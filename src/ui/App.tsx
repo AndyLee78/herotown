@@ -1,5 +1,5 @@
 import type { TFunction } from 'i18next'
-import { useEffect, useMemo, useState } from 'react'
+import { lazy, Suspense, useEffect, useMemo, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import {
   STAT_KEYS,
@@ -34,9 +34,11 @@ import {
 import { addGameOffset, gameNow, gameOffset, offsetParts, offsetSteps, resetGameOffset, subscribeGameClock } from './clock'
 import { josa } from './josa'
 import { loadGame, storeGame } from './storage'
-import { BattleView } from './BattleView'
-import { HeroPortrait, VillageView } from './VillageView'
 import { canReplay } from './voxel/replay'
+
+const VillageView = lazy(() => import('./VillageView').then((mod) => ({ default: mod.VillageView })))
+const HeroPortrait = lazy(() => import('./VillageView').then((mod) => ({ default: mod.HeroPortrait })))
+const BattleView = lazy(() => import('./BattleView').then((mod) => ({ default: mod.BattleView })))
 
 type Screen = 'town' | 'inn' | 'roster' | 'party' | 'result' | 'village' | 'smith' | 'save' | 'debug'
 
@@ -186,18 +188,20 @@ export function App() {
       </header>
       <section className="village-panel">
         <div className="village-stage">
-          <VillageView
-            roster={save.roster}
-            visitors={save.visitors}
-            partyIds={save.party.map((slot) => slot.id)}
-            selectedId={selectedId}
-            onSelect={setSelectedId}
-            villageLabel={t('label.village')}
-            buildings={save.buildings}
-            constructing={save.construction?.id ?? null}
-            buildingLabels={buildingLabels}
-            active={!overlayOpen}
-          />
+          <Suspense fallback={<div className="village-canvas" role="img" aria-label={t('label.village')} />}>
+            <VillageView
+              roster={save.roster}
+              visitors={save.visitors}
+              partyIds={save.party.map((slot) => slot.id)}
+              selectedId={selectedId}
+              onSelect={setSelectedId}
+              villageLabel={t('label.village')}
+              buildings={save.buildings}
+              constructing={save.construction?.id ?? null}
+              buildingLabels={buildingLabels}
+              active={!overlayOpen}
+            />
+          </Suspense>
           {overlayOpen ? (
             <div className="village-overlay">
               {screen !== 'village' ? (
@@ -283,6 +287,14 @@ export function App() {
   )
 }
 
+function Portrait({ hero }: { hero: Hero }) {
+  return (
+    <Suspense fallback={<span className="portrait" />}>
+      <HeroPortrait hero={hero} />
+    </Suspense>
+  )
+}
+
 function useNow(active: boolean): number {
   const [now, setNow] = useState(gameNow())
   useEffect(() => {
@@ -326,7 +338,7 @@ function Inn({ save, onHire, language }: { save: GameState; onHire: (id: string)
       <div className="grid">
         {save.visitors.map((hero) => (
           <article key={hero.id} className="card column">
-            <HeroPortrait hero={hero} />
+            <Portrait hero={hero} />
             <strong>{hero.name}</strong>
             <p>{language.startsWith('ko') ? t('hint.inn', { name: josa(hero.name, '이') }) : t('hint.inn', { name: hero.name })}</p>
             <p>{t('hint.staying', { time: waitLabel((hero.arrivedAt ?? save.lastTickAt) + stay - now) })}</p>
@@ -390,7 +402,7 @@ function Roster({
               className={hero.id === selectedId ? 'card selected' : 'card'}
               onClick={() => onSelect(hero.id)}
             >
-              <HeroPortrait hero={hero} />
+              <Portrait hero={hero} />
               <span>
                 {hero.name} · {t(`class.${hero.classId}`)} · {t(`condition.${hero.condition}`)}
                 {hero.deaths > 0 ? ` · ${t('hero.seenDeath')}` : ''}
@@ -426,7 +438,7 @@ function HeroDetail({ hero, save, onAction }: { hero: Hero; save: GameState; onA
   return (
     <article className="card column">
       <h2>{t('label.detail')}</h2>
-      <HeroPortrait hero={hero} />
+      <Portrait hero={hero} />
       <strong>{hero.name}</strong>
       <p>
         {t(`gender.${hero.gender}`)} · {t(`class.${hero.classId}`)} · {t('hero.age', { age: hero.age })} ·{' '}
@@ -655,7 +667,11 @@ function Report({ report, shown, onShown }: { report: DungeonReport; shown: numb
   }
   return (
     <>
-    {canReplay(report) ? <BattleView report={report} describe={describe} /> : null}
+    {canReplay(report) ? (
+        <Suspense fallback={<div className="battle-canvas" />}>
+          <BattleView report={report} describe={describe} />
+        </Suspense>
+      ) : null}
     <section className="split">
       <div>
         <h2>{t('label.log')}</h2>
