@@ -31,6 +31,7 @@ import {
   type LogEntry,
   type TargetPriority,
 } from '../core'
+import { addGameOffset, gameNow, gameOffset, offsetParts, offsetSteps, resetGameOffset, subscribeGameClock } from './clock'
 import { josa } from './josa'
 import { loadGame, storeGame } from './storage'
 import { BattleView } from './BattleView'
@@ -53,7 +54,7 @@ export function App() {
   }, [i18n.language, t])
 
   useEffect(() => {
-    const now = Date.now()
+    const now = gameNow()
     let cancel = false
     void loadGame(now).then((loaded) => {
       if (!cancel) {
@@ -74,7 +75,7 @@ export function App() {
 
   useEffect(() => {
     const timer = window.setInterval(() => {
-      setSave((current) => (current ? reduce(current, { type: 'catchUp', now: Date.now() }) : current))
+      setSave((current) => (current ? reduce(current, { type: 'catchUp', now: gameNow() }) : current))
     }, timeRules.tickMs)
     return () => window.clearInterval(timer)
   }, [])
@@ -92,12 +93,35 @@ export function App() {
       return
     }
     const due = Math.max(Math.min(...dueTimes), save.lastTickAt + 1)
-    const delay = Math.max(250, due - Date.now() + 40)
+    const delay = Math.max(250, due - gameNow() + 40)
     const timer = window.setTimeout(() => {
-      setSave((current) => (current ? reduce(current, { type: 'catchUp', now: Date.now() }) : current))
+      setSave((current) => (current ? reduce(current, { type: 'catchUp', now: gameNow() }) : current))
     }, delay)
     return () => window.clearTimeout(timer)
   }, [save])
+
+  const jumpClock = (ms: number) => {
+    const base = gameNow()
+    addGameOffset(ms)
+    setSave((current) => {
+      if (!current) {
+        return current
+      }
+      let next = current
+      let cursor = base
+      for (const step of offsetSteps(ms, timeRules.maxOfflineMs)) {
+        cursor += step
+        next = reduce(next, { type: 'catchUp', now: cursor })
+      }
+      return next
+    })
+  }
+
+  const resetClock = () => {
+    resetGameOffset()
+    const now = gameNow()
+    setSave((current) => (current ? reduce(current, { type: 'catchUp', now }) : current))
+  }
 
   const apply = (action: GameAction) => {
     setSave((current) => {
@@ -196,11 +220,11 @@ export function App() {
               {screen === 'town' ? (
                 <Town
                   save={save}
-                  onBuild={(id) => apply({ type: 'build', id, now: Date.now() })}
-                  onFinish={() => apply({ type: 'finishBuild', now: Date.now() })}
+                  onBuild={(id) => apply({ type: 'build', id, now: gameNow() })}
+                  onFinish={() => apply({ type: 'finishBuild', now: gameNow() })}
                 />
               ) : null}
-              {screen === 'inn' ? <Inn save={save} onHire={(id) => apply({ type: 'hire', id, now: Date.now() })} language={i18n.language} /> : null}
+              {screen === 'inn' ? <Inn save={save} onHire={(id) => apply({ type: 'hire', id, now: gameNow() })} language={i18n.language} /> : null}
               {screen === 'roster' ? (
                 <Roster
                   save={save}
@@ -222,7 +246,7 @@ export function App() {
                   onExport={() => downloadSave(exportSave(save))}
                   onImport={(text) => {
                     try {
-                      setSave(importSave(text, Date.now()))
+                      setSave(importSave(text, gameNow()))
                       setFileNotice(null)
                     } catch (error) {
                       setFileNotice(t(`result.${error instanceof Error ? error.message : 'checksum'}`))
@@ -238,7 +262,9 @@ export function App() {
                   onLock={(locked) => apply({ type: 'lockSeed', locked })}
                   onSeed={(seed) => apply({ type: 'setSeed', seed })}
                   onFast={() => apply({ type: 'rest', times: progression.debugRestTimes })}
-                  onReset={() => apply({ type: 'reset', now: Date.now() })}
+                  onReset={() => apply({ type: 'reset', now: gameNow() })}
+                  onJump={jumpClock}
+                  onResetClock={resetClock}
                 />
               ) : null}
             </div>
@@ -258,13 +284,18 @@ export function App() {
 }
 
 function useNow(active: boolean): number {
-  const [now, setNow] = useState(Date.now())
+  const [now, setNow] = useState(gameNow())
   useEffect(() => {
     if (!active) {
       return
     }
-    const timer = window.setInterval(() => setNow(Date.now()), 1000)
-    return () => window.clearInterval(timer)
+    const pull = () => setNow(gameNow())
+    const timer = window.setInterval(pull, 1000)
+    const unsubscribe = subscribeGameClock(pull)
+    return () => {
+      window.clearInterval(timer)
+      unsubscribe()
+    }
   }, [active])
   return now
 }
@@ -440,12 +471,12 @@ function HeroDetail({ hero, save, onAction }: { hero: Hero; save: GameState; onA
         ))}
       </ul>
       {hero.condition === 'injured' || hero.condition === 'critical' ? (
-        <button type="button" onClick={() => onAction({ type: 'treat', id: hero.id, now: Date.now() })}>
+        <button type="button" onClick={() => onAction({ type: 'treat', id: hero.id, now: gameNow() })}>
           {t('action.treat')}
         </button>
       ) : null}
       {hero.condition === 'dead' && hero.deaths === 1 ? (
-        <button type="button" disabled={save.gold < lifeRules.reviveCost} onClick={() => onAction({ type: 'revive', id: hero.id, now: Date.now() })}>
+        <button type="button" disabled={save.gold < lifeRules.reviveCost} onClick={() => onAction({ type: 'revive', id: hero.id, now: gameNow() })}>
           {t('action.revive', { cost: lifeRules.reviveCost })}
         </button>
       ) : null}
@@ -671,6 +702,8 @@ function Debug({
   onSeed,
   onFast,
   onReset,
+  onJump,
+  onResetClock,
 }: {
   save: GameState
   onGold: () => void
@@ -679,10 +712,28 @@ function Debug({
   onSeed: (seed: number) => void
   onFast: () => void
   onReset: () => void
+  onJump: (ms: number) => void
+  onResetClock: () => void
 }) {
   const { t } = useTranslation()
+  const [revision, setRevision] = useState(0)
+  useEffect(() => subscribeGameClock(() => setRevision((value) => value + 1)), [])
+  const offset = offsetParts(gameOffset())
   return (
     <section className="toolbar">
+      <p key={revision}>{t('debug.offset', offset)}</p>
+      <button type="button" onClick={() => onJump(10 * 60_000)}>
+        {t('debug.skip10')}
+      </button>
+      <button type="button" onClick={() => onJump(3_600_000)}>
+        {t('debug.skipHour')}
+      </button>
+      <button type="button" onClick={() => onJump(timeRules.seasonMs)}>
+        {t('debug.skipSeason')}
+      </button>
+      <button type="button" onClick={onResetClock}>
+        {t('debug.resetOffset')}
+      </button>
       <button type="button" onClick={onGold}>
         {t('action.addGold')}
       </button>
@@ -778,7 +829,7 @@ function Smith({ save, onAction }: { save: GameState; onAction: (action: GameAct
             <button
               type="button"
               disabled={save.buildings.smith < recipe.smithLevel || working}
-              onClick={() => onAction({ type: 'craft', recipeId: recipe.id, now: Date.now() })}
+              onClick={() => onAction({ type: 'craft', recipeId: recipe.id, now: gameNow() })}
             >
               {save.buildings.smith < recipe.smithLevel
                 ? t('smith.locked', { level: recipe.smithLevel })
@@ -796,7 +847,7 @@ function Smith({ save, onAction }: { save: GameState; onAction: (action: GameAct
             <button
               type="button"
               disabled={working || item.enhance >= smithRules.enhanceMax}
-              onClick={() => onAction({ type: 'enhance', gearId: item.id, now: Date.now() })}
+              onClick={() => onAction({ type: 'enhance', gearId: item.id, now: gameNow() })}
             >
               {t('action.enhance', { iron: smithRules.enhanceCost.iron, gold: smithRules.enhanceCost.gold })}
             </button>

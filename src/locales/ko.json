@@ -369,5 +369,12 @@
     "retreat": "평균 체력 {{hp}}%에서 후퇴했다.",
     "victory": "파티가 던전을 클리어했다.",
     "defeat": "파티가 전멸했다."
+  },
+  "debug": {
+    "offset": "시간 +{{days}}일 {{hours}}시간 {{minutes}}분",
+    "skip10": "+10분",
+    "skipHour": "+1시간",
+    "skipSeason": "+1계절",
+    "resetOffset": "오프셋 초기화"
   }
 }

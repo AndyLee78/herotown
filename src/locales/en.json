@@ -369,5 +369,12 @@
     "retreat": "The party retreats at {{hp}}% health.",
     "victory": "The party clears the dungeon.",
     "defeat": "The party is wiped out."
+  },
+  "debug": {
+    "offset": "Time +{{days}}d {{hours}}h {{minutes}}m",
+    "skip10": "+10 min",
+    "skipHour": "+1 hour",
+    "skipSeason": "+1 season",
+    "resetOffset": "Reset offset"
   }
 }
