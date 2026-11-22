@@ -170,7 +170,8 @@
     "noTank": "Without a tank, the back row collapsed.",
     "outmatched": "The fight ran out of time.",
     "retreated": "The party retreated before the dungeon was cleared.",
-    "wiped": "The party was wiped out."
+    "wiped": "The party was wiped out.",
+    "tooWeak": "The party is still too weak. Level up in an easier dungeon (recommended Lv {{level}})."
   },
   "dungeon": {
     "hill_cave": {
@@ -197,7 +198,8 @@
       "name": "Sunken crypt",
       "hint": "Harder undead than the barrow."
     },
-    "cleared": "Cleared"
+    "cleared": "Cleared",
+    "recommended": "recommended Lv {{level}}"
   },
   "policy": {
     "safe": "Leave the injured home",

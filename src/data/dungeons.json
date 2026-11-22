@@ -3,6 +3,7 @@
     {
       "id": "hill_cave",
       "tier": 1,
+      "recommendedLevel": 1,
       "betweenHeal": 0.45,
       "gold": 24,
       "xp": 12,
@@ -15,6 +16,7 @@
     {
       "id": "abandoned_mine",
       "tier": 2,
+      "recommendedLevel": 1,
       "betweenHeal": 0.28,
       "gold": 55,
       "xp": 24,
@@ -27,6 +29,7 @@
     {
       "id": "moss_path",
       "tier": 1,
+      "recommendedLevel": 1,
       "betweenHeal": 0.45,
       "gold": 20,
       "xp": 10,
@@ -39,6 +42,7 @@
     {
       "id": "deep_shaft",
       "tier": 2,
+      "recommendedLevel": 1,
       "betweenHeal": 0.28,
       "gold": 48,
       "xp": 20,
@@ -51,6 +55,7 @@
     {
       "id": "barrow",
       "tier": 3,
+      "recommendedLevel": 1,
       "betweenHeal": 0.22,
       "gold": 70,
       "xp": 28,
@@ -63,6 +68,7 @@
     {
       "id": "sunken_crypt",
       "tier": 3,
+      "recommendedLevel": 1,
       "betweenHeal": 0.18,
       "gold": 90,
       "xp": 34,

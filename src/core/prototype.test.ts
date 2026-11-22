@@ -1,7 +1,9 @@
 import { describe, expect, it } from 'vitest'
 import { createHeroUnit, simulateFloor } from './combat'
-import { DEFAULT_TACTICS, runDungeon } from './dungeon'
+import { dungeons } from './data'
+import { DEFAULT_TACTICS, defeatReason, runDungeon } from './dungeon'
 import { createHero } from './hero'
+import { clearingLevel } from '../../tools/recommended-level'
 import { createRng } from './rng'
 import type { ClassId, Hero, PartyMember, Row, Stats, Tactics } from './types'
 
@@ -76,6 +78,32 @@ describe('dungeon battles', () => {
       const healedCleric = healed.report.units.find((unit) => unit.id === 'cleric-1')
       const ignoredCleric = ignored.report.units.find((unit) => unit.id === 'cleric-1')
       expect(healedCleric?.healed ?? 0).toBeGreaterThan(ignoredCleric?.healed ?? 0)
+    }
+  })
+
+  it('wins the mine with a level 1 standard party, which is already the recommended level', () => {
+    const party = standard.map((member) => ({ ...member, hero: { ...member.hero, level: 1 } }))
+    const result = runDungeon(party, 'abandoned_mine', DEFAULT_TACTICS, 3)
+    expect(result.ok).toBe(true)
+    if (result.ok) {
+      expect(result.report.victory).toBe(true)
+      expect(result.report.defeatReason).toBeNull()
+    }
+  })
+
+  it('calls a wipe or a timeout too weak only while the party is below the recommended level', () => {
+    expect(defeatReason('wipe', 2, true, true, 1, 4)).toBe('tooWeak')
+    expect(defeatReason('timeout', 2, true, true, 1, 4)).toBe('tooWeak')
+    expect(defeatReason('wipe', 2, true, true, 4, 4)).toBe('wiped')
+    expect(defeatReason('timeout', 1, true, true, 4, 4)).toBe('outmatched')
+    expect(defeatReason('wipe', 2, false, true, 1, 4)).toBe('noTank')
+    expect(defeatReason('wipe', 2, true, false, 1, 4)).toBe('noHealer')
+    expect(defeatReason('retreat', 2, true, true, 1, 4)).toBe('retreated')
+  })
+
+  it('stores the lowest level where the standard party wins more than 60%', () => {
+    for (const dungeon of dungeons) {
+      expect(dungeon.recommendedLevel).toBe(clearingLevel(dungeon.id, 12, 1))
     }
   })
 })

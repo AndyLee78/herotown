@@ -121,6 +121,9 @@ export function validateGameData(data: GameData): void {
     }
   }
   for (const dungeon of data.dungeons) {
+    if (!Number.isInteger(dungeon.recommendedLevel) || dungeon.recommendedLevel < 1) {
+      throw new Error(`${dungeon.id} needs a recommended level of at least 1`)
+    }
     if (dungeon.floors.length < 2) {
       throw new Error(`${dungeon.id} needs multiple floors`)
     }

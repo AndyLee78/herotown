@@ -11,7 +11,7 @@ export type SkillKind = 'attack' | 'taunt' | 'heal' | 'buff' | 'debuff'
 export type TraitId = 'tough' | 'coward' | 'nocturnal' | 'treasure' | 'ironWill' | 'frail'
 export type Condition = 'healthy' | 'fatigued' | 'injured' | 'critical' | 'dead'
 export type TargetPriority = 'lowestHp' | 'backRow' | 'boss'
-export type DefeatReason = 'noTank' | 'noHealer' | 'retreated' | 'wiped' | 'outmatched'
+export type DefeatReason = 'noTank' | 'noHealer' | 'retreated' | 'wiped' | 'outmatched' | 'tooWeak'
 export type CombatError = 'emptyParty' | 'partyTooLarge' | 'underage' | 'badFormation' | 'dead'
 
 export type AgeBand = {
@@ -73,6 +73,7 @@ export type DungeonFloor = {
 export type DungeonDef = {
   id: string
   tier: 1 | 2 | 3
+  recommendedLevel: number
   betweenHeal: number
   gold: number
   xp: number

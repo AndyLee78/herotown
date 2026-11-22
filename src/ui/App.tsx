@@ -559,6 +559,7 @@ function Party({ save, onAction }: { save: GameState; onAction: (action: GameAct
             onClick={() => onAction({ type: 'dungeon', id: dungeon.id })}
           >
             {t(`dungeon.${dungeon.id}.name`)}
+            {` · ${t('dungeon.recommended', { level: dungeon.recommendedLevel })}`}
             {save.cleared.includes(dungeon.id) ? ` · ${t('dungeon.cleared')}` : ''}
           </button>
         ))}
@@ -600,7 +601,7 @@ function Party({ save, onAction }: { save: GameState; onAction: (action: GameAct
             <select value={save.auto.dungeonId} onChange={(event) => onAction({ type: 'autoDungeon', id: event.target.value })}>
               {dungeons.map((dungeon) => (
                 <option key={dungeon.id} value={dungeon.id}>
-                  {t(`dungeon.${dungeon.id}.name`)}
+                  {t(`dungeon.${dungeon.id}.name`)} · {t('dungeon.recommended', { level: dungeon.recommendedLevel })}
                 </option>
               ))}
             </select>
@@ -691,7 +692,15 @@ function Report({ report, shown, onShown }: { report: DungeonReport; shown: numb
       </div>
       <article className="card column">
         <h2>{report.victory ? t('result.victory') : t('result.defeat')}</h2>
-        {report.defeatReason ? <p>{t(`defeat.${report.defeatReason}`)}</p> : null}
+        {report.defeatReason ? (
+          <p>
+            {report.defeatReason === 'tooWeak'
+              ? t('defeat.tooWeak', {
+                  level: dungeons.find((dungeon) => dungeon.id === report.dungeonId)?.recommendedLevel ?? 1,
+                })
+              : t(`defeat.${report.defeatReason}`)}
+          </p>
+        ) : null}
         <p>{t('result.floors', { count: report.floorsCleared })}</p>
         <p>{t('result.gold', { gold: report.gold })}</p>
         <p>{t('result.xp', { xp: report.xp })}</p>

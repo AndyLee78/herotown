@@ -72,7 +72,9 @@ export function runDungeon(party: PartyMember[], dungeonId: string, tactics: Tac
     party: party.map(({ hero }) => ({ id: hero.id, classId: hero.classId, gender: hero.gender, age: hero.age })),
     floors,
     victory,
-    defeatReason: victory ? null : reasonFor(outcome, dungeon.tier, hadTank, hadHealer),
+    defeatReason: victory
+      ? null
+      : defeatReason(outcome, dungeon.tier, hadTank, hadHealer, averageLevel(party), dungeon.recommendedLevel),
     ticks,
     floorsCleared,
     gold,
@@ -112,11 +114,13 @@ export function applyReport(hero: Hero, report: DungeonReport): Hero {
   }
 }
 
-function reasonFor(
+export function defeatReason(
   outcome: 'wipe' | 'retreat' | 'timeout' | 'victory',
   tier: 1 | 2 | 3,
   hadTank: boolean,
   hadHealer: boolean,
+  averageLevel: number,
+  recommendedLevel: number,
 ): DungeonReport['defeatReason'] {
   if (outcome === 'retreat') {
     return 'retreated'
@@ -127,10 +131,17 @@ function reasonFor(
   if (tier >= 2 && !hadHealer) {
     return 'noHealer'
   }
+  if ((outcome === 'wipe' || outcome === 'timeout') && averageLevel < recommendedLevel) {
+    return 'tooWeak'
+  }
   if (outcome === 'timeout') {
     return 'outmatched'
   }
   return 'wiped'
+}
+
+function averageLevel(party: PartyMember[]): number {
+  return party.reduce((sum, member) => sum + member.hero.level, 0) / party.length
 }
 
 function judgeCondition(unit: BattleUnit): Condition {

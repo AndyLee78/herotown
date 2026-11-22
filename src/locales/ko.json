@@ -170,7 +170,8 @@
     "noTank": "탱커가 없어 후열이 무너졌다.",
     "outmatched": "제한 시간 안에 끝내지 못했다.",
     "retreated": "던전을 클리어하기 전에 후퇴했다.",
-    "wiped": "파티가 전멸했다."
+    "wiped": "파티가 전멸했다.",
+    "tooWeak": "파티가 아직 약하다. 쉬운 던전에서 레벨을 올리자 (권장 Lv {{level}})"
   },
   "dungeon": {
     "hill_cave": {
@@ -197,7 +198,8 @@
       "name": "가라앉은 묘실",
       "hint": "묘지보다 단단한 언데드다."
     },
-    "cleared": "클리어"
+    "cleared": "클리어",
+    "recommended": "권장 Lv {{level}}"
   },
   "policy": {
     "safe": "부상자 출정 금지",
