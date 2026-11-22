@@ -1,0 +1,16 @@
+{
+  "trainingBonus": 1,
+  "maxTraining": 40,
+  "visitorCount": 5,
+  "visitorAgeMin": 16,
+  "visitorAgeMax": 36,
+  "potentialSpread": 4,
+  "startGold": 200,
+  "hireCost": 35,
+  "wage": 6,
+  "restFatigue": 40,
+  "xpPerLevel": 30,
+  "debugGold": 100,
+  "debugRestTimes": 4,
+  "visitorNonceStride": 100000
+}

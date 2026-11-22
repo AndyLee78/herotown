@@ -1,0 +1,76 @@
+{
+  "dungeons": [
+    {
+      "id": "hill_cave",
+      "tier": 1,
+      "betweenHeal": 0.45,
+      "gold": 24,
+      "xp": 12,
+      "floors": [
+        { "monsters": ["wolf", "bat", "wolf"] },
+        { "monsters": ["boar", "slime"] },
+        { "monsters": ["cave_boss", "bat"] }
+      ]
+    },
+    {
+      "id": "abandoned_mine",
+      "tier": 2,
+      "betweenHeal": 0.28,
+      "gold": 55,
+      "xp": 24,
+      "floors": [
+        { "monsters": ["miner", "brigand"] },
+        { "monsters": ["spider", "toad"] },
+        { "monsters": ["mine_boss"] }
+      ]
+    },
+    {
+      "id": "moss_path",
+      "tier": 1,
+      "betweenHeal": 0.45,
+      "gold": 20,
+      "xp": 10,
+      "floors": [
+        { "monsters": ["slime", "bat"] },
+        { "monsters": ["boar", "wolf"] },
+        { "monsters": ["cave_boss"] }
+      ]
+    },
+    {
+      "id": "deep_shaft",
+      "tier": 2,
+      "betweenHeal": 0.28,
+      "gold": 48,
+      "xp": 20,
+      "floors": [
+        { "monsters": ["miner", "spider"] },
+        { "monsters": ["toad", "brigand"] },
+        { "monsters": ["mine_boss"] }
+      ]
+    },
+    {
+      "id": "barrow",
+      "tier": 3,
+      "betweenHeal": 0.22,
+      "gold": 70,
+      "xp": 28,
+      "floors": [
+        { "monsters": ["skeleton", "zombie"] },
+        { "monsters": ["wraith", "ghoul"] },
+        { "monsters": ["barrow_lord"] }
+      ]
+    },
+    {
+      "id": "sunken_crypt",
+      "tier": 3,
+      "betweenHeal": 0.18,
+      "gold": 90,
+      "xp": 34,
+      "floors": [
+        { "monsters": ["wraith", "skeleton", "zombie"] },
+        { "monsters": ["ghoul", "wraith"] },
+        { "monsters": ["crypt_lord"] }
+      ]
+    }
+  ]
+}

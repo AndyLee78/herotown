@@ -1,0 +1,81 @@
+import { describe, expect, it } from 'vitest'
+import { createHeroUnit, simulateFloor } from './combat'
+import { DEFAULT_TACTICS, runDungeon } from './dungeon'
+import { createHero } from './hero'
+import { createRng } from './rng'
+import type { ClassId, Hero, PartyMember, Row, Stats, Tactics } from './types'
+
+const adult: Record<ClassId, Stats> = {
+  warrior: { str: 15, agi: 10, vit: 15, int: 4, wil: 8, wis: 4 },
+  rogue: { str: 8, agi: 16, vit: 8, int: 5, wil: 6, wis: 5 },
+  archer: { str: 7, agi: 15, vit: 8, int: 6, wil: 7, wis: 6 },
+  mage: { str: 4, agi: 9, vit: 7, int: 16, wil: 8, wis: 9 },
+  cleric: { str: 5, agi: 8, vit: 10, int: 7, wil: 11, wis: 16 },
+  bard: { str: 5, agi: 10, vit: 9, int: 8, wil: 14, wis: 8 },
+  dancer: { str: 5, agi: 15, vit: 8, int: 6, wil: 12, wis: 7 },
+}
+
+function made(classId: ClassId, row: Row, index: number): PartyMember {
+  return { hero: hero(classId, index), row }
+}
+
+function hero(classId: ClassId, index: number, potentials = adult[classId]): Hero {
+  return createHero({
+    id: `${classId}-${index}`,
+    name: `${classId}-${index}`,
+    gender: classId === 'dancer' ? 'female' : 'male',
+    classId,
+    age: 28,
+    potentials,
+  })
+}
+
+const standard: PartyMember[] = [
+  made('warrior', 'front', 1),
+  made('rogue', 'front', 1),
+  made('archer', 'back', 1),
+  made('bard', 'back', 1),
+  made('cleric', 'back', 1),
+]
+
+describe('dungeon battles', () => {
+  it('repeats the log for the same seed and input', () => {
+    const first = runDungeon(standard, 'abandoned_mine', DEFAULT_TACTICS, 7)
+    const second = runDungeon(standard, 'abandoned_mine', DEFAULT_TACTICS, 7)
+    expect(first).toEqual(second)
+  })
+
+  it('keeps melee enemies off the back row while the front row stands', () => {
+    const tank = createHeroUnit(
+      {
+        hero: hero('warrior', 1, { str: 18, agi: 8, vit: 30, int: 4, wil: 8, wis: 4 }),
+        row: 'front',
+      },
+      0,
+    )
+    const back = createHeroUnit(
+      {
+        hero: hero('mage', 1, { str: 4, agi: 8, vit: 4, int: 8, wil: 6, wis: 6 }),
+        row: 'back',
+      },
+      1,
+    )
+    const log: Parameters<typeof simulateFloor>[4] = []
+    simulateFloor([tank, back], ['wolf', 'wolf'], { ...DEFAULT_TACTICS, healBelow: 0 }, createRng(1), log, 1)
+    expect(back.taken).toBe(0)
+    expect(tank.taken).toBeGreaterThan(0)
+  })
+
+  it('changes the mine when the healer stops healing', () => {
+    const careful: Tactics = { ...DEFAULT_TACTICS, healBelow: 80 }
+    const reckless: Tactics = { ...DEFAULT_TACTICS, healBelow: 0 }
+    const healed = runDungeon(standard, 'abandoned_mine', careful, 3)
+    const ignored = runDungeon(standard, 'abandoned_mine', reckless, 3)
+    expect(healed.ok && ignored.ok).toBe(true)
+    if (healed.ok && ignored.ok) {
+      const healedCleric = healed.report.units.find((unit) => unit.id === 'cleric-1')
+      const ignoredCleric = ignored.report.units.find((unit) => unit.id === 'cleric-1')
+      expect(healedCleric?.healed ?? 0).toBeGreaterThan(ignoredCleric?.healed ?? 0)
+    }
+  })
+})

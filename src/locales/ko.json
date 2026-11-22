@@ -1,0 +1,365 @@
+{
+  "app": {
+    "title": "영웅의 마을",
+    "tagline": "단계 1",
+    "gold": "골드 {{gold}}",
+    "day": "{{day}}일",
+    "calendar": "{{year}}년 · {{season}}"
+  },
+  "screen": {
+    "town": "마을 운영",
+    "inn": "여관",
+    "roster": "영웅",
+    "party": "편성",
+    "result": "결과",
+    "village": "마을",
+    "save": "저장",
+    "smith": "대장간",
+    "debug": "디버그"
+  },
+  "action": {
+    "hire": "고용 ({{cost}})",
+    "rest": "휴식",
+    "restFast": "휴식 네 번",
+    "fight": "출정",
+    "remove": "빼기",
+    "front": "전열",
+    "back": "후열",
+    "faster": "빨리 감기",
+    "all": "모두 보기",
+    "addGold": "골드 100 추가",
+    "refresh": "방문자 새로고침",
+    "reset": "저장 초기화",
+    "export": "세이브 내보내기",
+    "import": "세이브 가져오기",
+    "construct": "건설",
+    "upgrade": "증축",
+    "en": "English",
+    "ko": "한국어",
+    "learn": "배우기",
+    "treat": "신전 치료",
+    "revive": "되살리기 ({{cost}})",
+    "dismiss": "해고",
+    "confirmDismiss": "정말 떠나보낸다",
+    "departAnyway": "알고 출정",
+    "finishNow": "즉시 완료",
+    "close": "닫기",
+    "auto": "자동 출정",
+    "autoParty": "현재 편성 고정",
+    "craft": "제작",
+    "enhance": "강화 (철 {{iron}} · 골드 {{gold}})",
+    "equip": "{{name}} 장착",
+    "unequip": "{{name}} 해제"
+  },
+  "label": {
+    "visitors": "방문자",
+    "roster": "고용한 영웅",
+    "party": "편성",
+    "dungeon": "던전",
+    "result": "결과",
+    "log": "전투 기록",
+    "language": "언어",
+    "village": "마을",
+    "tactics": "작전",
+    "target": "우선 대상",
+    "healBelow": "회복 기준 %",
+    "retreatBelow": "후퇴 기준 %",
+    "seed": "시드",
+    "seedLocked": "시드 고정",
+    "report": "리포트",
+    "detail": "영웅",
+    "save": "세이브 파일",
+    "graveyard": "묘지",
+    "skills": "기술",
+    "auto": "자동 출정",
+    "policy": "운영",
+    "material": "재료",
+    "autoDungeon": "자동 던전",
+    "smith": "제작",
+    "stash": "창고"
+  },
+  "hint": {
+    "village": "마을에서 영웅을 누르면 선택됩니다.",
+    "inn": "{{name}} 여관에 머물고 있다.",
+    "emptyRoster": "아직 고용한 영웅이 없다.",
+    "emptyParty": "영웅을 다섯 명까지 고른다.",
+    "poor": "골드가 부족하다.",
+    "backup": "내보낸 파일을 백업으로 보관하세요. 내용이 바뀐 파일은 불러올 수 없습니다.",
+    "nextVisitor": "다음 방문자까지 {{time}}",
+    "innFull": "여관이 가득 찼다. {{time}} 뒤에 한 명이 떠난다.",
+    "staying": "{{time}} 뒤 떠난다",
+    "innEmpty": "지금 머무는 방문자가 없다.",
+    "graveyard": "묘지가 비어 있다.",
+    "auto": "클리어한 던전만 자동으로 돕니다. 보상은 80%이고, 자동 출정에서는 죽지 않습니다.",
+    "emptyStash": "창고가 비어 있다. 만든 장비는 영웅 화면에서 장착한다."
+  },
+  "building": {
+    "hall": "마을 회관",
+    "inn": "여관",
+    "house": "집",
+    "guild": "길드",
+    "smith": "대장간",
+    "temple": "신전"
+  },
+  "buildingHint": {
+    "hall": "마을 레벨과 다음 목표를 보여 준다.",
+    "inn": "레벨이 오르면 방문자가 늘고 더 오래 머문다.",
+    "house": "침상 수가 고용 상한이다. 휴식이 더 잘 듣는다.",
+    "guild": "동시 출정과 동굴 목재 의뢰.",
+    "smith": "무기와 방어구를 만들고 강화한다. 레벨이 오르면 더 높은 등급이 열린다.",
+    "temple": "부상과 중상을 치료하고, 한 번 죽은 영웅을 되돌린다."
+  },
+  "resource": {
+    "wood": "목재 {{amount}}",
+    "stone": "석재 {{amount}}",
+    "iron": "철 {{amount}}",
+    "fame": "명성 {{amount}}",
+    "bone": "뼈 {{amount}}"
+  },
+  "town": {
+    "level": "마을 레벨 {{level}}",
+    "fame": "명성 {{fame}}. 다음은 {{next}}.",
+    "beds": "침상 {{used}}/{{count}}",
+    "parties": "동시 출정 {{count}}",
+    "visitors": "방문자 자리 {{count}}",
+    "building": "{{name}} 건설 중 · {{time}}",
+    "slotFree": "건설 자리가 비어 있다.",
+    "buildingLevel": "레벨 {{level}}",
+    "cost": "골드 {{gold}} · 목재 {{wood}} · 석재 {{stone}} · 철 {{iron}}",
+    "maxed": "지금은 더 올릴 수 없다.",
+    "locked": "마을 레벨 {{level}}에 열린다.",
+    "quest": "동굴 목재 {{progress}}/{{count}}",
+    "questDone": "길드 의뢰를 마쳤다."
+  },
+  "result": {
+    "victory": "승리",
+    "defeat": "패배",
+    "emptyParty": "파티가 비어 있습니다.",
+    "partyTooLarge": "파티 인원이 너무 많습니다.",
+    "underage": "출전할 수 없는 영웅이 있습니다.",
+    "badFormation": "전열은 2명, 후열은 3명까지입니다.",
+    "dead": "사망한 영웅은 출전할 수 없습니다.",
+    "poor": "골드가 부족합니다.",
+    "missing": "이미 떠난 방문자입니다.",
+    "checksum": "세이브 파일이 변경되어 불러올 수 없습니다.",
+    "newer": "더 새 버전의 세이브입니다.",
+    "beds": "집에 빈 침상이 없습니다.",
+    "building": "이미 건설 중인 건물이 있습니다.",
+    "locked": "마을 레벨이 이 건물을 열지 못했습니다.",
+    "maxLevel": "이 건물은 아직 더 올릴 수 없습니다.",
+    "resources": "재료가 부족합니다.",
+    "wages": "주급을 낼 골드가 부족합니다.",
+    "seenDeath": "죽음을 본 영웅입니다. 이 던전에서 다시 죽으면 돌아오지 않습니다.",
+    "noTemple": "신전이 있어야 치료하거나 되살릴 수 있습니다.",
+    "skill": "배울 수 있는 기술이 아닙니다.",
+    "treat": "지금 신전에서 돌볼 상태가 아닙니다.",
+    "noSmith": "대장간이 있어야 만들 수 있습니다.",
+    "smithBusy": "대장간이 이미 작업 중입니다.",
+    "recipe": "그 장비는 지금 만들거나 강화할 수 없습니다.",
+    "enhanceFail": "강화에 실패했습니다. 재료만 사라졌습니다.",
+    "autoLocked": "클리어한 던전만 자동 출정할 수 있습니다.",
+    "gold": "골드 {{gold}}",
+    "xp": "경험치 {{xp}}",
+    "floors": "클리어한 층 {{count}}",
+    "dealt": "가한 피해 {{amount}}",
+    "taken": "받은 피해 {{amount}}",
+    "healed": "회복량 {{amount}}"
+  },
+  "defeat": {
+    "noHealer": "치유사가 없어 피해를 버티지 못했다.",
+    "noTank": "탱커가 없어 후열이 무너졌다.",
+    "outmatched": "제한 시간 안에 끝내지 못했다.",
+    "retreated": "던전을 클리어하기 전에 후퇴했다.",
+    "wiped": "파티가 전멸했다."
+  },
+  "dungeon": {
+    "hill_cave": {
+      "name": "마을 뒷산 동굴",
+      "hint": "능력치 합으로 밀어붙이는 던전이다."
+    },
+    "abandoned_mine": {
+      "name": "버려진 광산",
+      "hint": "탱커와 치유사가 필요하다."
+    },
+    "moss_path": {
+      "name": "이끼 길",
+      "hint": "석재가 나오는 얕은 길이다."
+    },
+    "deep_shaft": {
+      "name": "깊은 수직갱",
+      "hint": "광산보다 석재가 많다."
+    },
+    "barrow": {
+      "name": "언데드 묘지",
+      "hint": "물리 공격이 잘 안 통한다. 성직자와 화염·은 무기가 유리하다."
+    },
+    "sunken_crypt": {
+      "name": "가라앉은 묘실",
+      "hint": "묘지보다 단단한 언데드다."
+    },
+    "cleared": "클리어"
+  },
+  "policy": {
+    "safe": "부상자 출정 금지",
+    "material": "재료 우선",
+    "fixed": "고정 편성"
+  },
+  "material": {
+    "wood": "목재",
+    "stone": "석재",
+    "iron": "철",
+    "bone": "뼈"
+  },
+  "class": {
+    "warrior": "전사",
+    "rogue": "도적",
+    "archer": "궁수",
+    "mage": "마법사",
+    "cleric": "성직자",
+    "bard": "음유시인",
+    "dancer": "무희"
+  },
+  "gender": {
+    "male": "남",
+    "female": "여"
+  },
+  "stat": {
+    "str": "힘",
+    "agi": "민첩",
+    "vit": "체력",
+    "int": "지능",
+    "wil": "의지",
+    "wis": "지혜"
+  },
+  "row": {
+    "front": "전열",
+    "back": "후열"
+  },
+  "season": {
+    "spring": "봄",
+    "summer": "여름",
+    "autumn": "가을",
+    "winter": "겨울"
+  },
+  "absence": {
+    "title": "자리를 비운 동안",
+    "hours": "{{hours}}시간이 지났습니다.",
+    "capped": "최근 12시간만 계산했습니다.",
+    "season": "지금은 {{year}}년 {{season}}입니다.",
+    "gold": "획득 골드 {{gold}}",
+    "quiet": "끝난 건설은 없고, 새 방문자도 없습니다.",
+    "wages": "주급 {{gold}}",
+    "completed": "완공: {{names}}",
+    "visitors": "새 방문자: {{names}}",
+    "crafted": "제작 완료: {{names}}",
+    "auto": "자동 출정 {{count}}회, 골드 {{gold}}",
+    "dismiss": "계속"
+  },
+  "target": {
+    "lowestHp": "체력 낮은 적",
+    "backRow": "후열",
+    "boss": "보스"
+  },
+  "trait": {
+    "tough": "강인함",
+    "coward": "겁쟁이",
+    "nocturnal": "야행성",
+    "treasure": "보물 사냥꾼",
+    "ironWill": "강철 의지",
+    "frail": "허약"
+  },
+  "condition": {
+    "healthy": "건강",
+    "fatigued": "피로",
+    "injured": "부상",
+    "critical": "중상",
+    "dead": "사망"
+  },
+  "potential": {
+    "low": "잠재력 낮음",
+    "mid": "잠재력 중간",
+    "high": "잠재력 높음"
+  },
+  "hero": {
+    "age": "{{age}}세",
+    "level": "레벨 {{level}}",
+    "range": "{{min}}–{{max}}",
+    "points": "기술 점수 {{count}}",
+    "learned": "배움",
+    "seenDeath": "죽음을 봄",
+    "treating": "치료 중 {{time}}",
+    "reviving": "되살리는 중 {{time}}",
+    "noGear": "장비 없음",
+    "clears": "토벌 {{count}}"
+  },
+  "skill": {
+    "warrior": { "strike": "강타", "taunt": "도발", "guard": "수비", "slam": "내려치기" },
+    "rogue": { "stab": "찌르기", "bleed": "출혈", "poison": "독", "shadow": "그림자" },
+    "archer": { "shot": "사격", "aim": "조준", "mark": "표식", "volley": "난사" },
+    "mage": { "bolt": "마탄", "burst": "폭발", "ward": "결계", "arc": "전격" },
+    "cleric": { "smite": "징벌", "heal": "치유", "bless": "축복", "purify": "정화" },
+    "bard": { "note": "음표", "anthem": "응원가", "hymn": "찬가", "discord": "불협" },
+    "dancer": { "step": "스텝", "veil": "장막", "flourish": "피날레", "encore": "앵콜" }
+  },
+  "gear": {
+    "warrior": { "weapon": "검" },
+    "rogue": { "weapon": "단검" },
+    "archer": { "weapon": "활" },
+    "mage": { "weapon": "지팡이" },
+    "cleric": { "weapon": "성봉" },
+    "bard": { "weapon": "류트" },
+    "dancer": { "weapon": "리본", "armor": "천옷" }
+  },
+  "grade": { "common": "일반", "fine": "고급", "rare": "희귀" },
+  "element": { "flame": "화염", "silver": "은" },
+  "option": { "power": "공격", "guard": "방어" },
+  "item": {
+    "iron": { "blade": "철검", "mail": "철갑" },
+    "fine": { "blade": "강철검", "mail": "강철갑" },
+    "flame": { "blade": "화염검" },
+    "silver": { "edge": "은날" }
+  },
+  "smith": {
+    "level": "대장간 레벨 {{level}}",
+    "idle": "작업대가 비어 있다.",
+    "working": "{{name}} 제작 중 · {{time}}",
+    "stats": "공격 {{attack}} · 방어 {{defense}}",
+    "locked": "대장간 레벨 {{level}}에 열린다."
+  },
+  "unit": {
+    "indexed": "{{name}} {{index}}",
+    "hp": "HP {{hp}}/{{maxHp}}"
+  },
+  "enemy": {
+    "wolf": "늑대",
+    "bat": "박쥐",
+    "boar": "멧돼지",
+    "slime": "슬라임",
+    "miner": "광부",
+    "spider": "거미",
+    "brigand": "도적",
+    "toad": "두꺼비",
+    "cave_boss": "동굴 우두머리",
+    "mine_boss": "광산 폭군",
+    "skeleton": "해골",
+    "zombie": "좀비",
+    "wraith": "망령",
+    "ghoul": "구울",
+    "barrow_lord": "묘지 군주",
+    "crypt_lord": "묘실 군주"
+  },
+  "log": {
+    "floor": "{{floor}}층",
+    "floorClear": "{{floor}}층을 클리어했다.",
+    "attack": "{{actor}} → {{target}}, 피해 {{amount}}",
+    "heal": "{{actor}} → {{target}}, 회복 {{amount}}",
+    "taunt": "{{actor}}, 도발",
+    "buff": "{{actor}}, 파티 공격 상승",
+    "debuff": "{{actor}}, 적 약화",
+    "dot": "{{actor}}, 독 피해 {{amount}}",
+    "down": "{{actor}}, 전투 불능",
+    "retreat": "평균 체력 {{hp}}%에서 후퇴했다.",
+    "victory": "파티가 던전을 클리어했다.",
+    "defeat": "파티가 전멸했다."
+  }
+}

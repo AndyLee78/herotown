@@ -1,0 +1,8 @@
+{
+  "seasonMs": 86400000,
+  "tickMs": 15000,
+  "maxOfflineMs": 43200000,
+  "reportAfterMs": 3600000,
+  "startYear": 1,
+  "seasons": ["spring", "summer", "autumn", "winter"]
+}

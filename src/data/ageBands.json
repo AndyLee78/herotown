@@ -1,0 +1,12 @@
+{
+  "maxAge": 80,
+  "bands": [
+    { "id": "child", "min": 0, "max": 13, "canDeploy": false, "physical": 0.4, "mental": 0.45 },
+    { "id": "apprentice", "min": 14, "max": 17, "canDeploy": true, "physical": 0.72, "mental": 0.68 },
+    { "id": "rising", "min": 18, "max": 24, "canDeploy": true, "physical": 0.9, "mental": 0.84 },
+    { "id": "prime", "min": 25, "max": 31, "canDeploy": true, "physical": 1, "mental": 0.95 },
+    { "id": "mature", "min": 32, "max": 39, "canDeploy": true, "physical": 0.88, "mental": 1 },
+    { "id": "veteran", "min": 40, "max": 49, "canDeploy": true, "physical": 0.74, "mental": 0.98 },
+    { "id": "elder", "min": 50, "max": 80, "canDeploy": true, "physical": 0.52, "mental": 0.82 }
+  ]
+}

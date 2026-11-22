@@ -1,0 +1,365 @@
+{
+  "app": {
+    "title": "Hero's Town",
+    "tagline": "Stage 1",
+    "gold": "Gold {{gold}}",
+    "day": "Day {{day}}",
+    "calendar": "Year {{year}} · {{season}}"
+  },
+  "screen": {
+    "town": "Town",
+    "inn": "Inn",
+    "roster": "Roster",
+    "party": "Party",
+    "result": "Result",
+    "village": "Village",
+    "save": "Save",
+    "smith": "Smithy",
+    "debug": "Debug"
+  },
+  "action": {
+    "hire": "Hire ({{cost}})",
+    "rest": "Rest",
+    "restFast": "Rest four times",
+    "fight": "Depart",
+    "remove": "Remove",
+    "front": "Front row",
+    "back": "Back row",
+    "faster": "Fast forward",
+    "all": "Show all",
+    "addGold": "Add 100 gold",
+    "refresh": "Refresh visitors",
+    "reset": "Reset save",
+    "export": "Export save",
+    "import": "Import save",
+    "construct": "Build",
+    "upgrade": "Upgrade",
+    "en": "English",
+    "ko": "한국어",
+    "learn": "Learn",
+    "treat": "Temple care",
+    "revive": "Revive ({{cost}})",
+    "dismiss": "Dismiss",
+    "confirmDismiss": "Send them away",
+    "departAnyway": "Depart anyway",
+    "finishNow": "Finish now",
+    "close": "Close",
+    "auto": "Auto run",
+    "autoParty": "Keep this party",
+    "craft": "Craft",
+    "enhance": "Enhance (iron {{iron}} · gold {{gold}})",
+    "equip": "Equip {{name}}",
+    "unequip": "Remove {{name}}"
+  },
+  "label": {
+    "visitors": "Visitors",
+    "roster": "Hired heroes",
+    "party": "Formation",
+    "dungeon": "Dungeon",
+    "result": "Result",
+    "log": "Combat log",
+    "language": "Language",
+    "village": "Village",
+    "tactics": "Tactics",
+    "target": "Focus",
+    "healBelow": "Heal below %",
+    "retreatBelow": "Retreat below %",
+    "seed": "Seed",
+    "seedLocked": "Lock seed",
+    "report": "Report",
+    "detail": "Hero",
+    "save": "Save file",
+    "graveyard": "Graveyard",
+    "skills": "Skills",
+    "auto": "Auto run",
+    "policy": "Orders",
+    "material": "Material",
+    "autoDungeon": "Auto dungeon",
+    "smith": "Crafting",
+    "stash": "Warehouse"
+  },
+  "hint": {
+    "village": "Click a hero in the village to select them.",
+    "inn": "{{name}} is staying at the inn.",
+    "emptyRoster": "Nobody has been hired yet.",
+    "emptyParty": "Choose up to five heroes.",
+    "poor": "Not enough gold.",
+    "backup": "Keep an exported file as a backup. A changed file will not load.",
+    "nextVisitor": "Next visitor in {{time}}",
+    "innFull": "The inn is full. Someone leaves in {{time}}.",
+    "staying": "Leaves in {{time}}",
+    "innEmpty": "No visitors are staying.",
+    "graveyard": "The graveyard is empty.",
+    "auto": "Only a cleared dungeon runs on its own. Rewards are 80%, and nobody dies on an automatic run.",
+    "emptyStash": "The warehouse is empty. Equip finished gear from the hero screen."
+  },
+  "building": {
+    "hall": "Town hall",
+    "inn": "Inn",
+    "house": "House",
+    "guild": "Guild",
+    "smith": "Smithy",
+    "temple": "Temple"
+  },
+  "buildingHint": {
+    "hall": "Town level and the next goal.",
+    "inn": "More visitors stay longer as it grows.",
+    "house": "Beds set the hiring limit. Rest recovers more.",
+    "guild": "More expeditions, and a cave-wood request.",
+    "smith": "Makes and enhances weapons and armor. Higher levels unlock better grades.",
+    "temple": "Treats injuries and brings back a hero who has died once."
+  },
+  "resource": {
+    "wood": "Wood {{amount}}",
+    "stone": "Stone {{amount}}",
+    "iron": "Iron {{amount}}",
+    "fame": "Fame {{amount}}",
+    "bone": "Bone {{amount}}"
+  },
+  "town": {
+    "level": "Town level {{level}}",
+    "fame": "Fame {{fame}}. Next level at {{next}}.",
+    "beds": "Beds {{used}}/{{count}}",
+    "parties": "Expeditions {{count}}",
+    "visitors": "Visitor rooms {{count}}",
+    "building": "{{name}} is under construction · {{time}}",
+    "slotFree": "The building slot is free.",
+    "buildingLevel": "Level {{level}}",
+    "cost": "Gold {{gold}} · Wood {{wood}} · Stone {{stone}} · Iron {{iron}}",
+    "maxed": "This is as high as it can go for now.",
+    "locked": "Opens at town level {{level}}.",
+    "quest": "Cave wood {{progress}}/{{count}}",
+    "questDone": "The guild request is complete."
+  },
+  "result": {
+    "victory": "Victory",
+    "defeat": "Defeat",
+    "emptyParty": "The party is empty.",
+    "partyTooLarge": "The party is too large.",
+    "underage": "A child cannot deploy.",
+    "badFormation": "The front row holds 2 and the back row holds 3.",
+    "dead": "A dead hero cannot deploy.",
+    "poor": "Not enough gold.",
+    "missing": "That visitor has already left.",
+    "checksum": "This save file was changed and cannot be loaded.",
+    "newer": "This save is from a newer version.",
+    "beds": "The house has no free bed.",
+    "building": "Something is already being built.",
+    "locked": "The town is not ready for that building.",
+    "maxLevel": "That building cannot go higher yet.",
+    "resources": "Not enough materials.",
+    "wages": "There was not enough gold for wages.",
+    "seenDeath": "This hero has seen death. Dying again in this dungeon is permanent.",
+    "noTemple": "A temple is required to treat or revive.",
+    "skill": "That skill cannot be learned.",
+    "treat": "This hero is not ready for temple care.",
+    "noSmith": "A smithy is required to craft.",
+    "smithBusy": "The smithy is already working.",
+    "recipe": "That piece cannot be crafted or enhanced right now.",
+    "enhanceFail": "Enhancement failed. Only the materials were lost.",
+    "autoLocked": "Only a cleared dungeon can run automatically.",
+    "gold": "Gold {{gold}}",
+    "xp": "Experience {{xp}}",
+    "floors": "Floors cleared {{count}}",
+    "dealt": "Dealt {{amount}}",
+    "taken": "Taken {{amount}}",
+    "healed": "Healed {{amount}}"
+  },
+  "defeat": {
+    "noHealer": "There was no healer, so the party could not survive the damage.",
+    "noTank": "Without a tank, the back row collapsed.",
+    "outmatched": "The fight ran out of time.",
+    "retreated": "The party retreated before the dungeon was cleared.",
+    "wiped": "The party was wiped out."
+  },
+  "dungeon": {
+    "hill_cave": {
+      "name": "Cave behind the village",
+      "hint": "Raw stats are enough."
+    },
+    "abandoned_mine": {
+      "name": "Abandoned mine",
+      "hint": "A tank and a healer are required."
+    },
+    "moss_path": {
+      "name": "Moss path",
+      "hint": "A shallow path that yields stone."
+    },
+    "deep_shaft": {
+      "name": "Deep shaft",
+      "hint": "More stone than the mine."
+    },
+    "barrow": {
+      "name": "Undead barrow",
+      "hint": "Physical blows glance off. A cleric or a flame or silver weapon helps."
+    },
+    "sunken_crypt": {
+      "name": "Sunken crypt",
+      "hint": "Harder undead than the barrow."
+    },
+    "cleared": "Cleared"
+  },
+  "policy": {
+    "safe": "Leave the injured home",
+    "material": "Chase a material",
+    "fixed": "Keep this party"
+  },
+  "material": {
+    "wood": "Wood",
+    "stone": "Stone",
+    "iron": "Iron",
+    "bone": "Bone"
+  },
+  "class": {
+    "warrior": "Warrior",
+    "rogue": "Rogue",
+    "archer": "Archer",
+    "mage": "Mage",
+    "cleric": "Cleric",
+    "bard": "Bard",
+    "dancer": "Dancer"
+  },
+  "gender": {
+    "male": "Male",
+    "female": "Female"
+  },
+  "stat": {
+    "str": "STR",
+    "agi": "AGI",
+    "vit": "VIT",
+    "int": "INT",
+    "wil": "WIL",
+    "wis": "WIS"
+  },
+  "row": {
+    "front": "Front",
+    "back": "Back"
+  },
+  "season": {
+    "spring": "Spring",
+    "summer": "Summer",
+    "autumn": "Autumn",
+    "winter": "Winter"
+  },
+  "absence": {
+    "title": "While you were away",
+    "hours": "{{hours}} hours passed.",
+    "capped": "Only the latest 12 hours were counted.",
+    "season": "It is now {{season}}, year {{year}}.",
+    "gold": "Gold gained {{gold}}",
+    "quiet": "No construction finished, and no new visitors arrived.",
+    "wages": "Wages paid {{gold}}.",
+    "completed": "Finished: {{names}}",
+    "visitors": "New visitors: {{names}}",
+    "crafted": "Finished crafting: {{names}}",
+    "auto": "Automatic runs {{count}}, gold {{gold}}",
+    "dismiss": "Continue"
+  },
+  "target": {
+    "lowestHp": "Lowest HP",
+    "backRow": "Back row",
+    "boss": "Boss"
+  },
+  "trait": {
+    "tough": "Tough",
+    "coward": "Coward",
+    "nocturnal": "Nocturnal",
+    "treasure": "Treasure hunter",
+    "ironWill": "Iron will",
+    "frail": "Frail"
+  },
+  "condition": {
+    "healthy": "Healthy",
+    "fatigued": "Fatigued",
+    "injured": "Injured",
+    "critical": "Critical",
+    "dead": "Dead"
+  },
+  "potential": {
+    "low": "Low potential",
+    "mid": "Average potential",
+    "high": "High potential"
+  },
+  "hero": {
+    "age": "Age {{age}}",
+    "level": "Level {{level}}",
+    "range": "{{min}}–{{max}}",
+    "points": "Skill points {{count}}",
+    "learned": "Learned",
+    "seenDeath": "Seen death",
+    "treating": "In care {{time}}",
+    "reviving": "Returning {{time}}",
+    "noGear": "No gear",
+    "clears": "Clears {{count}}"
+  },
+  "skill": {
+    "warrior": { "strike": "Strike", "taunt": "Taunt", "guard": "Guard", "slam": "Slam" },
+    "rogue": { "stab": "Stab", "bleed": "Bleed", "poison": "Poison", "shadow": "Shadow" },
+    "archer": { "shot": "Shot", "aim": "Aim", "mark": "Mark", "volley": "Volley" },
+    "mage": { "bolt": "Bolt", "burst": "Burst", "ward": "Ward", "arc": "Arc" },
+    "cleric": { "smite": "Smite", "heal": "Heal", "bless": "Bless", "purify": "Purify" },
+    "bard": { "note": "Note", "anthem": "Anthem", "hymn": "Hymn", "discord": "Discord" },
+    "dancer": { "step": "Step", "veil": "Veil", "flourish": "Flourish", "encore": "Encore" }
+  },
+  "gear": {
+    "warrior": { "weapon": "Sword" },
+    "rogue": { "weapon": "Dagger" },
+    "archer": { "weapon": "Bow" },
+    "mage": { "weapon": "Staff" },
+    "cleric": { "weapon": "Mace" },
+    "bard": { "weapon": "Lute" },
+    "dancer": { "weapon": "Ribbon", "armor": "Cloth" }
+  },
+  "grade": { "common": "Common", "fine": "Fine", "rare": "Rare" },
+  "element": { "flame": "Flame", "silver": "Silver" },
+  "option": { "power": "Power", "guard": "Guard" },
+  "item": {
+    "iron": { "blade": "Iron blade", "mail": "Iron mail" },
+    "fine": { "blade": "Fine blade", "mail": "Fine mail" },
+    "flame": { "blade": "Flame blade" },
+    "silver": { "edge": "Silver edge" }
+  },
+  "smith": {
+    "level": "Smithy level {{level}}",
+    "idle": "The bench is free.",
+    "working": "Making {{name}} · {{time}}",
+    "stats": "Attack {{attack}} · Defense {{defense}}",
+    "locked": "Opens at smithy level {{level}}."
+  },
+  "unit": {
+    "indexed": "{{name}} {{index}}",
+    "hp": "HP {{hp}}/{{maxHp}}"
+  },
+  "enemy": {
+    "wolf": "Wolf",
+    "bat": "Bat",
+    "boar": "Boar",
+    "slime": "Slime",
+    "miner": "Miner",
+    "spider": "Spider",
+    "brigand": "Brigand",
+    "toad": "Toad",
+    "cave_boss": "Cave chief",
+    "mine_boss": "Mine tyrant",
+    "skeleton": "Skeleton",
+    "zombie": "Zombie",
+    "wraith": "Wraith",
+    "ghoul": "Ghoul",
+    "barrow_lord": "Barrow lord",
+    "crypt_lord": "Crypt lord"
+  },
+  "log": {
+    "floor": "Floor {{floor}}",
+    "floorClear": "Floor {{floor}} is clear.",
+    "attack": "{{actor}} hits {{target}} for {{amount}}.",
+    "heal": "{{actor}} heals {{target}} for {{amount}}.",
+    "taunt": "{{actor}} taunts the enemy.",
+    "buff": "{{actor}} raises the party's attack.",
+    "debuff": "{{actor}} weakens the enemy.",
+    "dot": "{{actor}} suffers {{amount}} poison damage.",
+    "down": "{{actor}} falls.",
+    "retreat": "The party retreats at {{hp}}% health.",
+    "victory": "The party clears the dungeon.",
+    "defeat": "The party is wiped out."
+  }
+}

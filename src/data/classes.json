@@ -1,0 +1,144 @@
+{
+  "classes": [
+    {
+      "id": "warrior",
+      "role": "tank",
+      "femaleOnly": false,
+      "reach": "melee",
+      "aoe": false,
+      "hpBase": 36,
+      "hpPerVit": 7,
+      "attackStat": "str",
+      "attackScale": 1.15,
+      "defenseScale": 0.5,
+      "healScale": 0,
+      "skills": [
+        { "id": "warrior.strike", "kind": "attack", "power": 1 },
+        { "id": "warrior.taunt", "kind": "taunt", "power": 1 },
+        { "id": "warrior.guard", "kind": "buff", "power": 1 },
+        { "id": "warrior.slam", "kind": "attack", "power": 1.05 }
+      ],
+      "potentialBias": { "str": 14, "agi": 8, "vit": 14, "int": 4, "wil": 7, "wis": 4 }
+    },
+    {
+      "id": "rogue",
+      "role": "dps",
+      "femaleOnly": false,
+      "reach": "melee",
+      "aoe": false,
+      "hpBase": 22,
+      "hpPerVit": 4,
+      "attackStat": "agi",
+      "attackScale": 1.35,
+      "defenseScale": 0.22,
+      "healScale": 0,
+      "skills": [
+        { "id": "rogue.stab", "kind": "attack", "power": 1 },
+        { "id": "rogue.bleed", "kind": "attack", "power": 1.1 },
+        { "id": "rogue.poison", "kind": "debuff", "power": 1 },
+        { "id": "rogue.shadow", "kind": "buff", "power": 1 }
+      ],
+      "potentialBias": { "str": 7, "agi": 15, "vit": 8, "int": 5, "wil": 6, "wis": 5 }
+    },
+    {
+      "id": "archer",
+      "role": "dps",
+      "femaleOnly": false,
+      "reach": "ranged",
+      "aoe": false,
+      "hpBase": 24,
+      "hpPerVit": 4,
+      "attackStat": "agi",
+      "attackScale": 1.25,
+      "defenseScale": 0.24,
+      "healScale": 0,
+      "skills": [
+        { "id": "archer.shot", "kind": "attack", "power": 1 },
+        { "id": "archer.aim", "kind": "attack", "power": 1.15 },
+        { "id": "archer.mark", "kind": "debuff", "power": 1 },
+        { "id": "archer.volley", "kind": "attack", "power": 0.9 }
+      ],
+      "potentialBias": { "str": 6, "agi": 14, "vit": 8, "int": 6, "wil": 7, "wis": 6 }
+    },
+    {
+      "id": "mage",
+      "role": "dps",
+      "femaleOnly": false,
+      "reach": "ranged",
+      "aoe": true,
+      "hpBase": 20,
+      "hpPerVit": 3,
+      "attackStat": "int",
+      "attackScale": 0.85,
+      "defenseScale": 0.16,
+      "healScale": 0,
+      "skills": [
+        { "id": "mage.bolt", "kind": "attack", "power": 1 },
+        { "id": "mage.burst", "kind": "attack", "power": 0.9 },
+        { "id": "mage.ward", "kind": "buff", "power": 1 },
+        { "id": "mage.arc", "kind": "attack", "power": 1.05 }
+      ],
+      "potentialBias": { "str": 4, "agi": 8, "vit": 6, "int": 15, "wil": 7, "wis": 8 }
+    },
+    {
+      "id": "cleric",
+      "role": "healer",
+      "femaleOnly": false,
+      "reach": "ranged",
+      "aoe": false,
+      "hpBase": 26,
+      "hpPerVit": 4.5,
+      "attackStat": "wil",
+      "attackScale": 0.45,
+      "defenseScale": 0.3,
+      "healScale": 3.8,
+      "skills": [
+        { "id": "cleric.smite", "kind": "attack", "power": 1 },
+        { "id": "cleric.heal", "kind": "heal", "power": 1 },
+        { "id": "cleric.bless", "kind": "buff", "power": 1 },
+        { "id": "cleric.purify", "kind": "heal", "power": 1.1 }
+      ],
+      "potentialBias": { "str": 5, "agi": 6, "vit": 10, "int": 7, "wil": 11, "wis": 15 }
+    },
+    {
+      "id": "bard",
+      "role": "support",
+      "femaleOnly": false,
+      "reach": "ranged",
+      "aoe": false,
+      "hpBase": 24,
+      "hpPerVit": 4,
+      "attackStat": "wil",
+      "attackScale": 0.7,
+      "defenseScale": 0.26,
+      "healScale": 0,
+      "skills": [
+        { "id": "bard.note", "kind": "attack", "power": 1 },
+        { "id": "bard.anthem", "kind": "buff", "power": 1 },
+        { "id": "bard.hymn", "kind": "heal", "power": 0.6 },
+        { "id": "bard.discord", "kind": "debuff", "power": 1 }
+      ],
+      "potentialBias": { "str": 5, "agi": 9, "vit": 8, "int": 8, "wil": 14, "wis": 8 }
+    },
+    {
+      "id": "dancer",
+      "role": "support",
+      "femaleOnly": true,
+      "reach": "melee",
+      "aoe": false,
+      "hpBase": 22,
+      "hpPerVit": 3.5,
+      "attackStat": "agi",
+      "attackScale": 0.85,
+      "defenseScale": 0.22,
+      "healScale": 0,
+      "skills": [
+        { "id": "dancer.step", "kind": "attack", "power": 1 },
+        { "id": "dancer.veil", "kind": "debuff", "power": 1 },
+        { "id": "dancer.flourish", "kind": "attack", "power": 1.05 },
+        { "id": "dancer.encore", "kind": "debuff", "power": 1 }
+      ],
+      "potentialBias": { "str": 5, "agi": 14, "vit": 7, "int": 6, "wil": 12, "wis": 7 }
+    }
+  ]
+}

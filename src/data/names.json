@@ -1,0 +1,28 @@
+{
+  "male": [
+    "Aldon", "Alaric", "Aldous", "Ansel", "Arlen", "Armand", "Baldric", "Barret", "Bastian", "Benedict",
+    "Bertram", "Bram", "Brand", "Brennan", "Brodric", "Caius", "Calder", "Callum", "Casper", "Cedric",
+    "Conrad", "Corin", "Crispin", "Darian", "Derrick", "Doran", "Duncan", "Eamon", "Edgar", "Edmund",
+    "Edric", "Eldric", "Elric", "Emory", "Ewan", "Farlan", "Fenwick", "Florian", "Galien", "Garrick",
+    "Gareth", "Gerard", "Godric", "Goran", "Hadrian", "Halden", "Harlan", "Henrik", "Holt", "Ivar",
+    "Jareth", "Joren", "Julian", "Kael", "Kendric", "Lars", "Leif", "Leopold", "Lucan", "Magnus",
+    "Marek", "Marcus", "Marlow", "Nils", "Norbert", "Odric", "Olaf", "Orin", "Osric", "Pascal",
+    "Perrin", "Quentin", "Ragnar", "Roderic", "Rowan", "Rufus", "Soren", "Stefan", "Taran", "Theron",
+    "Torin", "Tristan", "Ulric", "Valen", "Vance", "Venn", "Walter", "Wystan", "Yoren", "Adrian",
+    "Albert", "Alistair", "Baldwin", "Cassian", "Cyril", "Dominic", "Emeric", "Frederick", "Gregory", "Hugh",
+    "Laurence", "Miles", "Oliver", "Patrick", "Roland", "Silas", "Victor", "Cedmund", "Harwick", "Leoric"
+  ],
+  "female": [
+    "Adele", "Agnes", "Alina", "Alma", "Amalia", "Anwen", "Aria", "Astrid", "Beatrix", "Blythe",
+    "Brenna", "Brigid", "Brynn", "Cassia", "Cecilia", "Celeste", "Cora", "Cordelia", "Dahlia", "Dara",
+    "Edith", "Eira", "Elena", "Elspeth", "Elsa", "Emilia", "Esme", "Esther", "Freya", "Gilda",
+    "Gwen", "Helena", "Hilda", "Ida", "Ilse", "Ingrid", "Iris", "Isolde", "Jessa", "Johanna",
+    "Kira", "Lena", "Liora", "Lucia", "Lydia", "Mabel", "Maeve", "Margot", "Maren", "Mira",
+    "Nadine", "Nessa", "Nora", "Olga", "Ophelia", "Petra", "Quilla", "Rhea", "Rosa", "Sable",
+    "Selene", "Sigrid", "Sylvia", "Tessa", "Thea", "Una", "Vera", "Willa", "Ysolde", "Adela",
+    "Agatha", "Aileen", "Bernice", "Clarice", "Diana", "Eleanor", "Felicity", "Greta", "Harriet", "Irene",
+    "Juliet", "Katrina", "Lorna", "Matilda", "Naomi", "Prudence", "Rosalind", "Sybil", "Tabitha", "Ursula",
+    "Vivian", "Winifred", "Yvette", "Zelda", "Annora", "Briony", "Catriona", "Delphine", "Evadne", "Fenella",
+    "Gwyneth", "Honoria", "Ismay", "Jessamine", "Linnea", "Mirabel", "Nerissa", "Ottilie", "Philippa", "Seraphina"
+  ]
+}

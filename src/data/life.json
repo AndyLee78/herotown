@@ -1,0 +1,9 @@
+{
+  "skillPointsPerLevel": 1,
+  "reviveCost": 80,
+  "reviveMs": 7200000,
+  "treatMs": 3600000,
+  "lossAlone": 0.25,
+  "lossWithAllies": 0.1,
+  "dangerousTier": 2
+}

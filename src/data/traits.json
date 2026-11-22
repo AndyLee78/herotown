@@ -1,0 +1,10 @@
+{
+  "traits": [
+    { "id": "tough" },
+    { "id": "coward" },
+    { "id": "nocturnal" },
+    { "id": "treasure" },
+    { "id": "ironWill" },
+    { "id": "frail" }
+  ]
+}

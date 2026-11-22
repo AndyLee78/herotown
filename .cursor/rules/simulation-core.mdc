@@ -1,0 +1,13 @@
+---
+description: Keep the HeroTown simulation core pure
+alwaysApply: true
+---
+
+# HeroTown simulation core
+
+- `src/core` is pure TypeScript. It must not import React, the DOM, `src/ui`, or `src/locales`.
+- Balance numbers live in `src/data` JSON. Core code reads those tables and does not hard-code tuning values.
+- Every random roll goes through `src/core/rng.ts`. Do not call `Math.random`.
+- Player-facing copy uses translation keys in `src/locales/en.json` and `src/locales/ko.json`. Both files keep the same key tree.
+- Game changes go through `reduce` in `src/core/game.ts`. Combat stays behind `runDungeon` and is not rewritten for village, time, or save work.
+- The clock, offline catch-up, and IndexedDB live outside combat. Marriage, alchemy, and cloud saves stay out of scope until their stage.

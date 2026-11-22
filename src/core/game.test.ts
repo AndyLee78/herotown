@@ -1,0 +1,352 @@
+import { describe, expect, it } from 'vitest'
+import { lifeRules, smithRules, timeRules, villageRules } from './data'
+import { createHeroUnit } from './combat'
+import { DEFAULT_TACTICS, runDungeon } from './dungeon'
+import { applyCasualty, exportSave, freshState, importSave, migrate, reduce, townLevel, visitorStay } from './game'
+import { forgeGear, recipeById } from './gear'
+import { createHero, generateHero } from './hero'
+import { createRng } from './rng'
+
+const now = 1_700_000_000_000
+
+describe('game state', () => {
+  it('hires only through the action and keeps the same combat seed inputs', () => {
+    const start = freshState(4, now)
+    const hired = reduce(start, { type: 'hire', id: start.visitors[0]?.id ?? '' })
+    expect(hired.roster).toHaveLength(1)
+    expect(hired.gold).toBe(start.gold - 35)
+    expect(hired.visitors).toHaveLength(4)
+    expect(reduce(hired, { type: 'hire', id: 'missing' }).notice).toBe('missing')
+  })
+
+  it('migrates a version 1 save without dropping the roster', () => {
+    const start = freshState(4, now)
+    const hired = reduce(start, { type: 'hire', id: start.visitors[0]?.id ?? '' })
+    const legacy = { ...hired, version: 1, calendar: undefined, lastTickAt: undefined, absence: undefined, notice: undefined }
+    const migrated = migrate(legacy, now + 1000)
+    expect(migrated.version).toBe(2)
+    expect(migrated.roster.map((hero) => hero.id)).toEqual(hired.roster.map((hero) => hero.id))
+    expect(migrated.calendar.season).toBe('spring')
+    expect(migrated.absence).toBeNull()
+  })
+
+  it('caps offline time at 12 hours and reports it', () => {
+    const start = freshState(1, now)
+    const later = reduce(start, { type: 'catchUp', now: now + timeRules.maxOfflineMs + timeRules.seasonMs })
+    expect(later.absence?.capped).toBe(true)
+    expect(later.absence?.elapsedMs).toBe(timeRules.maxOfflineMs)
+    expect(later.calendar.season).toBe('spring')
+    const next = reduce(later, { type: 'catchUp', now: later.lastTickAt + timeRules.maxOfflineMs })
+    expect(next.calendar.season).toBe('summer')
+    expect(next.absence?.seasonsPassed).toBe(1)
+  })
+
+  it('stays quiet during a short tick', () => {
+    const start = freshState(1, now)
+    const ticked = reduce(start, { type: 'catchUp', now: now + timeRules.tickMs })
+    expect(ticked.absence).toBeNull()
+    expect(ticked.lastTickAt).toBe(now + timeRules.tickMs)
+  })
+
+  it('round-trips a save file and rejects a bad checksum', () => {
+    const start = reduce(freshState(3, now), { type: 'debugGold' })
+    const file = exportSave(start)
+    expect(importSave(file, now + 5).gold).toBe(start.gold)
+    const broken = file.replace(/"checksum":"[0-9a-f]+"/, '"checksum":"00000000"')
+    expect(() => importSave(broken, now)).toThrow('checksum')
+  })
+
+  it('builds one house at a time and finishes it when the clock catches up', () => {
+    const start = freshState(1, now)
+    const started = reduce(start, { type: 'build', id: 'house', now })
+    expect(started.construction?.id).toBe('house')
+    expect(started.materials.wood).toBe(start.materials.wood - 20)
+    expect(reduce(started, { type: 'build', id: 'inn', now }).notice).toBe('building')
+    const finishAt = started.construction?.finishAt ?? now
+    const done = reduce(started, { type: 'catchUp', now: finishAt })
+    expect(done.buildings.house).toBe(2)
+    expect(done.construction).toBeNull()
+    expect(done.absence?.completed).toEqual(['house'])
+    expect(done.fame).toBe(4)
+    const again = reduce(freshState(1, now), { type: 'build', id: 'house', now })
+    const instant = reduce(again, { type: 'finishBuild', now })
+    expect(instant.buildings.house).toBe(2)
+    expect(instant.construction).toBeNull()
+  })
+
+  it('keeps guild locked until the town level rises, then improves visitors', () => {
+    const start = freshState(1, now)
+    expect(reduce(start, { type: 'build', id: 'guild', now }).notice).toBe('locked')
+    expect(townLevel(12).level).toBe(2)
+    expect(townLevel(12).visitorPotential).toBe(10)
+    const plain = generateHero(createRng(1), 'a', 0)
+    const better = generateHero(createRng(1), 'b', 10)
+    expect(better.potential - plain.potential).toBe(10)
+  })
+
+  it('stops hiring when the house has no free beds and warns when wages cannot be paid', () => {
+    const start = freshState(2, now)
+    const cramped = { ...start, buildings: { ...start.buildings, house: 0 } }
+    expect(reduce(cramped, { type: 'hire', id: cramped.visitors[0]?.id ?? '' }).notice).toBe('beds')
+    const hired = reduce(start, { type: 'hire', id: start.visitors[0]?.id ?? '' })
+    const broke = {
+      ...hired,
+      gold: 0,
+      calendar: { ...hired.calendar, intoSeasonMs: timeRules.seasonMs - 1000 },
+    }
+    const season = reduce(broke, { type: 'catchUp', now: now + timeRules.reportAfterMs })
+    expect(season.warning).toBe('wages')
+    expect(season.calendar.season).toBe('summer')
+    expect(season.absence?.wagesPaid).toBe(0)
+  })
+
+  it('replaces a visitor when their stay ends', () => {
+    const start = freshState(1, now)
+    const ids = new Set(start.visitors.map((hero) => hero.id))
+    const earliest = Math.min(...start.visitors.map((hero) => hero.arrivedAt ?? now))
+    const turned = reduce(start, { type: 'catchUp', now: earliest + visitorStay(1) })
+    expect(turned.visitors).toHaveLength(start.visitors.length)
+    expect(turned.visitors.some((hero) => !ids.has(hero.id))).toBe(true)
+    expect(turned.visitors.some((hero) => ids.has(hero.id))).toBe(true)
+  })
+
+  it('sends a visitor as soon as the inn has a free bed and the old timer is far away', () => {
+    const start = freshState(1, now)
+    const empty = { ...start, visitors: [], nextVisitorAt: now + timeRules.seasonMs }
+    const arrived = reduce(empty, { type: 'catchUp', now: now + 1000 })
+    expect(arrived.visitors).toHaveLength(1)
+    expect(arrived.absence).toBeNull()
+  })
+
+  it('lets the house clear fatigue and leaves injuries for the temple', () => {
+    const start = freshState(1, now)
+    const hired = reduce(start, { type: 'hire', id: start.visitors[0]?.id ?? '' })
+    const id = hired.roster[0]?.id ?? ''
+    const injured = {
+      ...hired,
+      roster: hired.roster.map((hero) => ({ ...hero, condition: 'injured' as const, fatigue: 10 })),
+    }
+    const rested = reduce(injured, { type: 'rest', times: 1 })
+    expect(rested.roster[0]?.condition).toBe('injured')
+    expect(rested.roster[0]?.fatigue).toBe(0)
+    expect(reduce(rested, { type: 'treat', id, now }).notice).toBe('noTemple')
+    const temple = { ...rested, buildings: { ...rested.buildings, temple: 1 } }
+    const treating = reduce(temple, { type: 'treat', id, now })
+    const healed = reduce(treating, { type: 'catchUp', now: now + lifeRules.treatMs })
+    expect(healed.roster[0]?.condition).toBe('fatigued')
+  })
+
+  it('warns before a hero who has seen death enters the mine', () => {
+    const start = freshState(1, now)
+    const hired = reduce(start, { type: 'hire', id: start.visitors[0]?.id ?? '' })
+    const id = hired.roster[0]?.id ?? ''
+    const marked = {
+      ...hired,
+      dungeonId: 'abandoned_mine',
+      roster: hired.roster.map((hero) => ({ ...hero, deaths: 1 })),
+      party: [{ id, row: 'front' as const }],
+    }
+    const warned = reduce(marked, { type: 'depart' })
+    expect(warned.notice).toBe('seenDeath')
+    expect(warned.report).toBeNull()
+  })
+
+  it('keeps a first death on the roster and buries the second', () => {
+    const start = freshState(1, now)
+    const hired = reduce(start, { type: 'hire', id: start.visitors[0]?.id ?? '' })
+    const hero = hired.roster[0]
+    if (!hero) {
+      throw new Error('missing hero')
+    }
+    const report = {
+      victory: false,
+      defeatReason: 'wiped' as const,
+      ticks: 1,
+      floorsCleared: 0,
+      gold: 0,
+      xp: 0,
+      units: [],
+      log: [],
+      conditions: [{ id: hero.id, condition: 'dead' as const, fatigue: 55 }],
+    }
+    const first = applyCasualty(hero, report, 'hill_cave', false, createRng(1))
+    expect(first.hero?.deaths).toBe(1)
+    expect(first.hero?.condition).toBe('dead')
+    expect(first.grave).toBeNull()
+    const second = applyCasualty(first.hero ?? hero, report, 'hill_cave', false, createRng(2))
+    expect(second.hero).toBeNull()
+    expect(second.grave?.name).toBe(hero.name)
+    const dead = {
+      ...hired,
+      gold: hired.gold + lifeRules.reviveCost,
+      buildings: { ...hired.buildings, temple: 1 },
+      roster: first.hero ? [first.hero] : [],
+    }
+    const reviving = reduce(dead, { type: 'revive', id: hero.id, now })
+    const back = reduce(reviving, { type: 'catchUp', now: now + lifeRules.reviveMs })
+    expect(back.roster[0]?.condition).toBe('injured')
+    expect(back.roster[0]?.deaths).toBe(1)
+  })
+
+  it('forges a weapon from iron, then lets a hero wear it', () => {
+    const start = freshState(1, now)
+    expect(reduce(start, { type: 'craft', recipeId: 'iron.blade', now }).notice).toBe('noSmith')
+    const ready = {
+      ...start,
+      buildings: { ...start.buildings, smith: 1 },
+      materials: { ...start.materials, iron: 20, wood: 20 },
+    }
+    const job = reduce(ready, { type: 'craft', recipeId: 'iron.blade', now })
+    expect(job.smith?.recipeId).toBe('iron.blade')
+    expect(job.materials.iron).toBe(16)
+    expect(reduce(job, { type: 'craft', recipeId: 'iron.mail', now }).notice).toBe('smithBusy')
+    const done = reduce(job, { type: 'catchUp', now: now + smithRules.recipes[1].ms })
+    expect(done.stash).toHaveLength(1)
+    expect(done.smith).toBeNull()
+    const hired = reduce(done, { type: 'hire', id: done.visitors[0]?.id ?? '', now })
+    const heroId = hired.roster[0]?.id ?? ''
+    const gearId = hired.stash[0]?.id ?? ''
+    const worn = reduce(hired, { type: 'equip', heroId, gearId })
+    expect(worn.roster[0]?.gear.some((item) => item.recipeId === 'iron.blade')).toBe(true)
+    expect(worn.stash.some((item) => item.recipeId === 'starter')).toBe(true)
+  })
+
+  it('gives a rare weapon one option and keeps the starter weapon from changing attack', () => {
+    const start = freshState(3, now)
+    const ready = {
+      ...start,
+      buildings: { ...start.buildings, smith: 3 },
+      gold: 500,
+      materials: { wood: 40, stone: 40, iron: 40, bone: 0 },
+    }
+    const job = reduce(ready, { type: 'craft', recipeId: 'flame.blade', now })
+    const done = reduce(job, { type: 'catchUp', now: now + 7_200_000 })
+    expect(done.stash[0]?.element).toBe('flame')
+    expect(done.stash[0]?.option === 'power' || done.stash[0]?.option === 'guard').toBe(true)
+    expect(done.absence?.crafted).toEqual(['flame.blade'])
+    const naked = createHero({
+      id: 'a',
+      name: 'A',
+      gender: 'female',
+      classId: 'warrior',
+      age: 28,
+      potentials: { str: 15, agi: 10, vit: 15, int: 4, wil: 8, wis: 4 },
+      gear: [],
+    })
+    const starter = createHero({ ...naked, id: 'b', gear: undefined })
+    expect(createHeroUnit({ hero: starter, row: 'front' }, 0).attack).toBe(createHeroUnit({ hero: naked, row: 'front' }, 0).attack)
+  })
+
+  it('turns a lost mine into a clear once the party wears forged iron', () => {
+    const stats = { str: 10, agi: 10, vit: 10, int: 4, wil: 6, wis: 14 }
+    const member = (id: string, classId: 'warrior' | 'rogue' | 'archer' | 'bard' | 'cleric', row: 'front' | 'back') => ({
+      row,
+      hero: createHero({
+        id,
+        name: id,
+        gender: classId === 'bard' ? 'female' : 'male',
+        classId,
+        age: 22,
+        potentials: stats,
+        gear: [],
+      }),
+    })
+    const party = [
+      member('w', 'warrior', 'front'),
+      member('r', 'rogue', 'front'),
+      member('a', 'archer', 'back'),
+      member('b', 'bard', 'back'),
+      member('c', 'cleric', 'back'),
+    ]
+    const blade = recipeById('iron.blade')
+    const mail = recipeById('iron.mail')
+    if (!blade || !mail) {
+      throw new Error('missing recipe')
+    }
+    const armed = party.map((slot) => ({
+      ...slot,
+      hero: {
+        ...slot.hero,
+        gear: [forgeGear(blade, `${slot.hero.id}-blade`), forgeGear(mail, `${slot.hero.id}-mail`)],
+      },
+    }))
+    const bare = runDungeon(party, 'abandoned_mine', DEFAULT_TACTICS, 11)
+    const geared = runDungeon(armed, 'abandoned_mine', DEFAULT_TACTICS, 11)
+    expect(bare.ok && bare.report.victory).toBe(false)
+    expect(geared.ok && geared.report.victory).toBe(true)
+  })
+
+  it('pays a smaller repeat reward and runs a cleared dungeon while time passes', () => {
+    const start = freshState(8, now)
+    const hero = createHero({
+      id: 'tank',
+      name: 'Tank',
+      gender: 'male',
+      classId: 'warrior',
+      age: 28,
+      potentials: { str: 18, agi: 12, vit: 18, int: 6, wil: 8, wis: 6 },
+      gear: [],
+    })
+    const cleric = createHero({
+      id: 'heal',
+      name: 'Heal',
+      gender: 'female',
+      classId: 'cleric',
+      age: 28,
+      potentials: { str: 6, agi: 8, vit: 12, int: 8, wil: 12, wis: 18 },
+      gear: [],
+    })
+    const ready = {
+      ...start,
+      cleared: ['hill_cave'],
+      fame: 12,
+      materials: { ...start.materials, wood: 0 },
+      roster: [hero, cleric],
+      party: [
+        { id: hero.id, row: 'front' as const },
+        { id: cleric.id, row: 'back' as const },
+      ],
+    }
+    const again = reduce(ready, { type: 'depart' })
+    expect(again.report?.victory).toBe(true)
+    expect(again.materials.wood).toBeLessThan(4)
+    expect(again.fame).toBe(12)
+    const watching = reduce(again, { type: 'autoDungeon', id: 'hill_cave' })
+    const running = reduce({ ...watching, auto: { ...watching.auto, enabled: true } }, { type: 'catchUp', now: now + villageRules.auto.runMs })
+    expect(running.gold).toBeGreaterThan(watching.gold)
+    expect(running.materials.wood).toBeGreaterThan(watching.materials.wood)
+    expect(running.roster.every((entry) => entry.condition !== 'dead')).toBe(true)
+  })
+
+  it('clears the barrow with a silver weapon after physical blows fail', () => {
+    const blade = recipeById('silver.edge')
+    if (!blade) {
+      throw new Error('missing silver edge')
+    }
+    const make = (silver: boolean) => {
+      const specs = [
+        ['w', 'warrior', 'front', { str: 16, agi: 10, vit: 16, int: 4, wil: 8, wis: 4 }],
+        ['r', 'rogue', 'front', { str: 8, agi: 16, vit: 8, int: 5, wil: 6, wis: 5 }],
+        ['a', 'archer', 'back', { str: 7, agi: 15, vit: 8, int: 6, wil: 7, wis: 6 }],
+        ['m', 'mage', 'back', { str: 4, agi: 9, vit: 7, int: 16, wil: 8, wis: 9 }],
+        ['b', 'bard', 'back', { str: 5, agi: 10, vit: 9, int: 8, wil: 14, wis: 8 }],
+      ] as const
+      return specs.map(([id, classId, row, potentials]) => ({
+        row,
+        hero: createHero({
+          id,
+          name: id,
+          gender: 'male',
+          classId,
+          age: 28,
+          potentials,
+          gear: silver ? [forgeGear(blade, `${id}-silver`)] : [],
+        }),
+      }))
+    }
+    const bare = runDungeon(make(false), 'barrow', DEFAULT_TACTICS, 4)
+    const armed = runDungeon(make(true), 'barrow', DEFAULT_TACTICS, 4)
+    expect(bare.ok && bare.report.victory).toBe(false)
+    expect(armed.ok && armed.report.victory).toBe(true)
+  })
+})
