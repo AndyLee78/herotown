@@ -9,6 +9,7 @@ type Props = {
   partyIds: string[]
   selectedId: string | null
   onSelect: (id: string) => void
+  onPickBuilding: (id: BuildingId) => void
   villageLabel: string
   buildings: Record<BuildingId, number>
   constructing: BuildingId | null
@@ -16,18 +17,24 @@ type Props = {
   active: boolean
 }
 
-export function VillageView({ roster, visitors, partyIds, selectedId, onSelect, villageLabel, buildings, constructing, buildingLabels, active }: Props) {
+export function VillageView({ roster, visitors, partyIds, selectedId, onSelect, onPickBuilding, villageLabel, buildings, constructing, buildingLabels, active }: Props) {
   const canvasRef = useRef<HTMLCanvasElement>(null)
   const sceneRef = useRef<VillageScene | null>(null)
   const onSelectRef = useRef(onSelect)
   onSelectRef.current = onSelect
+  const onPickBuildingRef = useRef(onPickBuilding)
+  onPickBuildingRef.current = onPickBuilding
 
   useEffect(() => {
     const canvas = canvasRef.current
     if (!canvas) {
       return
     }
-    const scene = new VillageScene(canvas, (id) => onSelectRef.current(id))
+    const scene = new VillageScene(
+      canvas,
+      (id) => onSelectRef.current(id),
+      (id) => onPickBuildingRef.current(id),
+    )
     sceneRef.current = scene
     return () => {
       scene.dispose()
@@ -49,5 +56,5 @@ export function VillageView({ roster, visitors, partyIds, selectedId, onSelect, 
 export function HeroPortrait({ hero }: { hero: Pick<Hero, 'id' | 'classId' | 'gender' | 'age'> }) {
   const { id, classId, gender, age } = hero
   const src = useMemo(() => portraitUrl({ id, classId, gender, age }), [id, classId, gender, age])
-  return <img className="portrait" src={src} alt="" width={64} height={64} />
+  return <img className="portrait-img" src={src} alt="" width={64} height={64} />
 }

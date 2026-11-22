@@ -15,7 +15,8 @@
     "village": "마을",
     "save": "저장",
     "smith": "대장간",
-    "debug": "디버그"
+    "debug": "디버그",
+    "settings": "설정"
   },
   "action": {
     "hire": "고용 ({{cost}})",
@@ -305,31 +306,101 @@
     "warning": "경고"
   },
   "skill": {
-    "warrior": { "strike": "강타", "taunt": "도발", "guard": "수비", "slam": "내려치기" },
-    "rogue": { "stab": "찌르기", "bleed": "출혈", "poison": "독", "shadow": "그림자" },
-    "archer": { "shot": "사격", "aim": "조준", "mark": "표식", "volley": "난사" },
-    "mage": { "bolt": "마탄", "burst": "폭발", "ward": "결계", "arc": "전격" },
-    "cleric": { "smite": "징벌", "heal": "치유", "bless": "축복", "purify": "정화" },
-    "bard": { "note": "음표", "anthem": "응원가", "hymn": "찬가", "discord": "불협" },
-    "dancer": { "step": "스텝", "veil": "장막", "flourish": "피날레", "encore": "앵콜" }
+    "warrior": {
+      "strike": "강타",
+      "taunt": "도발",
+      "guard": "수비",
+      "slam": "내려치기"
+    },
+    "rogue": {
+      "stab": "찌르기",
+      "bleed": "출혈",
+      "poison": "독",
+      "shadow": "그림자"
+    },
+    "archer": {
+      "shot": "사격",
+      "aim": "조준",
+      "mark": "표식",
+      "volley": "난사"
+    },
+    "mage": {
+      "bolt": "마탄",
+      "burst": "폭발",
+      "ward": "결계",
+      "arc": "전격"
+    },
+    "cleric": {
+      "smite": "징벌",
+      "heal": "치유",
+      "bless": "축복",
+      "purify": "정화"
+    },
+    "bard": {
+      "note": "음표",
+      "anthem": "응원가",
+      "hymn": "찬가",
+      "discord": "불협"
+    },
+    "dancer": {
+      "step": "스텝",
+      "veil": "장막",
+      "flourish": "피날레",
+      "encore": "앵콜"
+    }
   },
   "gear": {
-    "warrior": { "weapon": "검" },
-    "rogue": { "weapon": "단검" },
-    "archer": { "weapon": "활" },
-    "mage": { "weapon": "지팡이" },
-    "cleric": { "weapon": "성봉" },
-    "bard": { "weapon": "류트" },
-    "dancer": { "weapon": "리본", "armor": "천옷" }
+    "warrior": {
+      "weapon": "검"
+    },
+    "rogue": {
+      "weapon": "단검"
+    },
+    "archer": {
+      "weapon": "활"
+    },
+    "mage": {
+      "weapon": "지팡이"
+    },
+    "cleric": {
+      "weapon": "성봉"
+    },
+    "bard": {
+      "weapon": "류트"
+    },
+    "dancer": {
+      "weapon": "리본",
+      "armor": "천옷"
+    }
   },
-  "grade": { "common": "일반", "fine": "고급", "rare": "희귀" },
-  "element": { "flame": "화염", "silver": "은" },
-  "option": { "power": "공격", "guard": "방어" },
+  "grade": {
+    "common": "일반",
+    "fine": "고급",
+    "rare": "희귀"
+  },
+  "element": {
+    "flame": "화염",
+    "silver": "은"
+  },
+  "option": {
+    "power": "공격",
+    "guard": "방어"
+  },
   "item": {
-    "iron": { "blade": "철검", "mail": "철갑" },
-    "fine": { "blade": "강철검", "mail": "강철갑" },
-    "flame": { "blade": "화염검" },
-    "silver": { "edge": "은날" }
+    "iron": {
+      "blade": "철검",
+      "mail": "철갑"
+    },
+    "fine": {
+      "blade": "강철검",
+      "mail": "강철갑"
+    },
+    "flame": {
+      "blade": "화염검"
+    },
+    "silver": {
+      "edge": "은날"
+    }
   },
   "smith": {
     "level": "대장간 레벨 {{level}}",
@@ -388,5 +459,24 @@
     "skipHour": "+1시간",
     "skipSeason": "+1계절",
     "resetOffset": "오프셋 초기화"
+  },
+  "ui": {
+    "level": "Lv {{level}}",
+    "hire": "고용",
+    "pickHero": "영웅을 고르면 자세히 볼 수 있다.",
+    "back": "목록",
+    "stats": "능력치",
+    "gear": "장비",
+    "unequip": "해제",
+    "equip": "장착",
+    "revive": "되살리기",
+    "formation": "대열",
+    "emptySlot": "빈 자리",
+    "bench": "대기 중인 영웅",
+    "allInParty": "모든 영웅이 편성되어 있다.",
+    "enhance": "강화",
+    "noReport": "아직 출정 기록이 없다.",
+    "cancel": "취소",
+    "wagesShort": "주급 부족"
   }
 }

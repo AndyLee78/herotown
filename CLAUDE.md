@@ -26,3 +26,10 @@ Current stage: stage 1 (MVP) per GDD section 12. Stage 2+ systems (aging curve, 
 - The clock, offline catch-up, and IndexedDB live outside combat.
 - Save format changes bump `SAVE_VERSION` and add a migration in `migrate`.
 - Add or update tests with each change; probability systems get seeded simulation tests.
+
+## UI
+
+- Game-style shell in `src/ui/App.tsx`: the 3D village fills the screen; `Hud` (town badge, resources, settings) on top, a dock of screens at the bottom, each screen opens in a framed `Window` (bottom sheet on phones). Tapping a building in 3D opens its screen (`BUILDING_SCREEN`).
+- Screens live in `src/ui/game/heroScreens.tsx` (inn, heroes, party) and `src/ui/game/villageScreens.tsx` (town, smith, result, settings, absence, depart confirm). Shared parts (`Window`, `Res`, `Chip`, `Bar`, `Portrait`, `CostList`) are in `src/ui/game/kit.tsx`; resource icons in `src/ui/game/icons.tsx`.
+- Notices from `reduce` show as toasts; `seenDeath`/`wornParty` show the depart confirm window. Dispatch through `apply` so this keeps working.
+- Style tokens are on `:root` in `src/ui/styles.css` (cream paper, wood frame, chunky buttons). Reuse `.btn` (`primary`, `gold`, `danger`, `ad`, `small`, `tiny`), `.card`, `.chip`, `.bar` rather than new one-off styles.

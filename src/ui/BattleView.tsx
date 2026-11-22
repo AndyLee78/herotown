@@ -61,14 +61,14 @@ export function BattleView({ report, describe }: { report: DungeonReport; descri
       <p className="battle-caption" aria-live="polite">
         {caption}
       </p>
-      <div className="toolbar">
-        <button type="button" onClick={toggle}>
+      <div className="row">
+        <button type="button" className="btn small primary" onClick={toggle}>
           {done ? t('battle.replay') : playing ? t('battle.pause') : t('battle.play')}
         </button>
-        <button type="button" onClick={() => setSpeed(SPEEDS[(SPEEDS.indexOf(speed) + 1) % SPEEDS.length] ?? 1)}>
+        <button type="button" className="btn small" onClick={() => setSpeed(SPEEDS[(SPEEDS.indexOf(speed) + 1) % SPEEDS.length] ?? 1)}>
           {t('battle.speed', { speed })}
         </button>
-        <button type="button" disabled={done} onClick={() => sceneRef.current?.skip()}>
+        <button type="button" className="btn small" disabled={done} onClick={() => sceneRef.current?.skip()}>
           {t('battle.skip')}
         </button>
       </div>

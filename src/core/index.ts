@@ -7,6 +7,7 @@ export { STAT_KEYS } from './types'
 export type {
   AbsenceReport,
   AdPlacement,
+  GameNotice,
   BuildingId,
   GameAction,
   GameState,

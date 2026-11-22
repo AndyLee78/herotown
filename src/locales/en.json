@@ -15,7 +15,8 @@
     "village": "Village",
     "save": "Save",
     "smith": "Smithy",
-    "debug": "Debug"
+    "debug": "Debug",
+    "settings": "Settings"
   },
   "action": {
     "hire": "Hire ({{cost}})",
@@ -305,31 +306,101 @@
     "warning": "Warning"
   },
   "skill": {
-    "warrior": { "strike": "Strike", "taunt": "Taunt", "guard": "Guard", "slam": "Slam" },
-    "rogue": { "stab": "Stab", "bleed": "Bleed", "poison": "Poison", "shadow": "Shadow" },
-    "archer": { "shot": "Shot", "aim": "Aim", "mark": "Mark", "volley": "Volley" },
-    "mage": { "bolt": "Bolt", "burst": "Burst", "ward": "Ward", "arc": "Arc" },
-    "cleric": { "smite": "Smite", "heal": "Heal", "bless": "Bless", "purify": "Purify" },
-    "bard": { "note": "Note", "anthem": "Anthem", "hymn": "Hymn", "discord": "Discord" },
-    "dancer": { "step": "Step", "veil": "Veil", "flourish": "Flourish", "encore": "Encore" }
+    "warrior": {
+      "strike": "Strike",
+      "taunt": "Taunt",
+      "guard": "Guard",
+      "slam": "Slam"
+    },
+    "rogue": {
+      "stab": "Stab",
+      "bleed": "Bleed",
+      "poison": "Poison",
+      "shadow": "Shadow"
+    },
+    "archer": {
+      "shot": "Shot",
+      "aim": "Aim",
+      "mark": "Mark",
+      "volley": "Volley"
+    },
+    "mage": {
+      "bolt": "Bolt",
+      "burst": "Burst",
+      "ward": "Ward",
+      "arc": "Arc"
+    },
+    "cleric": {
+      "smite": "Smite",
+      "heal": "Heal",
+      "bless": "Bless",
+      "purify": "Purify"
+    },
+    "bard": {
+      "note": "Note",
+      "anthem": "Anthem",
+      "hymn": "Hymn",
+      "discord": "Discord"
+    },
+    "dancer": {
+      "step": "Step",
+      "veil": "Veil",
+      "flourish": "Flourish",
+      "encore": "Encore"
+    }
   },
   "gear": {
-    "warrior": { "weapon": "Sword" },
-    "rogue": { "weapon": "Dagger" },
-    "archer": { "weapon": "Bow" },
-    "mage": { "weapon": "Staff" },
-    "cleric": { "weapon": "Mace" },
-    "bard": { "weapon": "Lute" },
-    "dancer": { "weapon": "Ribbon", "armor": "Cloth" }
+    "warrior": {
+      "weapon": "Sword"
+    },
+    "rogue": {
+      "weapon": "Dagger"
+    },
+    "archer": {
+      "weapon": "Bow"
+    },
+    "mage": {
+      "weapon": "Staff"
+    },
+    "cleric": {
+      "weapon": "Mace"
+    },
+    "bard": {
+      "weapon": "Lute"
+    },
+    "dancer": {
+      "weapon": "Ribbon",
+      "armor": "Cloth"
+    }
   },
-  "grade": { "common": "Common", "fine": "Fine", "rare": "Rare" },
-  "element": { "flame": "Flame", "silver": "Silver" },
-  "option": { "power": "Power", "guard": "Guard" },
+  "grade": {
+    "common": "Common",
+    "fine": "Fine",
+    "rare": "Rare"
+  },
+  "element": {
+    "flame": "Flame",
+    "silver": "Silver"
+  },
+  "option": {
+    "power": "Power",
+    "guard": "Guard"
+  },
   "item": {
-    "iron": { "blade": "Iron blade", "mail": "Iron mail" },
-    "fine": { "blade": "Fine blade", "mail": "Fine mail" },
-    "flame": { "blade": "Flame blade" },
-    "silver": { "edge": "Silver edge" }
+    "iron": {
+      "blade": "Iron blade",
+      "mail": "Iron mail"
+    },
+    "fine": {
+      "blade": "Fine blade",
+      "mail": "Fine mail"
+    },
+    "flame": {
+      "blade": "Flame blade"
+    },
+    "silver": {
+      "edge": "Silver edge"
+    }
   },
   "smith": {
     "level": "Smithy level {{level}}",
@@ -388,5 +459,24 @@
     "skipHour": "+1 hour",
     "skipSeason": "+1 season",
     "resetOffset": "Reset offset"
+  },
+  "ui": {
+    "level": "Lv {{level}}",
+    "hire": "Hire",
+    "pickHero": "Pick a hero to see details.",
+    "back": "List",
+    "stats": "Stats",
+    "gear": "Gear",
+    "unequip": "Unequip",
+    "equip": "Equip",
+    "revive": "Revive",
+    "formation": "Formation",
+    "emptySlot": "Empty",
+    "bench": "Available heroes",
+    "allInParty": "Every hero is in the party.",
+    "enhance": "Enhance",
+    "noReport": "No expedition yet.",
+    "cancel": "Cancel",
+    "wagesShort": "Wages short"
   }
 }

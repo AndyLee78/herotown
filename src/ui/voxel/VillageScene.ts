@@ -60,10 +60,12 @@ export class VillageScene {
   private frame = 0
   private active = true
   private downAt: [number, number] | null = null
+  private readonly raycaster = new THREE.Raycaster()
 
   constructor(
     private readonly canvas: HTMLCanvasElement,
     private readonly onPick: (id: string) => void,
+    private readonly onPickLot?: (id: BuildingId) => void,
   ) {
     this.renderer = new THREE.WebGLRenderer({ canvas, antialias: true })
     this.renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2))
@@ -90,7 +92,7 @@ export class VillageScene {
     this.ring.position.y = 0.02
 
     this.camera.position.copy(CAMERA_OFFSET)
-    this.camera.zoom = 0.8
+    this.camera.zoom = 0.62
     this.controls = new MapControls(this.camera, canvas)
     this.controls.enableRotate = false
     this.controls.enableDamping = true
@@ -387,6 +389,31 @@ export class VillageScene {
     }
     if (best) {
       this.onPick(best.id)
+      return
+    }
+    // Otherwise a tap on a building (or its lot) opens that building.
+    const pointer = new THREE.Vector2(
+      ((event.clientX - bounds.left) / bounds.width) * 2 - 1,
+      -((event.clientY - bounds.top) / bounds.height) * 2 + 1,
+    )
+    this.raycaster.setFromCamera(pointer, this.camera)
+    const groups = [...this.lots.entries()]
+    const hit = this.raycaster.intersectObjects(
+      groups.map(([, view]) => view.group),
+      true,
+    )[0]
+    if (!hit) {
+      return
+    }
+    for (const [id, view] of groups) {
+      let object: THREE.Object3D | null = hit.object
+      while (object && object !== view.group) {
+        object = object.parent
+      }
+      if (object) {
+        this.onPickLot?.(id)
+        return
+      }
     }
   }
 }
