@@ -258,8 +258,17 @@ section {
 }
 
 @media (max-width: 800px) {
+  main {
+    padding: 12px 12px 32px;
+  }
+
   .layout,
   .split {
     grid-template-columns: 1fr;
+  }
+
+  .village-canvas {
+    aspect-ratio: auto;
+    height: 70vh;
   }
 }
