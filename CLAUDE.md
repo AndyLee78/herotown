@@ -4,6 +4,8 @@ Village-building party RPG with idle auto-expeditions. Design source of truth: `
 
 Art direction (GDD 11.7): cute voxel 3D with an isometric orthographic camera, all generated in code with three.js, no image assets. The reference prototype is `prototypes/voxel3d/index.html` (standalone, loads three.js from a CDN, open via `npm run dev` at `/prototypes/voxel3d/index.html`). The game's village renders through `src/ui/voxel/` (`VillageScene.ts` drives it, `world.ts` lays out lots and props, `character.ts` builds heroes, `portrait.ts` renders card portraits, `look.ts` derives appearance from the hero id until genes exist in the core). The result screen replays the battle in 3D: `replay.ts` turns a `DungeonReport` log into steps (pure, tested), `BattleScene.ts` plays them, `enemies.ts` holds one model per monster id. Replays need the `dungeonId`, `party` and `floors` fields plus the `actorId`/`targetId` log params the core writes; when adding a monster to `monsters.json`, add its model to `enemies.ts`. Boxes go through `Builder` in `kit.ts`, which merges them so each moving part is one draw call; keep new art on that path.
 
+The project is developed alternately with Cursor. `Docs/cursor-tasks.md` lists the tasks handed to Cursor and their status; read it (and `git log`) at the start of a session to see what changed. Cursor reads the same rules from `.cursor/rules/simulation-core.mdc`; keep that file in sync when this one changes.
+
 Current stage: stage 1 (MVP) per GDD section 12. Stage 2+ systems (aging curve, marriage, children, alchemy, cloud saves) stay out of scope until their stage.
 
 ## Commands

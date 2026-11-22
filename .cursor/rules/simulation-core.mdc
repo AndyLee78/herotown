@@ -1,13 +1,34 @@
 ---
-description: Keep the HeroTown simulation core pure
+description: HeroTown project rules (kept in sync with CLAUDE.md)
 alwaysApply: true
 ---
 
-# HeroTown simulation core
+# HeroTown
 
-- `src/core` is pure TypeScript. It must not import React, the DOM, `src/ui`, or `src/locales`.
+Village-building party RPG with idle auto-expeditions. Design source of truth: `Docs/마을 성장 RPG – 게임 디자인 문서(GDD).md` (Korean). Per-system notes: `Docs/village.md`, `Docs/dungeons.md`, `Docs/combat.md`, `Docs/classes.md`. Update the matching note when a system's behavior changes. Open work for Cursor is listed in `Docs/cursor-tasks.md`.
+
+Current stage: stage 1 (MVP), GDD section 12. Aging curve, marriage, children, alchemy and cloud saves stay out of scope until their stage.
+
+## Commands
+
+- `npm test` (all must pass), `npx tsc --noEmit`, `npm run build`
+- `npm run simulate` prints the balance table (GDD 7.6)
+- `npm run dev` starts Vite; the voxel prototype is at `/prototypes/voxel3d/index.html`
+
+## Core rules
+
+- `src/core` is pure TypeScript. It must not import React, the DOM, three.js, `src/ui`, or `src/locales`.
 - Balance numbers live in `src/data` JSON. Core code reads those tables and does not hard-code tuning values.
-- Every random roll goes through `src/core/rng.ts`. Do not call `Math.random`.
-- Player-facing copy uses translation keys in `src/locales/en.json` and `src/locales/ko.json`. Both files keep the same key tree.
-- Game changes go through `reduce` in `src/core/game.ts`. Combat stays behind `runDungeon` and is not rewritten for village, time, or save work.
-- The clock, offline catch-up, and IndexedDB live outside combat. Marriage, alchemy, and cloud saves stay out of scope until their stage.
+- Every random roll in the core goes through `src/core/rng.ts`. Do not call `Math.random` there.
+- Game changes go through `reduce` in `src/core/game.ts`. Combat stays behind `runDungeon`; village, time and save work call it and do not rewrite the combat loop.
+- Save format changes bump `SAVE_VERSION` and add a migration in `migrate`.
+- Player-facing copy uses translation keys in `src/locales/en.json` and `src/locales/ko.json`. Both files keep the same key tree (`src/locales/parity.test.ts`).
+- Add or update tests with each change; probability systems get seeded simulation tests.
+
+## Graphics (GDD 11.7)
+
+- Cute voxel 3D with three.js, all generated in code, no image assets. Code lives in `src/ui/voxel/`.
+- `VillageScene.ts` draws the village from game state, `world.ts` holds lots and props, `character.ts` builds heroes and humanoid monsters, `enemies.ts` has one model per monster id, `BattleScene.ts` replays a `DungeonReport`, `replay.ts` turns the log into steps, `portrait.ts` renders card portraits, `look.ts` derives looks from the hero id.
+- Build boxes through `Builder` in `kit.ts`. It merges boxes so each moving part is one draw call. Do not add one mesh per box.
+- When adding a monster to `monsters.json`, add its model to `enemies.ts`.
+- Battle replays need `dungeonId`, `party`, `floors` on the report and `actorId`/`targetId` in log params. Keep them when changing combat logging.
