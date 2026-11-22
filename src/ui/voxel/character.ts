@@ -3,18 +3,21 @@ import type { ClassId } from '../../core'
 import { Builder } from './kit'
 import { ageLook, hairColor, type HairStyle, type Look } from './look'
 
-type Outfit = {
+export type Weapon = 'sword' | 'dagger' | 'bow' | 'staff' | 'mace' | 'lute' | 'fan' | 'rusty' | 'pick' | 'none'
+export type Headwear = 'wizard' | 'feather' | 'helmet' | 'hood' | 'crown'
+
+export type Outfit = {
   body: string
   trim: string
   pants: string
-  weapon: 'sword' | 'dagger' | 'bow' | 'staff' | 'mace' | 'lute' | 'fan'
+  weapon: Weapon
   pads?: boolean
   scarf?: boolean
   quiver?: boolean
   robe?: boolean
   skirt?: boolean
   bareArms?: boolean
-  hat?: 'wizard' | 'feather'
+  hat?: Headwear
 }
 
 const OUTFITS: Record<ClassId, Outfit> = {
@@ -27,7 +30,27 @@ const OUTFITS: Record<ClassId, Outfit> = {
   dancer: { body: '#8c4fa3', trim: '#f0c75e', pants: '#c76cb6', weapon: 'fan', skirt: true, bareArms: true },
 }
 
+// Everything needed to build a box person. Heroes fill it from their look;
+// humanoid monsters fill it directly.
+export type BodySpec = {
+  outfit: Outfit
+  skin: string
+  eye: string
+  eyeGlow?: boolean
+  eyeSize?: number
+  blush?: boolean
+  hair: string | null
+  style: HairStyle
+  beard: boolean
+  ribs?: boolean
+  scale: number
+  head: number
+  stoop: number
+  shoe?: string
+}
+
 export type Rig = {
+  kind: 'humanoid'
   group: THREE.Group
   legL: THREE.Group
   legR: THREE.Group
@@ -38,13 +61,30 @@ export type Rig = {
   height: number
 }
 
-// Each moving part is one merged mesh. Only the torso and head cast shadows,
-// which keeps the shadow pass cheap with many residents.
+export function outfitFor(classId: ClassId): Outfit {
+  return OUTFITS[classId]
+}
+
 export function buildCharacter(look: Look): Rig {
-  const outfit = OUTFITS[look.classId]
   const age = ageLook(look.age)
-  const skin = look.skin
-  const hair = hairColor(look)
+  return buildBody({
+    outfit: OUTFITS[look.classId],
+    skin: look.skin,
+    eye: look.eye,
+    blush: true,
+    hair: hairColor(look),
+    style: look.style,
+    beard: look.gender === 'male' && look.beard && look.age >= 25,
+    scale: age.scale * look.height,
+    head: age.head,
+    stoop: age.stoop,
+  })
+}
+
+// Each moving part is one merged mesh. Only the torso and head cast shadows,
+// which keeps the shadow pass cheap with many characters.
+export function buildBody(spec: BodySpec): Rig {
+  const { outfit, skin } = spec
   const group = new THREE.Group()
 
   const legL = new THREE.Group()
@@ -55,7 +95,7 @@ export function buildCharacter(look: Look): Rig {
     leg.add(
       new Builder()
         .box(0.15, 0.26, 0.17, outfit.pants, 0, -0.12, 0)
-        .box(0.16, 0.07, 0.21, '#4a3628', 0, -0.265, 0.02)
+        .box(0.16, 0.07, 0.21, spec.shoe ?? '#4a3628', 0, -0.265, 0.02)
         .build({ castShadow: false }),
     )
   }
@@ -81,6 +121,11 @@ export function buildCharacter(look: Look): Rig {
   } else {
     body.box(0.38, 0.32, 0.24, outfit.body, 0, 0.16, 0).box(0.39, 0.05, 0.25, outfit.trim, 0, 0.03, 0)
   }
+  if (spec.ribs) {
+    for (const y of [0.12, 0.19, 0.26]) {
+      body.box(0.3, 0.025, 0.01, '#8d8676', 0, y, 0.123)
+    }
+  }
   if (outfit.scarf) {
     body.box(0.42, 0.07, 0.28, outfit.trim, 0, 0.31, 0)
   }
@@ -98,7 +143,7 @@ export function buildCharacter(look: Look): Rig {
       .box(0.11, 0.22, 0.13, outfit.bareArms ? skin : outfit.body, 0, -0.1, 0)
       .box(0.1, 0.08, 0.11, skin, 0, -0.25, 0)
     if (outfit.pads) {
-      parts.box(0.16, 0.08, 0.19, '#b8c0c8', 0, 0.02, 0)
+      parts.box(0.16, 0.08, 0.19, outfit.trim === '#c9a43a' ? '#b8c0c8' : outfit.trim, 0, 0.02, 0)
     }
     if (arm === armR) {
       drawWeapon(parts, outfit.weapon)
@@ -109,41 +154,55 @@ export function buildCharacter(look: Look): Rig {
 
   const head = new THREE.Group()
   head.position.y = 0.32
-  head.scale.setScalar(age.head)
+  head.scale.setScalar(spec.head)
   torso.add(head)
+  const eyeSize = spec.eyeSize ?? 1
   const face = new Builder()
     .box(0.44, 0.42, 0.42, skin, 0, 0.21, 0)
-    .box(0.065, 0.09, 0.02, look.eye, -0.1, 0.19, 0.215)
-    .box(0.065, 0.09, 0.02, look.eye, 0.1, 0.19, 0.215)
-    .box(0.07, 0.03, 0.01, '#f2a5a0', -0.16, 0.12, 0.213)
-    .box(0.07, 0.03, 0.01, '#f2a5a0', 0.16, 0.12, 0.213)
-  if (outfit.hat !== 'wizard') {
-    drawHair(face, look.style, hair)
+    .box(0.065 * eyeSize, 0.09 * eyeSize, 0.02, spec.eye, -0.1, 0.19, 0.215, { glow: spec.eyeGlow })
+    .box(0.065 * eyeSize, 0.09 * eyeSize, 0.02, spec.eye, 0.1, 0.19, 0.215, { glow: spec.eyeGlow })
+  if (spec.blush) {
+    face.box(0.07, 0.03, 0.01, '#f2a5a0', -0.16, 0.12, 0.213).box(0.07, 0.03, 0.01, '#f2a5a0', 0.16, 0.12, 0.213)
   }
-  if (look.gender === 'male' && look.beard && look.age >= 25) {
-    face.box(0.36, 0.13, 0.06, hair, 0, 0.06, 0.225).box(0.2, 0.04, 0.03, hair, 0, 0.115, 0.235)
+  if (spec.hair && outfit.hat !== 'wizard' && outfit.hat !== 'hood') {
+    drawHair(face, spec.style, spec.hair)
   }
-  if (outfit.hat === 'wizard') {
-    face
-      .box(0.48, 0.1, 0.46, hair, 0, 0.4, -0.02)
+  if (spec.beard && spec.hair) {
+    face.box(0.36, 0.13, 0.06, spec.hair, 0, 0.06, 0.225).box(0.2, 0.04, 0.03, spec.hair, 0, 0.115, 0.235)
+  }
+  drawHeadwear(face, outfit.hat, spec.hair ?? outfit.body)
+  head.add(face.build())
+
+  group.scale.setScalar(spec.scale)
+  torso.rotation.x = spec.stoop
+  head.rotation.x = -spec.stoop * 0.5
+  const hatTop = outfit.hat === 'wizard' ? 0.25 : outfit.hat === 'crown' ? 0.1 : 0
+  return { kind: 'humanoid', group, legL, legR, torso, armL, armR, head, height: (0.62 + 0.5 * spec.head + hatTop) * spec.scale }
+}
+
+function drawHeadwear(b: Builder, hat: Headwear | undefined, hair: string) {
+  if (hat === 'wizard') {
+    b.box(0.48, 0.1, 0.46, hair, 0, 0.4, -0.02)
       .box(0.64, 0.05, 0.62, '#2e3a7a', 0, 0.45, 0)
       .box(0.42, 0.14, 0.42, '#2e3a7a', 0, 0.54, -0.02)
       .box(0.28, 0.14, 0.28, '#2e3a7a', 0.02, 0.67, -0.05, { rz: -0.08 })
       .box(0.14, 0.16, 0.14, '#2e3a7a', 0.06, 0.8, -0.08, { rz: -0.2 })
       .box(0.43, 0.04, 0.43, '#d9b54a', 0, 0.49, -0.02)
-  } else if (outfit.hat === 'feather') {
-    face
-      .box(0.58, 0.05, 0.56, '#7a3a2a', 0, 0.47, 0)
-      .box(0.42, 0.12, 0.42, '#7a3a2a', 0, 0.54, 0)
-      .box(0.03, 0.26, 0.07, '#f4f1e8', 0.17, 0.66, -0.06, { rz: -0.4 })
+  } else if (hat === 'feather') {
+    b.box(0.58, 0.05, 0.56, '#7a3a2a', 0, 0.47, 0).box(0.42, 0.12, 0.42, '#7a3a2a', 0, 0.54, 0).box(0.03, 0.26, 0.07, '#f4f1e8', 0.17, 0.66, -0.06, { rz: -0.4 })
+  } else if (hat === 'helmet') {
+    b.box(0.5, 0.16, 0.48, '#e0b23a', 0, 0.47, 0).box(0.6, 0.04, 0.58, '#c99a2a', 0, 0.4, 0).box(0.12, 0.1, 0.05, '#fff2a8', 0, 0.47, 0.25, { glow: true })
+  } else if (hat === 'hood') {
+    b.box(0.5, 0.48, 0.48, '#4a2f2a', 0, 0.24, -0.03)
+      .box(0.5, 0.12, 0.08, '#4a2f2a', 0, 0.44, 0.2)
+      .box(0.46, 0.1, 0.03, '#7a2e2e', 0, 0.08, 0.22)
+  } else if (hat === 'crown') {
+    b.box(0.5, 0.08, 0.48, '#d9b54a', 0, 0.46, 0)
+    for (const x of [-0.18, 0, 0.18]) {
+      b.box(0.08, 0.12, 0.08, '#d9b54a', x, 0.55, 0.18)
+    }
+    b.box(0.07, 0.07, 0.03, '#d14a6a', 0, 0.48, 0.25, { glow: true })
   }
-  head.add(face.build())
-
-  group.scale.setScalar(age.scale * look.height)
-  torso.rotation.x = age.stoop
-  head.rotation.x = -age.stoop * 0.5
-  const hatTop = outfit.hat === 'wizard' ? 0.25 : 0
-  return { group, legL, legR, torso, armL, armR, head, height: (0.62 + 0.5 * age.head + hatTop) * group.scale.y }
 }
 
 function drawHair(b: Builder, style: HairStyle, color: string) {
@@ -175,11 +234,14 @@ function drawHair(b: Builder, style: HairStyle, color: string) {
 }
 
 // Weapons hang from the right hand (arm-local y = -0.27).
-function drawWeapon(b: Builder, weapon: Outfit['weapon']) {
+function drawWeapon(b: Builder, weapon: Weapon) {
   const forward = Math.PI / 2
-  if (weapon === 'sword') {
+  if (weapon === 'sword' || weapon === 'rusty') {
+    const rusty = weapon === 'rusty'
     b.within(0, -0.27, 0.03, forward, 0, 0, () => {
-      b.box(0.05, 0.12, 0.05, '#5a3d28').box(0.2, 0.04, 0.06, '#c9a43a', 0, 0.07, 0).box(0.07, 0.46, 0.035, '#dfe4ea', 0, 0.32, 0)
+      b.box(0.05, 0.12, 0.05, '#5a3d28')
+        .box(0.2, 0.04, 0.06, rusty ? '#7a6a55' : '#c9a43a', 0, 0.07, 0)
+        .box(0.07, 0.46, 0.035, rusty ? '#9c8f7c' : '#dfe4ea', 0, 0.32, 0)
     })
   } else if (weapon === 'dagger') {
     b.within(0, -0.27, 0.03, forward, 0, 0, () => {
@@ -188,6 +250,10 @@ function drawWeapon(b: Builder, weapon: Outfit['weapon']) {
   } else if (weapon === 'mace') {
     b.within(0, -0.27, 0.03, forward, 0, 0, () => {
       b.box(0.045, 0.32, 0.045, '#6b4a30', 0, 0.1, 0).box(0.15, 0.15, 0.15, '#c9a43a', 0, 0.3, 0)
+    })
+  } else if (weapon === 'pick') {
+    b.within(0, -0.27, 0.03, forward, 0, 0, () => {
+      b.box(0.045, 0.42, 0.045, '#6b4a30', 0, 0.15, 0).box(0.36, 0.06, 0.05, '#8a8f98', 0, 0.36, 0, { rz: 0.15 })
     })
   } else if (weapon === 'staff') {
     b.within(0, -0.27, 0.05, 0, 0, 0, () => {
@@ -204,7 +270,7 @@ function drawWeapon(b: Builder, weapon: Outfit['weapon']) {
     b.within(0, -0.27, 0.03, 1.1, 0, 0, () => {
       b.box(0.22, 0.26, 0.08, '#b07a3c', 0, 0.06, 0).box(0.07, 0.07, 0.01, '#3a2616', 0, 0.07, 0.045).box(0.05, 0.3, 0.04, '#7a5236', 0, 0.34, 0)
     })
-  } else {
+  } else if (weapon === 'fan') {
     b.within(0, -0.27, 0.03, forward, 0, 0, () => {
       b.box(0.03, 0.12, 0.03, '#6b4a30', 0, 0.03, 0).box(0.3, 0.2, 0.025, '#f39bc2', 0, 0.18, 0).box(0.2, 0.06, 0.03, '#f0c75e', 0, 0.29, 0)
     })

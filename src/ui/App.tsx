@@ -33,7 +33,9 @@ import {
 } from '../core'
 import { josa } from './josa'
 import { loadGame, storeGame } from './storage'
+import { BattleView } from './BattleView'
 import { HeroPortrait, VillageView } from './VillageView'
+import { canReplay } from './voxel/replay'
 
 type Screen = 'town' | 'inn' | 'roster' | 'party' | 'result' | 'village' | 'smith' | 'save' | 'debug'
 
@@ -616,7 +618,13 @@ function Party({ save, onAction }: { save: GameState; onAction: (action: GameAct
 function Report({ report, shown, onShown }: { report: DungeonReport; shown: number; onShown: (count: number) => void }) {
   const { t } = useTranslation()
   const lines = report.log.slice(0, shown)
+  const describe = (index: number) => {
+    const entry = report.log[index]
+    return entry ? formatEntry(t, entry) : ''
+  }
   return (
+    <>
+    {canReplay(report) ? <BattleView report={report} describe={describe} /> : null}
     <section className="split">
       <div>
         <h2>{t('label.log')}</h2>
@@ -651,6 +659,7 @@ function Report({ report, shown, onShown }: { report: DungeonReport; shown: numb
         </ul>
       </article>
     </section>
+    </>
   )
 }
 

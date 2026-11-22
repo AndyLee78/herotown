@@ -1,7 +1,7 @@
 import { classById, combatRules, monsterById } from './data'
 import { heroGearMods } from './gear'
 import type { Rng } from './rng'
-import type { LogEntry, MonsterDef, PartyMember, Row, Tactics, UnitReport } from './types'
+import type { LogEntry, MonsterDef, PartyMember, ReplayUnit, Row, Tactics, UnitReport } from './types'
 
 export type BattleUnit = {
   id: string
@@ -105,8 +105,10 @@ export function simulateFloor(
   rng: Rng,
   log: LogEntry[],
   floorNumber: number,
+  floors?: ReplayUnit[][],
 ): { outcome: FloorOutcome; ticks: number } {
   const enemies = monsterIds.map((id, index) => enemyUnit(monsterById(id), index))
+  floors?.push([...heroes, ...enemies].map(replayUnit))
   push(log, 0, 'log.floor', { floor: floorNumber })
   let tick = 0
   while (tick < combatRules.maxTicks) {
@@ -376,18 +378,32 @@ function averageHpRatio(units: BattleUnit[]): number {
   return alive.reduce((sum, unit) => sum + unit.hp / unit.maxHp, 0) / alive.length
 }
 
+function replayUnit(unit: BattleUnit): ReplayUnit {
+  return {
+    id: unit.id,
+    refId: unit.refId,
+    side: unit.side,
+    row: unit.row,
+    reach: unit.reach,
+    hp: unit.hp,
+    maxHp: unit.maxHp,
+    boss: unit.boss,
+  }
+}
+
+// Ids let a replay find the unit; names and keys are for the text log.
 function actorParams(unit: BattleUnit): LogEntry['params'] {
   if (unit.nameKey) {
-    return { actorKey: unit.nameKey, actorIndex: unit.index + 1 }
+    return { actorKey: unit.nameKey, actorIndex: unit.index + 1, actorId: unit.id }
   }
-  return { actorName: unit.name }
+  return { actorName: unit.name, actorId: unit.id }
 }
 
 function targetParams(unit: BattleUnit): LogEntry['params'] {
   if (unit.nameKey) {
-    return { targetKey: unit.nameKey, targetIndex: unit.index + 1 }
+    return { targetKey: unit.nameKey, targetIndex: unit.index + 1, targetId: unit.id }
   }
-  return { targetName: unit.name }
+  return { targetName: unit.name, targetId: unit.id }
 }
 
 function push(log: LogEntry[], tick: number, key: string, params: LogEntry['params'] = {}) {

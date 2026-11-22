@@ -148,7 +148,30 @@ export type UnitReport = {
   healed: number
 }
 
+// A unit as it stood when a floor began, for replaying the battle.
+export type ReplayUnit = {
+  id: string
+  refId: string
+  side: 'hero' | 'enemy'
+  row: Row
+  reach: Reach
+  hp: number
+  maxHp: number
+  boss: boolean
+}
+
+export type ReplayHero = {
+  id: string
+  classId: ClassId
+  gender: Gender
+  age: number
+}
+
 export type DungeonReport = {
+  // Replay data. Missing on reports saved before replays existed.
+  dungeonId?: string
+  party?: ReplayHero[]
+  floors?: ReplayUnit[][]
   victory: boolean
   defeatReason: DefeatReason | null
   ticks: number

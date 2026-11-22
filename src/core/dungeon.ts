@@ -30,6 +30,7 @@ export function runDungeon(party: PartyMember[], dungeonId: string, tactics: Tac
   const rng = createRng(seed)
   const heroes = party.map((member, index) => createHeroUnit(member, index))
   const log: DungeonReport['log'] = []
+  const floors: NonNullable<DungeonReport['floors']> = []
   let ticks = 0
   let floorsCleared = 0
   let outcome: 'victory' | 'wipe' | 'retreat' | 'timeout' = 'victory'
@@ -39,7 +40,7 @@ export function runDungeon(party: PartyMember[], dungeonId: string, tactics: Tac
     if (!floorDef) {
       break
     }
-    const result = simulateFloor(heroes, floorDef.monsters, tactics, rng, log, floor + 1)
+    const result = simulateFloor(heroes, floorDef.monsters, tactics, rng, log, floor + 1, floors)
     ticks += result.ticks
     if (result.outcome !== 'victory') {
       outcome = result.outcome
@@ -67,6 +68,9 @@ export function runDungeon(party: PartyMember[], dungeonId: string, tactics: Tac
   }
 
   const report: DungeonReport = {
+    dungeonId,
+    party: party.map(({ hero }) => ({ id: hero.id, classId: hero.classId, gender: hero.gender, age: hero.age })),
+    floors,
     victory,
     defeatReason: victory ? null : reasonFor(outcome, dungeon.tier, hadTank, hadHealer),
     ticks,

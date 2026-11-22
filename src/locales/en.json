@@ -348,6 +348,14 @@
     "barrow_lord": "Barrow lord",
     "crypt_lord": "Crypt lord"
   },
+  "battle": {
+    "label": "Battle replay",
+    "play": "Play",
+    "pause": "Pause",
+    "replay": "Watch again",
+    "skip": "Skip to result",
+    "speed": "{{speed}}× speed"
+  },
   "log": {
     "floor": "Floor {{floor}}",
     "floorClear": "Floor {{floor}} is clear.",

@@ -151,6 +151,23 @@ section {
   cursor: grabbing;
 }
 
+.battle-view {
+  margin-bottom: 12px;
+}
+
+.battle-canvas {
+  display: block;
+  width: 100%;
+  height: clamp(220px, 42vh, 380px);
+  border-radius: 8px;
+  background: #24262a;
+}
+
+.battle-caption {
+  min-height: 1.5em;
+  margin: 8px 0;
+}
+
 .card,
 .party-row {
   align-items: flex-start;

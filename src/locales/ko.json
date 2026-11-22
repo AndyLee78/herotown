@@ -348,6 +348,14 @@
     "barrow_lord": "묘지 군주",
     "crypt_lord": "묘실 군주"
   },
+  "battle": {
+    "label": "전투 다시 보기",
+    "play": "재생",
+    "pause": "일시정지",
+    "replay": "다시 보기",
+    "skip": "결과로 건너뛰기",
+    "speed": "{{speed}}배속"
+  },
   "log": {
     "floor": "{{floor}}층",
     "floorClear": "{{floor}}층을 클리어했다.",
