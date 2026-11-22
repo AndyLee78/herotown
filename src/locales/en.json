@@ -90,7 +90,7 @@
     "staying": "Leaves in {{time}}",
     "innEmpty": "No visitors are staying.",
     "graveyard": "The graveyard is empty.",
-    "auto": "Only a cleared dungeon runs on its own. Rewards are 80%, and nobody dies on an automatic run.",
+    "auto": "Only a cleared dungeon runs on its own. Rewards are 80% of a hand-sent repeat, and nobody dies on an automatic run.",
     "emptyStash": "The warehouse is empty. Equip finished gear from the hero screen."
   },
   "building": {

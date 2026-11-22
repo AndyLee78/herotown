@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { lifeRules, smithRules, timeRules, villageRules } from './data'
+import { lifeRules, progression, smithRules, timeRules, villageRules } from './data'
 import { createHeroUnit } from './combat'
 import { DEFAULT_TACTICS, runDungeon } from './dungeon'
 import { applyCasualty, exportSave, freshState, importSave, migrate, reduce, townLevel, visitorStay } from './game'
@@ -348,5 +348,59 @@ describe('game state', () => {
     const armed = runDungeon(make(true), 'barrow', DEFAULT_TACTICS, 4)
     expect(bare.ok && bare.report.victory).toBe(false)
     expect(armed.ok && armed.report.victory).toBe(true)
+  })
+})
+
+describe('economy fixes', () => {
+  // Hire every visitor, field them all and clear the cave once by hand.
+  function clearedCave(seed: number) {
+    let state = freshState(seed, now)
+    for (const visitor of [...state.visitors]) {
+      state = reduce(state, { type: 'hire', id: visitor.id, now })
+    }
+    for (const hero of state.roster) {
+      state = reduce(state, { type: 'add', id: hero.id })
+    }
+    state = reduce(state, { type: 'depart' })
+    expect(state.report?.victory).toBe(true)
+    return state
+  }
+
+  it('pays an automatic run less than repeating the dungeon by hand', () => {
+    const cleared = clearedCave(7)
+    const manual = reduce(cleared, { type: 'depart' })
+    const manualGold = manual.gold - cleared.gold
+    const manualWood = manual.materials.wood - cleared.materials.wood
+    let auto = reduce(cleared, { type: 'auto', enabled: true })
+    auto = reduce(auto, { type: 'autoDungeon', id: 'hill_cave' })
+    const ran = reduce(auto, { type: 'catchUp', now: auto.lastTickAt + villageRules.auto.runMs })
+    expect(ran.report?.victory).toBe(true)
+    const autoGold = ran.gold - auto.gold
+    expect(autoGold).toBeGreaterThan(0)
+    expect(autoGold).toBeLessThan(manualGold)
+    expect(ran.materials.wood - auto.materials.wood).toBeLessThanOrEqual(manualWood)
+  })
+
+  it('reports income and wages separately after time away', () => {
+    let state = clearedCave(7)
+    state = reduce(state, { type: 'auto', enabled: true })
+    state = reduce(state, { type: 'autoDungeon', id: 'hill_cave' })
+    state = { ...state, calendar: { ...state.calendar, intoSeasonMs: timeRules.seasonMs - 1000 } }
+    const later = reduce(state, { type: 'catchUp', now: state.lastTickAt + timeRules.reportAfterMs })
+    const report = later.absence
+    expect(report).not.toBeNull()
+    expect(report?.wagesPaid).toBe(state.roster.length * progression.wage)
+    expect(report?.goldGained).toBe(report?.autoGold)
+    expect(report?.goldGained).toBeGreaterThan(0)
+    expect(later.gold - state.gold).toBe((report?.goldGained ?? 0) - (report?.wagesPaid ?? 0))
+  })
+
+  it('lets heroes rest without spending gold', () => {
+    const start = freshState(1, now)
+    const hired = reduce(start, { type: 'hire', id: start.visitors[0]?.id ?? '' })
+    const tired = { ...hired, roster: hired.roster.map((hero) => ({ ...hero, fatigue: 80 })) }
+    const rested = reduce(tired, { type: 'rest', times: 1 })
+    expect(rested.gold).toBe(tired.gold)
+    expect(rested.roster[0]?.fatigue).toBeLessThan(80)
   })
 })

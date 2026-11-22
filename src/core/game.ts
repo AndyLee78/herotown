@@ -268,14 +268,13 @@ function apply(state: GameState, action: GameAction): GameState {
     return scheduleVisitor(hired, action.now ?? state.lastTickAt)
   }
   if (action.type === 'rest') {
-    let gold = state.gold
+    // Wages are paid once per season by the clock, so resting is free.
     let roster = state.roster
     const times = Math.max(0, Math.round(action.times))
     for (let index = 0; index < times; index += 1) {
-      gold = Math.max(0, gold - progression.wage * roster.length)
       roster = roster.map((hero) => restHero(hero, restBonus(state.buildings.house)))
     }
-    return { ...state, notice: null, gold, roster, day: state.day + times }
+    return { ...state, notice: null, roster, day: state.day + times }
   }
   if (action.type === 'depart') {
     const party = state.party.flatMap((slot) => {
@@ -432,7 +431,8 @@ function advance(state: GameState, now: number): GameState {
   const completed: string[] = []
   const crafted: string[] = []
   const visitors: string[] = []
-  let next = moveCalendar(state, elapsed)
+  const wages = { paid: 0 }
+  let next = moveCalendar(state, elapsed, wages)
   next = finishConstruction(next, effectiveNow, completed)
   next = finishSmith(next, effectiveNow, crafted)
   next = finishCare(next, effectiveNow)
@@ -449,8 +449,10 @@ function advance(state: GameState, now: number): GameState {
     seasonsPassed: next.calendar.year * 4 + seasonIndex(next.calendar.season) - (state.calendar.year * 4 + seasonIndex(state.calendar.season)),
     year: next.calendar.year,
     season: next.calendar.season,
-    goldGained: 0,
-    wagesPaid: state.gold - next.gold,
+    // Income is the net change with wages added back, so it counts every
+    // source (auto runs, guild quest) without listing them.
+    goldGained: next.gold - state.gold + wages.paid,
+    wagesPaid: wages.paid,
     injuries: [],
     completed,
     crafted,
@@ -537,7 +539,7 @@ function seasonIndex(season: SeasonId): number {
   return index < 0 ? 0 : index
 }
 
-function moveCalendar(state: GameState, elapsed: number): GameState {
+function moveCalendar(state: GameState, elapsed: number, wages: { paid: number }): GameState {
   let intoSeasonMs = state.calendar.intoSeasonMs + elapsed
   let index = seasonIndex(state.calendar.season)
   let year = state.calendar.year
@@ -552,6 +554,7 @@ function moveCalendar(state: GameState, elapsed: number): GameState {
     const due = progression.wage * state.roster.length
     const paid = Math.min(gold, due)
     gold -= paid
+    wages.paid += paid
     warning = paid < due ? 'wages' : null
   }
   return {
@@ -689,6 +692,9 @@ function runAuto(state: GameState, elapsed: number, tally: { runs: number; gold:
     }
     const battleSeed = next.seed + 9000 + tally.runs + next.day
     const result = runDungeon(members, dungeonId, next.tactics, battleSeed)
+    // Auto runs only repeat cleared dungeons, so they earn a share of the
+    // repeat reward and always less than sending the party by hand.
+    const scale = villageRules.repeatReward * villageRules.auto.rewardScale
     if (!result.ok) {
       break
     }
@@ -700,11 +706,8 @@ function runAuto(state: GameState, elapsed: number, tally: { runs: number; gold:
     }
     const slots = members.map((member) => ({ id: member.hero.id, row: member.row }))
     const settled = settleParty({ ...next, dungeonId, party: slots }, report, battleSeed)
-    const goldGain = report.victory ? Math.floor(result.report.gold * villageRules.auto.rewardScale) : 0
-    next = grantVictoryRewards(
-      { ...next, ...settled, dungeonId, gold: next.gold + goldGain, report: { ...report, gold: goldGain } },
-      villageRules.auto.rewardScale,
-    )
+    const goldGain = report.victory ? Math.floor(result.report.gold * scale) : 0
+    next = grantVictoryRewards({ ...next, ...settled, dungeonId, gold: next.gold + goldGain, report: { ...report, gold: goldGain } }, scale)
     budget -= villageRules.auto.runMs
     tally.runs += 1
     tally.gold += goldGain
