@@ -90,7 +90,7 @@ export class VillageScene {
     this.ring.position.y = 0.02
 
     this.camera.position.copy(CAMERA_OFFSET)
-    this.camera.zoom = 1.25
+    this.camera.zoom = 0.8
     this.controls = new MapControls(this.camera, canvas)
     this.controls.enableRotate = false
     this.controls.enableDamping = true
