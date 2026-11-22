@@ -1,0 +1,1357 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>영웅의 마을 3D 시안</title>
+<style>
+  :root {
+    --ink: #2d3a2e;
+    --muted: #6b776b;
+    --panel: rgba(255, 255, 255, 0.95);
+    --line: #dfe5d8;
+    --accent: #5a8f3c;
+    --accent-ink: #ffffff;
+    --sky: #cfe6f2;
+  }
+  * { box-sizing: border-box; }
+  html, body { margin: 0; height: 100%; overflow: hidden; background: var(--sky); color: var(--ink);
+    font-family: system-ui, -apple-system, "Segoe UI", "Apple SD Gothic Neo", "Malgun Gothic", sans-serif; }
+  canvas { display: block; touch-action: none; }
+  .hud { position: fixed; left: 12px; right: 12px; display: flex; gap: 8px; align-items: center; pointer-events: none; }
+  .hud > * { pointer-events: auto; }
+  .top { top: 12px; }
+  .bottom { bottom: 12px; flex-wrap: wrap; }
+  .chip { background: var(--panel); border: 1px solid var(--line); border-radius: 999px; padding: 9px 14px;
+    box-shadow: 0 2px 8px rgba(40, 60, 40, 0.12); font-size: 14px; }
+  .brand { font-weight: 700; }
+  .brand small { font-weight: 500; color: var(--muted); margin-left: 6px; }
+  .seg { display: flex; background: var(--panel); border: 1px solid var(--line); border-radius: 999px; padding: 3px;
+    box-shadow: 0 2px 8px rgba(40, 60, 40, 0.12); }
+  .seg button { border: 0; background: transparent; border-radius: 999px; padding: 0 16px; min-height: 38px;
+    font: inherit; font-size: 14px; color: var(--ink); cursor: pointer; }
+  .seg button.on { background: var(--accent); color: var(--accent-ink); }
+  .stats { margin-left: auto; font-variant-numeric: tabular-nums; font-size: 13px; }
+  .btn { border: 1px solid var(--line); background: var(--panel); color: var(--ink); border-radius: 12px; padding: 0 16px;
+    min-height: 44px; font: inherit; font-size: 14px; cursor: pointer; box-shadow: 0 2px 8px rgba(40, 60, 40, 0.12); }
+  .btn.primary { background: var(--accent); color: var(--accent-ink); border-color: var(--accent); }
+  .hint { font-size: 13px; color: var(--muted); }
+  .panel { position: fixed; top: 66px; right: 12px; width: 300px; max-height: calc(100% - 140px); overflow: auto;
+    background: var(--panel); border: 1px solid var(--line); border-radius: 16px; padding: 14px 14px 16px;
+    box-shadow: 0 6px 20px rgba(40, 60, 40, 0.18); }
+  .panel[hidden] { display: none; }
+  .panel h2 { margin: 0; font-size: 17px; }
+  .panel .head { display: flex; align-items: center; justify-content: space-between; margin-bottom: 10px; }
+  .panel .close { border: 0; background: transparent; font-size: 22px; min-width: 44px; min-height: 44px; cursor: pointer; color: var(--muted); }
+  .row { margin: 10px 0; }
+  .row label, .row .lab { display: block; font-size: 12px; color: var(--muted); margin-bottom: 4px; }
+  .row select { width: 100%; min-height: 40px; border-radius: 10px; border: 1px solid var(--line); background: #fff; font: inherit; padding: 0 8px; }
+  .row input[type=range] { width: 100%; }
+  .age { display: flex; gap: 10px; align-items: center; }
+  .age output { min-width: 44px; text-align: right; font-variant-numeric: tabular-nums; font-weight: 600; }
+  .swatches { display: flex; flex-wrap: wrap; gap: 6px; align-items: center; }
+  .sw { width: 32px; height: 32px; border-radius: 8px; border: 2px solid rgba(0, 0, 0, 0.12); cursor: pointer; padding: 0; }
+  .sw.on { border-color: var(--ink); box-shadow: 0 0 0 2px #fff inset; }
+  .swatches input[type=color] { width: 40px; height: 34px; border: 0; padding: 0; background: none; cursor: pointer; }
+  .check { display: flex; align-items: center; gap: 8px; font-size: 14px; min-height: 36px; }
+  .family { margin-top: 12px; border-top: 1px solid var(--line); padding-top: 10px; font-size: 13px; }
+  .family h3 { margin: 0 0 6px; font-size: 14px; }
+  .family ul { margin: 0; padding: 0; list-style: none; }
+  .family li { display: flex; align-items: center; gap: 8px; padding: 3px 0; }
+  .family .dot { width: 14px; height: 14px; border-radius: 4px; border: 1px solid rgba(0, 0, 0, 0.15); flex: none; }
+  .panel .btn { width: 100%; margin-top: 6px; }
+  @media (max-width: 720px) {
+    .panel { left: 8px; right: 8px; width: auto; top: auto; bottom: 68px; max-height: 46%; }
+    .brand small { display: none; }
+    .stats { font-size: 11px; }
+  }
+</style>
+<script type="importmap">
+  { "imports": { "three": "https://cdn.jsdelivr.net/npm/three@0.170.0/build/three.module.js" } }
+</script>
+</head>
+<body>
+<div class="hud top">
+  <div class="chip brand">영웅의 마을<small>3D 시안</small></div>
+  <div class="seg" role="tablist">
+    <button type="button" data-view="village" class="on">마을</button>
+    <button type="button" data-view="battle">전투</button>
+  </div>
+  <div class="chip stats" id="stats">-</div>
+</div>
+<div class="hud bottom">
+  <button type="button" class="btn" id="crowd">주민 80명</button>
+  <span class="chip hint" id="hint">주민을 누르면 외형을 바꿀 수 있어요 · 드래그로 이동 · 휠/핀치로 확대</span>
+</div>
+<aside class="panel" id="panel" hidden></aside>
+
+<script type="module">
+import * as THREE from 'https://cdn.jsdelivr.net/npm/three@0.170.0/build/three.module.js';
+import { MapControls } from 'https://cdn.jsdelivr.net/npm/three@0.170.0/examples/jsm/controls/MapControls.js';
+
+// ---------- utilities ----------
+const rand = (a, b) => a + Math.random() * (b - a);
+const randInt = (a, b) => Math.floor(rand(a, b + 1));
+const pick = (list) => list[Math.floor(Math.random() * list.length)];
+const clamp01 = (t) => Math.min(1, Math.max(0, t));
+const lerp = (a, b, t) => a + (b - a) * clamp01(t);
+const easeOut = (t) => 1 - Math.pow(1 - clamp01(t), 3);
+const easeIn = (t) => Math.pow(clamp01(t), 3);
+const mixHex = (a, b, t) => '#' + new THREE.Color(a).lerp(new THREE.Color(b), t).getHexString();
+
+const BOX = new THREE.BoxGeometry(1, 1, 1);
+const materials = new Map();
+function mat(color, glow = false) {
+  const key = color + (glow ? ':glow' : '');
+  let found = materials.get(key);
+  if (!found) {
+    found = glow ? new THREE.MeshBasicMaterial({ color }) : new THREE.MeshLambertMaterial({ color });
+    materials.set(key, found);
+  }
+  return found;
+}
+// Adds a box centred at (x, y, z) in the parent's space.
+function box(parent, w, h, d, color, x = 0, y = 0, z = 0, opts = {}) {
+  const mesh = new THREE.Mesh(BOX, mat(color, opts.glow));
+  mesh.scale.set(w, h, d);
+  mesh.position.set(x, y, z);
+  mesh.castShadow = opts.shadow !== false;
+  mesh.receiveShadow = true;
+  if (opts.rx) mesh.rotation.x = opts.rx;
+  if (opts.ry) mesh.rotation.y = opts.ry;
+  if (opts.rz) mesh.rotation.z = opts.rz;
+  parent.add(mesh);
+  return mesh;
+}
+
+// ---------- hero data ----------
+const SKINS = ['#f7dcc0', '#ecc39b', '#d49d6e', '#ab7149', '#7b4c30'];
+const HAIRS = ['#2a2019', '#4e3221', '#7b4a2a', '#b0722f', '#e0b85a', '#a8352a', '#3d4256', '#e9e2cf'];
+const EYES = ['#2a2522', '#3c6fa8', '#3f7f4c', '#7a5230'];
+const STYLES = { short: '짧은 머리', spiky: '삐죽 머리', ponytail: '묶은 머리', long: '긴 머리', bob: '단발', bald: '민머리' };
+const MALE_STYLES = ['short', 'spiky', 'ponytail', 'short'];
+const FEMALE_STYLES = ['long', 'bob', 'ponytail', 'short'];
+const NAMES = {
+  male: ['Armand', 'Henrik', 'Roland', 'Edric', 'Bram', 'Cedric', 'Darian', 'Gareth', 'Lucan', 'Osric', 'Tobin', 'Wendel'],
+  female: ['Olga', 'Honoria', 'Seraphina', 'Anwen', 'Irene', 'Brigid', 'Elowen', 'Maren', 'Rosalind', 'Tamsin', 'Ysolde', 'Lyra'],
+};
+const CLASSES = {
+  warrior: { name: '전사', body: '#8e98a3', trim: '#c9a43a', pants: '#5a4636', weapon: 'sword', pads: true },
+  rogue: { name: '도적', body: '#3f5b4b', trim: '#8a3434', pants: '#2e3732', weapon: 'dagger', scarf: true },
+  archer: { name: '궁수', body: '#5d8a3c', trim: '#8a6a3a', pants: '#6a5638', weapon: 'bow', quiver: true },
+  mage: { name: '마법사', body: '#3e4f9c', trim: '#d9b54a', pants: '#2f3b78', weapon: 'staff', robe: true, hat: 'wizard' },
+  cleric: { name: '성직자', body: '#eeeae0', trim: '#d2ad46', pants: '#d9d3c3', weapon: 'mace', robe: true },
+  bard: { name: '음유시인', body: '#a9453b', trim: '#e0c26a', pants: '#4b3b5c', weapon: 'lute', hat: 'feather' },
+  dancer: { name: '무희', body: '#8c4fa3', trim: '#f0c75e', pants: '#c76cb6', weapon: 'fan', skirt: true, bareArms: true, femaleOnly: true },
+  skeleton: { name: '해골', body: '#e6e1d2', trim: '#b9b2a0', pants: '#e6e1d2', weapon: 'rusty', internal: true },
+};
+const classesFor = (gender) => Object.keys(CLASSES).filter((id) => !CLASSES[id].internal && !(gender === 'male' && CLASSES[id].femaleOnly));
+const stylesFor = (gender) => (gender === 'male' ? MALE_STYLES : FEMALE_STYLES);
+
+function randomGenes(gender) {
+  return {
+    gender,
+    skin: Math.min(4, Math.floor(Math.random() * Math.random() * 6)),
+    hair: pick(HAIRS.slice(0, 7)),
+    eye: randInt(0, EYES.length - 1),
+    style: pick(stylesFor(gender)),
+    beard: gender === 'male' && Math.random() < 0.45,
+    height: rand(0.96, 1.04),
+  };
+}
+function randomHero({ gender = Math.random() < 0.5 ? 'male' : 'female', cls, age } = {}) {
+  return {
+    name: pick(NAMES[gender]),
+    cls: cls ?? pick(classesFor(gender)),
+    age: age ?? randInt(18, 45),
+    genes: randomGenes(gender),
+  };
+}
+
+// Age changes body scale, head ratio, grey hair and posture.
+function ageLook(age) {
+  const scale = age < 18 ? lerp(0.62, 0.95, (age - 8) / 10) : age < 22 ? lerp(0.95, 1, (age - 18) / 4) : age > 50 ? lerp(1, 0.94, (age - 50) / 15) : 1;
+  const head = age < 20 ? lerp(1.22, 1, (age - 8) / 12) : 1;
+  const gray = age < 38 ? 0 : lerp(0, 0.9, (age - 38) / 22);
+  const stoop = age < 55 ? 0 : lerp(0, 0.22, (age - 55) / 12);
+  return { scale, head, gray, stoop };
+}
+
+// ---------- character rig ----------
+function buildHair(head, style, color) {
+  if (style === 'bald') {
+    box(head, 0.05, 0.16, 0.3, color, -0.235, 0.2, -0.04);
+    box(head, 0.05, 0.16, 0.3, color, 0.235, 0.2, -0.04);
+    box(head, 0.46, 0.16, 0.05, color, 0, 0.2, -0.22);
+    return;
+  }
+  box(head, 0.48, 0.1, 0.46, color, 0, 0.45, -0.01);
+  box(head, 0.48, 0.07, 0.06, color, 0, 0.37, 0.21);
+  if (style === 'short' || style === 'spiky' || style === 'ponytail') {
+    box(head, 0.48, 0.3, 0.07, color, 0, 0.27, -0.215);
+    box(head, 0.05, 0.2, 0.4, color, -0.24, 0.31, -0.01);
+    box(head, 0.05, 0.2, 0.4, color, 0.24, 0.31, -0.01);
+  }
+  if (style === 'spiky') {
+    box(head, 0.12, 0.14, 0.12, color, -0.13, 0.54, 0.06, { rz: 0.3 });
+    box(head, 0.12, 0.17, 0.12, color, 0.02, 0.56, -0.02, { rz: -0.1 });
+    box(head, 0.12, 0.13, 0.12, color, 0.15, 0.53, 0.05, { rz: -0.35 });
+  }
+  if (style === 'ponytail') {
+    box(head, 0.12, 0.34, 0.12, color, 0, 0.2, -0.3);
+    box(head, 0.14, 0.05, 0.14, '#c0392b', 0, 0.37, -0.29);
+  }
+  if (style === 'long') {
+    box(head, 0.5, 0.58, 0.08, color, 0, 0.15, -0.225);
+    box(head, 0.06, 0.46, 0.36, color, -0.245, 0.2, -0.02);
+    box(head, 0.06, 0.46, 0.36, color, 0.245, 0.2, -0.02);
+  }
+  if (style === 'bob') {
+    box(head, 0.5, 0.34, 0.08, color, 0, 0.26, -0.225);
+    box(head, 0.07, 0.34, 0.42, color, -0.25, 0.26, 0);
+    box(head, 0.07, 0.34, 0.42, color, 0.25, 0.26, 0);
+    box(head, 0.48, 0.1, 0.06, color, 0, 0.35, 0.215);
+  }
+}
+
+function buildWeapon(holder, type) {
+  const w = new THREE.Group();
+  holder.add(w);
+  if (type === 'sword' || type === 'rusty') {
+    w.rotation.x = Math.PI / 2;
+    box(w, 0.05, 0.12, 0.05, '#5a3d28', 0, 0, 0);
+    box(w, 0.2, 0.04, 0.06, type === 'rusty' ? '#7a6a55' : '#c9a43a', 0, 0.07, 0);
+    box(w, 0.07, 0.46, 0.035, type === 'rusty' ? '#9c8f7c' : '#dfe4ea', 0, 0.32, 0);
+  } else if (type === 'dagger') {
+    w.rotation.x = Math.PI / 2;
+    box(w, 0.045, 0.1, 0.045, '#3a2a20', 0, 0, 0);
+    box(w, 0.13, 0.035, 0.05, '#8a3434', 0, 0.06, 0);
+    box(w, 0.05, 0.22, 0.03, '#cfd5dc', 0, 0.18, 0);
+  } else if (type === 'mace') {
+    w.rotation.x = Math.PI / 2;
+    box(w, 0.045, 0.32, 0.045, '#6b4a30', 0, 0.1, 0);
+    box(w, 0.15, 0.15, 0.15, '#c9a43a', 0, 0.3, 0);
+  } else if (type === 'staff') {
+    box(w, 0.05, 1.0, 0.05, '#7a5236', 0, 0.28, 0.02);
+    box(w, 0.18, 0.05, 0.05, '#7a5236', 0, 0.76, 0.02);
+    box(w, 0.13, 0.13, 0.13, '#7fe3ff', 0, 0.86, 0.02, { glow: true });
+  } else if (type === 'bow') {
+    w.position.z = 0.06;
+    box(w, 0.05, 0.2, 0.05, '#7a5236', 0, 0, 0);
+    box(w, 0.05, 0.26, 0.05, '#7a5236', 0, 0.21, -0.04, { rx: 0.3 });
+    box(w, 0.05, 0.26, 0.05, '#7a5236', 0, -0.21, -0.04, { rx: -0.3 });
+    box(w, 0.012, 0.64, 0.012, '#f2efe6', 0, 0, -0.09, { shadow: false });
+  } else if (type === 'lute') {
+    w.rotation.x = 1.1;
+    box(w, 0.22, 0.26, 0.08, '#b07a3c', 0, 0.06, 0);
+    box(w, 0.07, 0.07, 0.01, '#3a2616', 0, 0.07, 0.045, { shadow: false });
+    box(w, 0.05, 0.3, 0.04, '#7a5236', 0, 0.34, 0);
+  } else if (type === 'fan') {
+    w.rotation.x = Math.PI / 2;
+    box(w, 0.03, 0.12, 0.03, '#6b4a30', 0, 0.03, 0);
+    box(w, 0.3, 0.2, 0.025, '#f39bc2', 0, 0.18, 0);
+    box(w, 0.2, 0.06, 0.03, '#f0c75e', 0, 0.29, 0);
+  }
+  return w;
+}
+
+function buildRig(hero) {
+  const g = hero.genes;
+  const c = CLASSES[hero.cls];
+  const look = ageLook(hero.age);
+  const skeleton = hero.cls === 'skeleton';
+  const skin = skeleton ? '#e9e4d4' : SKINS[g.skin];
+  const hair = mixHex(g.hair, '#dcdcdc', look.gray);
+  const group = new THREE.Group();
+
+  const legL = new THREE.Group();
+  const legR = new THREE.Group();
+  legL.position.set(-0.095, 0.3, 0);
+  legR.position.set(0.095, 0.3, 0);
+  for (const leg of [legL, legR]) {
+    box(leg, 0.15, 0.26, 0.17, c.pants, 0, -0.12, 0);
+    box(leg, 0.16, 0.07, 0.21, skeleton ? '#cfc8b4' : '#4a3628', 0, -0.265, 0.02);
+  }
+  group.add(legL, legR);
+  if (c.robe) {
+    box(group, 0.42, 0.26, 0.28, c.body, 0, 0.17, 0);
+    box(group, 0.43, 0.04, 0.29, c.trim, 0, 0.05, 0);
+  }
+  if (c.skirt) box(group, 0.46, 0.15, 0.32, c.pants, 0, 0.27, 0);
+
+  const torso = new THREE.Group();
+  torso.position.y = 0.3;
+  group.add(torso);
+  if (c.bareArms) {
+    box(torso, 0.36, 0.13, 0.22, skin, 0, 0.065, 0);
+    box(torso, 0.38, 0.2, 0.24, c.body, 0, 0.22, 0);
+  } else {
+    box(torso, 0.38, 0.32, 0.24, c.body, 0, 0.16, 0);
+    box(torso, 0.39, 0.05, 0.25, c.trim, 0, 0.03, 0);
+  }
+  if (skeleton) {
+    for (const y of [0.12, 0.19, 0.26]) box(torso, 0.3, 0.025, 0.01, '#8d8676', 0, y, 0.123, { shadow: false });
+  }
+  if (c.scarf) box(torso, 0.42, 0.07, 0.28, c.trim, 0, 0.31, 0);
+  if (c.quiver) {
+    box(torso, 0.12, 0.34, 0.1, '#7a5236', 0.08, 0.22, -0.17, { rz: 0.3 });
+    box(torso, 0.1, 0.06, 0.08, '#f2efe6', 0.13, 0.4, -0.17, { rz: 0.3 });
+  }
+
+  const armL = new THREE.Group();
+  const armR = new THREE.Group();
+  armL.position.set(-0.245, 0.28, 0);
+  armR.position.set(0.245, 0.28, 0);
+  for (const arm of [armL, armR]) {
+    box(arm, 0.11, 0.22, 0.13, c.bareArms ? skin : c.body, 0, -0.1, 0);
+    box(arm, 0.1, 0.08, 0.11, skin, 0, -0.25, 0);
+    if (c.pads) box(arm, 0.16, 0.08, 0.19, '#b8c0c8', 0, 0.02, 0);
+  }
+  torso.add(armL, armR);
+  const holder = new THREE.Group();
+  holder.position.set(0, -0.27, 0.03);
+  armR.add(holder);
+  buildWeapon(holder, c.weapon);
+
+  const head = new THREE.Group();
+  head.position.y = 0.32;
+  head.scale.setScalar(look.head);
+  torso.add(head);
+  box(head, 0.44, 0.42, 0.42, skin, 0, 0.21, 0);
+  if (skeleton) {
+    const eye = hero.boss ? '#ff4b3a' : '#2a2a2a';
+    box(head, 0.11, 0.1, 0.02, eye, -0.1, 0.22, 0.215, { glow: hero.boss, shadow: false });
+    box(head, 0.11, 0.1, 0.02, eye, 0.1, 0.22, 0.215, { glow: hero.boss, shadow: false });
+    box(head, 0.2, 0.04, 0.02, '#8d8676', 0, 0.07, 0.215, { shadow: false });
+    if (hero.boss) {
+      box(head, 0.5, 0.08, 0.48, '#d9b54a', 0, 0.46, 0);
+      for (const x of [-0.18, 0, 0.18]) box(head, 0.08, 0.12, 0.08, '#d9b54a', x, 0.55, 0.18);
+    }
+  } else {
+    const eye = EYES[g.eye];
+    box(head, 0.065, 0.09, 0.02, eye, -0.1, 0.19, 0.215, { shadow: false });
+    box(head, 0.065, 0.09, 0.02, eye, 0.1, 0.19, 0.215, { shadow: false });
+    box(head, 0.07, 0.03, 0.01, '#f2a5a0', -0.16, 0.12, 0.213, { shadow: false });
+    box(head, 0.07, 0.03, 0.01, '#f2a5a0', 0.16, 0.12, 0.213, { shadow: false });
+    if (c.hat !== 'wizard') buildHair(head, g.style, hair);
+    if (g.gender === 'male' && g.beard && hero.age >= 25) {
+      box(head, 0.36, 0.13, 0.06, hair, 0, 0.06, 0.225);
+      box(head, 0.2, 0.04, 0.03, hair, 0, 0.115, 0.235);
+    }
+  }
+  if (c.hat === 'wizard') {
+    box(head, 0.48, 0.1, 0.46, hair, 0, 0.4, -0.02);
+    box(head, 0.64, 0.05, 0.62, '#2e3a7a', 0, 0.45, 0);
+    box(head, 0.42, 0.14, 0.42, '#2e3a7a', 0, 0.54, -0.02);
+    box(head, 0.28, 0.14, 0.28, '#2e3a7a', 0.02, 0.67, -0.05, { rz: -0.08 });
+    box(head, 0.14, 0.16, 0.14, '#2e3a7a', 0.06, 0.8, -0.08, { rz: -0.2 });
+    box(head, 0.43, 0.04, 0.43, '#d9b54a', 0, 0.49, -0.02);
+  } else if (c.hat === 'feather') {
+    box(head, 0.58, 0.05, 0.56, '#7a3a2a', 0, 0.47, 0);
+    box(head, 0.42, 0.12, 0.42, '#7a3a2a', 0, 0.54, 0);
+    box(head, 0.03, 0.26, 0.07, '#f4f1e8', 0.17, 0.66, -0.06, { rz: -0.4 });
+  }
+
+  group.scale.setScalar(look.scale * (g.height ?? 1));
+  torso.rotation.x = look.stoop;
+  head.rotation.x = -look.stoop * 0.5;
+  const hatTop = c.hat === 'wizard' ? 0.25 : 0;
+  return { kind: 'humanoid', group, legL, legR, torso, armL, armR, head, height: (0.62 + 0.5 * look.head + hatTop) * group.scale.y };
+}
+
+function buildSlime(hero) {
+  const group = new THREE.Group();
+  const s = hero.size ?? 1;
+  const body = new THREE.Group();
+  body.scale.setScalar(s);
+  group.add(body);
+  box(body, 0.62, 0.44, 0.62, '#79c96b', 0, 0.22, 0);
+  box(body, 0.46, 0.1, 0.46, '#8fd97f', 0, 0.49, 0);
+  box(body, 0.07, 0.1, 0.02, '#222222', -0.12, 0.28, 0.315, { shadow: false });
+  box(body, 0.07, 0.1, 0.02, '#222222', 0.12, 0.28, 0.315, { shadow: false });
+  box(body, 0.08, 0.08, 0.02, '#ffffff', -0.2, 0.37, 0.315, { shadow: false });
+  return { kind: 'slime', group, body, height: 0.55 * s };
+}
+
+// ---------- scene ----------
+const renderer = new THREE.WebGLRenderer({ antialias: true });
+renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+renderer.shadowMap.enabled = true;
+renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+document.body.prepend(renderer.domElement);
+
+const scene = new THREE.Scene();
+scene.background = new THREE.Color('#cfe6f2');
+const camera = new THREE.OrthographicCamera(-1, 1, 1, -1, 0.1, 300);
+const FRUSTUM = 16;
+function resize() {
+  const w = window.innerWidth;
+  const h = window.innerHeight;
+  renderer.setSize(w, h);
+  const aspect = w / h;
+  const size = aspect < 1 ? (FRUSTUM / aspect) * 0.62 : FRUSTUM;
+  camera.left = (-size * aspect) / 2;
+  camera.right = (size * aspect) / 2;
+  camera.top = size / 2;
+  camera.bottom = -size / 2;
+  camera.updateProjectionMatrix();
+}
+window.addEventListener('resize', resize);
+resize();
+
+scene.add(new THREE.HemisphereLight('#ffffff', '#8fb36a', 1.6));
+const sun = new THREE.DirectionalLight('#fff1dc', 2.2);
+sun.castShadow = true;
+sun.shadow.mapSize.set(2048, 2048);
+Object.assign(sun.shadow.camera, { left: -17, right: 17, top: 17, bottom: -17, near: 1, far: 70 });
+sun.shadow.bias = -0.0005;
+sun.shadow.normalBias = 0.02;
+scene.add(sun, sun.target);
+const SUN_OFFSET = new THREE.Vector3(10, 20, 7);
+
+const controls = new MapControls(camera, renderer.domElement);
+controls.enableRotate = false;
+controls.enableDamping = true;
+controls.screenSpacePanning = true;
+controls.minZoom = 0.6;
+controls.maxZoom = 3.5;
+
+const VIEWS = {
+  village: { target: new THREE.Vector3(0, 0, 0), offset: new THREE.Vector3(16, 16, 16), zoom: 1 },
+  battle: { target: new THREE.Vector3(60, 0.4, 0.3), offset: new THREE.Vector3(0, 9, 11), zoom: 1.7 },
+};
+let view = 'village';
+function focus(target, offset, zoom) {
+  controls.target.copy(target);
+  camera.position.copy(target).add(offset);
+  camera.zoom = zoom;
+  camera.updateProjectionMatrix();
+  controls.update();
+  sun.position.copy(target).add(SUN_OFFSET);
+  sun.target.position.copy(target);
+}
+function setView(next) {
+  view = next;
+  const v = VIEWS[next];
+  scene.background.set(next === 'battle' ? '#2b2f3a' : '#cfe6f2');
+  focus(v.target, v.offset, v.zoom);
+  for (const button of document.querySelectorAll('[data-view]')) button.classList.toggle('on', button.dataset.view === next);
+  document.getElementById('crowd').hidden = next !== 'village';
+  document.getElementById('hint').textContent =
+    next === 'village' ? '주민을 누르면 외형을 바꿀 수 있어요 · 드래그로 이동 · 휠/핀치로 확대' : '자동 전투 시연 · 전열 2 / 후열 3 · 작전: 체력 70% 미만 회복';
+  if (next !== 'village') select(null);
+}
+
+// ---------- village ----------
+const village = new THREE.Group();
+scene.add(village);
+const GRASS = ['#a5d46a', '#9acb5e', '#b0da78', '#94c55a'];
+const DIRT = ['#e2cfa6', '#dcc79b', '#e6d5b0', '#d8c294'];
+const N = 15;
+const inPlaza = (x, z) => (Math.abs(x) <= 6 && Math.abs(z) <= 6) || (Math.abs(x) <= 1 && z > 0) || (Math.abs(z) <= 1 && x > 0);
+const topAt = (x, z) => (Math.max(Math.abs(x), Math.abs(z)) > 12.5 ? 0.3 : 0);
+{
+  const count = (2 * N) * (2 * N);
+  const tiles = new THREE.InstancedMesh(BOX, new THREE.MeshLambertMaterial({ color: '#ffffff' }), count);
+  tiles.receiveShadow = true;
+  const m = new THREE.Matrix4();
+  const color = new THREE.Color();
+  let i = 0;
+  for (let x = -N; x < N; x += 1) {
+    for (let z = -N; z < N; z += 1) {
+      const cx = x + 0.5;
+      const cz = z + 0.5;
+      const top = topAt(cx, cz);
+      const h = 0.4 + top;
+      m.compose(new THREE.Vector3(cx, top - h / 2, cz), new THREE.Quaternion(), new THREE.Vector3(1, h, 1));
+      tiles.setMatrixAt(i, m);
+      tiles.setColorAt(i, color.set(inPlaza(cx, cz) && top === 0 ? pick(DIRT) : pick(GRASS)));
+      i += 1;
+    }
+  }
+  village.add(tiles);
+}
+
+function building({ x, z, w, d, h, wall, roof, steps = 4, timber = false, chimney = false, stone = '#a9a59c' }) {
+  const b = new THREE.Group();
+  b.position.set(x, 0, z);
+  box(b, w + 0.3, 0.2, d + 0.3, stone, 0, 0.1, 0);
+  box(b, w, h, d, wall, 0, 0.2 + h / 2, 0);
+  if (timber) {
+    for (const [px, pz] of [[-1, -1], [1, -1], [-1, 1], [1, 1]]) box(b, 0.14, h, 0.14, '#6b4a33', (px * w) / 2, 0.2 + h / 2, (pz * d) / 2);
+    box(b, w + 0.04, 0.1, d + 0.04, '#6b4a33', 0, 0.2 + h * 0.55, 0);
+  }
+  box(b, 0.5, 0.8, 0.06, '#6b4a33', 0, 0.6, d / 2 + 0.03);
+  box(b, 0.06, 0.06, 0.03, '#d9b54a', 0.14, 0.6, d / 2 + 0.07, { shadow: false });
+  const winY = 0.2 + h * 0.62;
+  for (const wx of [-w * 0.3, w * 0.3]) {
+    box(b, 0.44, 0.48, 0.05, '#f4f1e8', wx, winY, d / 2 + 0.02);
+    box(b, 0.3, 0.34, 0.06, '#5aa0a0', wx, winY, d / 2 + 0.03);
+  }
+  for (const wz of [-d * 0.22, d * 0.22]) {
+    box(b, 0.05, 0.48, 0.44, '#f4f1e8', w / 2 + 0.02, winY, wz);
+    box(b, 0.06, 0.34, 0.3, '#5aa0a0', w / 2 + 0.03, winY, wz);
+  }
+  const layer = 0.22;
+  for (let s = 0; s < steps; s += 1) {
+    const depth = (d + 0.6) * (1 - s / steps);
+    box(b, w + 0.5, layer, depth, s % 2 ? mixHex(roof, '#000000', 0.08) : roof, 0, 0.2 + h + layer / 2 + s * layer, 0);
+  }
+  if (chimney) box(b, 0.35, 0.6, 0.35, '#9e9a92', w * 0.25, 0.2 + h + steps * layer * 0.6, -d * 0.15);
+  village.add(b);
+  return b;
+}
+
+function tree(x, z, s = 1) {
+  const t = new THREE.Group();
+  t.position.set(x, topAt(x, z), z);
+  const g1 = pick(['#7cb342', '#6fa83a', '#86bd4a']);
+  const g2 = mixHex(g1, '#ffffff', 0.12);
+  box(t, 0.3, 0.7, 0.3, '#6d4c33', 0, 0.35, 0);
+  box(t, 1.3 * s, 0.8 * s, 1.3 * s, g1, 0, 0.7 + 0.4 * s, 0);
+  box(t, 0.95 * s, 0.6 * s, 0.95 * s, g2, 0, 0.7 + 1.1 * s, 0);
+  box(t, 0.5 * s, 0.4 * s, 0.5 * s, g1, 0, 0.7 + 1.6 * s, 0);
+  village.add(t);
+}
+
+function lamp(x, z, crystal = false) {
+  const l = new THREE.Group();
+  l.position.set(x, 0, z);
+  box(l, 0.32, 0.16, 0.32, '#6d6d6d', 0, 0.08, 0);
+  box(l, 0.12, 1.4, 0.12, '#3a3a3a', 0, 0.8, 0);
+  box(l, 0.24, 0.26, 0.24, crystal ? '#9fe8ff' : '#ffd36b', 0, 1.6, 0, { glow: true });
+  box(l, 0.3, 0.05, 0.3, '#3a3a3a', 0, 1.76, 0);
+  village.add(l);
+}
+
+function sign(text, x, z) {
+  const s = new THREE.Group();
+  s.position.set(x, 0, z);
+  s.rotation.y = Math.PI / 4;
+  box(s, 0.12, 1.2, 0.12, '#6b4a33', -1, 0.6, 0);
+  box(s, 0.12, 1.2, 0.12, '#6b4a33', 1, 0.6, 0);
+  box(s, 2.4, 1.0, 0.12, '#7a5236', 0, 1.3, 0);
+  const canvas = document.createElement('canvas');
+  canvas.width = 512;
+  canvas.height = 200;
+  const ctx = canvas.getContext('2d');
+  ctx.fillStyle = '#f3ead6';
+  ctx.fillRect(0, 0, 512, 200);
+  ctx.strokeStyle = '#b8443a';
+  ctx.lineWidth = 10;
+  ctx.strokeRect(14, 14, 484, 172);
+  ctx.fillStyle = '#4a3426';
+  ctx.font = 'bold 72px system-ui, sans-serif';
+  ctx.textAlign = 'center';
+  ctx.textBaseline = 'middle';
+  ctx.fillText(text, 256, 104);
+  const texture = new THREE.CanvasTexture(canvas);
+  texture.colorSpace = THREE.SRGBColorSpace;
+  const plane = new THREE.Mesh(new THREE.PlaneGeometry(2.2, 0.86), new THREE.MeshLambertMaterial({ map: texture }));
+  plane.position.set(0, 1.3, 0.065);
+  s.add(plane);
+  village.add(s);
+}
+
+// Hall: stone, banners.
+{
+  const hall = building({ x: -8.5, z: -8.5, w: 5, d: 4, h: 2.0, wall: '#b9b6ad', roof: '#5b6570', steps: 3, stone: '#8f8b83' });
+  for (const bx of [-1.4, 1.4]) {
+    box(hall, 0.3, 1.0, 0.05, '#c0392b', bx, 1.4, 2.06);
+    box(hall, 0.34, 0.06, 0.07, '#d9b54a', bx, 1.92, 2.06);
+  }
+}
+building({ x: 8.5, z: -8.5, w: 4, d: 3, h: 2.0, wall: '#c99c6a', roof: '#e07b5f', steps: 4, timber: true, chimney: true });
+building({ x: -8.5, z: 6, w: 3, d: 2.6, h: 1.4, wall: '#efe3c4', roof: '#9a98e2', steps: 4 });
+building({ x: 6, z: 9, w: 3, d: 2.6, h: 1.5, wall: '#efe3c4', roof: '#e8896a', steps: 4, chimney: true });
+building({ x: 10.5, z: 4.5, w: 2.6, d: 2.4, h: 1.3, wall: '#e9dcc0', roof: '#7fb0d8', steps: 4 });
+
+// Wheat field with fence.
+{
+  const f = new THREE.Group();
+  f.position.set(-1.5, 0, -10.5);
+  box(f, 4.2, 0.08, 3.0, '#7a5a3a', 0, 0.04, 0);
+  for (let ix = 0; ix < 8; ix += 1) {
+    for (let iz = 0; iz < 5; iz += 1) box(f, 0.1, rand(0.35, 0.5), 0.1, pick(['#e8c95a', '#dcb945', '#f0d470']), -1.75 + ix * 0.5, 0.25, -1.0 + iz * 0.5);
+  }
+  for (const [px, pz, w, d] of [[0, -1.65, 4.6, 0.08], [0, 1.65, 4.6, 0.08], [-2.3, 0, 0.08, 3.3], [2.3, 0, 0.08, 3.3]]) {
+    box(f, w, 0.08, d, '#8d6e4f', px, 0.45, pz);
+    box(f, w, 0.08, d, '#8d6e4f', px, 0.25, pz);
+  }
+  for (const [px, pz] of [[-2.3, -1.65], [2.3, -1.65], [-2.3, 1.65], [2.3, 1.65], [0, -1.65], [0, 1.65]]) box(f, 0.14, 0.6, 0.14, '#6b4a33', px, 0.3, pz);
+  village.add(f);
+}
+// Well and picnic table near the inn.
+{
+  const w = new THREE.Group();
+  w.position.set(7.4, 0, -3.2);
+  for (const [px, pz, sx, sz] of [[0, -0.45, 1.1, 0.2], [0, 0.45, 1.1, 0.2], [-0.45, 0, 0.2, 0.7], [0.45, 0, 0.2, 0.7]]) box(w, sx, 0.5, sz, '#9e9a92', px, 0.25, pz);
+  box(w, 0.7, 0.05, 0.7, '#5fb7d9', 0, 0.42, 0, { shadow: false });
+  box(w, 0.1, 1.2, 0.1, '#6b4a33', -0.5, 0.6, 0);
+  box(w, 0.1, 1.2, 0.1, '#6b4a33', 0.5, 0.6, 0);
+  box(w, 1.4, 0.12, 0.9, '#b8443a', 0, 1.25, 0);
+  village.add(w);
+  const t = new THREE.Group();
+  t.position.set(9.5, 0, -5.2);
+  box(t, 1.4, 0.1, 0.8, '#7a5a40', 0, 0.6, 0);
+  box(t, 0.1, 0.55, 0.1, '#5d4433', -0.55, 0.28, 0);
+  box(t, 0.1, 0.55, 0.1, '#5d4433', 0.55, 0.28, 0);
+  box(t, 1.4, 0.08, 0.3, '#7a5a40', 0, 0.35, 0.65);
+  box(t, 1.4, 0.08, 0.3, '#7a5a40', 0, 0.35, -0.65);
+  village.add(t);
+}
+for (const [x, z] of [[-6.4, -6.4], [6.4, -6.4], [-6.4, 6.4], [6.4, 6.4]]) lamp(x, z, x < 0 && z < 0);
+lamp(2, 10, false);
+sign('영웅의 마을', -7.6, 8.8);
+for (const [x, z, s] of [[-13.5, -2, 1], [-12.5, 3, 0.8], [-13.5, 10, 1.1], [-4, -13.5, 0.9], [4, -13.5, 1], [13.5, -1, 1], [13.5, 8, 0.9],
+  [11, 12.5, 1.1], [-4.5, 12.5, 1], [-11, 13, 0.9], [13, -12.5, 1], [-13, -13, 1.1], [3, 13.5, 0.8], [-10.5, -3, 0.7], [11.5, -11, 0.8]]) tree(x, z, s);
+// Grass tufts and flowers.
+for (let i = 0; i < 70; i += 1) {
+  const x = rand(-14, 14);
+  const z = rand(-14, 14);
+  if (inPlaza(x, z) || Math.abs(x) < 7.5 && Math.abs(z) < 7.5) continue;
+  const flower = Math.random() < 0.4;
+  box(village, 0.08, flower ? 0.12 : 0.16, 0.08, flower ? pick(['#ffffff', '#ffe27a', '#f7a8c4']) : '#5f8f35', x, topAt(x, z) + 0.07, z, { shadow: false });
+}
+// Stone slabs leading to doors.
+for (const [x, z] of [[-8.5, -6.1], [-8.5, -5.3], [8.5, -6.6], [8.5, -5.8], [-8.5, 7.7], [-7.6, 8.2]]) box(village, 0.7, 0.06, 0.7, '#cfd3d6', x, 0.03, z, { shadow: false });
+
+// ---------- units ----------
+const charLayer = new THREE.Group();
+scene.add(charLayer);
+const barLayer = new THREE.Group();
+scene.add(barLayer);
+
+class Unit {
+  constructor(hero) {
+    this.hero = hero;
+    this.root = new THREE.Group();
+    this.root.userData.unit = this;
+    this.phase = rand(0, 10);
+    this.speed = rand(0.9, 1.2);
+    this.state = 'idle';
+    this.timer = rand(0.5, 3);
+    this.target = new THREE.Vector3();
+    this.anim = null;
+    this.label = null;
+    this.rebuild();
+  }
+  rebuild() {
+    if (this.rig) this.root.remove(this.rig.group);
+    this.rig = this.hero.cls === 'slime' ? buildSlime(this.hero) : buildRig(this.hero);
+    this.root.add(this.rig.group);
+    if (this.labelText) this.setLabel(this.labelText);
+  }
+  setLabel(text) {
+    if (this.label) {
+      this.root.remove(this.label);
+      this.label.material.map.dispose();
+      this.label.material.dispose();
+      this.label = null;
+    }
+    this.labelText = text;
+    if (!text) return;
+    this.label = makeLabel(text);
+    this.label.position.y = this.rig.height + 0.3;
+    this.root.add(this.label);
+  }
+}
+
+function makeLabel(text) {
+  const canvas = document.createElement('canvas');
+  const ctx = canvas.getContext('2d');
+  ctx.font = '600 34px system-ui, sans-serif';
+  const width = Math.ceil(ctx.measureText(text).width) + 36;
+  canvas.width = width;
+  canvas.height = 56;
+  ctx.font = '600 34px system-ui, sans-serif';
+  ctx.fillStyle = 'rgba(255,255,255,0.92)';
+  ctx.beginPath();
+  ctx.roundRect(2, 2, width - 4, 52, 26);
+  ctx.fill();
+  ctx.fillStyle = '#2d3a2e';
+  ctx.textAlign = 'center';
+  ctx.textBaseline = 'middle';
+  ctx.fillText(text, width / 2, 30);
+  const texture = new THREE.CanvasTexture(canvas);
+  texture.colorSpace = THREE.SRGBColorSpace;
+  const sprite = new THREE.Sprite(new THREE.SpriteMaterial({ map: texture, depthTest: false }));
+  sprite.renderOrder = 10;
+  sprite.scale.set((width / 56) * 0.32, 0.32, 1);
+  return sprite;
+}
+
+function idlePose(u, t) {
+  const r = u.rig;
+  const b = Math.sin(t * 2.4 + u.phase);
+  r.group.position.y = 0;
+  r.group.rotation.set(0, 0, 0);
+  if (r.kind === 'slime') {
+    r.body.scale.set((u.hero.size ?? 1) * (1 + b * 0.05), (u.hero.size ?? 1) * (1 - b * 0.07), (u.hero.size ?? 1) * (1 + b * 0.05));
+    return;
+  }
+  r.torso.scale.y = 1 + b * 0.02;
+  r.armL.rotation.set(0, 0, -0.06 - b * 0.03);
+  r.armR.rotation.set(0, 0, 0.06 + b * 0.03);
+  r.legL.rotation.x = 0;
+  r.legR.rotation.x = 0;
+}
+
+function walkPose(u, t) {
+  const r = u.rig;
+  const k = t * 9 * u.speed + u.phase;
+  const s = Math.sin(k);
+  r.group.position.y = Math.abs(Math.cos(k)) * 0.035;
+  r.torso.scale.y = 1;
+  r.legL.rotation.x = s * 0.6;
+  r.legR.rotation.x = -s * 0.6;
+  r.armL.rotation.set(-s * 0.5, 0, -0.06);
+  r.armR.rotation.set(s * 0.5, 0, 0.06);
+}
+
+function turnToward(current, target, step) {
+  let diff = ((target - current + Math.PI) % (Math.PI * 2)) - Math.PI;
+  if (diff < -Math.PI) diff += Math.PI * 2;
+  return current + Math.max(-step, Math.min(step, diff));
+}
+
+// ---------- residents ----------
+const residents = [];
+function addResident(hero, x = rand(-5.3, 5.3), z = rand(-5.3, 5.3)) {
+  const u = new Unit(hero);
+  u.root.position.set(x, 0, z);
+  u.root.rotation.y = rand(0, Math.PI * 2);
+  charLayer.add(u.root);
+  residents.push(u);
+  return u;
+}
+function removeResident(u) {
+  charLayer.remove(u.root);
+  u.setLabel(null);
+  residents.splice(residents.indexOf(u), 1);
+}
+function updateResident(u, dt, t) {
+  if (u.state === 'pose') {
+    idlePose(u, t);
+    u.timer -= dt;
+    if (u.timer <= 0) {
+      u.state = 'idle';
+      u.timer = rand(1, 3);
+      if (u !== selected) u.setLabel(null);
+    }
+    return;
+  }
+  if (u.state === 'idle') {
+    idlePose(u, t);
+    u.timer -= dt;
+    if (u.timer <= 0) {
+      u.state = 'walk';
+      u.target.set(rand(-5.3, 5.3), 0, rand(-5.3, 5.3));
+    }
+    return;
+  }
+  const p = u.root.position;
+  const dx = u.target.x - p.x;
+  const dz = u.target.z - p.z;
+  const dist = Math.hypot(dx, dz);
+  if (dist < 0.05) {
+    u.state = 'idle';
+    u.timer = rand(1.5, 5);
+    return;
+  }
+  const step = Math.min(dist, 1.0 * u.speed * dt * (u.hero.age > 60 ? 0.6 : 1));
+  p.x += (dx / dist) * step;
+  p.z += (dz / dist) * step;
+  u.root.rotation.y = turnToward(u.root.rotation.y, Math.atan2(dx, dz), dt * 8);
+  walkPose(u, t);
+}
+
+function seedResidents() {
+  const ages = [9, 12, 16, 19, 22, 25, 28, 31, 36, 42, 55, 66];
+  for (const age of ages) addResident(randomHero({ age }));
+}
+function setResidentCount(n) {
+  while (residents.length < n) addResident(randomHero({ age: randInt(10, 65) }));
+  for (let i = residents.length - 1; i >= 0 && residents.length > n; i -= 1) {
+    const u = residents[i];
+    if (u !== selected && u.state !== 'pose') removeResident(u);
+  }
+}
+
+// ---------- selection & inspector ----------
+const ring = new THREE.Mesh(new THREE.RingGeometry(0.42, 0.54, 28), new THREE.MeshBasicMaterial({ color: '#ffd84d', transparent: true, opacity: 0.95 }));
+ring.rotation.x = -Math.PI / 2;
+ring.position.y = 0.02;
+let selected = null;
+const panel = document.getElementById('panel');
+
+function select(u) {
+  if (selected && selected !== u && selected.state !== 'pose') selected.setLabel(null);
+  selected = u;
+  if (u) {
+    u.root.add(ring);
+    if (!u.labelText || u.state !== 'pose') u.setLabel(u.hero.name);
+  } else {
+    ring.removeFromParent();
+  }
+  renderPanel();
+}
+
+function swatchRow(name, colors, current) {
+  return `<div class="swatches">${colors
+    .map((c, i) => `<button type="button" class="sw${current === i || current === c ? ' on' : ''}" data-${name}="${i}" style="background:${c}" aria-label="${name} ${i + 1}"></button>`)
+    .join('')}</div>`;
+}
+
+function renderPanel() {
+  if (!selected) {
+    panel.hidden = true;
+    return;
+  }
+  const h = selected.hero;
+  const g = h.genes;
+  const classOptions = classesFor(g.gender).map((id) => `<option value="${id}"${id === h.cls ? ' selected' : ''}>${CLASSES[id].name}</option>`).join('');
+  const styleOptions = Object.entries(STYLES).map(([id, label]) => `<option value="${id}"${id === g.style ? ' selected' : ''}>${label}</option>`).join('');
+  const family = h.family
+    ? `<div class="family"><h3>${h.family.father} × ${h.family.mother}의 아이</h3><ul>${h.family.rows
+        .map((row) => `<li>${row.color ? `<span class="dot" style="background:${row.color}"></span>` : ''}<span><b>${row.label}</b> · ${row.text}</span></li>`)
+        .join('')}</ul></div>`
+    : '';
+  panel.innerHTML = `
+    <div class="head"><h2>${h.name}</h2><button type="button" class="close" id="p-close" aria-label="닫기">×</button></div>
+    <div class="row"><label for="p-cls">클래스</label><select id="p-cls">${classOptions}</select></div>
+    <div class="row"><label for="p-gender">성별</label><select id="p-gender">
+      <option value="male"${g.gender === 'male' ? ' selected' : ''}>남</option>
+      <option value="female"${g.gender === 'female' ? ' selected' : ''}>여</option></select></div>
+    <div class="row"><label for="p-age">나이</label><div class="age"><input id="p-age" type="range" min="8" max="70" value="${h.age}"><output id="p-age-out">${h.age}세</output></div></div>
+    <div class="row"><label for="p-style">머리 모양</label><select id="p-style">${styleOptions}</select></div>
+    <div class="row"><span class="lab">머리색</span><div class="swatches">${HAIRS.map((c) => `<button type="button" class="sw${c === g.hair ? ' on' : ''}" data-hair="${c}" style="background:${c}" aria-label="머리색 ${c}"></button>`).join('')}<input type="color" id="p-hair" value="${g.hair}" aria-label="머리색 직접 고르기"></div></div>
+    <div class="row"><span class="lab">피부</span>${swatchRow('skin', SKINS, g.skin)}</div>
+    <div class="row"><span class="lab">눈</span>${swatchRow('eye', EYES, g.eye)}</div>
+    ${g.gender === 'male' ? `<div class="row"><label class="check"><input type="checkbox" id="p-beard"${g.beard ? ' checked' : ''}> 수염 (25세 이상)</label></div>` : ''}
+    <button type="button" class="btn primary" id="p-child">자식 만들기</button>
+    <button type="button" class="btn" id="p-ages">나이별로 보기</button>
+    ${family}`;
+  const apply = (rerender = false) => {
+    selected.rebuild();
+    selected.setLabel(selected.hero.name);
+    if (rerender) renderPanel();
+  };
+  panel.querySelector('#p-close').onclick = () => select(null);
+  panel.querySelector('#p-cls').onchange = (e) => { h.cls = e.target.value; apply(); };
+  panel.querySelector('#p-gender').onchange = (e) => {
+    g.gender = e.target.value;
+    if (g.gender === 'male' && CLASSES[h.cls].femaleOnly) h.cls = 'warrior';
+    apply(true);
+  };
+  panel.querySelector('#p-age').oninput = (e) => {
+    h.age = Number(e.target.value);
+    panel.querySelector('#p-age-out').textContent = `${h.age}세`;
+    apply();
+  };
+  panel.querySelector('#p-style').onchange = (e) => { g.style = e.target.value; apply(); };
+  panel.querySelector('#p-hair').oninput = (e) => { g.hair = e.target.value; apply(); };
+  for (const b of panel.querySelectorAll('[data-hair]')) b.onclick = () => { g.hair = b.dataset.hair; apply(true); };
+  for (const b of panel.querySelectorAll('[data-skin]')) b.onclick = () => { g.skin = Number(b.dataset.skin); apply(true); };
+  for (const b of panel.querySelectorAll('[data-eye]')) b.onclick = () => { g.eye = Number(b.dataset.eye); apply(true); };
+  const beard = panel.querySelector('#p-beard');
+  if (beard) beard.onchange = (e) => { g.beard = e.target.checked; apply(); };
+  panel.querySelector('#p-child').onclick = makeChild;
+  panel.querySelector('#p-ages').onclick = showAges;
+  panel.hidden = false;
+}
+
+// Child inherits from both parents: blended hair colour, one parent's eyes, style from a parent.
+function breed(father, mother) {
+  const gender = Math.random() < 0.5 ? 'male' : 'female';
+  const fg = father.genes;
+  const mg = mother.genes;
+  const rows = [];
+  const t = rand(0.25, 0.75);
+  let hair = mixHex(fg.hair, mg.hair, t);
+  if (Math.random() < 0.08) {
+    hair = pick(HAIRS);
+    rows.push({ label: '머리색', text: '돌연변이 (부모와 다른 색)', color: hair });
+  } else {
+    rows.push({ label: '머리색', text: `아버지 ${Math.round((1 - t) * 100)}% + 어머니 ${Math.round(t * 100)}%`, color: hair });
+  }
+  const skin = Math.round(lerp(fg.skin, mg.skin, Math.random()));
+  rows.push({ label: '피부', text: skin === fg.skin && skin === mg.skin ? '두 사람과 같음' : skin === fg.skin ? '아버지 쪽' : skin === mg.skin ? '어머니 쪽' : '두 사람의 중간', color: SKINS[skin] });
+  const eyeFromFather = Math.random() < 0.5;
+  const eye = eyeFromFather ? fg.eye : mg.eye;
+  rows.push({ label: '눈', text: eyeFromFather ? '아버지에게서' : '어머니에게서', color: EYES[eye] });
+  const sameSide = gender === 'male' ? fg : mg;
+  const otherSide = gender === 'male' ? mg : fg;
+  let style;
+  let styleText;
+  if (stylesFor(gender).includes(sameSide.style) && Math.random() < 0.7) {
+    style = sameSide.style;
+    styleText = `${gender === 'male' ? '아버지' : '어머니'}에게서`;
+  } else if (stylesFor(gender).includes(otherSide.style)) {
+    style = otherSide.style;
+    styleText = `${gender === 'male' ? '어머니' : '아버지'}에게서`;
+  } else {
+    style = pick(stylesFor(gender));
+    styleText = '새로 생김';
+  }
+  rows.push({ label: '머리 모양', text: `${STYLES[style]} (${styleText})` });
+  const height = (fg.height + mg.height) / 2 + rand(-0.02, 0.02);
+  rows.push({ label: '키', text: '두 사람의 평균 ± 약간' });
+  return {
+    name: pick(NAMES[gender]),
+    // Hatless classes so the inherited hair stays visible.
+    cls: pick(classesFor(gender).filter((id) => !CLASSES[id].hat)),
+    age: 14,
+    genes: { gender, skin, hair, eye, style, beard: gender === 'male' && fg.beard, height },
+    family: { father: father.name, mother: mother.name, rows },
+  };
+}
+
+function makeChild() {
+  const a = selected;
+  if (!a) return;
+  const want = a.hero.genes.gender === 'male' ? 'female' : 'male';
+  let b = residents.find((u) => u !== a && u.hero.genes.gender === want && u.hero.age >= 20 && u.hero.age <= 50 && u.state !== 'pose');
+  if (!b) b = addResident(randomHero({ gender: want, age: randInt(24, 40) }));
+  const father = want === 'female' ? a : b;
+  const mother = want === 'female' ? b : a;
+  const child = addResident(breed(father.hero, mother.hero));
+  const center = new THREE.Vector3(0, 0, 1);
+  const across = new THREE.Vector3(1, 0, -1).normalize();
+  const toward = new THREE.Vector3(1, 0, 1).normalize();
+  const spots = [
+    [father, center.clone().addScaledVector(across, -1.3), `아버지 ${father.hero.name}`],
+    [mother, center.clone().addScaledVector(across, 1.3), `어머니 ${mother.hero.name}`],
+    [child, center.clone().addScaledVector(toward, 0.9), `아이 ${child.hero.name}`],
+  ];
+  for (const [u, pos, text] of spots) {
+    u.state = 'pose';
+    u.timer = 15;
+    u.root.position.copy(pos);
+    u.root.rotation.y = Math.PI / 4;
+    u.setLabel(text);
+  }
+  select(child);
+  child.setLabel(`아이 ${child.hero.name}`);
+  focus(center, VIEWS.village.offset, 2.4);
+}
+
+// Lines up copies of the selected hero at several ages.
+const lineup = [];
+function showAges() {
+  if (!selected) return;
+  for (const u of lineup) removeResident(u);
+  lineup.length = 0;
+  const base = selected.hero;
+  const ages = [10, 16, 24, 38, 52, 66];
+  const across = new THREE.Vector3(1, 0, -1).normalize();
+  const center = new THREE.Vector3(0, 0, -2.5);
+  ages.forEach((age, i) => {
+    const u = addResident({ ...base, age, genes: { ...base.genes }, family: undefined });
+    u.root.position.copy(center).addScaledVector(across, (i - (ages.length - 1) / 2) * 1.05);
+    u.root.rotation.y = Math.PI / 4;
+    u.state = 'pose';
+    u.timer = 20;
+    u.setLabel(`${age}세`);
+    lineup.push(u);
+  });
+  focus(center, VIEWS.village.offset, 2.2);
+  const shown = [...lineup];
+  setTimeout(() => {
+    for (const u of shown) {
+      if (u === selected) select(null);
+      if (residents.includes(u)) removeResident(u);
+    }
+  }, 20000);
+}
+
+// ---------- battle ----------
+const B = VIEWS.battle.target.clone().setY(0);
+{
+  const floor = new THREE.Group();
+  floor.position.copy(B);
+  for (let x = -10; x < 10; x += 1) {
+    for (let z = -4; z < 7; z += 1) box(floor, 1, 0.4, 1, pick(['#5b6170', '#535866', '#626879', '#585e6c']), x + 0.5, -0.2, z + 0.5, { shadow: false });
+  }
+  for (let x = -10; x < 10; x += 1) {
+    const h = rand(1.6, 3);
+    box(floor, 1, h, 1, pick(['#454a57', '#4c5160', '#40444f']), x + 0.5, h / 2, -4.5);
+  }
+  for (const x of [-4.5, 0.5, 4.5]) {
+    box(floor, 0.12, 0.5, 0.12, '#3a2a20', x, 1.3, -3.9);
+    box(floor, 0.2, 0.22, 0.2, '#ffad4d', x, 1.62, -3.9, { glow: true });
+  }
+  for (const [x, z] of [[-6, 2.5], [5.8, 2.8], [-5.5, -2.8], [6, -2.5]]) box(floor, rand(0.5, 0.9), rand(0.3, 0.6), rand(0.5, 0.9), '#6e7484', x, 0.2, z);
+  for (const [x, z] of [[-6.3, -3.2], [6.4, 1.2]]) box(floor, 0.25, 0.6, 0.25, '#b48cff', x, 0.3, z, { glow: true });
+  scene.add(floor);
+}
+const battle = { heroes: [], enemies: [], order: [], turn: 0, timer: 1, pending: 0, wave: 0 };
+const fx = { numbers: [], particles: [], projectiles: [] };
+const HERO_SLOTS = [[-1.5, -1.0, 'front'], [-1.5, 1.0, 'front'], [-3.2, -2.0, 'back'], [-3.2, 0, 'back'], [-3.2, 2.0, 'back']];
+const ENEMY_SLOTS = [[1.5, -1.0, 'front'], [1.5, 1.0, 'front'], [3.2, -2.0, 'back'], [3.2, 0, 'back'], [3.2, 2.0, 'back']];
+const MELEE = new Set(['warrior', 'rogue', 'skeleton', 'slime', 'dancer', 'bard']);
+
+function makeBar() {
+  const group = new THREE.Group();
+  box(group, 0.62, 0.09, 0.02, '#2b2b2b', 0, 0, 0, { shadow: false });
+  const fg = box(group, 0.58, 0.055, 0.03, '#6cd26a', 0, 0, 0.01, { shadow: false });
+  barLayer.add(group);
+  return { group, fg };
+}
+function battleUnit(hero, slot, side, hp) {
+  const u = new Unit(hero);
+  u.side = side;
+  u.row = slot[2];
+  u.home = new THREE.Vector3(B.x + slot[0], 0, B.z + slot[1]);
+  u.root.position.copy(u.home);
+  // Turned partly toward the camera so faces read as 3/4 view.
+  u.root.rotation.y = side === 'hero' ? Math.PI / 2 - 0.5 : -Math.PI / 2 + 0.5;
+  u.max = hp;
+  u.hp = hp;
+  u.alive = true;
+  u.bar = makeBar();
+  if (side === 'enemy') u.bar.fg.material = mat('#e05a4a');
+  scene.add(u.root);
+  return u;
+}
+function spawnParty() {
+  const party = [['warrior', 'male'], ['rogue', 'female'], ['archer', 'male'], ['mage', 'female'], ['cleric', 'male']];
+  party.forEach(([cls, gender], i) => battle.heroes.push(battleUnit(randomHero({ cls, gender, age: randInt(19, 38) }), HERO_SLOTS[i], 'hero', cls === 'warrior' ? 170 : 90)));
+}
+function spawnWave() {
+  battle.wave += 1;
+  const skeleton = (boss) => ({ name: boss ? '해골 왕' : '해골', cls: 'skeleton', age: 30, boss, genes: { gender: 'male', skin: 0, hair: '#000000', eye: 0, style: 'bald', beard: false, height: boss ? 1.45 : 1 } });
+  const slime = () => ({ name: '슬라임', cls: 'slime', age: 1, size: rand(0.85, 1.1), genes: { gender: 'male' } });
+  const plan = battle.wave % 2 === 1
+    ? [[skeleton(false), 0, 70], [skeleton(false), 1, 70], [slime(), 2, 45], [slime(), 3, 45], [slime(), 4, 45]]
+    : [[skeleton(true), 0, 260], [slime(), 3, 45], [slime(), 4, 45]];
+  for (const [hero, slotIndex, hp] of plan) {
+    const slot = hero.boss ? [1.6, 0, 'front'] : ENEMY_SLOTS[slotIndex];
+    battle.enemies.push(battleUnit(hero, slot, 'enemy', hp));
+  }
+  battle.order = [];
+  for (let i = 0; i < 5; i += 1) {
+    if (battle.heroes[i]) battle.order.push(battle.heroes[i]);
+    if (battle.enemies[i]) battle.order.push(battle.enemies[i]);
+  }
+  battle.turn = 0;
+  battle.timer = 0.8;
+}
+function clearEnemies() {
+  for (const u of battle.enemies) {
+    scene.remove(u.root);
+    barLayer.remove(u.bar.group);
+  }
+  battle.enemies = [];
+}
+function reviveHeroes() {
+  for (const u of battle.heroes) {
+    u.alive = true;
+    u.dead = false;
+    u.hp = u.max;
+    u.anim = null;
+    u.root.visible = true;
+  }
+}
+
+function damageRoll(cls) {
+  const table = { warrior: [18, 26], rogue: [14, 22], archer: [12, 20], mage: [20, 30], cleric: [6, 10], skeleton: [8, 13], slime: [4, 8] };
+  const [a, b] = table[cls] ?? [8, 12];
+  return randInt(a, b);
+}
+
+function act(actor) {
+  const allies = actor.side === 'hero' ? battle.heroes : battle.enemies;
+  const foes = (actor.side === 'hero' ? battle.enemies : battle.heroes).filter((u) => u.alive);
+  if (!foes.length) return;
+  const cls = actor.hero.cls;
+  if (cls === 'cleric') {
+    const hurt = allies.filter((u) => u.alive && u.hp / u.max < 0.7).sort((x, y) => x.hp / x.max - y.hp / y.max)[0];
+    if (hurt) {
+      actor.anim = { type: 'cast', t: 0, dur: 0.55, impactAt: 0.25, onImpact: () => {
+        const amount = randInt(22, 34);
+        hurt.hp = Math.min(hurt.max, hurt.hp + amount);
+        floatNumber(`+${amount}`, '#3bb54a', hurt);
+        burst(hurt.root.position.clone().setY(hurt.rig.height * 0.6), '#8ef08a', 10);
+      } };
+      return;
+    }
+  }
+  let pool = foes;
+  if (MELEE.has(cls)) {
+    const front = foes.filter((u) => u.row === 'front');
+    if (front.length) pool = front;
+  }
+  const target = cls === 'archer' || cls === 'rogue' ? [...pool].sort((x, y) => x.hp - y.hp)[0] : pick(pool);
+  let dmg = damageRoll(cls);
+  if (actor.hero.boss) dmg = randInt(16, 24);
+  const crit = cls === 'rogue' && Math.random() < 0.3;
+  if (crit) dmg *= 2;
+  if (MELEE.has(cls)) {
+    const dir = target.root.position.clone().sub(actor.home).setY(0).normalize();
+    const to = target.root.position.clone().addScaledVector(dir, -0.75);
+    actor.anim = { type: 'melee', t: 0, dur: 0.6, impactAt: 0.3, to, onImpact: () => hit(target, dmg, actor, crit) };
+  } else {
+    actor.anim = { type: 'cast', t: 0, dur: 0.5, impactAt: 0.2, onImpact: () => shoot(actor, target, cls, () => hit(target, dmg, actor, false)) };
+  }
+}
+
+function hit(target, dmg, source, crit) {
+  if (!target.alive) return;
+  target.hp -= dmg;
+  floatNumber(crit ? `${dmg}!` : `${dmg}`, crit ? '#ff9a2e' : '#ffffff', target);
+  burst(target.root.position.clone().setY(target.rig.height * 0.6), '#ffffff', 6);
+  const dir = target.root.position.clone().sub(source.root.position).setY(0).normalize();
+  if (target.hp <= 0) {
+    target.hp = 0;
+    target.alive = false;
+    target.anim = { type: 'die', t: 0, dur: 0.6 };
+  } else {
+    target.anim = { type: 'hit', t: 0, dur: 0.3, dir };
+  }
+}
+
+function shoot(actor, target, cls, onArrive) {
+  const from = actor.root.position.clone().setY(actor.rig.height * 0.55);
+  const to = target.root.position.clone().setY(target.rig.height * 0.55);
+  const mesh = new THREE.Group();
+  if (cls === 'archer') {
+    box(mesh, 0.04, 0.04, 0.45, '#8d6e4f', 0, 0, 0, { shadow: false });
+    box(mesh, 0.07, 0.07, 0.08, '#dfe4ea', 0, 0, 0.24, { shadow: false });
+  } else {
+    box(mesh, 0.18, 0.18, 0.18, cls === 'mage' ? '#7fe3ff' : '#ffe27a', 0, 0, 0, { glow: true, shadow: false });
+  }
+  mesh.position.copy(from);
+  mesh.lookAt(to);
+  scene.add(mesh);
+  fx.projectiles.push({ mesh, from, to, t: 0, dur: cls === 'archer' ? 0.22 : 0.32, onArrive, spin: cls !== 'archer' });
+}
+
+const numberTextures = new Map();
+function floatNumber(text, color, target) {
+  const key = text + color;
+  let texture = numberTextures.get(key);
+  if (!texture) {
+    const canvas = document.createElement('canvas');
+    canvas.width = 128;
+    canvas.height = 64;
+    const ctx = canvas.getContext('2d');
+    ctx.font = '800 46px system-ui, sans-serif';
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'middle';
+    ctx.lineWidth = 8;
+    ctx.strokeStyle = 'rgba(30,30,30,0.85)';
+    ctx.strokeText(text, 64, 34);
+    ctx.fillStyle = color;
+    ctx.fillText(text, 64, 34);
+    texture = new THREE.CanvasTexture(canvas);
+    texture.colorSpace = THREE.SRGBColorSpace;
+    numberTextures.set(key, texture);
+  }
+  const sprite = new THREE.Sprite(new THREE.SpriteMaterial({ map: texture, depthTest: false, transparent: true }));
+  sprite.renderOrder = 20;
+  sprite.scale.set(0.8, 0.4, 1);
+  sprite.position.copy(target.root.position).setY(target.rig.height + 0.35);
+  sprite.position.x += rand(-0.15, 0.15);
+  scene.add(sprite);
+  fx.numbers.push({ sprite, t: 0 });
+}
+
+function burst(pos, color, n) {
+  for (let i = 0; i < n; i += 1) {
+    const mesh = new THREE.Mesh(BOX, mat(color, true));
+    mesh.scale.setScalar(rand(0.05, 0.09));
+    mesh.position.copy(pos);
+    scene.add(mesh);
+    fx.particles.push({ mesh, vel: new THREE.Vector3(rand(-1.6, 1.6), rand(1, 2.6), rand(-1.6, 1.6)), life: rand(0.35, 0.6) });
+  }
+}
+
+function updateFx(dt) {
+  for (let i = fx.numbers.length - 1; i >= 0; i -= 1) {
+    const n = fx.numbers[i];
+    n.t += dt;
+    n.sprite.position.y += dt * 0.9;
+    n.sprite.material.opacity = 1 - clamp01((n.t - 0.5) / 0.4);
+    if (n.t > 0.9) {
+      scene.remove(n.sprite);
+      n.sprite.material.dispose();
+      fx.numbers.splice(i, 1);
+    }
+  }
+  for (let i = fx.particles.length - 1; i >= 0; i -= 1) {
+    const p = fx.particles[i];
+    p.life -= dt;
+    p.vel.y -= 7 * dt;
+    p.mesh.position.addScaledVector(p.vel, dt);
+    if (p.life <= 0) {
+      scene.remove(p.mesh);
+      fx.particles.splice(i, 1);
+    }
+  }
+  for (let i = fx.projectiles.length - 1; i >= 0; i -= 1) {
+    const p = fx.projectiles[i];
+    p.t += dt;
+    const k = clamp01(p.t / p.dur);
+    p.mesh.position.lerpVectors(p.from, p.to, k);
+    p.mesh.position.y += Math.sin(k * Math.PI) * 0.25;
+    if (p.spin) p.mesh.rotation.z += dt * 12;
+    if (k >= 1) {
+      scene.remove(p.mesh);
+      fx.projectiles.splice(i, 1);
+      p.onArrive();
+    }
+  }
+}
+
+function updateBattleUnit(u, dt, t) {
+  const r = u.rig;
+  if (u.dead) {
+    u.bar.group.visible = false;
+    return;
+  }
+  u.root.position.copy(u.home);
+  idlePose(u, t);
+  const a = u.anim;
+  if (a) {
+    a.t += dt;
+    const p = clamp01(a.t / a.dur);
+    if (a.onImpact && !a.fired && a.t >= a.impactAt) {
+      a.fired = true;
+      a.onImpact();
+    }
+    if (a.type === 'melee') {
+      const k = p < 0.45 ? easeOut(p / 0.45) : 1 - easeIn((p - 0.45) / 0.55);
+      u.root.position.lerpVectors(u.home, a.to, k);
+      if (r.kind === 'humanoid') {
+        r.armR.rotation.x = p < 0.3 ? -2.5 * (p / 0.3) : p < 0.5 ? lerp(-2.5, -0.3, (p - 0.3) / 0.2) : lerp(-0.3, 0, (p - 0.5) / 0.5);
+        r.legL.rotation.x = Math.sin(p * Math.PI * 2) * 0.5;
+        r.legR.rotation.x = -Math.sin(p * Math.PI * 2) * 0.5;
+      } else {
+        r.group.position.y = Math.sin(p * Math.PI) * 0.45;
+      }
+    } else if (a.type === 'cast') {
+      if (r.kind === 'humanoid') r.armR.rotation.x = -2.7 * Math.sin(p * Math.PI);
+      else r.group.position.y = Math.sin(p * Math.PI) * 0.2;
+    } else if (a.type === 'hit') {
+      u.root.position.addScaledVector(a.dir, Math.sin(p * Math.PI) * 0.22);
+      r.group.rotation.z = Math.sin(p * Math.PI * 3) * 0.14 * (1 - p);
+    } else if (a.type === 'die') {
+      if (r.kind === 'slime') r.body.scale.setScalar((u.hero.size ?? 1) * (1 - easeOut(p)));
+      else r.group.rotation.x = -1.45 * easeOut(p);
+    }
+    if (p >= 1) {
+      u.anim = null;
+      if (a.type === 'die') {
+        u.dead = true;
+        if (r.kind === 'slime') u.root.visible = false;
+        else r.group.position.y = 0.05;
+      }
+    }
+  }
+  const bar = u.bar;
+  bar.group.visible = u.alive;
+  bar.group.position.copy(u.root.position).setY(u.rig.height + 0.2);
+  bar.group.quaternion.copy(camera.quaternion);
+  const ratio = u.hp / u.max;
+  bar.fg.scale.x = 0.58 * Math.max(0.001, ratio);
+  bar.fg.position.x = -(0.58 * (1 - ratio)) / 2;
+}
+
+function updateBattle(dt, t) {
+  for (const u of battle.heroes) updateBattleUnit(u, dt, t);
+  for (const u of battle.enemies) updateBattleUnit(u, dt, t);
+  if (battle.pending > 0) {
+    battle.pending -= dt;
+    if (battle.pending <= 0) {
+      clearEnemies();
+      reviveHeroes();
+      spawnWave();
+    }
+    return;
+  }
+  const enemiesLeft = battle.enemies.some((u) => u.alive);
+  const heroesLeft = battle.heroes.some((u) => u.alive);
+  if (!enemiesLeft || !heroesLeft) {
+    if (!fx.projectiles.length) battle.pending = 1.6;
+    return;
+  }
+  battle.timer -= dt;
+  if (battle.timer > 0) return;
+  for (let tries = 0; tries < battle.order.length; tries += 1) {
+    const actor = battle.order[battle.turn % battle.order.length];
+    battle.turn += 1;
+    if (actor.alive && !actor.anim) {
+      act(actor);
+      break;
+    }
+  }
+  battle.timer = 0.72;
+}
+
+// ---------- input ----------
+const raycaster = new THREE.Raycaster();
+let downAt = null;
+renderer.domElement.addEventListener('pointerdown', (e) => { downAt = [e.clientX, e.clientY]; });
+renderer.domElement.addEventListener('pointerup', (e) => {
+  if (!downAt) return;
+  const moved = Math.hypot(e.clientX - downAt[0], e.clientY - downAt[1]);
+  downAt = null;
+  if (moved > 6 || view !== 'village') return;
+  const ndc = new THREE.Vector2((e.clientX / window.innerWidth) * 2 - 1, -(e.clientY / window.innerHeight) * 2 + 1);
+  raycaster.setFromCamera(ndc, camera);
+  for (const hitInfo of raycaster.intersectObjects(charLayer.children, true)) {
+    let o = hitInfo.object;
+    while (o && !o.userData.unit) o = o.parent;
+    if (o) {
+      select(o.userData.unit);
+      return;
+    }
+  }
+  select(null);
+});
+for (const button of document.querySelectorAll('[data-view]')) button.addEventListener('click', () => setView(button.dataset.view));
+const crowd = document.getElementById('crowd');
+crowd.addEventListener('click', () => {
+  const many = residents.length < 40;
+  setResidentCount(many ? 80 : 12);
+  crowd.textContent = many ? '주민 12명' : '주민 80명';
+});
+
+// ---------- loop ----------
+seedResidents();
+spawnParty();
+spawnWave();
+setView('village');
+// Debug handle for poking at the prototype from the console.
+window.proto = { residents, battle, select, makeChild, setView, setResidentCount, renderer, scene, camera };
+
+const clock = new THREE.Clock();
+const stats = document.getElementById('stats');
+let frames = 0;
+let statTime = 0;
+let worst = 0;
+function frame() {
+  const raw = clock.getDelta();
+  const dt = Math.min(raw, 0.05);
+  const t = clock.elapsedTime;
+  for (const u of residents) updateResident(u, dt, t);
+  if (view === 'battle') updateBattle(dt, t);
+  updateFx(dt);
+  controls.update();
+  renderer.render(scene, camera);
+  frames += 1;
+  statTime += raw;
+  worst = Math.max(worst, raw);
+  if (statTime >= 0.5) {
+    stats.textContent = `${Math.round(frames / statTime)} fps · 최대 ${Math.round(worst * 1000)}ms · 그리기 ${renderer.info.render.calls} · 주민 ${residents.length}`;
+    frames = 0;
+    statTime = 0;
+    worst = 0;
+  }
+  requestAnimationFrame(frame);
+}
+requestAnimationFrame(frame);
+</script>
+</body>
+</html>
