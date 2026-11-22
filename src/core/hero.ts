@@ -34,6 +34,7 @@ export type HeroDraft = {
   arrivedAt?: number
   resurrectAt?: number
   treatAt?: number
+  recoverAt?: number
 }
 
 export function deriveStats(age: number, training: number, potentials: Stats): Stats {
@@ -73,6 +74,7 @@ export function createHero(draft: HeroDraft): Hero {
     arrivedAt: draft.arrivedAt,
     resurrectAt: draft.resurrectAt,
     treatAt: draft.treatAt,
+    recoverAt: draft.recoverAt,
   }
 }
 

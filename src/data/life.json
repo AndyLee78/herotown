@@ -5,5 +5,18 @@
   "treatMs": 3600000,
   "lossAlone": 0.25,
   "lossWithAllies": 0.1,
-  "dangerousTier": 2
+  "dangerousTier": 2,
+  "fatigue": {
+    "tiredAt": 50,
+    "exhaustedAt": 80,
+    "tiredPenalty": 0.1,
+    "exhaustedPenalty": 0.2,
+    "recoverPerHour": 10,
+    "recoverPerHouseLevel": 5
+  },
+  "injury": {
+    "injuredPenalty": 0.15,
+    "criticalPenalty": 0.4,
+    "recoverMs": 86400000
+  }
 }

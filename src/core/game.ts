@@ -6,7 +6,7 @@ import { createRng } from './rng'
 import type { Rng } from './rng'
 import type { ClassId, CombatError, DungeonReport, Gear, GearSlot, Hero, Row, Tactics } from './types'
 
-export const SAVE_VERSION = 3
+export const SAVE_VERSION = 4
 
 export type SeasonId = 'spring' | 'summer' | 'autumn' | 'winter'
 
@@ -92,6 +92,7 @@ export type GameNotice =
   | 'autoLocked'
   | 'adLimit'
   | 'adUsed'
+  | 'wornParty'
   | CombatError
   | 'checksum'
   | 'newer'
@@ -295,16 +296,17 @@ function apply(state: GameState, action: GameAction): GameState {
       return hero ? [{ hero, row: slot.row }] : []
     })
     const dungeon = dungeonById(state.dungeonId)
+    const worn = party.some((member) => needsWarning(member.hero))
     const marked = party.some((member) => member.hero.deaths >= 1)
-    if (marked && dungeon.tier >= lifeRules.dangerousTier && !action.confirm) {
-      return { ...state, notice: 'seenDeath' }
+    if (!action.confirm && (worn || (marked && dungeon.tier >= lifeRules.dangerousTier))) {
+      return { ...state, notice: worn ? 'wornParty' : 'seenDeath' }
     }
     const battleSeed = state.seedLocked ? state.seed : state.seed + state.day
     const result = runDungeon(party, state.dungeonId, state.tactics, battleSeed)
     if (!result.ok) {
       return { ...state, notice: result.error }
     }
-    const settled = settleParty(state, result.report, battleSeed)
+    const settled = settleParty(state, result.report, battleSeed, state.lastTickAt)
     const repeat = state.cleared.includes(state.dungeonId)
     const goldGain = repeat ? Math.floor(result.report.gold * villageRules.repeatReward) : result.report.gold
     return grantVictoryRewards({
@@ -452,6 +454,7 @@ function advance(state: GameState, now: number): GameState {
   next = finishConstruction(next, effectiveNow, completed)
   next = finishSmith(next, effectiveNow, crafted)
   next = finishCare(next, effectiveNow)
+  next = recoverRoster(next, elapsed, effectiveNow)
   next = updateVisitors(next, effectiveNow, visitors)
   const autoTally = { runs: 0, gold: 0 }
   next = runAuto(next, elapsed, autoTally)
@@ -593,11 +596,10 @@ function applyAdReward(state: GameState, placement: AdPlacement, now: number): G
   if (!hero) {
     return { ...state, notice: 'treat' }
   }
-  const condition = hero.condition === 'critical' ? 'injured' : hero.condition === 'injured' ? 'fatigued' : hero.condition
   return {
     ...state,
     notice: null,
-    roster: state.roster.map((entry) => (entry.id === hero.id ? { ...entry, treatAt: undefined, condition } : entry)),
+    roster: state.roster.map((entry) => (entry.id === hero.id ? stepCondition({ ...entry, treatAt: undefined }, now) : entry)),
   }
 }
 
@@ -775,7 +777,7 @@ function autoMembers(state: GameState): { hero: Hero; row: Row }[] {
     if (!hero || !canDeploy(hero)) {
       return []
     }
-    if (state.auto.policy === 'safe' && (hero.condition === 'injured' || hero.condition === 'critical')) {
+    if (hero.condition === 'critical' || (state.auto.policy === 'safe' && hero.condition === 'injured')) {
       return []
     }
     return [{ hero, row: slot.row }]
@@ -814,7 +816,7 @@ function runAuto(state: GameState, elapsed: number, tally: { runs: number; gold:
       ),
     }
     const slots = members.map((member) => ({ id: member.hero.id, row: member.row }))
-    const settled = settleParty({ ...next, dungeonId, party: slots }, report, battleSeed)
+    const settled = settleParty({ ...next, dungeonId, party: slots }, report, battleSeed, next.lastTickAt)
     const goldGain = report.victory ? Math.floor(result.report.gold * scale) : 0
     next = grantVictoryRewards({ ...next, ...settled, dungeonId, gold: next.gold + goldGain, report: { ...report, gold: goldGain } }, scale)
     budget -= villageRules.auto.runMs
@@ -874,15 +876,65 @@ function finishCare(state: GameState, now: number): GameState {
   const roster = state.roster.map((hero) => {
     let next = hero
     if (next.resurrectAt != null && next.resurrectAt <= now) {
-      next = { ...next, resurrectAt: undefined, condition: 'injured' }
+      next = { ...next, resurrectAt: undefined, condition: 'injured', recoverAt: now + lifeRules.injury.recoverMs }
     }
     if (next.treatAt != null && next.treatAt <= now) {
-      const condition = next.condition === 'critical' ? 'injured' : next.condition === 'injured' ? 'fatigued' : next.condition
-      next = { ...next, treatAt: undefined, condition }
+      next = stepCondition({ ...next, treatAt: undefined }, now)
     }
     return next
   })
   return { ...state, roster }
+}
+
+function needsWarning(hero: Hero): boolean {
+  return hero.fatigue >= lifeRules.fatigue.exhaustedAt || hero.condition === 'injured' || hero.condition === 'critical'
+}
+
+function stepCondition(hero: Hero, now: number): Hero {
+  if (hero.condition === 'critical') {
+    return { ...hero, condition: 'injured', recoverAt: now + lifeRules.injury.recoverMs }
+  }
+  if (hero.condition === 'injured') {
+    return { ...hero, condition: 'fatigued', recoverAt: undefined }
+  }
+  return { ...hero, recoverAt: undefined }
+}
+
+function recoverRoster(state: GameState, elapsed: number, now: number): GameState {
+  const hours = elapsed / 3_600_000
+  const rate =
+    lifeRules.fatigue.recoverPerHour + lifeRules.fatigue.recoverPerHouseLevel * Math.max(0, state.buildings.house - 1)
+  return {
+    ...state,
+    roster: state.roster.map((hero) => recoverHero(hero, hours, rate, now)),
+  }
+}
+
+function recoverHero(hero: Hero, hours: number, rate: number, now: number): Hero {
+  let next = hero
+  if ((next.condition === 'critical' || next.condition === 'injured') && next.recoverAt != null && next.recoverAt <= now) {
+    next = stepCondition(next, now)
+  }
+  if (next.condition === 'dead') {
+    return next
+  }
+  const fatigue = Math.max(0, next.fatigue - rate * hours)
+  if (next.condition === 'fatigued' && next.fatigue > 0 && fatigue === 0) {
+    return { ...next, fatigue, condition: 'healthy', recoverAt: undefined }
+  }
+  return { ...next, fatigue }
+}
+
+function stampRecovery(before: Hero, after: Hero, now: number): Hero {
+  const rank = { healthy: 0, fatigued: 1, injured: 2, critical: 3, dead: 4 }
+  const hurt = after.condition === 'injured' || after.condition === 'critical'
+  if (hurt && (rank[after.condition] > rank[before.condition] || after.recoverAt == null)) {
+    return { ...after, recoverAt: now + lifeRules.injury.recoverMs }
+  }
+  if (!hurt) {
+    return { ...after, recoverAt: undefined }
+  }
+  return after
 }
 
 export function applyCasualty(
@@ -911,7 +963,7 @@ export function applyCasualty(
   return { hero: { ...next, deaths: 1, condition: 'dead' }, grave: null }
 }
 
-function settleParty(state: GameState, report: DungeonReport, seed: number): Pick<GameState, 'roster' | 'party' | 'graveyard'> {
+function settleParty(state: GameState, report: DungeonReport, seed: number, now: number): Pick<GameState, 'roster' | 'party' | 'graveyard'> {
   const rng = createRng(seed + 17)
   const partyIds = new Set(state.party.map((slot) => slot.id))
   const alliesLived = report.conditions.filter((entry) => entry.condition !== 'dead').length > 0
@@ -924,7 +976,7 @@ function settleParty(state: GameState, report: DungeonReport, seed: number): Pic
     }
     const outcome = applyCasualty(hero, report, state.dungeonId, alliesLived, rng)
     if (outcome.hero) {
-      roster.push(outcome.hero)
+      roster.push(stampRecovery(hero, outcome.hero, now))
     }
     if (outcome.grave) {
       graveyard.push(outcome.grave)
@@ -1156,6 +1208,14 @@ function fromLegacy(record: Record<string, unknown>, now: number): GameState {
   return normalize({ ...base, ...record, version: SAVE_VERSION, calendar: base.calendar, lastTickAt: now, absence: null, notice: null }, now)
 }
 
+function withRecovery(hero: Hero, now: number): Hero {
+  const next = normalizeHero(hero)
+  if ((next.condition === 'injured' || next.condition === 'critical') && next.recoverAt == null) {
+    return { ...next, recoverAt: now + lifeRules.injury.recoverMs }
+  }
+  return next
+}
+
 function normalize(record: Record<string, unknown>, now: number): GameState {
   const base = freshState(numberOr(record.seed, 1), now)
   const calendar = isCalendar(record.calendar) ? record.calendar : base.calendar
@@ -1166,9 +1226,9 @@ function normalize(record: Record<string, unknown>, now: number): GameState {
     calendar,
     lastTickAt: numberOr(record.lastTickAt, now),
     visitors: validHeroes(record.visitors)
-      ? openStays(record.visitors.map(normalizeHero), now, visitorStay(innLevel(record, base)))
+      ? openStays(record.visitors.map((hero) => withRecovery(hero, now)), now, visitorStay(innLevel(record, base)))
       : base.visitors,
-    roster: validHeroes(record.roster) ? record.roster.map(normalizeHero) : [],
+    roster: validHeroes(record.roster) ? record.roster.map((hero) => withRecovery(hero, now)) : [],
     graveyard: Array.isArray(record.graveyard) ? (record.graveyard as Grave[]) : [],
     smith: isSmith(record.smith) ? record.smith : null,
     stash: Array.isArray(record.stash) ? (record.stash as Partial<Gear>[]).map((item) => normalizeGear(item, 'warrior')) : [],

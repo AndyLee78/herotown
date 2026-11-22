@@ -163,6 +163,7 @@
     "autoLocked": "Only a cleared dungeon can run automatically.",
     "adLimit": "Today's ad rewards are used up.",
     "adUsed": "This report's ad reward was already claimed.",
+    "wornParty": "Someone in the party is worn out. Going out is more dangerous.",
     "gold": "Gold {{gold}}",
     "xp": "Experience {{xp}}",
     "floors": "Floors cleared {{count}}",
@@ -297,7 +298,11 @@
     "treating": "In care {{time}}",
     "reviving": "Returning {{time}}",
     "noGear": "No gear",
-    "clears": "Clears {{count}}"
+    "clears": "Clears {{count}}",
+    "fatigue": "Fatigue {{fatigue}}",
+    "fatigueEffect": "Fatigue {{fatigue}} · attack and speed −{{percent}}%",
+    "recoverIn": "{{condition}} · recovers in {{hours}}h",
+    "warning": "Warning"
   },
   "skill": {
     "warrior": { "strike": "Strike", "taunt": "Taunt", "guard": "Guard", "slam": "Slam" },

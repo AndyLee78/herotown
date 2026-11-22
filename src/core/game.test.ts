@@ -498,4 +498,151 @@ describe('economy fixes', () => {
     expect(loaded.version).toBe(SAVE_VERSION)
     expect(loaded.ads.counts).toEqual({ absence: 0, construction: 0, temple: 0 })
   })
+
+  it('lowers attack, speed and max hp by fatigue and injury', () => {
+    const hero = createHero({
+      id: 'worn',
+      name: 'Worn',
+      gender: 'male',
+      classId: 'warrior',
+      age: 28,
+      potentials: { str: 15, agi: 10, vit: 15, int: 4, wil: 8, wis: 4 },
+    })
+    const unit = (patch: Partial<typeof hero>) => createHeroUnit({ hero: { ...hero, ...patch }, row: 'front' }, 0)
+    const healthy = unit({})
+    const tired = unit({ fatigue: lifeRules.fatigue.tiredAt })
+    expect(tired.attack).toBeCloseTo(healthy.attack * (1 - lifeRules.fatigue.tiredPenalty))
+    expect(tired.speed).toBeCloseTo(healthy.speed * (1 - lifeRules.fatigue.tiredPenalty))
+    expect(tired.maxHp).toBe(healthy.maxHp)
+    const exhausted = unit({ fatigue: lifeRules.fatigue.exhaustedAt })
+    expect(exhausted.attack).toBeCloseTo(healthy.attack * (1 - lifeRules.fatigue.exhaustedPenalty))
+    expect(exhausted.speed).toBeCloseTo(healthy.speed * (1 - lifeRules.fatigue.exhaustedPenalty))
+    const injured = unit({ condition: 'injured' })
+    expect(injured.maxHp).toBe(Math.max(1, Math.round(healthy.maxHp * (1 - lifeRules.injury.injuredPenalty))))
+    expect(injured.attack).toBeCloseTo(healthy.attack * (1 - lifeRules.injury.injuredPenalty))
+    const critical = unit({ condition: 'critical' })
+    expect(critical.attack).toBeCloseTo(healthy.attack * (1 - lifeRules.injury.criticalPenalty))
+    const both = unit({ fatigue: lifeRules.fatigue.tiredAt, condition: 'injured' })
+    expect(both.attack).toBeCloseTo(healthy.attack * (1 - lifeRules.fatigue.tiredPenalty) * (1 - lifeRules.injury.injuredPenalty))
+    expect(unit({ fatigue: lifeRules.fatigue.exhaustedAt, stats: { ...hero.stats, agi: 1 } }).speed).toBe(1)
+  })
+
+  it('recovers fatigue faster in a better house and clears a tired hero at zero', () => {
+    const start = freshState(1, now)
+    const hired = reduce(start, { type: 'hire', id: start.visitors[0]?.id ?? '' })
+    const hero = hired.roster[0]
+    if (!hero) {
+      throw new Error('expected a hero')
+    }
+    const tired = {
+      ...hired,
+      roster: [{ ...hero, fatigue: 40, condition: 'fatigued' as const }],
+    }
+    const hour = now + 3_600_000
+    const house1 = reduce(tired, { type: 'catchUp', now: hour })
+    expect(house1.roster[0]?.fatigue).toBe(30)
+    expect(house1.roster[0]?.condition).toBe('fatigued')
+    const house2 = reduce({ ...tired, buildings: { ...tired.buildings, house: 2 } }, { type: 'catchUp', now: hour })
+    expect(house2.roster[0]?.fatigue).toBe(25)
+    const clearing = reduce(
+      { ...tired, roster: [{ ...hero, fatigue: lifeRules.fatigue.recoverPerHour, condition: 'fatigued' as const }] },
+      { type: 'catchUp', now: hour },
+    )
+    expect(clearing.roster[0]?.fatigue).toBe(0)
+    expect(clearing.roster[0]?.condition).toBe('healthy')
+  })
+
+  it('improves a critical hero one step per season', () => {
+    const start = freshState(1, now)
+    const hired = reduce(start, { type: 'hire', id: start.visitors[0]?.id ?? '' })
+    const hero = hired.roster[0]
+    if (!hero) {
+      throw new Error('expected a hero')
+    }
+    const forward = (state: GameState) => {
+      let next = state
+      const target = next.lastTickAt + timeRules.seasonMs
+      while (next.lastTickAt < target) {
+        next = reduce(next, { type: 'catchUp', now: target })
+      }
+      return next
+    }
+    const critical = {
+      ...hired,
+      roster: [{ ...hero, condition: 'critical' as const, recoverAt: now + lifeRules.injury.recoverMs }],
+    }
+    const injured = forward(critical)
+    expect(injured.roster[0]?.condition).toBe('injured')
+    expect(injured.roster[0]?.recoverAt).toBe(injured.lastTickAt + lifeRules.injury.recoverMs)
+    const tired = forward(injured)
+    expect(tired.roster[0]?.condition).toBe('fatigued')
+    expect(tired.roster[0]?.recoverAt).toBeUndefined()
+  })
+
+  it('warns before a worn party leaves and lets one confirm through', () => {
+    const start = freshState(1, now)
+    const hired = reduce(start, { type: 'hire', id: start.visitors[0]?.id ?? '' })
+    const hero = hired.roster[0]
+    if (!hero) {
+      throw new Error('expected a hero')
+    }
+    const worn = {
+      ...hired,
+      roster: [{ ...hero, fatigue: lifeRules.fatigue.exhaustedAt }],
+      party: [{ id: hero.id, row: 'front' as const }],
+    }
+    const warned = reduce(worn, { type: 'depart' })
+    expect(warned.notice).toBe('wornParty')
+    expect(warned.report).toBeNull()
+    const sent = reduce(worn, { type: 'depart', confirm: true })
+    expect(sent.notice).toBeNull()
+    expect(sent.report).not.toBeNull()
+    const both = {
+      ...worn,
+      dungeonId: 'abandoned_mine',
+      roster: [{ ...hero, fatigue: lifeRules.fatigue.exhaustedAt, deaths: 1 }],
+    }
+    expect(reduce(both, { type: 'depart' }).notice).toBe('wornParty')
+    expect(reduce(both, { type: 'depart', confirm: true }).report).not.toBeNull()
+  })
+
+  it('keeps a critical hero out of automatic runs', () => {
+    const start = freshState(1, now)
+    const hired = reduce(start, { type: 'hire', id: start.visitors[0]?.id ?? '' })
+    const hero = hired.roster[0]
+    if (!hero) {
+      throw new Error('expected a hero')
+    }
+    for (const policy of ['material', 'fixed'] as const) {
+      const parked = {
+        ...hired,
+        cleared: ['hill_cave'],
+        roster: [{ ...hero, condition: 'critical' as const, fatigue: 0 }],
+        party: [{ id: hero.id, row: 'front' as const }],
+        auto: {
+          enabled: true,
+          dungeonId: 'hill_cave',
+          policy,
+          material: 'wood' as const,
+          party: [{ id: hero.id, row: 'front' as const }],
+        },
+      }
+      const later = reduce(parked, { type: 'catchUp', now: now + villageRules.auto.runMs })
+      expect(later.report).toBeNull()
+      expect(later.roster[0]?.fatigue).toBe(0)
+      expect(later.roster[0]?.condition).toBe('critical')
+    }
+  })
+
+  it('gives an injured hero from a version 2 save a recovery time', () => {
+    const start = freshState(2, now)
+    const hero = start.visitors[0]
+    if (!hero) {
+      throw new Error('expected a visitor')
+    }
+    const saved = { ...start, version: 2, roster: [{ ...hero, condition: 'injured' as const, recoverAt: undefined }] }
+    const loaded = migrate(saved, now + 50)
+    expect(loaded.version).toBe(SAVE_VERSION)
+    expect(loaded.roster[0]?.recoverAt).toBe(now + 50 + lifeRules.injury.recoverMs)
+  })
 })

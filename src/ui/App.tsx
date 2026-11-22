@@ -230,7 +230,7 @@ export function App() {
                 </div>
               ) : null}
               {save.notice ? <p className="notice">{t(`result.${save.notice}`)}</p> : null}
-              {save.notice === 'seenDeath' ? (
+              {save.notice === 'seenDeath' || save.notice === 'wornParty' ? (
                 <p className="notice">
                   <button type="button" onClick={() => apply({ type: 'depart', confirm: true })}>
                     {t('action.departAnyway')}
@@ -262,7 +262,6 @@ export function App() {
                   save={save}
                   selectedId={selectedId}
                   onSelect={setSelectedId}
-                  onRest={() => apply({ type: 'rest', times: 1 })}
                   selected={selected}
                   onAction={apply}
                   busy={adBusy}
@@ -342,6 +341,32 @@ function useNow(active: boolean): number {
   return now
 }
 
+function needsWarning(hero: Hero): boolean {
+  return hero.fatigue >= lifeRules.fatigue.exhaustedAt || hero.condition === 'injured' || hero.condition === 'critical'
+}
+
+function fatigueText(t: TFunction, hero: Hero): string {
+  const penalty =
+    hero.fatigue >= lifeRules.fatigue.exhaustedAt
+      ? lifeRules.fatigue.exhaustedPenalty
+      : hero.fatigue >= lifeRules.fatigue.tiredAt
+        ? lifeRules.fatigue.tiredPenalty
+        : 0
+  const fatigue = Math.round(hero.fatigue)
+  if (penalty > 0) {
+    return t('hero.fatigueEffect', { fatigue, percent: Math.round(penalty * 100) })
+  }
+  return t('hero.fatigue', { fatigue })
+}
+
+function recoveryText(t: TFunction, hero: Hero, now: number): string | null {
+  if (hero.condition !== 'injured' && hero.condition !== 'critical') {
+    return null
+  }
+  const hours = Math.max(0, Math.ceil(((hero.recoverAt ?? now) - now) / 3_600_000))
+  return t('hero.recoverIn', { condition: t(`condition.${hero.condition}`), hours })
+}
+
 function waitLabel(ms: number): string {
   const total = Math.max(0, Math.ceil(ms / 1000))
   const minutes = Math.floor(total / 60)
@@ -374,7 +399,9 @@ function Inn({ save, onHire, language }: { save: GameState; onHire: (id: string)
             <p>{t('hint.staying', { time: waitLabel((hero.arrivedAt ?? save.lastTickAt) + stay - now) })}</p>
             <p>
               {t(`gender.${hero.gender}`)} · {t(`class.${hero.classId}`)} · {t('hero.age', { age: hero.age })}
+              {needsWarning(hero) ? ` · ${t('hero.warning')}` : ''}
             </p>
+            <p>{fatigueText(t, hero)}</p>
             <p>{hero.traitIds.map((trait) => t(`trait.${trait}`)).join(', ')}</p>
             <p>{t(`potential.${potentialBand(hero.potential)}`)}</p>
             <ul>
@@ -402,7 +429,6 @@ function Roster({
   selectedId,
   selected,
   onSelect,
-  onRest,
   onAction,
   busy,
   onWatch,
@@ -411,7 +437,6 @@ function Roster({
   selectedId: string | null
   selected: Hero | null
   onSelect: (id: string) => void
-  onRest: () => void
   onAction: (action: GameAction) => void
   busy: boolean
   onWatch: () => void
@@ -423,9 +448,6 @@ function Roster({
       <div>
         <div className="toolbar">
           <h2>{t('label.roster')}</h2>
-          <button type="button" onClick={onRest} disabled={roster.length === 0}>
-            {t('action.rest')}
-          </button>
         </div>
         {roster.length === 0 ? <p>{t('hint.emptyRoster')}</p> : null}
         <div className="grid">
@@ -440,6 +462,8 @@ function Roster({
               <span>
                 {hero.name} · {t(`class.${hero.classId}`)} · {t(`condition.${hero.condition}`)}
                 {hero.deaths > 0 ? ` · ${t('hero.seenDeath')}` : ''}
+                {needsWarning(hero) ? ` · ${t('hero.warning')}` : ''}
+                {` · ${fatigueText(t, hero)}`}
               </span>
             </button>
           ))}
@@ -477,7 +501,7 @@ function HeroDetail({
 }) {
   const { t } = useTranslation()
   const [confirmDismiss, setConfirmDismiss] = useState(false)
-  const waiting = hero.treatAt != null || hero.resurrectAt != null
+  const waiting = hero.treatAt != null || hero.resurrectAt != null || hero.recoverAt != null
   const now = useNow(waiting)
   const skills = classById(hero.classId).skills
   const careAt = hero.resurrectAt ?? hero.treatAt
@@ -493,6 +517,8 @@ function HeroDetail({
       <p>
         {t(`condition.${hero.condition}`)} · {hero.traitIds.map((trait) => t(`trait.${trait}`)).join(', ')}
       </p>
+      <p>{fatigueText(t, hero)}</p>
+      {recoveryText(t, hero, now) ? <p>{recoveryText(t, hero, now)}</p> : null}
       {hero.deaths > 0 ? <p>{t('hero.seenDeath')}</p> : null}
       {careAt != null ? <p>{t(hero.resurrectAt != null ? 'hero.reviving' : 'hero.treating', { time: waitLabel(careAt - now) })}</p> : null}
       <p>{t('hero.points', { count: hero.skillPoints })}</p>
@@ -571,6 +597,7 @@ function Party({ save, onAction }: { save: GameState; onAction: (action: GameAct
           {save.roster.map((hero) => (
             <button key={hero.id} type="button" onClick={() => onAction({ type: 'add', id: hero.id })} disabled={!canDeploy(hero)}>
               {hero.name} · {t(`class.${hero.classId}`)} · {t(`condition.${hero.condition}`)}
+              {needsWarning(hero) ? ` · ${t('hero.warning')}` : ''}
             </button>
           ))}
         </div>
@@ -583,6 +610,7 @@ function Party({ save, onAction }: { save: GameState; onAction: (action: GameAct
             <div key={slot.id} className="party-row">
               <span>
                 {hero.name} · {t(`row.${slot.row}`)}
+                {needsWarning(hero) ? ` · ${t('hero.warning')}` : ''}
               </span>
               <button type="button" aria-pressed={slot.row === 'front'} onClick={() => onAction({ type: 'row', id: slot.id, row: 'front' })}>
                 {t('action.front')}

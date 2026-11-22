@@ -1,4 +1,4 @@
-import { classById, combatRules, monsterById } from './data'
+import { classById, combatRules, lifeRules, monsterById } from './data'
 import { heroGearMods } from './gear'
 import type { Rng } from './rng'
 import type { LogEntry, MonsterDef, PartyMember, ReplayUnit, Row, Tactics, UnitReport } from './types'
@@ -52,9 +52,24 @@ export function createHeroUnit(member: PartyMember, index: number): BattleUnit {
   const klass = classById(hero.classId)
   const tough = hero.traitIds.includes('tough')
   const skills = new Set(klass.skills.map((skill) => skill.kind))
-  const maxHp = Math.max(1, Math.round((klass.hpBase + hero.stats.vit * klass.hpPerVit) * (tough ? combatRules.toughHp : 1)))
+  const baseHp = Math.max(1, Math.round((klass.hpBase + hero.stats.vit * klass.hpPerVit) * (tough ? combatRules.toughHp : 1)))
   const gear = heroGearMods(hero)
   const element = hero.gear.find((item) => item.element)?.element
+  const fatiguePenalty =
+    hero.fatigue >= lifeRules.fatigue.exhaustedAt
+      ? lifeRules.fatigue.exhaustedPenalty
+      : hero.fatigue >= lifeRules.fatigue.tiredAt
+        ? lifeRules.fatigue.tiredPenalty
+        : 0
+  const injuryPenalty =
+    hero.condition === 'critical'
+      ? lifeRules.injury.criticalPenalty
+      : hero.condition === 'injured'
+        ? lifeRules.injury.injuredPenalty
+        : 0
+  const fatigueScale = 1 - fatiguePenalty
+  const injuryScale = 1 - injuryPenalty
+  const maxHp = Math.max(1, Math.round(baseHp * injuryScale))
   return {
     id: hero.id,
     refId: hero.id,
@@ -71,10 +86,10 @@ export function createHeroUnit(member: PartyMember, index: number): BattleUnit {
     hasDebuff: skills.has('debuff'),
     hp: maxHp,
     maxHp,
-    attack: hero.stats[klass.attackStat] * klass.attackScale + gear.attack,
+    attack: (hero.stats[klass.attackStat] * klass.attackScale + gear.attack) * fatigueScale * injuryScale,
     defense: hero.stats.vit * klass.defenseScale + gear.defense,
     heal: hero.stats.wis * klass.healScale,
-    speed: Math.max(1, hero.stats.agi + (hero.traitIds.includes('nocturnal') ? combatRules.nocturnalSpeed : 0)),
+    speed: Math.max(1, (hero.stats.agi + (hero.traitIds.includes('nocturnal') ? combatRules.nocturnalSpeed : 0)) * fatigueScale),
     gauge: 0,
     threat: klass.role === 'tank' ? combatRules.tankThreat : combatRules.baseThreat,
     dot: 0,

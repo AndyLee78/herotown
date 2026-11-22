@@ -163,6 +163,7 @@
     "autoLocked": "클리어한 던전만 자동 출정할 수 있습니다.",
     "adLimit": "오늘의 광고 횟수를 모두 썼습니다.",
     "adUsed": "이 보고서의 광고 보상은 이미 받았습니다.",
+    "wornParty": "지친 영웅이 있습니다. 출정하면 더 위험합니다.",
     "gold": "골드 {{gold}}",
     "xp": "경험치 {{xp}}",
     "floors": "클리어한 층 {{count}}",
@@ -297,7 +298,11 @@
     "treating": "치료 중 {{time}}",
     "reviving": "되살리는 중 {{time}}",
     "noGear": "장비 없음",
-    "clears": "토벌 {{count}}"
+    "clears": "토벌 {{count}}",
+    "fatigue": "피로 {{fatigue}}",
+    "fatigueEffect": "피로 {{fatigue}} · 공격·속도 −{{percent}}%",
+    "recoverIn": "{{condition}} · 회복까지 {{hours}}시간",
+    "warning": "경고"
   },
   "skill": {
     "warrior": { "strike": "강타", "taunt": "도발", "guard": "수비", "slam": "내려치기" },

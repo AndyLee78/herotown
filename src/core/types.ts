@@ -118,6 +118,7 @@ export type Hero = {
   arrivedAt?: number
   resurrectAt?: number
   treatAt?: number
+  recoverAt?: number
 }
 
 export type Tactics = {
