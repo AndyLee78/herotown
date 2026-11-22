@@ -3,6 +3,8 @@ import { lazy, Suspense, useEffect, useMemo, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import {
   STAT_KEYS,
+  adRules,
+  adsRemaining,
   canDeploy,
   combatRules,
   dungeons,
@@ -22,6 +24,7 @@ import {
   villageRules,
   visitorCap,
   visitorStay,
+  type AdPlacement,
   type BuildingId,
   type DungeonReport,
   type GameAction,
@@ -31,6 +34,7 @@ import {
   type LogEntry,
   type TargetPriority,
 } from '../core'
+import { rewardedAds } from './ads'
 import { addGameOffset, gameNow, gameOffset, offsetParts, offsetSteps, resetGameOffset, subscribeGameClock } from './clock'
 import { josa } from './josa'
 import { loadGame, storeGame } from './storage'
@@ -49,6 +53,7 @@ export function App() {
   const [selectedId, setSelectedId] = useState<string | null>(null)
   const [shown, setShown] = useState(12)
   const [fileNotice, setFileNotice] = useState<string | null>(null)
+  const [adBusy, setAdBusy] = useState(false)
 
   useEffect(() => {
     document.title = t('app.title')
@@ -141,6 +146,19 @@ export function App() {
     })
   }
 
+  const watchAd = (placement: AdPlacement) => {
+    if (adBusy) {
+      return
+    }
+    setAdBusy(true)
+    void rewardedAds.showRewarded(placement).then((result) => {
+      setAdBusy(false)
+      if (result === 'rewarded') {
+        apply({ type: 'adReward', placement, now: gameNow() })
+      }
+    })
+  }
+
   const heroes = useMemo(() => [...(save?.visitors ?? []), ...(save?.roster ?? [])], [save])
 
   if (!save) {
@@ -220,12 +238,22 @@ export function App() {
                 </p>
               ) : null}
               {save.warning ? <p className="notice">{t('result.wages')}</p> : null}
-              {save.absence ? <Absence report={save.absence} onClose={() => apply({ type: 'dismissAbsence' })} /> : null}
+              {save.absence ? (
+                <Absence
+                  report={save.absence}
+                  save={save}
+                  busy={adBusy}
+                  onWatch={() => watchAd('absence')}
+                  onClose={() => apply({ type: 'dismissAbsence' })}
+                />
+              ) : null}
               {screen === 'town' ? (
                 <Town
                   save={save}
                   onBuild={(id) => apply({ type: 'build', id, now: gameNow() })}
                   onFinish={() => apply({ type: 'finishBuild', now: gameNow() })}
+                  busy={adBusy}
+                  onWatch={() => watchAd('construction')}
                 />
               ) : null}
               {screen === 'inn' ? <Inn save={save} onHire={(id) => apply({ type: 'hire', id, now: gameNow() })} language={i18n.language} /> : null}
@@ -237,6 +265,8 @@ export function App() {
                   onRest={() => apply({ type: 'rest', times: 1 })}
                   selected={selected}
                   onAction={apply}
+                  busy={adBusy}
+                  onWatch={() => watchAd('temple')}
                 />
               ) : null}
               {screen === 'party' ? <Party save={save} onAction={apply} /> : null}
@@ -374,6 +404,8 @@ function Roster({
   onSelect,
   onRest,
   onAction,
+  busy,
+  onWatch,
 }: {
   save: GameState
   selectedId: string | null
@@ -381,6 +413,8 @@ function Roster({
   onSelect: (id: string) => void
   onRest: () => void
   onAction: (action: GameAction) => void
+  busy: boolean
+  onWatch: () => void
 }) {
   const { t } = useTranslation()
   const roster = save.roster
@@ -422,13 +456,25 @@ function Roster({
         </ul>
       </div>
       {selected && roster.some((hero) => hero.id === selected.id) ? (
-        <HeroDetail hero={selected} save={save} onAction={onAction} />
+        <HeroDetail hero={selected} save={save} onAction={onAction} busy={busy} onWatch={onWatch} />
       ) : null}
     </section>
   )
 }
 
-function HeroDetail({ hero, save, onAction }: { hero: Hero; save: GameState; onAction: (action: GameAction) => void }) {
+function HeroDetail({
+  hero,
+  save,
+  onAction,
+  busy,
+  onWatch,
+}: {
+  hero: Hero
+  save: GameState
+  onAction: (action: GameAction) => void
+  busy: boolean
+  onWatch: () => void
+}) {
   const { t } = useTranslation()
   const [confirmDismiss, setConfirmDismiss] = useState(false)
   const waiting = hero.treatAt != null || hero.resurrectAt != null
@@ -482,6 +528,11 @@ function HeroDetail({ hero, save, onAction }: { hero: Hero; save: GameState; onA
           </li>
         ))}
       </ul>
+      {hero.treatAt != null && hero.treatAt > gameNow() ? (
+        <button type="button" disabled={busy} onClick={onWatch}>
+          {t('action.adTemple', { left: adsRemaining(save, 'temple', gameNow()), cap: adRules.temple.daily })}
+        </button>
+      ) : null}
       {hero.condition === 'injured' || hero.condition === 'critical' ? (
         <button type="button" onClick={() => onAction({ type: 'treat', id: hero.id, now: gameNow() })}>
           {t('action.treat')}
@@ -786,7 +837,19 @@ function Debug({
   )
 }
 
-function Absence({ report, onClose }: { report: NonNullable<GameState['absence']>; onClose: () => void }) {
+function Absence({
+  report,
+  save,
+  busy,
+  onWatch,
+  onClose,
+}: {
+  report: NonNullable<GameState['absence']>
+  save: GameState
+  busy: boolean
+  onWatch: () => void
+  onClose: () => void
+}) {
   const { t } = useTranslation()
   return (
     <section className="card column">
@@ -807,6 +870,11 @@ function Absence({ report, onClose }: { report: NonNullable<GameState['absence']
       {report.completed.length === 0 && report.visitors.length === 0 && (report.crafted ?? []).length === 0 ? (
         <p>{t('absence.quiet')}</p>
       ) : null}
+      {report.adClaimed ? null : (
+        <button type="button" disabled={busy} onClick={onWatch}>
+          {t('action.adAbsence', { left: adsRemaining(save, 'absence', gameNow()), cap: adRules.absence.daily })}
+        </button>
+      )}
       <button type="button" onClick={onClose}>
         {t('absence.dismiss')}
       </button>
@@ -883,7 +951,19 @@ function Smith({ save, onAction }: { save: GameState; onAction: (action: GameAct
   )
 }
 
-function Town({ save, onBuild, onFinish }: { save: GameState; onBuild: (id: BuildingId) => void; onFinish: () => void }) {
+function Town({
+  save,
+  onBuild,
+  onFinish,
+  busy,
+  onWatch,
+}: {
+  save: GameState
+  onBuild: (id: BuildingId) => void
+  onFinish: () => void
+  busy: boolean
+  onWatch: () => void
+}) {
   const { t } = useTranslation()
   const level = townLevel(save.fame)
   const next = villageRules.levels.find((entry) => entry.level === level.level + 1)
@@ -905,6 +985,12 @@ function Town({ save, onBuild, onFinish }: { save: GameState; onBuild: (id: Buil
               time: waitLabel(save.construction.finishAt - now),
             })}
           </span>
+          <button type="button" disabled={busy} onClick={onWatch}>
+            {t('action.adConstruction', {
+              left: adsRemaining(save, 'construction', gameNow()),
+              cap: adRules.construction.daily,
+            })}
+          </button>
           {import.meta.env.DEV ? (
             <button type="button" onClick={onFinish}>
               {t('action.finishNow')}

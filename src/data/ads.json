@@ -1,0 +1,5 @@
+{
+  "absence": { "daily": 3 },
+  "construction": { "daily": 5, "shortenRatio": 0.3, "shortenMinMs": 1800000 },
+  "temple": { "daily": 3 }
+}

@@ -1,4 +1,4 @@
-import { classById, combatRules, dungeonById, lifeRules, progression, smithRules, timeRules, villageRules } from './data'
+import { adRules, classById, combatRules, dungeonById, lifeRules, progression, smithRules, timeRules, villageRules } from './data'
 import { forgeGear, normalizeGear, recipeById } from './gear'
 import { applyReport, DEFAULT_TACTICS, runDungeon } from './dungeon'
 import { canDeploy, generateHero, generateVisitors, normalizeHero, restHero } from './hero'
@@ -6,7 +6,7 @@ import { createRng } from './rng'
 import type { Rng } from './rng'
 import type { ClassId, CombatError, DungeonReport, Gear, GearSlot, Hero, Row, Tactics } from './types'
 
-export const SAVE_VERSION = 2
+export const SAVE_VERSION = 3
 
 export type SeasonId = 'spring' | 'summer' | 'autumn' | 'winter'
 
@@ -30,6 +30,7 @@ export type AbsenceReport = {
   visitors: string[]
   autoRuns: number
   autoGold: number
+  adClaimed: boolean
 }
 
 export type SmithJob = {
@@ -89,6 +90,8 @@ export type GameNotice =
   | 'recipe'
   | 'enhanceFail'
   | 'autoLocked'
+  | 'adLimit'
+  | 'adUsed'
   | CombatError
   | 'checksum'
   | 'newer'
@@ -125,6 +128,14 @@ export type GameState = {
   absence: AbsenceReport | null
   notice: GameNotice
   auto: AutoPlan
+  ads: AdUses
+}
+
+export type AdPlacement = 'absence' | 'construction' | 'temple'
+
+export type AdUses = {
+  date: string
+  counts: Record<AdPlacement, number>
 }
 
 export type GameAction =
@@ -158,6 +169,7 @@ export type GameAction =
   | { type: 'lockSeed'; locked: boolean }
   | { type: 'setSeed'; seed: number }
   | { type: 'reset'; now: number }
+  | { type: 'adReward'; placement: AdPlacement; now: number }
 
 export function freshState(seed: number, now: number): GameState {
   return {
@@ -191,6 +203,7 @@ export function freshState(seed: number, now: number): GameState {
     absence: null,
     notice: null,
     auto: { enabled: false, dungeonId: 'hill_cave', policy: 'safe', material: 'wood', party: [] },
+    ads: emptyAds(now),
   }
 }
 
@@ -237,7 +250,7 @@ export function migrate(raw: unknown, now: number): GameState {
   if (record.version === 1) {
     return fromLegacy(record, now)
   }
-  if (record.version === SAVE_VERSION) {
+  if (typeof record.version === 'number' && record.version >= 2 && record.version <= SAVE_VERSION) {
     return normalize(record, now)
   }
   if (typeof record.version === 'number' && record.version > SAVE_VERSION) {
@@ -417,6 +430,9 @@ function apply(state: GameState, action: GameAction): GameState {
   if (action.type === 'setSeed') {
     return { ...state, notice: null, seed: action.seed }
   }
+  if (action.type === 'adReward') {
+    return grantAdReward(state, action.placement, action.now)
+  }
   return freshState(state.seed, action.now)
 }
 
@@ -459,6 +475,7 @@ function advance(state: GameState, now: number): GameState {
     visitors,
     autoRuns: autoTally.runs,
     autoGold: autoTally.gold,
+    adClaimed: false,
   }
   return { ...next, absence }
 }
@@ -490,6 +507,98 @@ export function expeditionSlots(guildLevel: number): number {
 
 export function restBonus(houseLevel: number): number {
   return Math.max(0, houseLevel - 1) * villageRules.house.restBonusPerLevel
+}
+
+export function localDateKey(now: number): string {
+  const date = new Date(now)
+  const month = String(date.getMonth() + 1).padStart(2, '0')
+  const day = String(date.getDate()).padStart(2, '0')
+  return `${date.getFullYear()}-${month}-${day}`
+}
+
+function emptyAds(now: number): AdUses {
+  return { date: localDateKey(now), counts: { absence: 0, construction: 0, temple: 0 } }
+}
+
+export function adsRemaining(state: GameState, placement: AdPlacement, now: number): number {
+  const used = state.ads.date === localDateKey(now) ? state.ads.counts[placement] : 0
+  return Math.max(0, adRules[placement].daily - used)
+}
+
+function readAds(value: unknown, now: number): AdUses {
+  if (value == null || typeof value !== 'object') {
+    return emptyAds(now)
+  }
+  const record = value as Partial<AdUses>
+  const counts = record.counts
+  if (typeof record.date !== 'string' || counts == null) {
+    return emptyAds(now)
+  }
+  return {
+    date: record.date,
+    counts: {
+      absence: numberOr(counts.absence, 0),
+      construction: numberOr(counts.construction, 0),
+      temple: numberOr(counts.temple, 0),
+    },
+  }
+}
+
+function grantAdReward(state: GameState, placement: AdPlacement, now: number): GameState {
+  const dated = state.ads.date === localDateKey(now) ? state : { ...state, ads: emptyAds(now) }
+  if (dated.ads.counts[placement] >= adRules[placement].daily) {
+    return { ...dated, notice: 'adLimit' }
+  }
+  const rewarded = applyAdReward(dated, placement, now)
+  if (rewarded.notice) {
+    return rewarded
+  }
+  return {
+    ...rewarded,
+    ads: {
+      ...rewarded.ads,
+      counts: { ...rewarded.ads.counts, [placement]: rewarded.ads.counts[placement] + 1 },
+    },
+  }
+}
+
+function applyAdReward(state: GameState, placement: AdPlacement, now: number): GameState {
+  if (placement === 'absence') {
+    if (!state.absence) {
+      return { ...state, notice: 'missing' }
+    }
+    if (state.absence.adClaimed) {
+      return { ...state, notice: 'adUsed' }
+    }
+    return {
+      ...state,
+      notice: null,
+      gold: state.gold + state.absence.goldGained,
+      absence: { ...state.absence, adClaimed: true },
+    }
+  }
+  if (placement === 'construction') {
+    if (!state.construction || state.construction.finishAt <= now) {
+      return { ...state, notice: 'missing' }
+    }
+    const remaining = state.construction.finishAt - now
+    const cut = Math.round(Math.max(remaining * adRules.construction.shortenRatio, adRules.construction.shortenMinMs))
+    const finishAt = Math.max(now, state.construction.finishAt - cut)
+    const shortened = { ...state, notice: null, construction: { ...state.construction, finishAt } }
+    return finishAt <= now ? finishConstruction(shortened, now, []) : shortened
+  }
+  const hero = state.roster
+    .filter((entry) => entry.treatAt != null && entry.treatAt > now)
+    .sort((left, right) => (left.treatAt ?? 0) - (right.treatAt ?? 0))[0]
+  if (!hero) {
+    return { ...state, notice: 'treat' }
+  }
+  const condition = hero.condition === 'critical' ? 'injured' : hero.condition === 'injured' ? 'fatigued' : hero.condition
+  return {
+    ...state,
+    notice: null,
+    roster: state.roster.map((entry) => (entry.id === hero.id ? { ...entry, treatAt: undefined, condition } : entry)),
+  }
 }
 
 function startingBuildings(): Record<BuildingId, number> {
@@ -1068,8 +1177,15 @@ function normalize(record: Record<string, unknown>, now: number): GameState {
     tactics: isTactics(record.tactics) ? record.tactics : base.tactics,
     report: record.report == null ? null : (record.report as DungeonReport),
     absence: isAbsence(record.absence)
-      ? { ...record.absence, crafted: record.absence.crafted ?? [], autoRuns: record.absence.autoRuns ?? 0, autoGold: record.absence.autoGold ?? 0 }
+      ? {
+          ...record.absence,
+          crafted: record.absence.crafted ?? [],
+          autoRuns: record.absence.autoRuns ?? 0,
+          autoGold: record.absence.autoGold ?? 0,
+          adClaimed: record.absence.adClaimed ?? false,
+        }
       : null,
+    ads: readAds(record.ads, now),
     materials: readMaterials(record.materials, base.materials),
     auto: isAuto(record.auto) ? record.auto : base.auto,
     notice: null,

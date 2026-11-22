@@ -49,7 +49,10 @@
     "craft": "Craft",
     "enhance": "Enhance (iron {{iron}} · gold {{gold}})",
     "equip": "Equip {{name}}",
-    "unequip": "Remove {{name}}"
+    "unequip": "Remove {{name}}",
+    "adAbsence": "Watch an ad for the gold again ({{left}}/{{cap}} left)",
+    "adConstruction": "Watch an ad to shorten construction ({{left}}/{{cap}} left)",
+    "adTemple": "Watch an ad to finish treatment ({{left}}/{{cap}} left)"
   },
   "label": {
     "visitors": "Visitors",
@@ -158,6 +161,8 @@
     "recipe": "That piece cannot be crafted or enhanced right now.",
     "enhanceFail": "Enhancement failed. Only the materials were lost.",
     "autoLocked": "Only a cleared dungeon can run automatically.",
+    "adLimit": "Today's ad rewards are used up.",
+    "adUsed": "This report's ad reward was already claimed.",
     "gold": "Gold {{gold}}",
     "xp": "Experience {{xp}}",
     "floors": "Floors cleared {{count}}",

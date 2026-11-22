@@ -1,8 +1,9 @@
 import { describe, expect, it } from 'vitest'
-import { lifeRules, progression, smithRules, timeRules, villageRules } from './data'
+import { adRules, lifeRules, progression, smithRules, timeRules, villageRules } from './data'
 import { createHeroUnit } from './combat'
 import { DEFAULT_TACTICS, runDungeon } from './dungeon'
-import { applyCasualty, exportSave, freshState, importSave, migrate, reduce, townLevel, visitorStay } from './game'
+import { SAVE_VERSION, applyCasualty, exportSave, freshState, importSave, migrate, reduce, townLevel, visitorStay } from './game'
+import type { AbsenceReport, GameState } from './game'
 import { forgeGear, recipeById } from './gear'
 import { createHero, generateHero } from './hero'
 import { createRng } from './rng'
@@ -24,7 +25,8 @@ describe('game state', () => {
     const hired = reduce(start, { type: 'hire', id: start.visitors[0]?.id ?? '' })
     const legacy = { ...hired, version: 1, calendar: undefined, lastTickAt: undefined, absence: undefined, notice: undefined }
     const migrated = migrate(legacy, now + 1000)
-    expect(migrated.version).toBe(2)
+    expect(migrated.version).toBe(SAVE_VERSION)
+    expect(migrated.ads.counts.absence).toBe(0)
     expect(migrated.roster.map((hero) => hero.id)).toEqual(hired.roster.map((hero) => hero.id))
     expect(migrated.calendar.season).toBe('spring')
     expect(migrated.absence).toBeNull()
@@ -402,5 +404,98 @@ describe('economy fixes', () => {
     const rested = reduce(tired, { type: 'rest', times: 1 })
     expect(rested.gold).toBe(tired.gold)
     expect(rested.roster[0]?.fatigue).toBeLessThan(80)
+  })
+
+  it('pays an absence ad once, stops at the daily cap, and resets on the next local date', () => {
+    const day = new Date(2026, 10, 22, 15).getTime()
+    const nextDay = new Date(2026, 10, 23, 15).getTime()
+    const absence: AbsenceReport = {
+      elapsedMs: timeRules.reportAfterMs,
+      capped: false,
+      seasonsPassed: 0,
+      year: 1,
+      season: 'spring',
+      goldGained: 40,
+      wagesPaid: 0,
+      injuries: [],
+      completed: [],
+      crafted: [],
+      visitors: [],
+      autoRuns: 0,
+      autoGold: 0,
+      adClaimed: false,
+    }
+    const start = { ...freshState(1, day), gold: 10, absence }
+    const once = reduce(start, { type: 'adReward', placement: 'absence', now: day })
+    expect(once.gold).toBe(50)
+    expect(once.absence?.adClaimed).toBe(true)
+    expect(once.ads.counts.absence).toBe(1)
+    const twice = reduce(once, { type: 'adReward', placement: 'absence', now: day })
+    expect(twice.gold).toBe(50)
+    expect(twice.notice).toBe('adUsed')
+    expect(twice.ads.counts.absence).toBe(1)
+
+    let current: GameState = start
+    for (let index = 0; index < adRules.absence.daily; index += 1) {
+      current = reduce(
+        { ...current, absence: { ...absence }, notice: null },
+        { type: 'adReward', placement: 'absence', now: day },
+      )
+      expect(current.notice).toBeNull()
+    }
+    const blocked = reduce(
+      { ...current, absence: { ...absence }, notice: null },
+      { type: 'adReward', placement: 'absence', now: day },
+    )
+    expect(blocked.notice).toBe('adLimit')
+    expect(blocked.gold).toBe(current.gold)
+    const reset = reduce(
+      { ...blocked, absence: { ...absence }, notice: null },
+      { type: 'adReward', placement: 'absence', now: nextDay },
+    )
+    expect(reset.notice).toBeNull()
+    expect(reset.ads.date).not.toBe(blocked.ads.date)
+    expect(reset.ads.counts.absence).toBe(1)
+    expect(reset.gold).toBe(blocked.gold + 40)
+  })
+
+  it('shortens construction by the larger of 30 percent and 30 minutes', () => {
+    const day = new Date(2026, 10, 22, 15).getTime()
+    const started = reduce(freshState(1, day), { type: 'build', id: 'house', now: day })
+    const finishAt = started.construction?.finishAt ?? day
+    const remaining = finishAt - day
+    const cut = Math.round(Math.max(remaining * adRules.construction.shortenRatio, adRules.construction.shortenMinMs))
+    const shortened = reduce(started, { type: 'adReward', placement: 'construction', now: day })
+    expect(shortened.construction?.finishAt).toBe(finishAt - cut)
+    expect(shortened.ads.counts.construction).toBe(1)
+    expect(cut).toBeGreaterThan(adRules.construction.shortenMinMs)
+  })
+
+  it('finishes the hero currently being treated', () => {
+    const day = new Date(2026, 10, 22, 15).getTime()
+    const start = freshState(1, day)
+    const hero = start.visitors[0]
+    if (!hero) {
+      throw new Error('expected a visitor')
+    }
+    const injured = {
+      ...start,
+      buildings: { ...start.buildings, temple: 1 },
+      roster: [{ ...hero, condition: 'injured' as const }],
+    }
+    const treating = reduce(injured, { type: 'treat', id: hero.id, now: day })
+    expect(treating.roster[0]?.treatAt).toBe(day + lifeRules.treatMs)
+    const finished = reduce(treating, { type: 'adReward', placement: 'temple', now: day })
+    expect(finished.roster[0]?.treatAt).toBeUndefined()
+    expect(finished.roster[0]?.condition).toBe('fatigued')
+    expect(finished.ads.counts.temple).toBe(1)
+    expect(reduce(finished, { type: 'adReward', placement: 'temple', now: day }).notice).toBe('treat')
+  })
+
+  it('loads a version 2 save and starts the ad counts at zero', () => {
+    const saved = { ...freshState(2, now), version: 2, ads: undefined }
+    const loaded = migrate(saved, now)
+    expect(loaded.version).toBe(SAVE_VERSION)
+    expect(loaded.ads.counts).toEqual({ absence: 0, construction: 0, temple: 0 })
   })
 })

@@ -49,7 +49,10 @@
     "craft": "제작",
     "enhance": "강화 (철 {{iron}} · 골드 {{gold}})",
     "equip": "{{name}} 장착",
-    "unequip": "{{name}} 해제"
+    "unequip": "{{name}} 해제",
+    "adAbsence": "광고 보고 골드 한 번 더 (남은 횟수 {{left}}/{{cap}})",
+    "adConstruction": "광고 보고 공사 단축 (남은 횟수 {{left}}/{{cap}})",
+    "adTemple": "광고 보고 치료 완료 (남은 횟수 {{left}}/{{cap}})"
   },
   "label": {
     "visitors": "방문자",
@@ -158,6 +161,8 @@
     "recipe": "그 장비는 지금 만들거나 강화할 수 없습니다.",
     "enhanceFail": "강화에 실패했습니다. 재료만 사라졌습니다.",
     "autoLocked": "클리어한 던전만 자동 출정할 수 있습니다.",
+    "adLimit": "오늘의 광고 횟수를 모두 썼습니다.",
+    "adUsed": "이 보고서의 광고 보상은 이미 받았습니다.",
     "gold": "골드 {{gold}}",
     "xp": "경험치 {{xp}}",
     "floors": "클리어한 층 {{count}}",

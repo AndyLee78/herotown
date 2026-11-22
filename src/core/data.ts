@@ -1,3 +1,4 @@
+import adsFile from '../data/ads.json'
 import ageBandsFile from '../data/ageBands.json'
 import classesFile from '../data/classes.json'
 import lifeFile from '../data/life.json'
@@ -40,6 +41,7 @@ export type GameData = {
   village: typeof villageFile
   life: typeof lifeFile
   smith: typeof smithFile
+  ads: typeof adsFile
 }
 
 export function validateGameData(data: GameData): void {
@@ -155,6 +157,21 @@ export const timeRules = timeFile
 export const villageRules = villageFile
 export const lifeRules = lifeFile
 export const smithRules = smithFile
+export const adRules = adsFile
+
+const adPlacements = ['absence', 'construction', 'temple'] as const
+for (const placement of adPlacements) {
+  const rule = adRules[placement]
+  if (!Number.isInteger(rule.daily) || rule.daily < 1) {
+    throw new Error(`${placement} ads need a daily cap of at least 1`)
+  }
+}
+if (adRules.construction.shortenRatio <= 0 || adRules.construction.shortenRatio > 1) {
+  throw new Error('Construction ads need a shorten ratio between 0 and 1')
+}
+if (!Number.isInteger(adRules.construction.shortenMinMs) || adRules.construction.shortenMinMs < 1) {
+  throw new Error('Construction ads need a positive minimum shorten time')
+}
 
 validateGameData({
   ageBands,
@@ -170,6 +187,7 @@ validateGameData({
   village: villageFile,
   life: lifeFile,
   smith: smithFile,
+  ads: adsFile,
 })
 
 const PHYSICAL: ReadonlySet<StatKey> = new Set(['str', 'agi', 'vit'])
