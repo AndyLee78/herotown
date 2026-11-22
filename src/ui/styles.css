@@ -137,11 +137,18 @@ section {
 }
 
 .village-canvas {
+  display: block;
   width: 100%;
-  height: auto;
-  background: #2f5228;
+  aspect-ratio: 16 / 10;
+  max-height: 70vh;
+  background: #cfe6f2;
   border-radius: 8px;
-  cursor: pointer;
+  cursor: grab;
+  touch-action: none;
+}
+
+.village-canvas:active {
+  cursor: grabbing;
 }
 
 .card,
@@ -163,9 +170,8 @@ section {
   width: 64px;
   height: 64px;
   flex: 0 0 auto;
-  background: #243022;
+  background: #cfe6f2;
   border-radius: 6px;
-  image-rendering: pixelated;
 }
 
 .stats {

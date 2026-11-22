@@ -124,6 +124,8 @@ export function App() {
   }
 
   const selected = heroes.find((hero) => hero.id === selectedId) ?? null
+  const overlayOpen = screen !== 'village' || Boolean(save.notice || save.warning || save.absence)
+  const buildingLabels = Object.fromEntries(villageRules.buildings.map((building) => [building.id, t(`building.${building.id}`)])) as Record<BuildingId, string>
   const screens = (['town', 'inn', 'roster', 'party', 'result', 'village', 'smith', 'save', 'debug'] as const).filter(
     (item) => item !== 'debug' || import.meta.env.DEV,
   )
@@ -159,18 +161,18 @@ export function App() {
       <section className="village-panel">
         <div className="village-stage">
           <VillageView
-            heroes={heroes}
+            roster={save.roster}
+            visitors={save.visitors}
             partyIds={save.party.map((slot) => slot.id)}
             selectedId={selectedId}
             onSelect={setSelectedId}
             villageLabel={t('label.village')}
-            buildingLabels={{
-              hall: t('building.hall'),
-              inn: t('building.inn'),
-              house: t('building.house'),
-            }}
+            buildings={save.buildings}
+            constructing={save.construction?.id ?? null}
+            buildingLabels={buildingLabels}
+            active={!overlayOpen}
           />
-          {screen !== 'village' || save.notice || save.warning || save.absence ? (
+          {overlayOpen ? (
             <div className="village-overlay">
               {screen !== 'village' ? (
                 <div className="overlay-close">

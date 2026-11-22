@@ -2,7 +2,7 @@
 
 Village-building party RPG with idle auto-expeditions. Design source of truth: `Docs/마을 성장 RPG – 게임 디자인 문서(GDD).md` (Korean). Per-system notes live next to it (`Docs/village.md`, `Docs/dungeons.md`, `Docs/combat.md`, `Docs/classes.md`); update the matching note when a system's behavior changes.
 
-Art direction (GDD 11.7): cute voxel 3D with an isometric orthographic camera, all generated in code with three.js, no image assets. The reference prototype is `prototypes/voxel3d/index.html` (standalone, loads three.js from a CDN, open via `npm run dev` at `/prototypes/voxel3d/index.html`). The current game still renders with `src/ui/pixelArt.ts` until the 3D view replaces it.
+Art direction (GDD 11.7): cute voxel 3D with an isometric orthographic camera, all generated in code with three.js, no image assets. The reference prototype is `prototypes/voxel3d/index.html` (standalone, loads three.js from a CDN, open via `npm run dev` at `/prototypes/voxel3d/index.html`). The game's village renders through `src/ui/voxel/` (`VillageScene.ts` drives it, `world.ts` lays out lots and props, `character.ts` builds heroes, `portrait.ts` renders card portraits, `look.ts` derives appearance from the hero id until genes exist in the core). Boxes go through `Builder` in `kit.ts`, which merges them so each moving part is one draw call; keep new art on that path.
 
 Current stage: stage 1 (MVP) per GDD section 12. Stage 2+ systems (aging curve, marriage, children, alchemy, cloud saves) stay out of scope until their stage.
 
