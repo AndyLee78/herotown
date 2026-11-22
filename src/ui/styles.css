@@ -1,5 +1,14 @@
 /* HeroTown game UI: cute casual style to match the voxel village.
-   Cream paper panels, wooden frames, chunky buttons with a pressed edge. */
+   Cream paper panels, wooden frames, chunky buttons with a pressed edge.
+   Jua (SIL OFL) is the display face for titles, buttons and numbers. */
+
+@font-face {
+  font-family: 'Jua';
+  src: url('/fonts/Jua-Regular.woff2') format('woff2');
+  font-weight: 400;
+  font-style: normal;
+  font-display: swap;
+}
 
 :root {
   --ink: #3b2a1e;
@@ -58,13 +67,28 @@ p {
   margin: 0;
 }
 
+button,
+.town-info strong,
+.town-level,
+.window-head h2,
+.section-title,
+.res,
+.badge,
+.loading {
+  font-family: 'Jua', 'Pretendard', 'Apple SD Gothic Neo', sans-serif;
+  font-synthesis: none;
+}
+
 .loading {
   display: grid;
   place-items: center;
   height: 100%;
-  font-size: 24px;
-  font-weight: 800;
-  color: var(--wood-dark);
+  background: linear-gradient(#e7f5fb, var(--sky));
+}
+
+.town-logo {
+  width: min(340px, 90vw);
+  height: auto;
 }
 
 /* ---------- stage ---------- */
@@ -235,7 +259,9 @@ p {
   display: flex;
   gap: 8px;
   padding: 8px;
-  background: var(--paper);
+  background:
+    repeating-linear-gradient(90deg, rgba(255, 236, 210, 0.7) 0 3px, transparent 3px 11px),
+    linear-gradient(#f6e6c8, #e7d3ab);
   border: 3px solid var(--wood);
   border-radius: 22px;
   box-shadow: 0 5px 0 var(--wood-dark), 0 12px 28px rgba(0, 0, 0, 0.22);
@@ -268,10 +294,10 @@ p {
 }
 
 .dock button span:not(.badge) {
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
   max-width: 100%;
+  line-height: 1.15;
+  text-align: center;
+  overflow-wrap: anywhere;
 }
 
 .badge {
@@ -347,7 +373,10 @@ p {
   gap: 10px;
   padding: 10px 10px 10px 16px;
   color: #fff8ec;
-  background: linear-gradient(#a8784a, var(--wood));
+  background:
+    repeating-linear-gradient(90deg, rgba(255, 226, 180, 0.22) 0 2px, transparent 2px 8px),
+    repeating-linear-gradient(180deg, rgba(80, 42, 16, 0.16) 0 10px, transparent 10px 18px),
+    linear-gradient(#c48a55, #8a572e);
   border-bottom: 3px solid var(--wood-dark);
 }
 
@@ -361,6 +390,27 @@ p {
 .window-icon {
   display: grid;
   place-items: center;
+  padding: 3px;
+  background: var(--paper);
+  border: 2px solid var(--wood-dark);
+  border-radius: 10px;
+}
+
+.icon-sheet {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  align-items: flex-end;
+}
+
+.icon-sheet > span {
+  display: inline-flex;
+  align-items: flex-end;
+  gap: 4px;
+  padding: 6px;
+  background: var(--paper);
+  border: 2px solid var(--line);
+  border-radius: 10px;
 }
 
 .close {

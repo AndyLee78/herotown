@@ -1,4 +1,5 @@
-import { Hammer, Lock } from 'lucide-react'
+import { Lock } from 'lucide-react'
+import { IconSheet, UiIcon } from './icons'
 import { lazy, Suspense, useEffect, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import {
@@ -55,7 +56,7 @@ export function Town({ save, onAction, busy, onWatch }: { save: GameState; onAct
 
       {save.construction ? (
         <div className="card building-now">
-          <Hammer size={22} />
+          <UiIcon name="town" size={22} />
           <div className="grow">
             <strong>{t('town.building', { name: t(`building.${save.construction.id}`), time: waitLabel(save.construction.finishAt - now) })}</strong>
             <Bar value={total - (save.construction.finishAt - now)} max={total} tone="info" />
@@ -116,7 +117,7 @@ export function Smith({ save, onAction }: { save: GameState; onAction: Act }) {
   return (
     <>
       <p className="banner">
-        <Hammer size={18} />
+        <UiIcon name="smith" size={18} />
         {t('smith.level', { level: save.buildings.smith })} ·{' '}
         {save.smith ? t('smith.working', { name: t(`item.${save.smith.recipeId}`), time: waitLabel(save.smith.finishAt - now) }) : t('smith.idle')}
       </p>
@@ -329,6 +330,8 @@ export function Settings({
               {t('label.seedLocked')}
             </button>
           </div>
+          <h3 className="section-title">{t('debug.icons')}</h3>
+          <IconSheet />
         </>
       ) : null}
     </>

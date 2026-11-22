@@ -458,7 +458,8 @@
     "skip10": "+10 min",
     "skipHour": "+1 hour",
     "skipSeason": "+1 season",
-    "resetOffset": "Reset offset"
+    "resetOffset": "Reset offset",
+    "icons": "Icons"
   },
   "ui": {
     "level": "Lv {{level}}",

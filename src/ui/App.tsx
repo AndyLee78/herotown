@@ -1,4 +1,4 @@
-import { Anvil, Beer, Clock, Hammer, ScrollText, Settings as SettingsIcon, Swords, Users } from 'lucide-react'
+import { Clock } from 'lucide-react'
 import { lazy, Suspense, useEffect, useRef, useState, type ReactNode } from 'react'
 import { useTranslation } from 'react-i18next'
 import {
@@ -19,6 +19,7 @@ import {
 import { rewardedAds } from './ads'
 import { addGameOffset, gameNow, offsetSteps, resetGameOffset } from './clock'
 import { Inn, Party, Roster } from './game/heroScreens'
+import { UiIcon, TownLogo } from './game/icons'
 import { Bar, Res, Window, needsWarning, useNow, waitLabel } from './game/kit'
 import { Absence, ConfirmDepart, Report, Settings, Smith, Town } from './game/villageScreens'
 import { loadGame, storeGame } from './storage'
@@ -29,12 +30,12 @@ type Screen = 'town' | 'inn' | 'roster' | 'party' | 'smith' | 'result' | 'settin
 type Toast = { id: number; text: string }
 
 const DOCK: { screen: Screen; icon: ReactNode }[] = [
-  { screen: 'town', icon: <Hammer size={26} /> },
-  { screen: 'inn', icon: <Beer size={26} /> },
-  { screen: 'roster', icon: <Users size={26} /> },
-  { screen: 'party', icon: <Swords size={26} /> },
-  { screen: 'smith', icon: <Anvil size={26} /> },
-  { screen: 'result', icon: <ScrollText size={26} /> },
+  { screen: 'town', icon: <UiIcon name="town" size={26} /> },
+  { screen: 'inn', icon: <UiIcon name="inn" size={26} /> },
+  { screen: 'roster', icon: <UiIcon name="roster" size={26} /> },
+  { screen: 'party', icon: <UiIcon name="party" size={26} /> },
+  { screen: 'smith', icon: <UiIcon name="smith" size={26} /> },
+  { screen: 'result', icon: <UiIcon name="result" size={26} /> },
 ]
 
 // Tapping a building in the village opens the screen that runs it.
@@ -183,7 +184,11 @@ export function App() {
   }
 
   if (!save) {
-    return <div className="loading">{t('app.title')}</div>
+    return (
+      <div className="loading">
+        <TownLogo />
+      </div>
+    )
   }
 
   const buildingLabels = Object.fromEntries(villageRules.buildings.map((building) => [building.id, t(`building.${building.id}`)])) as Record<BuildingId, string>
@@ -231,7 +236,7 @@ export function App() {
       </nav>
 
       {screen ? (
-        <Window title={t(`screen.${screen}`)} icon={DOCK.find((item) => item.screen === screen)?.icon ?? <SettingsIcon size={24} />} onClose={() => setScreen(null)}>
+        <Window title={t(`screen.${screen}`)} icon={DOCK.find((item) => item.screen === screen)?.icon ?? <UiIcon name="settings" size={24} />} onClose={() => setScreen(null)}>
           {screen === 'town' ? <Town save={save} onAction={apply} busy={adBusy} onWatch={() => watchAd('construction')} /> : null}
           {screen === 'inn' ? <Inn save={save} onHire={(id) => apply({ type: 'hire', id, now: gameNow() })} /> : null}
           {screen === 'roster' ? (
@@ -312,7 +317,7 @@ function Hud({ save, onOpen }: { save: GameState; onOpen: (screen: Screen) => vo
         ) : null}
       </div>
       <button type="button" className="icon-btn" aria-label={t('screen.settings')} onClick={() => onOpen('settings')}>
-        <SettingsIcon size={24} />
+        <UiIcon name="settings" size={24} />
       </button>
     </header>
   )
