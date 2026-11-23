@@ -4,8 +4,10 @@ import { useTranslation } from 'react-i18next'
 import {
   guideStatus,
   exportSave,
+  housingFree,
   importSave,
   reduce,
+  residents,
   timeRules,
   townLevel,
   villageRules,
@@ -22,7 +24,7 @@ import { addGameOffset, gameNow, offsetSteps, resetGameOffset } from './clock'
 import { BattleHub } from './game/battleScreens'
 import { Inn, Roster } from './game/heroScreens'
 import { UiIcon, TownLogo, type ResourceKind } from './game/icons'
-import { Bar, Res, Window, needsWarning, useNow, waitLabel } from './game/kit'
+import { Bar, Portrait, Res, Window, needsWarning, useNow, waitLabel } from './game/kit'
 import { Absence, ConfirmDepart, Settings, Smith, Town } from './game/villageScreens'
 import { loadGame, storeGame } from './storage'
 import { registerSW } from 'virtual:pwa-register'
@@ -67,6 +69,7 @@ export function App() {
   const [updateReady, setUpdateReady] = useState(false)
   const updateSw = useRef<((reloadPage?: boolean) => Promise<void>) | null>(null)
   const [confirm, setConfirm] = useState<'seenDeath' | 'wornParty' | null>(null)
+  const [proposalLater, setProposalLater] = useState<string[]>([])
   const [reportUnseen, setReportUnseen] = useState(false)
   const toastId = useRef(0)
   const pendingPreset = useRef('p1')
@@ -237,7 +240,34 @@ export function App() {
       play('depart')
       pushToast(t('battle.departed', { dungeon: t(`dungeon.${next.dungeonId}.name`) }))
     }
+    if (action.type === 'acceptProposal') {
+      const pair = residents(next)
+      const first = pair.find((hero) => hero.id === action.a)
+      const second = pair.find((hero) => hero.id === action.b)
+      if (first?.spouseId === action.b && second) {
+        pushToast(t('family.married', { a: first.name, b: second.name }))
+      }
+    }
   }
+
+  const birthMark = useRef<string | null>(null)
+  const born = save?.absence?.births ?? []
+  const bornKey = born.length > 0 ? `${save?.lastTickAt ?? 0}|${born.join(',')}` : ''
+  useEffect(() => {
+    if (!save) {
+      return
+    }
+    if (birthMark.current === null) {
+      birthMark.current = bornKey
+      return
+    }
+    if (bornKey && bornKey !== birthMark.current) {
+      pushToast(t('family.born', { names: born.join(', ') }))
+    }
+    birthMark.current = bornKey
+    // The toast follows a new absence report. pushToast changes every render.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [bornKey])
 
   const jumpClock = (ms: number) => {
     const base = gameNow()
@@ -330,7 +360,15 @@ export function App() {
       </Suspense>
 
       <Hud save={save} onOpen={open} />
-      <GuideCard save={save} onOpen={open} onClaim={() => apply({ type: 'claimGuide' })} />
+      <div className="corner-cards">
+        <GuideCard save={save} onOpen={open} onClaim={() => apply({ type: 'claimGuide' })} />
+        <ProposalCards
+          save={save}
+          later={proposalLater}
+          onLater={(key) => setProposalLater((keys) => (keys.includes(key) ? keys : [...keys, key]))}
+          onAction={apply}
+        />
+      </div>
 
       {save.expeditions.length > 0 ? (
         <Suspense fallback={null}>
@@ -488,5 +526,65 @@ function GuideCard({ save, onOpen, onClaim }: { save: GameState; onOpen: (screen
         ) : null}
       </span>
     </aside>
+  )
+}
+
+function ProposalCards({
+  save,
+  later,
+  onLater,
+  onAction,
+}: {
+  save: GameState
+  later: string[]
+  onLater: (key: string) => void
+  onAction: (action: GameAction) => void
+}) {
+  const { t } = useTranslation()
+  const people = residents(save)
+  const free = housingFree(save)
+  const open = (save.proposals ?? []).filter((proposal) => !later.includes(`${proposal.a}|${proposal.b}`))
+  if (open.length === 0) {
+    return null
+  }
+  return (
+    <>
+      {open.map((proposal) => {
+        const first = people.find((hero) => hero.id === proposal.a)
+        const second = people.find((hero) => hero.id === proposal.b)
+        if (!first || !second) {
+          return null
+        }
+        const key = `${proposal.a}|${proposal.b}`
+        return (
+          <aside key={key} className="proposal">
+            <strong>{t('family.propose')}</strong>
+            <div className="proposal-people">
+              <span>
+                <Portrait hero={first} />
+                {first.name}
+              </span>
+              <span>
+                <Portrait hero={second} />
+                {second.name}
+              </span>
+            </div>
+            <p>{t('family.proposeText', { a: first.name, b: second.name })}</p>
+            {free === 0 ? <p className="muted">{t('family.needHouse')}</p> : null}
+            <div className="actions">
+              <button type="button" className="btn primary small" disabled={free === 0} onClick={() => onAction({ type: 'acceptProposal', a: proposal.a, b: proposal.b, now: gameNow() })}>
+                {t('family.accept')}
+              </button>
+              <button type="button" className="btn small" onClick={() => onLater(key)}>
+                {t('family.later')}
+              </button>
+              <button type="button" className="btn small danger" onClick={() => onAction({ type: 'declineProposal', a: proposal.a, b: proposal.b, now: gameNow() })}>
+                {t('family.decline')}
+              </button>
+            </div>
+          </aside>
+        )
+      })}
+    </>
   )
 }

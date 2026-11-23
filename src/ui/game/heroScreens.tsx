@@ -7,10 +7,13 @@ import {
   adsRemaining,
   canDeploy,
   classById,
+  familyOf,
   lifeRules,
   potentialBand,
   progression,
+  residents,
   statRange,
+  topBonds,
   visitorCap,
   visitorStay,
   type GameAction,
@@ -28,6 +31,7 @@ import {
   Chip,
   Portrait,
   Res,
+  Window,
   conditionTone,
   fatigueText,
   fatigueTone,
@@ -135,7 +139,9 @@ export function Roster({
   onWatch: () => void
 }) {
   const { t } = useTranslation()
-  const selected = save.roster.find((hero) => hero.id === selectedId) ?? null
+  const [treeHouse, setTreeHouse] = useState<string | null>(null)
+  const selected = shownHero(save, selectedId)
+  const inRoster = selected != null && save.roster.some((hero) => hero.id === selected.id)
   return (
     <div className={selected ? 'split has-detail' : 'split'}>
       <div className="list-pane">
@@ -172,7 +178,10 @@ export function Roster({
       </div>
       <div className="detail-pane">
         {selected ? (
-          <HeroDetail hero={selected} save={save} onAction={onAction} busy={busy} onWatch={onWatch} onBack={() => onSelect(null)} />
+          <>
+            <HeroDetail hero={selected} save={save} inRoster={inRoster} onAction={onAction} busy={busy} onWatch={onWatch} onBack={() => onSelect(null)} onOpenTree={setTreeHouse} onSelect={onSelect} />
+            {treeHouse ? <FamilyTree save={save} house={treeHouse} onSelect={onSelect} onClose={() => setTreeHouse(null)} /> : null}
+          </>
         ) : (
           <p className="empty">{t('ui.pickHero')}</p>
         )}
@@ -184,22 +193,28 @@ export function Roster({
 function HeroDetail({
   hero,
   save,
+  inRoster,
   onAction,
   busy,
   onWatch,
   onBack,
+  onOpenTree,
+  onSelect,
 }: {
   hero: Hero
   save: GameState
+  inRoster: boolean
   onAction: Act
   busy: boolean
   onWatch: () => void
   onBack: () => void
+  onOpenTree: (house: string) => void
+  onSelect: (id: string) => void
 }) {
   const { t } = useTranslation()
   const [confirmDismiss, setConfirmDismiss] = useState(false)
   const [confirmRetire, setConfirmRetire] = useState(false)
-  const waiting = hero.treatAt != null || hero.resurrectAt != null || hero.recoverAt != null
+  const waiting = hero.treatAt != null || hero.resurrectAt != null || hero.recoverAt != null || hero.expecting != null
   const now = useNow(waiting)
   const skills = classById(hero.classId).skills
   const careAt = hero.resurrectAt ?? hero.treatAt
@@ -212,7 +227,7 @@ function HeroDetail({
       <div className="card-top">
         <Portrait hero={hero} large />
         <div>
-          <strong className="name">{hero.name}</strong>
+          <strong className="name">{hero.family ? `${hero.name} · ${hero.family}` : hero.name}</strong>
           <HeroChips hero={hero} />
           <span className="chips">
             {hero.traitIds.map((trait) => (
@@ -227,6 +242,8 @@ function HeroDetail({
       </span>
       {recovery ? <p className="muted">{recovery}</p> : null}
       {careAt != null ? <p className="banner">{t(hero.resurrectAt != null ? 'hero.reviving' : 'hero.treating', { time: waitLabel(careAt - now) })}</p> : null}
+
+      <FamilyPanel hero={hero} save={save} now={now} onSelect={onSelect} onOpenTree={onOpenTree} />
 
       <h3 className="section-title">{t('ui.stats')}</h3>
       <dl className="stat-bars">
@@ -265,22 +282,26 @@ function HeroDetail({
         {hero.gear.map((item) => (
           <li key={item.id} className="line">
             <span>{itemLabel(t, item, hero.classId)}</span>
-            <button type="button" className="btn small" onClick={() => onAction({ type: 'unequip', heroId: hero.id, slot: item.slot })}>
-              {t('ui.unequip')}
-            </button>
+            {inRoster ? (
+              <button type="button" className="btn small" onClick={() => onAction({ type: 'unequip', heroId: hero.id, slot: item.slot })}>
+                {t('ui.unequip')}
+              </button>
+            ) : null}
           </li>
         ))}
-        {save.stash.map((item) => (
+        {inRoster
+          ? save.stash.map((item) => (
           <li key={item.id} className="line">
             <span className="muted">{itemLabel(t, item, hero.classId)}</span>
             <button type="button" className="btn small" onClick={() => onAction({ type: 'equip', heroId: hero.id, gearId: item.id })}>
               {t('ui.equip')}
             </button>
           </li>
-        ))}
+        ))
+          : null}
       </ul>
 
-      <div className="actions">
+      {inRoster ? <div className="actions">
         {hero.condition === 'injured' || hero.condition === 'critical' ? (
           <button type="button" className="btn" onClick={() => onAction({ type: 'treat', id: hero.id, now: gameNow() })}>
             {t('action.treat')}
@@ -316,10 +337,166 @@ function HeroDetail({
             {t('action.dismiss')}
           </button>
         )}
-      </div>
+      </div> : null}
       {canDeploy(hero) ? null : <p className="muted">{t('result.dead')}</p>}
     </article>
   )
+}
+
+function shownHero(save: GameState, id: string | null): Hero | null {
+  if (!id) {
+    return null
+  }
+  return save.roster.find((hero) => hero.id === id) ?? save.retirees.find((retiree) => retiree.hero.id === id)?.hero ?? null
+}
+
+function FamilyPanel({
+  hero,
+  save,
+  now,
+  onSelect,
+  onOpenTree,
+}: {
+  hero: Hero
+  save: GameState
+  now: number
+  onSelect: (id: string) => void
+  onOpenTree: (house: string) => void
+}) {
+  const { t } = useTranslation()
+  const family = familyOf(save, hero.id)
+  const bonds = topBonds(save, hero.id, 3)
+  const house = hero.family ?? family.children.find((child) => child.family)?.family ?? null
+  return (
+    <>
+      <h3 className="section-title">{t('family.title')}</h3>
+      <p className="line">
+        <span className="muted">{t('family.house')}</span>
+        {house ? (
+          <button type="button" className="btn tiny" onClick={() => onOpenTree(house)}>
+            {house}
+          </button>
+        ) : (
+          <span className="muted">{t('family.none')}</span>
+        )}
+      </p>
+      <FamilyLine label={t('family.spouse')} people={family.spouse ? [family.spouse] : []} empty={t('family.noSpouse')} onSelect={onSelect} />
+      <FamilyLine label={t('family.parents')} people={family.parents} empty={t('family.noParents')} onSelect={onSelect} />
+      <FamilyLine label={t('family.children')} people={family.children} empty={t('family.noChildren')} onSelect={onSelect} />
+      {hero.expecting ? (
+        <p className="chips">
+          <Chip tone="info">{t('family.due')}</Chip>
+          <span className="muted">{t('family.dueIn', { time: waitLabel(Math.max(0, hero.expecting.dueAt - now)) })}</span>
+        </p>
+      ) : null}
+      <h3 className="section-title">{t('family.bonds')}</h3>
+      {bonds.length === 0 ? <p className="muted">{t('family.noBonds')}</p> : null}
+      {bonds.map((bond) => {
+        const other = shownHero(save, bond.id)
+        if (!other) {
+          return null
+        }
+        return (
+          <button key={bond.id} type="button" className="bond" onClick={() => onSelect(other.id)}>
+            <span>{other.family ? `${other.name} · ${other.family}` : other.name}</span>
+            <Bar value={bond.affinity} max={100} tone={bond.stage === 'spouse' || bond.stage === 'lover' ? 'good' : 'info'} />
+            <Chip>{t(`family.stage.${bond.stage}`)}</Chip>
+          </button>
+        )
+      })}
+    </>
+  )
+}
+
+function FamilyLine({ label, people, empty, onSelect }: { label: string; people: Hero[]; empty: string; onSelect: (id: string) => void }) {
+  return (
+    <p className="line">
+      <span className="muted">{label}</span>
+      {people.length === 0 ? <span className="muted">{empty}</span> : null}
+      <span className="chips">
+        {people.map((person) => (
+          <button key={person.id} type="button" className="btn tiny" onClick={() => onSelect(person.id)}>
+            {person.family ? `${person.name} · ${person.family}` : person.name}
+          </button>
+        ))}
+      </span>
+    </p>
+  )
+}
+
+function FamilyTree({ save, house, onSelect, onClose }: { save: GameState; house: string; onSelect: (id: string) => void; onClose: () => void }) {
+  const { t } = useTranslation()
+  const members = houseMembers(residents(save), house)
+  const rows = generationRows(members)
+  return (
+    <Window title={t('family.tree', { house })} onClose={onClose} small>
+      {rows.length === 0 ? <p className="empty">{t('family.emptyTree')}</p> : null}
+      {rows.map((row, index) => (
+        <div key={row.map((hero) => hero.id).join('-')} className={index === 0 ? 'tree-row' : 'tree-row next'}>
+          {pairCouples(row).map((group) => (
+            <div key={group.map((hero) => hero.id).join('-')} className={group.length > 1 ? 'tree-couple' : 'tree-one'}>
+              {group.map((hero) => (
+                <button key={hero.id} type="button" className="tree-person" onClick={() => onSelect(hero.id)}>
+                  <Portrait hero={hero} />
+                  <span>{hero.name}</span>
+                </button>
+              ))}
+            </div>
+          ))}
+        </div>
+      ))}
+    </Window>
+  )
+}
+
+function houseMembers(all: Hero[], house: string): Hero[] {
+  const named = all.filter((hero) => hero.family === house || (hero.family == null && hero.name === house))
+  const ids = new Set(named.map((hero) => hero.id))
+  const spouses = all.filter((hero) => hero.spouseId != null && ids.has(hero.spouseId) && !ids.has(hero.id))
+  return [...named, ...spouses]
+}
+
+function generationRows(members: Hero[]): Hero[][] {
+  const ids = new Set(members.map((hero) => hero.id))
+  const rows: Hero[][] = []
+  const seen = new Set<string>()
+  let current = members.filter((hero) => !hero.parents?.some((parent) => ids.has(parent)))
+  while (current.length > 0) {
+    const row = current.filter((hero) => !seen.has(hero.id))
+    if (row.length === 0) {
+      break
+    }
+    for (const hero of row) {
+      seen.add(hero.id)
+    }
+    rows.push(row)
+    const parentIds = new Set(row.map((hero) => hero.id))
+    current = members.filter((hero) => hero.parents?.some((parent) => parentIds.has(parent)))
+  }
+  const left = members.filter((hero) => !seen.has(hero.id))
+  if (left.length > 0) {
+    rows.push(left)
+  }
+  return rows
+}
+
+function pairCouples(row: Hero[]): Hero[][] {
+  const placed = new Set<string>()
+  const groups: Hero[][] = []
+  for (const hero of row) {
+    if (placed.has(hero.id)) {
+      continue
+    }
+    const spouse = hero.spouseId ? row.find((other) => other.id === hero.spouseId) : undefined
+    placed.add(hero.id)
+    if (spouse && !placed.has(spouse.id)) {
+      placed.add(spouse.id)
+      groups.push([hero, spouse])
+    } else {
+      groups.push([hero])
+    }
+  }
+  return groups
 }
 
 // Retired heroes: who they were, and the building each one runs.

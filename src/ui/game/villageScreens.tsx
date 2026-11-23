@@ -5,9 +5,11 @@ import { useTranslation } from 'react-i18next'
 import {
   adRules,
   adsRemaining,
+  ageBands,
   bedCount,
   dungeons,
   expeditionSlots,
+  population,
   smithRules,
   timeRules,
   townLevel,
@@ -31,7 +33,9 @@ type Act = (action: GameAction) => void
 
 export function Town({ save, onAction, busy, onWatch }: { save: GameState; onAction: Act; busy: boolean; onWatch: () => void }) {
   const { t } = useTranslation()
+  const [census, setCensus] = useState(false)
   const level = townLevel(save.fame)
+  const people = population(save)
   const next = villageRules.levels.find((entry) => entry.level === level.level + 1)
   const now = useNow(save.construction != null)
   const total = save.construction ? villageRules.buildings.find((b) => b.id === save.construction?.id)?.levels.find((l) => l.level === save.buildings[save.construction!.id] + 1)?.ms ?? 1 : 1
@@ -47,6 +51,9 @@ export function Town({ save, onAction, busy, onWatch }: { save: GameState; onAct
         </div>
         <span className="chips">
           <Chip>{t('town.beds', { used: save.roster.length, count: bedCount(save.buildings.house) })}</Chip>
+          <button type="button" className="chip" onClick={() => setCensus(true)}>
+            {t('family.population')}
+          </button>
           <Chip>{t('town.parties', { count: expeditionSlots(save.buildings.guild) })}</Chip>
           <Chip>{t('town.visitors', { count: visitorCap(save.buildings.inn) })}</Chip>
           {save.buildings.guild > 0 ? (
@@ -116,6 +123,33 @@ export function Town({ save, onAction, busy, onWatch }: { save: GameState; onAct
           )
         })}
       </div>
+      {census ? (
+        <Window title={t('family.population')} onClose={() => setCensus(false)} small>
+          <table className="census">
+            <thead>
+              <tr>
+                <th />
+                <th>{t('gender.male')}</th>
+                <th>{t('gender.female')}</th>
+              </tr>
+            </thead>
+            <tbody>
+              {ageBands.map((band) => (
+                <tr key={band.id}>
+                  <th>{t(`family.band.${band.id}`)}</th>
+                  <td>{people.bands[band.id]?.male ?? 0}</td>
+                  <td>{people.bands[band.id]?.female ?? 0}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+          <span className="chips">
+            <Chip>{t('family.marriedCount', { count: people.married })}</Chip>
+            <Chip>{t('family.singleCount', { count: people.single })}</Chip>
+            <Chip>{t('family.beds', { used: people.beds.used, total: people.beds.total })}</Chip>
+          </span>
+        </Window>
+      ) : null}
     </>
   )
 }
@@ -412,7 +446,9 @@ export function Absence({ save, busy, onWatch, onClose }: { save: GameState; bus
       {(report.aged ?? []).length > 0 ? (
         <p>{t('absence.aged', { names: (report.aged ?? []).map((hero) => t('absence.agedHero', { name: hero.name, age: hero.age })).join(', ') })}</p>
       ) : null}
-      {report.completed.length === 0 && report.visitors.length === 0 && crafted.length === 0 && (report.aged ?? []).length === 0 ? <p className="muted">{t('absence.quiet')}</p> : null}
+      {(report.proposals ?? 0) > 0 ? <p>{t('absence.proposals', { count: report.proposals })}</p> : null}
+      {(report.births ?? []).length > 0 ? <p>{t('absence.births', { names: (report.births ?? []).join(', ') })}</p> : null}
+      {report.completed.length === 0 && report.visitors.length === 0 && crafted.length === 0 && (report.aged ?? []).length === 0 && (report.proposals ?? 0) === 0 && (report.births ?? []).length === 0 ? <p className="muted">{t('absence.quiet')}</p> : null}
       <div className="actions">
         {report.adClaimed ? null : (
           <button type="button" className="btn ad" disabled={busy} onClick={onWatch}>

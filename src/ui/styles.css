@@ -1287,15 +1287,23 @@ input[type='range'] {
 
 /* ---------- first-play guide ---------- */
 
-.guide {
+.corner-cards {
   position: absolute;
   z-index: 6;
   top: calc(92px + var(--safe-top));
   left: 10px;
   display: flex;
   flex-direction: column;
+  gap: 8px;
+  width: min(320px, calc(100% - 20px));
+}
+
+.guide {
+  position: relative;
+  display: flex;
+  flex-direction: column;
   gap: 6px;
-  width: min(300px, calc(100% - 20px));
+  width: 100%;
   padding: 8px 10px 10px;
   background: var(--paper);
   border: 3px solid var(--wood);
@@ -1360,12 +1368,124 @@ input[type='range'] {
   margin-left: auto;
 }
 
+.proposal {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 10px;
+  background: var(--paper);
+  border: 3px solid var(--gold-dark);
+  border-radius: 16px;
+  box-shadow: 0 4px 0 var(--wood-dark);
+}
+
+.proposal-people {
+  display: flex;
+  gap: 12px;
+}
+
+.proposal-people span {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-weight: 800;
+}
+
+.proposal .actions {
+  flex-wrap: wrap;
+}
+
+.bond {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 72px auto;
+  align-items: center;
+  gap: 8px;
+  width: 100%;
+  margin: 0 0 6px;
+  padding: 6px 8px;
+  border: 2px solid var(--line);
+  border-radius: 12px;
+  background: transparent;
+  color: inherit;
+  font: inherit;
+  text-align: left;
+}
+
+.census {
+  width: 100%;
+  border-collapse: collapse;
+  margin-bottom: 12px;
+}
+
+.census th,
+.census td {
+  padding: 6px 8px;
+  text-align: right;
+  border-bottom: 1px solid var(--line);
+}
+
+.census th:first-child,
+.census td:first-child {
+  text-align: left;
+}
+
+.tree-row {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 12px;
+  margin-bottom: 8px;
+}
+
+.tree-row.next {
+  padding-top: 10px;
+  border-top: 2px solid var(--wood);
+}
+
+.tree-couple,
+.tree-one {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.tree-couple {
+  padding: 6px;
+  border: 2px solid var(--gold-dark);
+  border-radius: 14px;
+}
+
+.tree-person {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+  width: 72px;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  color: inherit;
+  font: inherit;
+  font-size: 12px;
+  font-weight: 800;
+}
+
+button.chip {
+  cursor: pointer;
+  font: inherit;
+}
+
 @media (max-width: 600px) {
-  .guide {
+  .corner-cards {
     top: auto;
     bottom: calc(90px + var(--safe-bottom));
     left: 8px;
     width: calc(100% - 16px);
+  }
+
+  .guide {
+    top: auto;
+    width: 100%;
   }
 }
 
