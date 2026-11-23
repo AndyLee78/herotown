@@ -80,7 +80,7 @@ Claude Code, Cursor, GPT(Codex)가 함께 쓰는 작업 목록이다. 작업 하
 | 38 | 3a core 코드 리뷰 (1918eda) | GPT | `Docs/reviews/1918eda.md` (새 파일만) | 완료 (03d9e42) |
 | 39 | 독늪 밸런스 측정 | GPT | `tools/curve.ts`, `print-curve.ts`, `tune-curve.ts`, `first-hour.ts` | 완료 (c6e24d9) |
 | 40 | 도적 요새 몬스터·던전 그림 | Cursor | `src/ui/voxel/enemies.ts`, `portrait.ts` | 완료 (c7b4d76) |
-| 41 | 마법 공방 화면·장신구 장착·함정/기습 문구 | Cursor | `App.tsx`, `src/ui/game/*.tsx`, `styles.css`, `src/locales/*` | 대기 |
+| 41 | 마법 공방 화면·장신구 장착·함정/기습 문구 | Cursor | `App.tsx`, `src/ui/game/*.tsx`, `styles.css`, `src/locales/*` | 완료 (8eed6e7) |
 | 42 | 함정·기습 연출과 마법 공방 건물 3D | Cursor | `BattleScene.ts`, `replay.ts`, `world.ts`, `VillageScene.ts` | 대기 (41 뒤) |
 | 43 | 3b core 코드 리뷰 (1f690a1) | GPT | `Docs/reviews/1f690a1.md` (새 파일만) | 대기 |
 | 44 | 도적 요새 밸런스 측정 | GPT | `tools/curve.ts`, `print-curve.ts`, `tune-curve.ts`, `first-hour.ts` | 대기 |
@@ -1110,6 +1110,8 @@ core에 이미 있는 것:
 
 확인: npm run dev에서 디버그로 마을 Lv5·공방을 만들고 장신구를 만들어 끼운 뒤 요새에 나가 본다. 확인 못 한 부분은 메모에.
 ```
+
+메모: 가짜 세이브로 공방 Lv2 화면을 띄워 경계·함정 감지·해독·굳건은 만들 수 있고 고요는 Lv3에 잠긴 것을 확인했다. HUD에 마력 수정이 보인다. 요새의 함정·기습 대비 줄과 장신구 장착은 코어 조회로 맞췄고, 실제 마을 Lv5까지 올려 요새에 나가 보지는 않았다.
 
 ---
 
