@@ -4,12 +4,12 @@ import { buildCharacter, walkPose } from './character'
 import { buildEnemy, idleActor, type Actor } from './enemies'
 import { Builder, disposeTree } from './kit'
 import { lookFor, seeded } from './look'
-import type { Hit, ReplayStep } from './replay'
+import type { Hit, ReplayStep, StatusMark } from './replay'
 
 // Plays a dungeon report back as a 3D auto battle. The outcome is already
 // decided by the core; this only shows the steps in order.
 
-type AnimType = 'melee' | 'cast' | 'hit' | 'shout' | 'spawn' | 'die' | 'flee' | 'cheer'
+type AnimType = 'melee' | 'cast' | 'hit' | 'shout' | 'spawn' | 'die' | 'flee' | 'cheer' | 'drink'
 
 type Anim = {
   type: AnimType
@@ -38,6 +38,7 @@ type Fighter = {
   anim: Anim | null
   phase: number
   bar: { group: THREE.Group; fill: THREE.Mesh }
+  marks: THREE.Group
 }
 
 type Projectile = { mesh: THREE.Object3D; from: THREE.Vector3; to: THREE.Vector3; t: number; dur: number; spin: boolean; onArrive: () => void }
@@ -66,11 +67,15 @@ const DURATION: Record<ReplayStep['type'], number> = {
   buff: 0.6,
   debuff: 0.6,
   dot: 0.45,
+  status: 0.35,
+  potion: 0.7,
   clear: 0.8,
   retreat: 1.4,
   end: 0,
 }
 const CASTERS = new Set(['mage', 'cleric', 'bard', 'crypt_lord', 'wraith'])
+const STATUS_COLOR: Record<StatusMark, string> = { poison: '#6fbf4a', paralyze: '#ffe14a', slow: '#c4a574', silence: '#e05a4a' }
+const POTION_COLOR: Record<string, string> = { heal: '#8ef08a', antidote: '#7dff9a', tonic: '#ffe14a', clarity: '#d7c4ff' }
 const THEMES = {
   1: { sky: '#2a2622', floor: ['#7a6a58', '#6f604f', '#84735f', '#756553'], wall: ['#5a4c40', '#524538', '#625244'], light: '#ffb85a', crystal: '#9fe8ff' },
   2: { sky: '#24262a', floor: ['#6a6660', '#625e58', '#726d66', '#5d5953'], wall: ['#4a4744', '#53504c', '#44413e'], light: '#ffa64d', crystal: '#ffcf5a' },
@@ -348,8 +353,42 @@ export class BattleScene {
       case 'dot': {
         const target = this.fighters.get(step.targetId)
         if (target) {
+          this.setStatus(target, 'poison', true)
           this.damage(target, step.amount, '#9be36a', instant)
         }
+        break
+      }
+      case 'status': {
+        const target = this.fighters.get(step.targetId)
+        if (target) {
+          this.setStatus(target, step.status, step.on)
+          if (step.on && !instant) {
+            this.burst(this.chest(target), STATUS_COLOR[step.status], 6)
+          }
+        }
+        break
+      }
+      case 'potion': {
+        const drinker = this.fighters.get(step.actorId)
+        if (drinker && !instant) {
+          this.holdBottle(drinker)
+        }
+        this.act(step.actorId, 'drink', instant, () => {
+          if (!drinker) {
+            return
+          }
+          this.burst(this.chest(drinker), POTION_COLOR[step.potion] ?? '#fff6c8', 12)
+          if (step.potion === 'antidote') {
+            this.setStatus(drinker, 'poison', false)
+          }
+          if (step.potion === 'tonic') {
+            this.setStatus(drinker, 'paralyze', false)
+            this.setStatus(drinker, 'slow', false)
+          }
+          if (step.potion === 'clarity') {
+            this.setStatus(drinker, 'silence', false)
+          }
+        })
         break
       }
       case 'clear':
@@ -394,6 +433,9 @@ export class BattleScene {
         this.removeFighter(fighter)
         this.fighters.delete(fighter.id)
       }
+    }
+    for (const fighter of this.fighters.values()) {
+      this.clearStatuses(fighter)
     }
     for (const side of ['hero', 'enemy'] as const) {
       for (const row of ['front', 'back'] as const) {
@@ -441,6 +483,8 @@ export class BattleScene {
     fill.position.z = 0.01
     bar.add(fill)
     this.bars.add(bar)
+    const marks = new THREE.Group()
+    this.scene.add(marks)
     const fighter: Fighter = {
       id: unit.id,
       side: unit.side,
@@ -457,6 +501,7 @@ export class BattleScene {
       anim: null,
       phase: this.random() * 10,
       bar: { group: bar, fill },
+      marks,
     }
     this.fighters.set(unit.id, fighter)
     return fighter
@@ -466,8 +511,45 @@ export class BattleScene {
     this.scene.remove(fighter.root)
     disposeTree(fighter.root)
     this.bars.remove(fighter.bar.group)
+    this.scene.remove(fighter.marks)
+    disposeTree(fighter.marks)
     disposeTree(fighter.bar.group)
     ;(fighter.bar.fill.material as THREE.Material).dispose()
+  }
+
+  private setStatus(fighter: Fighter, status: StatusMark, on: boolean) {
+    const current = fighter.marks.getObjectByName(status)
+    if (on && !current) {
+      const icon = statusIcon(status)
+      icon.name = status
+      fighter.marks.add(icon)
+    }
+    if (!on && current) {
+      fighter.marks.remove(current)
+      disposeTree(current)
+    }
+  }
+
+  private clearStatuses(fighter: Fighter) {
+    for (const status of ['poison', 'paralyze', 'slow', 'silence'] as const) {
+      this.setStatus(fighter, status, false)
+    }
+  }
+
+  private holdBottle(fighter: Fighter) {
+    const existing = fighter.actor.group.getObjectByName('bottle')
+    if (existing) {
+      fighter.actor.group.remove(existing)
+      disposeTree(existing)
+    }
+    const bottle = new Builder()
+      .box(0.08, 0.16, 0.08, '#8fd4ef')
+      .box(0.07, 0.04, 0.07, '#8a5a32', 0, 0.1, 0)
+      .box(0.06, 0.08, 0.04, '#6fbf4a', 0, 0.02, 0.05)
+      .build({ castShadow: false })
+    bottle.name = 'bottle'
+    bottle.position.set(0.24, fighter.actor.height * 0.55, 0.12)
+    fighter.actor.group.add(bottle)
   }
 
   private attack(actorId: string, hits: Hit[], downs: string[], instant: boolean) {
@@ -614,6 +696,13 @@ export class BattleScene {
         if (anim.type === 'die') {
           fighter.dead = true
         }
+        if (anim.type === 'drink') {
+          const bottle = actor.group.getObjectByName('bottle')
+          if (bottle) {
+            actor.group.remove(bottle)
+            disposeTree(bottle)
+          }
+        }
         if (anim.type === 'flee') {
           root.visible = false
           fighter.dead = false
@@ -625,6 +714,12 @@ export class BattleScene {
     bar.group.visible = fighter.alive && root.visible
     bar.group.position.copy(root.position).setY(actor.height + 0.22)
     bar.group.quaternion.copy(this.camera.quaternion)
+    fighter.marks.position.copy(root.position).setY(actor.height + 0.55)
+    fighter.marks.quaternion.copy(this.camera.quaternion)
+    const icons = fighter.marks.children
+    icons.forEach((icon, index) => {
+      icon.position.x = (index - (icons.length - 1) / 2) * 0.32
+    })
     const ratio = fighter.max > 0 ? fighter.hp / fighter.max : 0
     bar.fill.scale.x = Math.max(0.001, ratio)
     bar.fill.position.x = (-0.58 * (1 - ratio)) / 2
@@ -676,6 +771,19 @@ export class BattleScene {
       root.position.x = fighter.home.x - easeIn(p) * 9
       if (humanoid) {
         walkPose(humanoid, time, fighter.phase, 1.6)
+      }
+    } else if (anim.type === 'drink') {
+      const tilt = Math.sin(p * Math.PI)
+      const bottle = actor.group.getObjectByName('bottle')
+      if (bottle) {
+        bottle.rotation.z = -1.1 * tilt
+        bottle.position.y = actor.height * 0.62 + tilt * 0.08
+      }
+      if (humanoid) {
+        humanoid.armR.rotation.x = -1.5 * tilt
+        humanoid.armR.rotation.z = -0.5 * tilt
+      } else {
+        actor.group.rotation.z = tilt * 0.2
       }
     } else if (anim.type === 'cheer') {
       actor.group.position.y = Math.abs(Math.sin(p * Math.PI * 3)) * 0.35
@@ -817,6 +925,23 @@ export class BattleScene {
 
 function enemyBolt(fighter: Fighter): string {
   return fighter.caster ? '#b48cff' : '#a6e05a'
+}
+
+function statusIcon(status: StatusMark): THREE.Group {
+  const icon = new Builder()
+  if (status === 'poison') {
+    icon.box(0.12, 0.16, 0.08, '#3faf4a').box(0.08, 0.08, 0.06, '#b6e68a', 0, 0.12, 0)
+  } else if (status === 'paralyze') {
+    icon.box(0.08, 0.16, 0.04, '#ffe14a', -0.04, 0.06, 0, { rz: 0.6 })
+    icon.box(0.08, 0.14, 0.04, '#ffe14a', 0.06, -0.04, 0, { rz: 0.6 })
+  } else if (status === 'slow') {
+    icon.box(0.18, 0.1, 0.12, '#c4a574').box(0.1, 0.1, 0.08, '#8a6a42', 0.04, 0.08, 0)
+  } else {
+    icon.box(0.22, 0.16, 0.04, '#f7f4ee')
+    icon.box(0.14, 0.03, 0.05, '#e05a4a', 0, 0, 0.03, { rz: 0.8 })
+    icon.box(0.14, 0.03, 0.05, '#e05a4a', 0, 0, 0.03, { rz: -0.8 })
+  }
+  return icon.build({ castShadow: false })
 }
 
 function pickColor(random: () => number): string {

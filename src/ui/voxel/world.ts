@@ -214,6 +214,10 @@ export function buildLot(id: BuildingId, level: number, constructing: boolean): 
   if (id === 'fountain' && level > 0) {
     group.add(fountainWater(level))
   }
+  if (id === 'alchemy' && level > 0) {
+    const grow = level - 1
+    group.add(alchemySmoke(level, lot.w - 0.6 + Math.min(0.6, grow * 0.3), lot.d - 0.4 + Math.min(0.4, grow * 0.2)))
+  }
   group.position.set(lot.x, 0, lot.z)
   return { group, top }
 }
@@ -288,6 +292,51 @@ function fountainWater(level: number): THREE.Group {
   return group
 }
 
+// A timber shed, a cauldron, and a chimney. Smoke is added beside the merged mesh.
+function drawAlchemy(b: Builder, w: number, d: number, level: number): number {
+  const top = house(b, { w, d, h: 1.35 + (level - 1) * 0.15, wall: '#d7c4a2', roof: '#3f6b4a', timber: true, chimney: true })
+  const front = d / 2 + 0.55
+  b.box(0.95, 0.42, 0.8, '#3e4248', -0.15, 0.32, front)
+  b.box(1.05, 0.14, 0.9, '#2c3036', -0.15, 0.56, front)
+  b.box(0.7, 0.12, 0.55, '#3faf4a', -0.15, 0.62, front)
+  b.box(0.22, 0.28, 0.18, '#c9a36b', 0.45, 0.2, front)
+  if (level >= 2) {
+    for (const [x, color] of [[0.55, '#8fd4ef'], [0.78, '#d7c4ff'], [1.01, '#f0e06a']] as const) {
+      b.box(0.14, 0.32, 0.14, color, x, 0.7, front - 0.1)
+      b.box(0.1, 0.06, 0.1, '#8a5a32', x, 0.88, front - 0.1)
+    }
+    b.box(0.85, 0.1, 0.28, '#6b4630', 0.78, 0.5, front - 0.1)
+  }
+  if (level >= 3) {
+    b.box(0.4, 0.18, 0.08, '#d9b54a', -w * 0.28, 1.2, d / 2 + 0.06)
+  }
+  return top + 0.4
+}
+
+function alchemySmoke(level: number, w: number, d: number): THREE.Group {
+  const group = new THREE.Group()
+  const materials: THREE.Material[] = []
+  const h = 1.35 + (level - 1) * 0.15
+  const stack = 0.2 + h + 4 * 0.22 * 0.6 + 0.35
+  const puff = (x: number, y: number, z: number, size: number) => {
+    const material = new THREE.MeshBasicMaterial({ color: 0xd5ddd4, transparent: true, opacity: 0.72 })
+    materials.push(material)
+    const mesh = new THREE.Mesh(new THREE.BoxGeometry(size, size * 0.7, size), material)
+    mesh.name = 'smoke'
+    mesh.position.set(w * 0.25 + x, stack + y, -d * 0.15 + z)
+    mesh.userData.baseY = mesh.position.y
+    group.add(mesh)
+  }
+  puff(0, 0.15, 0, 0.34)
+  puff(0.16, 0.42, -0.08, 0.42)
+  puff(-0.06, 0.68, 0.1, 0.3)
+  if (level >= 2) {
+    puff(0.22, 0.95, -0.16, 0.26)
+  }
+  group.userData.materials = materials
+  return group
+}
+
 function drawEmptyLot(b: Builder, lot: Lot) {
   b.box(lot.w + 0.4, 0.04, lot.d + 0.4, '#cdb48a', 0, 0.02, 0)
   const hx = lot.w / 2 + 0.1
@@ -345,6 +394,9 @@ function drawBuilding(b: Builder, id: BuildingId, lot: Lot, level: number): numb
     b.box(0.08, 2.4, 0.08, '#5d4433', w / 2 + 0.3, 1.2, d / 2).box(0.5, 0.35, 0.03, '#3f6fa8', w / 2 + 0.55, 2.2, d / 2)
     b.box(0.8, 0.6, 0.06, '#9c7448', -w * 0.3, 0.7, d / 2 + 0.35).box(0.06, 0.7, 0.06, WOOD, -w * 0.3 - 0.35, 0.35, d / 2 + 0.35).box(0.06, 0.7, 0.06, WOOD, -w * 0.3 + 0.35, 0.35, d / 2 + 0.35)
     return Math.max(top, 2.4)
+  }
+  if (id === 'alchemy') {
+    return drawAlchemy(b, w, d, level)
   }
   if (id === 'smith') {
     const top = house(b, { w, d, h: 1.4 + grow * 0.25, wall: '#9a7a5c', roof: '#6d6d6d', steps: 3 })

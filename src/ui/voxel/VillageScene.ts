@@ -306,6 +306,18 @@ export class VillageScene {
     }
   }
 
+  private bobSmoke(time: number) {
+    this.lots.get('alchemy')?.group.traverse((object) => {
+      if (object.name !== 'smoke') {
+        return
+      }
+      const base = object.userData.baseY
+      if (typeof base === 'number') {
+        object.position.y = base + Math.sin(time * 2 + base * 4) * 0.08
+      }
+    })
+  }
+
   private bobFountain(time: number) {
     this.lots.get('fountain')?.group.traverse((object) => {
       if (object.name !== 'jet') {
@@ -646,6 +658,7 @@ export class VillageScene {
       this.step(walker, delta, time)
     }
     this.bobFountain(time)
+    this.bobSmoke(time)
     this.stepBursts(delta)
     this.controls.update()
     this.clampPan()

@@ -5,6 +5,8 @@ import type { DungeonReport, LogEntry, ReplayUnit } from '../../core'
 
 export type Hit = { targetId: string; amount: number }
 
+export type StatusMark = 'poison' | 'paralyze' | 'slow' | 'silence'
+
 type Base = { log: number; downs: string[] }
 
 export type ReplayStep =
@@ -13,6 +15,8 @@ export type ReplayStep =
   | (Base & { type: 'heal'; actorId: string; targetId: string; amount: number })
   | (Base & { type: 'taunt' | 'buff' | 'debuff'; actorId: string })
   | (Base & { type: 'dot'; targetId: string; amount: number })
+  | (Base & { type: 'status'; targetId: string; status: StatusMark; on: boolean })
+  | (Base & { type: 'potion'; actorId: string; potion: string })
   | (Base & { type: 'clear'; floor: number })
   | (Base & { type: 'retreat' })
   | (Base & { type: 'end'; victory: boolean })
@@ -55,6 +59,21 @@ export function buildSteps(report: DungeonReport): ReplayStep[] {
         break
       case 'log.dot':
         steps.push({ type: 'dot', targetId: actorId, amount, log: index, downs: [] })
+        break
+      case 'log.paralyze':
+        steps.push({ type: 'status', targetId, status: 'paralyze', on: true, log: index, downs: [] })
+        break
+      case 'log.paralyzed':
+        steps.push({ type: 'status', targetId: actorId, status: 'paralyze', on: false, log: index, downs: [] })
+        break
+      case 'log.slow':
+        steps.push({ type: 'status', targetId, status: 'slow', on: true, log: index, downs: [] })
+        break
+      case 'log.silence':
+        steps.push({ type: 'status', targetId, status: 'silence', on: true, log: index, downs: [] })
+        break
+      case 'log.potion':
+        steps.push({ type: 'potion', actorId, potion: text(entry, 'potion'), log: index, downs: [] })
         break
       case 'log.down':
         if (previous) {
