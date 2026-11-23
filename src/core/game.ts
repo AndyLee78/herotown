@@ -3,7 +3,7 @@ import { adRules, classById, combatRules, dungeonById, dungeons, expeditionRules
 import { forgeGear, normalizeGear, recipeById } from './gear'
 import { applyReport, DEFAULT_TACTICS, runDungeon } from './dungeon'
 import { canDeploy, generateHero, generateVisitors, normalizeHero, restHero, withAge } from './hero'
-import { acceptProposal, bondParty, declineProposal, deliverBirths, femaleChance, nextAge, partyBonus, readBonds, readProposals, tidyFamily, turnSeason, wageCount, type FamilyEvents } from './family'
+import { acceptProposal, bedsTaken, bondParty, declineProposal, deliverBirths, femaleChance, nextAge, partyBonus, readBonds, readProposals, tidyFamily, turnSeason, wageCount, type FamilyEvents } from './family'
 import { createRng } from './rng'
 import type { Rng } from './rng'
 import type { Bond, ClassId, CombatError, DungeonReport, Gear, GearSlot, Hero, PartyMember, Proposal, Row, Tactics } from './types'
@@ -332,7 +332,8 @@ function apply(state: GameState, action: GameAction): GameState {
     if (state.gold < progression.hireCost) {
       return { ...state, notice: 'poor' }
     }
-    if (state.roster.length >= bedCount(state.buildings.house)) {
+    // Babies on the way already have a bed waiting for them.
+    if (bedsTaken(state) >= bedCount(state.buildings.house)) {
       return { ...state, notice: 'beds' }
     }
     const hired = {
@@ -514,18 +515,30 @@ function advance(state: GameState, now: number): GameState {
   const wages = { paid: 0 }
   const aged: { name: string; age: number }[] = []
   const family: FamilyEvents = { births: [], proposals: 0 }
-  let next = moveCalendar(state, elapsed, wages, aged)
-  for (let turned = seasonsBetween(state.calendar, next.calendar); turned > 0; turned -= 1) {
-    next = turnSeason(next, effectiveNow, family)
-  }
-  next = finishConstruction(next, effectiveNow, completed)
-  next = finishSmith(next, effectiveNow, crafted)
-  next = finishCare(next, effectiveNow)
-  next = deliverBirths(next, effectiveNow, family)
-  next = recoverRoster(next, elapsed, effectiveNow)
-  next = updateVisitors(next, effectiveNow, visitors)
   const returned: AbsenceReport['returned'] = []
-  next = returnExpeditions(next, effectiveNow, returned)
+  // Time moves in pieces that end on each season turn, so everything due
+  // before a turn (returns, births) is settled before the season's family
+  // rolls, and those rolls happen at the turn itself.
+  let next = state
+  while (next.lastTickAt < effectiveNow) {
+    const turnAt = next.lastTickAt + (timeRules.seasonMs - next.calendar.intoSeasonMs)
+    // Always move forward, even if a broken save has the season overrun.
+    const until = Math.min(Math.max(turnAt, next.lastTickAt + 1), effectiveNow)
+    const piece = until - next.lastTickAt
+    const before = next.calendar
+    next = moveCalendar(next, piece, wages, aged)
+    next = finishConstruction(next, until, completed)
+    next = finishSmith(next, until, crafted)
+    next = finishCare(next, until)
+    next = recoverRoster(next, piece, until)
+    next = updateVisitors(next, until, visitors)
+    next = returnExpeditions(next, until, returned)
+    next = deliverBirths(next, until, family)
+    for (let turned = seasonsBetween(before, next.calendar); turned > 0; turned -= 1) {
+      next = turnSeason(next, until, family)
+    }
+    next = { ...next, lastTickAt: until }
+  }
   const autoTally = { runs: 0, gold: 0 }
   next = runAuto(next, elapsed, autoTally)
   next = { ...next, lastTickAt: effectiveNow }

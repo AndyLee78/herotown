@@ -8,7 +8,7 @@
     "build": "tsc --noEmit && vite build",
     "test": "vitest run",
     "simulate": "npx vite-node tools/print-balance.ts",
-    "sim:generations": "tsx tools/generations.ts",
+    "sim:generations": "npx tsx tools/generations.ts",
     "sync:rules": "node tools/sync-rules.mjs"
   },
   "dependencies": {

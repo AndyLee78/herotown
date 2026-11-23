@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest'
 import { createHeroUnit } from './combat'
 import { familyRules, progression, timeRules } from './data'
-import { bondOf, bondParty, bondStage, familyOf, femaleChance, housingFree, makeChild, nextAge, partyBonus, population, topBonds } from './family'
+import { bondOf, bondParty, bondStage, canCourt, familyOf, femaleChance, housingFree, makeChild, nextAge, partyBonus, population, topBonds } from './family'
 import { canDeploy, createHero, type HeroDraft } from './hero'
 import { freshState, migrate, reduce, type GameState } from './game'
 import { createRng } from './rng'
@@ -140,7 +140,8 @@ describe('children', () => {
     expect(child?.age).toBe(0)
     expect(child?.family).toBe('m')
     expect(child?.genes).toBeDefined()
-    expect(born.roster.find((entry) => entry.id === 'f')?.expecting).toBeUndefined()
+    // The mother may already expect again at the same season turn, but not the same child.
+    expect(born.roster.find((entry) => entry.id === 'f')?.expecting?.child.id).not.toBe(child?.id)
     expect(familyOf(born, 'f').children.map((entry) => entry.id)).toEqual([child?.id])
     expect(familyOf(born, child!.id).parents.map((entry) => entry.id).sort()).toEqual(['f', 'm'])
   })
@@ -205,5 +206,83 @@ describe('village balance and saves', () => {
     expect(loaded.bonds).toEqual([])
     expect(loaded.proposals).toEqual([])
     expect(loaded.roster.find((entry) => entry.id === 'f')?.spouseId).toBe('m')
+  })
+})
+
+describe('review 443bde5 fixes', () => {
+  it('never lets parents, children or siblings court', () => {
+    const father = hero('m', 'male')
+    const daughter = hero('d', 'female', { parents: ['f', 'm'] })
+    const brother = hero('s', 'male', { parents: ['f', 'm'] })
+    const halfBrother = hero('h', 'male', { parents: ['x', 'm'] })
+    const stranger = hero('o', 'male')
+    expect(canCourt(daughter, father, now)).toBe(false)
+    expect(canCourt(daughter, brother, now)).toBe(false)
+    expect(canCourt(daughter, halfBrother, now)).toBe(false)
+    expect(canCourt(daughter, stranger, now)).toBe(true)
+    const state = town([father, daughter, brother], {
+      bonds: [
+        { a: 'd', b: 'm', affinity: 100 },
+        { a: 'd', b: 's', affinity: 100 },
+      ],
+    })
+    expect(passSeasons(state, 6).proposals).toEqual([])
+  })
+
+  it('keeps a proposal open but refuses to wed a hero waiting to be revived', () => {
+    const state = town([hero('a', 'male', { condition: 'dead', deaths: 1 }), hero('b', 'female')], {
+      proposals: [{ a: 'a', b: 'b', at: now }],
+    })
+    const tried = reduce(state, { type: 'acceptProposal', a: 'a', b: 'b' })
+    expect(tried.notice).toBe('dead')
+    expect(tried.proposals).toHaveLength(1)
+    expect(tried.roster.every((entry) => entry.spouseId == null)).toBe(true)
+  })
+
+  it('saves a bed for a baby on the way, so hiring cannot overfill the houses', () => {
+    const child = hero('baby', 'male', { age: 0 })
+    const mother = hero('f', 'female', { spouseId: 'm', expecting: { dueAt: now + 1000, child } })
+    const state = town([hero('m', 'male', { spouseId: 'f' }), mother, hero('x', 'male'), hero('y', 'female')], {
+      buildings: { ...freshState(5, now).buildings, house: 1 },
+      gold: 1000,
+    })
+    const visitor = state.visitors[0]!
+    expect(reduce(state, { type: 'hire', id: visitor.id, now }).notice).toBe('beds')
+  })
+
+  it('rolls family events at the season turn, the same in one catch-up or two', () => {
+    const toTurn = 2 * 60 * 60 * 1000
+    let checked = 0
+    for (let seed = 1; seed < 80 && checked === 0; seed += 1) {
+      const start = { ...couple(), seed, calendar: { ...couple().calendar, intoSeasonMs: timeRules.seasonMs - toTurn } }
+      const end = now + toTurn + 60 * 60 * 1000
+      const once = reduce(start, { type: 'catchUp', now: end })
+      const mother = once.roster.find((entry) => entry.id === 'f')
+      if (!mother?.expecting) {
+        continue
+      }
+      checked += 1
+      expect(mother.expecting.dueAt).toBe(now + toTurn + timeRules.seasonMs)
+      const half = reduce(start, { type: 'catchUp', now: now + toTurn - 1000 })
+      const twice = reduce(half, { type: 'catchUp', now: end })
+      expect(twice.roster.find((entry) => entry.id === 'f')?.expecting?.dueAt).toBe(mother.expecting.dueAt)
+      expect(twice.bonds).toEqual(once.bonds)
+      expect(twice.familyNonce).toBe(once.familyNonce)
+    }
+    expect(checked).toBe(1)
+  })
+
+  it('rolls a trait both parents share only once', () => {
+    const mother = hero('f', 'female', { traitIds: ['tough'] })
+    const father = hero('m', 'male', { traitIds: ['tough'] })
+    let tough = 0
+    const runs = 2000
+    for (let seed = 0; seed < runs; seed += 1) {
+      if (makeChild(createRng(seed), `c${seed}`, mother, father).traitIds.includes('tough')) {
+        tough += 1
+      }
+    }
+    expect(tough / runs).toBeGreaterThan(familyRules.traitInherit - 0.05)
+    expect(tough / runs).toBeLessThan(familyRules.traitInherit + 0.07)
   })
 })

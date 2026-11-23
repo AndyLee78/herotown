@@ -58,16 +58,33 @@ export function isSingle(hero: Hero, now: number): boolean {
   return hero.spouseId == null && (hero.widowedAt == null || now - hero.widowedAt >= mourning())
 }
 
-// Whether two heroes could become lovers: adults of opposite genders, both free.
+// Parents and children, and children who share a parent.
+export function isKin(a: Hero, b: Hero): boolean {
+  if (a.parents?.includes(b.id) || b.parents?.includes(a.id)) {
+    return true
+  }
+  return a.parents != null && b.parents != null && a.parents.some((id) => b.parents?.includes(id))
+}
+
+// Whether two heroes could become lovers: living adults of opposite genders,
+// both free, and not close family.
 export function canCourt(a: Hero, b: Hero, now: number): boolean {
   return (
     a.id !== b.id &&
     a.gender !== b.gender &&
+    a.condition !== 'dead' &&
+    b.condition !== 'dead' &&
     a.age >= familyRules.loverMinAge &&
     b.age >= familyRules.loverMinAge &&
     isSingle(a, now) &&
-    isSingle(b, now)
+    isSingle(b, now) &&
+    !isKin(a, b)
   )
+}
+
+// Beds in use, counting babies on the way (an expecting retiree's baby too).
+export function bedsTaken(state: GameState): number {
+  return state.roster.length + residents(state).filter((hero) => hero.expecting).length
 }
 
 export function bondStage(state: GameState, a: string, b: string): BondStage {
@@ -251,7 +268,7 @@ function raiseProposals(state: GameState, rng: Rng, now: number, events: FamilyE
 function conceive(state: GameState, rng: Rng, now: number): GameState {
   const away = new Set(state.expeditions.flatMap((expedition) => expedition.heroIds))
   const beds = state.buildings.house * villageRules.house.bedsPerLevel
-  let pending = state.roster.filter((hero) => hero.expecting).length
+  let taken = bedsTaken(state)
   let nonce = state.familyNonce
   const roster = state.roster.map((mother) => {
     if (mother.gender !== 'female' || !mother.spouseId || mother.expecting || mother.condition === 'dead' || away.has(mother.id)) {
@@ -265,14 +282,14 @@ function conceive(state: GameState, rng: Rng, now: number): GameState {
       return mother
     }
     const children = residents(state).filter((hero) => hero.parents?.includes(mother.id) && hero.parents.includes(father.id)).length
-    if (children >= familyRules.maxChildren || state.roster.length + pending >= beds) {
+    if (children >= familyRules.maxChildren || taken >= beds) {
       return mother
     }
     if (rng.next() >= familyRules.birthChance) {
       return mother
     }
     nonce += 1
-    pending += 1
+    taken += 1
     const child = makeChild(rng, `${state.seed}-c${nonce}`, mother, father)
     return { ...mother, expecting: { dueAt: now + timeRules.seasonMs, child } }
   })
@@ -316,9 +333,10 @@ export function makeChild(rng: Rng, id: string, mother: Hero, father: Hero): Her
   }
   const spread = (rng.next() * 2 - 1) * familyRules.potentialSpread
   const potential = clamp(Math.round((mother.potential + father.potential) / 2 + spread + (genius ? familyRules.geniusPotential : 0)), 0, 100)
+  // A trait both parents share is rolled once, not twice.
   const traitIds: TraitId[] = []
-  for (const trait of [...mother.traitIds, ...father.traitIds]) {
-    if (!traitIds.includes(trait) && rng.next() < familyRules.traitInherit) {
+  for (const trait of new Set([...mother.traitIds, ...father.traitIds])) {
+    if (rng.next() < familyRules.traitInherit) {
       traitIds.push(trait)
     }
   }
@@ -351,6 +369,10 @@ export function acceptProposal(state: GameState, a: string, b: string, now: numb
   }
   const first = heroById(state, proposal.a)
   const second = heroById(state, proposal.b)
+  // A hero waiting to be revived keeps the proposal open but cannot wed yet.
+  if (first?.condition === 'dead' || second?.condition === 'dead') {
+    return { ...state, notice: 'dead' }
+  }
   if (!first || !second || !canCourt(first, second, now)) {
     return { ...state, notice: 'missing', proposals: dropProposal(state.proposals, proposal) }
   }
