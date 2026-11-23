@@ -79,6 +79,11 @@ Claude Code, Cursor, GPT(Codex)가 함께 쓰는 작업 목록이다. 작업 하
 | 37 | 상태 표시·물약 동작·공방 건물 3D | Cursor | `BattleScene.ts`, `replay.ts`, `world.ts`, `VillageScene.ts` | 완료 (4d4ded2) |
 | 38 | 3a core 코드 리뷰 (1918eda) | GPT | `Docs/reviews/1918eda.md` (새 파일만) | 완료 (03d9e42) |
 | 39 | 독늪 밸런스 측정 | GPT | `tools/curve.ts`, `print-curve.ts`, `tune-curve.ts`, `first-hour.ts` | 완료 (c6e24d9) |
+| 40 | 도적 요새 몬스터·던전 그림 | Cursor | `src/ui/voxel/enemies.ts`, `portrait.ts` | 대기 |
+| 41 | 마법 공방 화면·장신구 장착·함정/기습 문구 | Cursor | `App.tsx`, `src/ui/game/*.tsx`, `styles.css`, `src/locales/*` | 대기 |
+| 42 | 함정·기습 연출과 마법 공방 건물 3D | Cursor | `BattleScene.ts`, `replay.ts`, `world.ts`, `VillageScene.ts` | 대기 (41 뒤) |
+| 43 | 3b core 코드 리뷰 (1f690a1) | GPT | `Docs/reviews/1f690a1.md` (새 파일만) | 대기 |
+| 44 | 도적 요새 밸런스 측정 | GPT | `tools/curve.ts`, `print-curve.ts`, `tune-curve.ts`, `first-hour.ts` | 대기 |
 
 ---
 
@@ -1055,3 +1060,94 @@ tools/curve.ts, tools/print-curve.ts, tools/tune-curve.ts, tools/first-hour.ts�
 - 40파티×10전 Lv11 중앙값/P25(무물약/해독2/회복2+해독2/힐러 제외/해독4)는 40/0, 75/10, 75/0, 0/0, 100/40%였다. 해독4는 24×6에서 P25 67%로 설계 기준을 재현했으나 큰 표본에서는 60% 미달이었다. 배수 1.85의 P25 70%를 재검증 후보로 기록했다.
 - 해독4 제조비는 12/44골드(27%). 회복2+해독2는 14/44(32%), 힐러를 뺀 회복4+해독1은 22/44(50%, 배치 구매 기준)이고 Lv8–14 전체에서 승리가 없었다. 힐러 자리는 비운 조건이다.
 - 시드 1–20의 6시간 실행에서 공방 20/20, 독늪 67출정, 클리어 8/20(성공 시드 중앙값 297.3분). 프로젝트·도구 타입 검사, 테스트 162개, 프로덕션 빌드 통과.
+
+---
+
+## 40. 도적 요새 몬스터·던전 그림 (Cursor)
+
+**지금 시작할 수 있다.** 3b core는 1f690a1에 들어갔다. 설계: `Docs/depth.md` 3b.
+
+**전달할 내용**
+
+```
+Docs/depth.md의 3b를 읽고 도적 요새의 3D 그림을 만든다. src/ui/voxel/enemies.ts, src/ui/voxel/portrait.ts만 고친다. core와 data는 고치지 않는다.
+
+몬스터 id: bandit_thug(도적 졸개, 두건과 몽둥이), crossbowman(석궁병, 후열), cutthroat(암살자, 복면과 쌍단검, 날렵함), bandit_chief(보스 도적 두목, 큰 체구·외투·큰 도끼).
+던전 id: bandit_fort(도적 요새, 티어 5).
+
+1. buildEnemy에 네 몬스터. 사람형이면 기존 humanoid 종류를 재사용하거나 필요하면 추가한다. 색은 가죽 갈색·어두운 빨강·회색 천.
+2. dungeonPreviewUrl이 bandit_fort를 나무 목책과 망루, 횃불이 있는 요새 입구로 그린다.
+3. monsterPortraitUrl이 네 몬스터를 그린다.
+
+확인: 개발 화면에서 도적 요새 카드(디버그로 독늪까지 클리어한 세이브)나 portrait 함수를 직접 불러 확인하고 스크린샷을 메모에. 임시 코드는 커밋하지 않는다.
+```
+
+---
+
+## 41. 마법 공방 화면·장신구 장착·함정/기습 문구 (Cursor)
+
+**지금 시작할 수 있다(작업 40과 파일이 겹치지 않는다).** 3b core는 1f690a1. 조회 함수와 필드는 그 커밋 메시지와 `src/core/magic.ts`에 있다.
+
+**전달할 내용**
+
+```
+Docs/depth.md 3b를 읽고 화면을 만든다. src/ui/App.tsx, src/ui/game/*.tsx, src/ui/styles.css, src/locales/*만 고친다. core는 고치지 않는다.
+
+core에 이미 있는 것:
+- 건물 id 'magic'(마을 Lv5), 동작 { type: 'enchant', trinketId, now }, state.magic(진행 중인 작업, finishAt), enchantTime(state, id), magicRules.trinkets(재료·레벨·시간), TRINKET_IDS.
+- 장신구는 state.stash의 Gear(slot 'trinket', recipeId 'trinket.<id>')다. 영웅마다 두 개(magicRules.trinketSlots). 셋째를 끼우면 가장 오래된 것이 빠진다. 해제는 { type: 'unequip', heroId, slot: 'trinket', gearId }.
+- 새 재료 crystal(마력 수정). 문구 키: building.magic, buildingHint.magic, material.crystal, resource.crystal, item.trinket.<id>, trinket.hint.<id>, defeat.trapped, defeat.ambushed, result.noMagic, result.magicBusy, log.trap, log.trapHit, log.disarm, log.alert, log.ambush, enemy.bandit_*, enemy.crossbowman, enemy.cutthroat, dungeon.bandit_fort.
+- 리포트: report.traps = { sprung, disarmed } (함정이 있는 던전만).
+
+1. 마법 공방 창: 만들 수 있는 장신구(공방 레벨별), 골드·마력 수정·시간, 진행 막대. 연금술 공방 창 구조를 따른다. App.tsx의 BUILDING_SCREEN에서 magic을 새 화면으로 바꾼다.
+2. 영웅 장비 칸: 장신구 두 칸을 무기·방어구 아래에 보이고, 창고의 장신구를 끼우고 뺀다. 효과 한 줄(trinket.hint).
+3. 출발 준비(Prep): 도적 요새를 고르면 "함정: 도적 있음/함정 감지 있음/없음", "기습: 경계 있음/없음"을 한 줄로 보여 준다(파티 영웅의 classId와 heroTrinkets로 판단).
+4. 원정 기록·리포트: 함정 해제/발동 횟수, 새 패배 이유 2가지 문구.
+5. HUD·비용 목록에 마력 수정.
+6. 문구 ko/en 같은 키. 이미 넣은 키는 다듬어도 된다.
+
+확인: npm run dev에서 디버그로 마을 Lv5·공방을 만들고 장신구를 만들어 끼운 뒤 요새에 나가 본다. 확인 못 한 부분은 메모에.
+```
+
+---
+
+## 42. 함정·기습 연출과 마법 공방 건물 3D (Cursor)
+
+**작업 41 뒤에 시작한다.**
+
+**전달할 내용**
+
+```
+src/ui/voxel/BattleScene.ts, src/ui/voxel/replay.ts, src/ui/voxel/world.ts, src/ui/voxel/VillageScene.ts만 고친다.
+1. 전투 다시 보기: log.trap이면 바닥에서 가시가 튀어나오고 log.trapHit 대상의 체력이 그만큼 준다(replay가 이 피해를 반영해야 체력 막대가 맞는다). log.disarm이면 도적이 쭈그려 앉아 손을 움직이고 작은 톱니 아이콘. log.ambush면 공격자가 연기와 함께 후열 대상 옆에 나타났다가 돌아간다. log.alert면 영웅 머리 위 느낌표.
+2. 마을에 마법 공방 건물(레벨 1–3, 보라 지붕, 떠다니는 수정). world.ts LOTS의 magic 자리는 임시이므로 어울리게 옮겨도 된다.
+확인: 스크린샷을 메모에.
+```
+
+---
+
+## 43. 3b core 코드 리뷰 (GPT)
+
+3b core 커밋은 **1f690a1**이다.
+
+**전달할 내용**
+
+```
+3b core 커밋 1f690a1을 리뷰한다. 코드는 고치지 않고 Docs/reviews/1f690a1.md 새 파일 하나에만 쓴다(Docs/reviews/README.md 형식).
+볼 것: Docs/depth.md 3b와 수치·규칙 차이, 함정의 판정 순서(누가 해제를 시도하나, 체력 1 하한, 게이지 초기화), 기습이 경계 영웅이 쓰러진 뒤 다음 층에서 어떻게 되는지, 장신구 두 칸 장착·해제(같은 장신구 두 개, 영웅 사망 때 장비 분실과의 관계), 마법 공방 작업의 오프라인 진행, 세이브 11 → 12, 기존 던전 결과가 바뀌지 않았는지(부모 커밋과 시드 전투 비교).
+```
+
+---
+
+## 44. 도적 요새 밸런스 측정 (GPT)
+
+**지금 시작할 수 있다(작업 43과 파일이 겹치지 않는다).**
+
+**전달할 내용**
+
+```
+tools/curve.ts, tools/print-curve.ts, tools/tune-curve.ts, tools/first-hour.ts만 고친다. 게임 코드와 data는 고치지 않는다(제안만).
+1. 곡선 도구에 요새 조건을 추가한다: 도적 있음/없음 × 장신구(없음 / 경계 / 경계+함정 감지). 장신구는 Gear { slot: 'trinket', recipeId: 'trinket.<id>' }를 영웅 gear에 넣으면 된다. bandit_fort Lv12–17 승률(중앙값/하위 25%)과 패배 이유 분포를 출력한다.
+2. 독늪에서 해독의 목걸이(poisonWard) 1–2개가 해독 물약 몇 개 값인지 비교한다.
+3. Docs/depth.md 3b "밸런스 기준"과 1차 측정표(Claude)와 비교해 메모에 적는다. 기준을 벗어나면 고칠 수치를 제안한다.
+```
