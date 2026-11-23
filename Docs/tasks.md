@@ -68,7 +68,7 @@ Claude Code, Cursor, GPT(Codex)가 함께 쓰는 작업 목록이다. 작업 하
 | 26 | 출발 준비의 파티 구성 안내 | Cursor | `src/ui/game/battleScreens.tsx`, `src/locales/*` | 완료 (6bc08f1) |
 | 27 | 명예의 전당·묘지·조상 화면 | Cursor | `src/ui/game/heroScreens.tsx`, `villageScreens.tsx`, `App.tsx`, `styles.css`, `src/locales/*` | 완료 (75b80bd) |
 | 28 | 집 레벨별 모습·묘지 비석 3D | Cursor | `src/ui/voxel/VillageScene.ts`, `src/ui/voxel/world.ts` | 완료 (9d35253) |
-| 29 | 2b core 코드 리뷰 (f7fdf88) | GPT | `Docs/reviews/f7fdf88.md` (새 파일만) | 대기 (지금 시작 가능) |
+| 29 | 2b core 코드 리뷰 (f7fdf88) | GPT | `Docs/reviews/f7fdf88.md` (새 파일만) | 완료 (이 커밋) |
 | 30 | 세대 시뮬레이터 60년 | GPT | `tools/generations.ts` | 대기 (지금 시작 가능) |
 
 ---
@@ -839,6 +839,8 @@ src/ui/voxel/VillageScene.ts와 src/ui/voxel/world.ts만 고친다.
 ```
 
 메모:
+- 새해 전 귀환한 영웅의 무덤 연도·나이, 따라잡기 상한 너머의 사별 시각, 첫 전투 사망자의 노환 매장, 미등록 던전 이력 예외를 직접 재현했다.
+- 리뷰 보고서에 심각도와 재현·수정 제안을 적었다. 은퇴자 사망과 건물 자리, 전설 상한, 세이브 8 무덤 호환도 확인했다.
 
 ---
 
