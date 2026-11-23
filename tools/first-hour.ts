@@ -1,12 +1,37 @@
 // Plays the first hours like a simple player would, to catch dead ends in
 // the early flow. Run: npx tsx tools/first-hour.ts [minutes] [seed,seed,...]
-import { dungeons, villageRules } from '../src/core/data'
+import { dungeons, progression, villageRules } from '../src/core/data'
 import { busyHeroIds, dungeonUnlocked, freshState, presetById, reduce, townLevel, type BuildingId, type GameState } from '../src/core/game'
 import { guideStatus } from '../src/core/guide'
 import { canDeploy } from '../src/core/hero'
-import type { Hero } from '../src/core/types'
+import type { ClassId, Hero } from '../src/core/types'
 
 const isHurt = (hero: Hero) => hero.condition === 'injured' || hero.condition === 'critical'
+const essentialRoles = ['warrior', 'cleric'] as const
+const hireOrder: ClassId[] = [...essentialRoles, 'rogue', 'archer', 'mage', 'bard', 'dancer']
+
+function hasLivingRole(state: GameState, role: ClassId): boolean {
+  return state.roster.some((hero) => hero.classId === role && hero.condition !== 'dead')
+}
+
+function fillParty(state: GameState): GameState {
+  for (const role of essentialRoles) {
+    const current = selectedHeroes(state)
+    const recruit = state.roster.find((hero) => hero.classId === role && canDeploy(hero))
+    if (!recruit || current.some((hero) => hero.classId === role)) continue
+    const slots = presetById(state, state.presetId)?.slots ?? []
+    if (slots.length >= 5) {
+      const replace = slots.find((slot) => !current.some((hero) => hero.id === slot.id))
+        ?? [...current].reverse().find((hero) => !essentialRoles.some((essential) => essential === hero.classId))
+      if (replace) state = reduce(state, { type: 'remove', id: replace.id })
+    }
+    state = reduce(state, { type: 'add', id: recruit.id })
+  }
+  for (const hero of state.roster.filter(canDeploy)) {
+    state = reduce(state, { type: 'add', id: hero.id })
+  }
+  return state
+}
 
 function selectedHeroes(s: GameState): Hero[] {
   const slots = presetById(s, s.presetId)?.slots ?? []
@@ -18,12 +43,18 @@ function averageLevel(heroes: Hero[]): number | undefined {
 }
 
 // The hardest open dungeon the party is levelled for.
-function pickDungeon(s: GameState): string {
-  // After a loss, drop back one level of difficulty for the next trip.
-  const lost = s.history[0] && !s.history[0].victory ? 1 : 0
-  const level = (averageLevel(selectedHeroes(s).filter((hero) => !isHurt(hero))) ?? 1) - lost
-  const fitting = dungeons.filter((dungeon) => dungeonUnlocked(s, dungeon.id) && dungeon.recommendedLevel <= level)
-  return [...fitting].sort((a, b) => b.recommendedLevel - a.recommendedLevel)[0]?.id ?? 'hill_cave'
+const difficultyOrder = [...dungeons].sort((a, b) => a.recommendedLevel - b.recommendedLevel || a.tier - b.tier)
+const difficulty = new Map(difficultyOrder.map((dungeon, index) => [dungeon.id, index]))
+
+type Training = { dungeon: string; targetLevel: number }
+
+function pickDungeon(state: GameState, training: Training | undefined): string {
+  if (state.gold < progression.hireCost && !hasLivingRole(state, 'cleric')) {
+    return difficultyOrder.find((dungeon) => state.cleared.includes(dungeon.id))?.id ?? 'hill_cave'
+  }
+  if (training) return training.dungeon
+  const level = averageLevel(selectedHeroes(state)) ?? 1
+  return [...difficultyOrder].reverse().find((dungeon) => dungeonUnlocked(state, dungeon.id) && dungeon.recommendedLevel <= level)?.id ?? 'hill_cave'
 }
 
 function simulate(minutes: number, seed: number) {
@@ -35,22 +66,32 @@ function simulate(minutes: number, seed: number) {
 
   let lastTown = 1
   let lastLevel = 1
+  let training: Training | undefined
+  let lastLostDungeon: string | undefined
+  let sameDungeonLosses = 0
+  let losingStreak = 0
+  let maxLosingStreak = 0
+  let lowGoldSince: number | undefined
+  let maxLowGoldMs = 0
+  const recentWins: string[] = []
+  function recordGold() {
+    if (lowGoldSince != null) maxLowGoldMs = Math.max(maxLowGoldMs, now - lowGoldSince)
+    lowGoldSince = state.gold < progression.hireCost ? lowGoldSince ?? now : undefined
+  }
   while (now - start < minutes * 60_000) {
-    // Hire up to five while gold allows: a tank and a healer first, then damage.
-    const priority = ['warrior', 'cleric', 'rogue', 'archer', 'mage', 'bard', 'dancer']
-    const has = (classId: string) => state.roster.some((hero) => hero.classId === classId)
-    const wanted = [...state.visitors].sort((a, b) => priority.indexOf(a.classId) - priority.indexOf(b.classId))
+    const missing = essentialRoles.filter((role) => !hasLivingRole(state, role))
+    const wanted = [...state.visitors].sort((a, b) =>
+      Number(missing.some((role) => role === b.classId)) - Number(missing.some((role) => role === a.classId))
+      || hireOrder.indexOf(a.classId) - hireOrder.indexOf(b.classId),
+    )
     for (const visitor of wanted) {
-      if (state.roster.length >= 3 && !has('warrior') && visitor.classId !== 'warrior') continue
-      if (state.roster.length >= 5) break
+      const fillsGap = essentialRoles.some((role) => visitor.classId === role && !hasLivingRole(state, role))
+      if (state.roster.length >= 5 && !fillsGap) continue
       const before = state.roster.length
       state = reduce(state, { type: 'hire', id: visitor.id, now })
       if (state.roster.length > before) note(`hire ${visitor.classId} (gold ${state.gold})`)
     }
-    // Keep the selected preset full of free heroes.
-    for (const hero of state.roster) {
-      state = reduce(state, { type: 'add', id: hero.id, presetId: state.presetId })
-    }
+    if (state.expeditions.length === 0) state = fillParty(state)
     // Treat anyone hurt.
     for (const hero of state.roster) {
       if (isHurt(hero) && hero.treatAt == null && !busyHeroIds(state).has(hero.id)) {
@@ -86,8 +127,12 @@ function simulate(minutes: number, seed: number) {
     }
     // Send the party out whenever it is home.
     const selected = selectedHeroes(state)
+    if (training && (averageLevel(selected) ?? 0) >= training.targetLevel) {
+      note(`training complete at ${training.dungeon}`)
+      training = undefined
+    }
     if (state.expeditions.length === 0 && selected.length > 0 && !selected.some(isHurt)) {
-      const dungeon = pickDungeon(state)
+      const dungeon = pickDungeon(state, training)
       state = reduce(state, { type: 'dungeon', id: dungeon })
       const sent = reduce(state, { type: 'depart', presetId: state.presetId, confirm: true, now })
       if (sent.expeditions.length > state.expeditions.length) {
@@ -96,11 +141,34 @@ function simulate(minutes: number, seed: number) {
         note(`cannot depart: ${sent.notice}`)
       }
     }
+    recordGold()
     const lastReturn = state.history[0]?.finishedAt
-    now += 15_000
+    now = Math.min(now + 15_000, start + minutes * 60_000)
     state = reduce(state, { type: 'catchUp', now })
+    recordGold()
     const report = state.history[0]
-    if (report && report.finishedAt !== lastReturn && !report.victory) note(`LOST ${report.dungeonId} (${report.defeatReason})`)
+    if (report && report.finishedAt !== lastReturn) {
+      const dungeonId = report.dungeonId ?? state.dungeonId
+      if (report.victory) {
+        recentWins.unshift(dungeonId)
+        losingStreak = 0
+        lastLostDungeon = undefined
+        sameDungeonLosses = 0
+      } else {
+        note(`LOST ${dungeonId} (${report.defeatReason})`)
+        losingStreak += 1
+        maxLosingStreak = Math.max(maxLosingStreak, losingStreak)
+        sameDungeonLosses = lastLostDungeon === dungeonId ? sameDungeonLosses + 1 : 1
+        lastLostDungeon = dungeonId
+        if (sameDungeonLosses === 2 && !training) {
+          const lostRank = difficulty.get(dungeonId) ?? 0
+          const fallback = recentWins.find((id) => (difficulty.get(id) ?? Infinity) < lostRank) ?? 'hill_cave'
+          const targetLevel = (averageLevel(selectedHeroes(state)) ?? 1) + 1
+          training = { dungeon: fallback, targetLevel }
+          note(`train at ${fallback} until party Lv ${targetLevel.toFixed(2)}`)
+        }
+      }
+    }
     const level = townLevel(state.fame).level
     if (level > lastTown) {
       note(`town level ${level}`)
@@ -108,13 +176,13 @@ function simulate(minutes: number, seed: number) {
     }
     const avg = Math.floor(averageLevel(selectedHeroes(state)) ?? 0)
     if (avg > lastLevel) {
-      note(`party level ${avg} · next dungeon ${pickDungeon(state)} · gold ${state.gold}`)
+      note(`party level ${avg} · next dungeon ${pickDungeon(state, training)} · gold ${state.gold}`)
       lastLevel = avg
     }
   }
   const wins = state.history.filter((report) => report.victory).length
   const party = selectedHeroes(state)
-  return { seed, state, log, wins, partyLevel: averageLevel(party), ready: party.filter((hero) => !isHurt(hero)).length, partySize: party.length }
+  return { seed, state, log, wins, maxLosingStreak, maxLowGoldMs, partyLevel: averageLevel(party), ready: party.filter((hero) => !isHurt(hero)).length, partySize: party.length }
 }
 
 function summarize(values: number[]): string {
@@ -134,16 +202,19 @@ if (!Number.isFinite(minutes) || minutes <= 0 || seedArgs.some((seed, index) => 
 const results = seeds.map((seed) => simulate(minutes, seed))
 const displayLevel = (level: number | undefined) => level?.toFixed(1) ?? 'n/a'
 if (results.length === 1) {
-  const { state, log, wins, partyLevel, ready, partySize } = results[0]!
+  const { state, log, wins, partyLevel, ready, partySize, maxLosingStreak } = results[0]!
   console.log(log.join('\n'))
   console.log(`\nafter ${minutes}m: gold ${state.gold}, party Lv ${displayLevel(partyLevel)} (${ready}/${partySize} ready), cleared ${state.cleared.join(', ')}, buildings ${JSON.stringify(state.buildings)}`)
   console.log(`last ${state.history.length} trips: ${wins} wins`)
+  console.log(`max losing streak: ${maxLosingStreak}`)
 } else {
-  for (const { seed, state, wins, partyLevel, ready, partySize } of results) {
-    console.log(`seed ${seed}: party Lv ${displayLevel(partyLevel)} (${ready}/${partySize} ready) · cleared ${state.cleared.length} · recent wins ${wins}/${state.history.length}`)
+  for (const { seed, state, wins, partyLevel, ready, partySize, maxLosingStreak, maxLowGoldMs } of results) {
+    console.log(`seed ${seed}: party Lv ${displayLevel(partyLevel)} (${ready}/${partySize} ready) · cleared ${state.cleared.length} · recent wins ${wins}/${state.history.length} · max losing streak ${maxLosingStreak} · low gold ${(maxLowGoldMs / 60_000).toFixed(2)}m`)
   }
   const levels = results.flatMap(({ partyLevel }) => partyLevel == null ? [] : [partyLevel])
   console.log(`party Lv: ${summarize(levels)} (${levels.length}/${results.length} seeds)`)
   console.log(`cleared dungeons: ${summarize(results.map(({ state }) => state.cleared.length))}`)
   console.log(`recent wins: ${summarize(results.map((result) => result.wins))}`)
+  console.log(`max losing streak: ${summarize(results.map((result) => result.maxLosingStreak))}`)
 }
+console.log(`seeds below hire cost for over 30m: ${results.filter((result) => result.maxLowGoldMs > 30 * 60_000).length}/${results.length}`)
