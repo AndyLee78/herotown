@@ -179,6 +179,20 @@ describe('trinkets and the magic workshop', () => {
     expect(worn()).toEqual(['t-trapSense-2'])
   })
 
+  it('locks the gear of a hero who is away, and never enhances a trinket (review 1f690a1)', () => {
+    const base = ready()
+    const hero = base.roster[0] ?? base.visitors[0]!
+    const worn = { ...hero, gear: [...hero.gear, trinket('alert', 1)] }
+    const away = { ...base, roster: [worn], stash: [trinket('calm', 2)], expeditions: [{ heroIds: [hero.id] }] } as unknown as GameState
+    expect(reduce(away, { type: 'unequip', heroId: hero.id, slot: 'trinket', gearId: 't-alert-1' }).notice).toBe('busyHero')
+    expect(reduce(away, { type: 'equip', heroId: hero.id, gearId: 't-calm-2' }).notice).toBe('busyHero')
+    const smithy = { ...base, buildings: { ...base.buildings, smith: 1 }, materials: { ...base.materials, iron: 50 }, stash: [trinket('alert', 3)] }
+    const tried = reduce(smithy, { type: 'enhance', gearId: 't-alert-3', now })
+    expect(tried.notice).toBe('recipe')
+    expect(tried.smith).toBeNull()
+    expect(tried.gold).toBe(smithy.gold)
+  })
+
   it('opens the fortress after the marsh, drops crystals, and opens the workshop at town level 5', () => {
     const base = freshState(5, now)
     const tier3 = ['hill_cave', 'abandoned_mine', 'barrow', 'sunken_crypt']

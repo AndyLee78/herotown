@@ -1558,7 +1558,8 @@ function startEnhance(state: GameState, gearId: string, now: number): GameState 
     return { ...state, notice: 'smithBusy' }
   }
   const gear = state.stash.find((item) => item.id === gearId)
-  if (!gear || gear.enhance >= smithRules.enhanceMax) {
+  // Trinkets have fixed effects (Docs/depth.md 3b): the smith cannot enhance them.
+  if (!gear || gear.slot === 'trinket' || gear.enhance >= smithRules.enhanceMax) {
     return { ...state, notice: 'recipe' }
   }
   if (!affordable(state, smithRules.enhanceCost)) {
@@ -1609,6 +1610,10 @@ function equipGear(state: GameState, heroId: string, gearId: string): GameState 
   if (!item || !hero) {
     return { ...state, notice: 'missing' }
   }
+  // Gear is locked while its hero is away: the trip was simulated with it (review 1f690a1).
+  if (busyHeroIds(state).has(heroId)) {
+    return { ...state, notice: 'busyHero' }
+  }
   const stash = state.stash.filter((gear) => gear.id !== item.id)
   // Weapons and armour swap one for one; trinkets fill two slots, and the
   // oldest comes off when both are taken (Docs/depth.md 3b).
@@ -1631,6 +1636,9 @@ function unequipGear(state: GameState, heroId: string, slot: GearSlot, gearId?: 
   const item = hero?.gear.find((gear) => gear.slot === slot && (gearId === undefined || gear.id === gearId))
   if (!hero || !item) {
     return { ...state, notice: 'missing' }
+  }
+  if (busyHeroIds(state).has(heroId)) {
+    return { ...state, notice: 'busyHero' }
   }
   return {
     ...state,

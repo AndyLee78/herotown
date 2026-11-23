@@ -9,7 +9,7 @@
   "senseDisarm": 0.55,
   "disarmGold": 0.08,
   "trapDamage": 0.22,
-  "ambushPower": 1.4,
+  "ambushPower": 1.25,
   "ward": 0.5,
   "trinkets": [
     {
