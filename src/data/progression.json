@@ -14,5 +14,14 @@
   "debugRestTimes": 4,
   "visitorNonceStride": 100000,
   "trainingPerLevel": 1,
-  "defeatXpShare": 0.5
+  "defeatXpShare": 0.5,
+  "defeatGoldShare": 0.3,
+  "starterClasses": [
+    "warrior",
+    "cleric"
+  ],
+  "neededRoles": [
+    "tank",
+    "healer"
+  ]
 }

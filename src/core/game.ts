@@ -1,12 +1,12 @@
 import { claimGuide } from './guide'
-import { adRules, classById, combatRules, dungeonById, dungeons, expeditionRules, lifeRules, progression, retirementRules, smithRules, timeRules, villageRules } from './data'
+import { adRules, classById, classList, combatRules, dungeonById, dungeons, expeditionRules, lifeRules, progression, retirementRules, smithRules, timeRules, villageRules } from './data'
 import { forgeGear, normalizeGear, recipeById } from './gear'
 import { applyReport, DEFAULT_TACTICS, runDungeon } from './dungeon'
 import { canDeploy, generateHero, generateVisitors, normalizeHero, restHero, withAge } from './hero'
 import { acceptProposal, bedsTaken, bondParty, declineProposal, deliverBirths, femaleChance, nextAge, partyBonus, readBonds, readProposals, tidyFamily, turnSeason, wageCount, type FamilyEvents } from './family'
 import { createRng } from './rng'
 import type { Rng } from './rng'
-import type { Bond, ClassId, CombatError, DungeonReport, Gear, GearSlot, Hero, PartyMember, Proposal, Row, Tactics } from './types'
+import type { Bond, ClassId, CombatError, DungeonReport, Gear, GearSlot, Hero, PartyMember, Proposal, Role, Row, Tactics } from './types'
 
 export const SAVE_VERSION = 8
 
@@ -250,7 +250,8 @@ export function freshState(seed: number, now: number): GameState {
     day: 1,
     calendar: { year: timeRules.startYear, season: 'spring', intoSeasonMs: 0 },
     lastTickAt: now,
-    visitors: stampVisitors(generateVisitors(seed, visitorCap(1), townLevel(0).visitorPotential), now),
+    // The first visitors always include a tank and a healer, so a new village can field a working party.
+    visitors: stampVisitors(generateVisitors(seed, visitorCap(1), townLevel(0).visitorPotential, 0.5, progression.starterClasses as ClassId[]), now),
     roster: [],
     presets: makePresets(),
     presetId: 'p1',
@@ -465,6 +466,7 @@ function apply(state: GameState, action: GameAction): GameState {
       visitorCap(state.buildings.inn),
       townLevel(state.fame).visitorPotential + retireeBonus(state, 'inn'),
       femaleChance(state),
+      neededClasses(state, []),
     ).map((hero) => ({ ...hero, arrivedAt: now }))
     return {
       ...state,
@@ -827,7 +829,13 @@ function updateVisitors(state: GameState, now: number, arrived: string[]): GameS
   while (visitors.length < cap && nextVisitorAt <= now) {
     nonce += 1
     const hero = {
-      ...generateHero(createRng(state.seed + nonce * progression.visitorNonceStride), `${state.seed}-v${nonce}`, bonus, femaleChance(state)),
+      ...generateHero(
+        createRng(state.seed + nonce * progression.visitorNonceStride),
+        `${state.seed}-v${nonce}`,
+        bonus,
+        femaleChance(state),
+        neededClasses(state, visitors)[0],
+      ),
       arrivedAt: now,
     }
     visitors.push(hero)
@@ -838,6 +846,15 @@ function updateVisitors(state: GameState, now: number, arrived: string[]): GameS
     nextVisitorAt = now + villageRules.inn.arriveEveryMs
   }
   return { ...state, visitors, visitorNonce: nonce, nextVisitorAt }
+}
+
+// Roles the village has nobody for, among living heroes at home or at the inn,
+// as the class the inn sends to fill each one.
+function neededClasses(state: GameState, visitors: Hero[]): ClassId[] {
+  const present = [...state.roster.filter((hero) => hero.condition !== 'dead'), ...visitors]
+  return (progression.neededRoles as Role[])
+    .filter((role) => !present.some((hero) => classById(hero.classId).role === role))
+    .flatMap((role) => classList.find((klass) => klass.role === role && !klass.femaleOnly)?.id ?? [])
 }
 
 function startBuild(state: GameState, id: BuildingId, now: number): GameState {

@@ -61,7 +61,11 @@ export function runDungeon(party: PartyMember[], dungeonId: string, tactics: Tac
   const hadTank = party.some((member) => classById(member.hero.classId).role === 'tank')
   const hadHealer = party.some((member) => classById(member.hero.classId).role === 'healer')
   const treasure = party.some((member) => member.hero.traitIds.includes('treasure') && member.hero.condition !== 'dead')
-  const gold = victory ? Math.round(dungeon.gold * (treasure ? 1.25 : 1)) : 0
+  // A loss still brings home a little loot from the floors that were cleared,
+  // so a struggling village always has some income.
+  const gold = victory
+    ? Math.round(dungeon.gold * (treasure ? 1.25 : 1))
+    : Math.round((dungeon.gold * progression.defeatGoldShare * floorsCleared) / dungeon.floors.length)
   // A loss still teaches something: half the XP, for the share of floors cleared.
   const xp = victory ? dungeon.xp : Math.round((dungeon.xp * progression.defeatXpShare * floorsCleared) / dungeon.floors.length)
   if (victory) {

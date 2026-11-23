@@ -173,10 +173,14 @@ export function restHero(hero: Hero, bonus = 0): Hero {
   return { ...hero, fatigue }
 }
 
-export function generateHero(rng: Rng, id: string, potentialBonus = 0, femaleChance = 0.5): Hero {
-  const gender: Gender = rng.next() < 1 - femaleChance ? 'male' : 'female'
+// `forced` sets the class (the inn sending what the village lacks); the
+// draws stay the same so other visitors from the seed are unchanged.
+export function generateHero(rng: Rng, id: string, potentialBonus = 0, femaleChance = 0.5, forced?: ClassId): Hero {
+  const drawn: Gender = rng.next() < 1 - femaleChance ? 'male' : 'female'
+  const gender: Gender = forced && classById(forced).femaleOnly ? 'female' : drawn
   const pool = classList.filter((klass) => gender === 'female' || !klass.femaleOnly)
-  const classId = rng.pick(pool).id
+  const picked = rng.pick(pool).id
+  const classId = forced ?? picked
   const classDef = classById(classId)
   const span = progression.visitorAgeMax - progression.visitorAgeMin
   const age = progression.visitorAgeMin + rng.int(span)
@@ -199,9 +203,15 @@ export function generateHero(rng: Rng, id: string, potentialBonus = 0, femaleCha
   })
 }
 
-export function generateVisitors(seed: number, count = progression.visitorCount, potentialBonus = 0, femaleChance = 0.5): Hero[] {
+export function generateVisitors(
+  seed: number,
+  count = progression.visitorCount,
+  potentialBonus = 0,
+  femaleChance = 0.5,
+  forced: ClassId[] = [],
+): Hero[] {
   const rng = createRng(seed)
-  return Array.from({ length: count }, (_, index) => generateHero(rng, `${seed}-${index}`, potentialBonus, femaleChance))
+  return Array.from({ length: count }, (_, index) => generateHero(rng, `${seed}-${index}`, potentialBonus, femaleChance, forced[index]))
 }
 
 function clampAge(age: number): number {

@@ -137,3 +137,36 @@ describe('older saves', () => {
     expect(migrate(old, now).buildings.temple).toBe(1)
   })
 })
+
+describe('early game safety nets', () => {
+  it('always offers a tank and a healer among the first visitors', () => {
+    for (let seed = 1; seed <= 30; seed += 1) {
+      const classes = freshState(seed, now).visitors.map((hero) => hero.classId)
+      expect(classes).toContain('warrior')
+      expect(classes).toContain('cleric')
+    }
+  })
+
+  it('sends a healer to the inn when the village has none', () => {
+    const state = hireAll(5)
+    const noHealer = {
+      ...state,
+      roster: state.roster.filter((hero) => hero.classId !== 'cleric'),
+      visitors: [],
+      nextVisitorAt: now,
+    }
+    const later = reduce(noHealer, { type: 'catchUp', now: now + 1000 })
+    expect(later.visitors[0]?.classId).toBe('cleric')
+  })
+
+  it('brings home a little gold from a loss, for the floors that were cleared', () => {
+    const party = hireAll(3).roster.slice(0, 1).map((hero) => ({ hero, row: 'front' as const }))
+    for (let seed = 1; seed <= 40; seed += 1) {
+      const result = runDungeon(party, 'barrow', DEFAULT_TACTICS, seed)
+      if (!result.ok || result.report.victory) continue
+      const dungeon = dungeonById('barrow')
+      const expected = Math.round((dungeon.gold * progression.defeatGoldShare * result.report.floorsCleared) / dungeon.floors.length)
+      expect(result.report.gold).toBe(expected)
+    }
+  })
+})
