@@ -5,7 +5,7 @@ import { DEFAULT_TACTICS, runDungeon } from './dungeon'
 import { SAVE_VERSION, applyCasualty, exportSave, freshState, importSave, migrate, reduce, townLevel, visitorStay } from './game'
 import type { AbsenceReport, GameState } from './game'
 import { forgeGear, recipeById } from './gear'
-import { createHero, generateHero } from './hero'
+import { createHero, generateHero, withAge } from './hero'
 import { createRng } from './rng'
 
 const now = 1_700_000_000_000
@@ -424,6 +424,7 @@ describe('economy fixes', () => {
       autoRuns: 0,
       autoGold: 0,
       adClaimed: false,
+      aged: [],
     }
     const start = { ...freshState(1, day), gold: 10, absence }
     const once = reduce(start, { type: 'adReward', placement: 'absence', now: day })
@@ -645,4 +646,77 @@ describe('economy fixes', () => {
     expect(loaded.version).toBe(SAVE_VERSION)
     expect(loaded.roster[0]?.recoverAt).toBe(now + 50 + lifeRules.injury.recoverMs)
   })
+
+  it('ages the roster and visitors once per new year and recalculates the age band', () => {
+    const start = freshState(1, now)
+    const visitor = start.visitors[0]
+    const hired = reduce(start, { type: 'hire', id: visitor?.id ?? '' })
+    const hero = hired.roster[0]
+    const staying = hired.visitors[0]
+    if (!hero || !staying) {
+      throw new Error('expected a hero and a visitor')
+    }
+    const at = (age: number) => ({ ...withAge(hero, age), arrivedAt: now })
+    const prepared = {
+      ...hired,
+      roster: [at(49)],
+      visitors: [{ ...withAge(staying, 49), arrivedAt: now + timeRules.seasonMs * 8 }],
+    }
+    const oneYear = seasons(prepared, 4)
+    expect(oneYear.calendar).toMatchObject({ year: 2, season: 'spring' })
+    expect(oneYear.roster[0]?.age).toBe(50)
+    expect(oneYear.visitors[0]?.age).toBe(50)
+    expect(oneYear.roster[0]?.stats).toEqual(withAge(hero, 50).stats)
+    expect(oneYear.roster[0]?.stats).not.toEqual(withAge(hero, 49).stats)
+    expect(oneYear.absence?.aged).toContainEqual({ name: hero.name, age: 50 })
+    expect(oneYear.absence?.aged).toContainEqual({ name: staying.name, age: 50 })
+    const twoYears = seasons(prepared, 8)
+    expect(twoYears.roster[0]?.age).toBe(51)
+    expect(twoYears.visitors.find((entry) => entry.id === staying.id)?.age).toBe(51)
+    expect(twoYears.absence?.aged).toContainEqual({ name: hero.name, age: 51 })
+    expect(twoYears.absence?.aged).toContainEqual({ name: staying.name, age: 51 })
+    const elder = { ...prepared, roster: [at(80)], visitors: [{ ...withAge(staying, 80), arrivedAt: now + timeRules.seasonMs * 8 }] }
+    const capped = seasons(elder, 4)
+    expect(capped.roster[0]?.age).toBe(80)
+    expect(capped.roster).toHaveLength(1)
+    expect(capped.absence?.aged?.some((entry) => entry.name === hero.name)).toBe(false)
+  })
+
+  it('fills the aged list when an older absence report has none', () => {
+    const start = freshState(1, now)
+    const saved = {
+      ...start,
+      version: 4,
+      absence: {
+        elapsedMs: timeRules.reportAfterMs,
+        capped: false,
+        seasonsPassed: 0,
+        year: 1,
+        season: 'spring' as const,
+        goldGained: 0,
+        wagesPaid: 0,
+        injuries: [],
+        completed: [],
+        crafted: [],
+        visitors: [],
+        autoRuns: 0,
+        autoGold: 0,
+        adClaimed: false,
+      },
+    }
+    expect(migrate(saved, now).absence?.aged).toEqual([])
+  })
 })
+
+function seasons(state: GameState, count: number): GameState {
+  let next = state
+  for (let season = 0; season < count; season += 1) {
+    let left = timeRules.seasonMs
+    while (left > 0) {
+      const step = Math.min(timeRules.maxOfflineMs, left)
+      next = reduce(next, { type: 'catchUp', now: next.lastTickAt + step })
+      left -= step
+    }
+  }
+  return next
+}

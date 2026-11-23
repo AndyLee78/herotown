@@ -262,6 +262,8 @@
     "wages": "주급 {{gold}}",
     "completed": "완공: {{names}}",
     "visitors": "새 방문자: {{names}}",
+    "aged": "나이를 먹음: {{names}}",
+    "agedHero": "{{name}} {{age}}세",
     "crafted": "제작 완료: {{names}}",
     "auto": "자동 출정 {{count}}회, 골드 {{gold}}",
     "dismiss": "계속"

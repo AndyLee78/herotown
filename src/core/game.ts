@@ -2,7 +2,7 @@ import { claimGuide } from './guide'
 import { adRules, classById, combatRules, dungeonById, lifeRules, progression, smithRules, timeRules, villageRules } from './data'
 import { forgeGear, normalizeGear, recipeById } from './gear'
 import { applyReport, DEFAULT_TACTICS, runDungeon } from './dungeon'
-import { canDeploy, generateHero, generateVisitors, normalizeHero, restHero } from './hero'
+import { canDeploy, ageUp, generateHero, generateVisitors, normalizeHero, restHero } from './hero'
 import { createRng } from './rng'
 import type { Rng } from './rng'
 import type { ClassId, CombatError, DungeonReport, Gear, GearSlot, Hero, Row, Tactics } from './types'
@@ -32,6 +32,7 @@ export type AbsenceReport = {
   autoRuns: number
   autoGold: number
   adClaimed: boolean
+  aged: { name: string; age: number }[]
 }
 
 export type SmithJob = {
@@ -457,7 +458,8 @@ function advance(state: GameState, now: number): GameState {
   const crafted: string[] = []
   const visitors: string[] = []
   const wages = { paid: 0 }
-  let next = moveCalendar(state, elapsed, wages)
+  const aged: { name: string; age: number }[] = []
+  let next = moveCalendar(state, elapsed, wages, aged)
   next = finishConstruction(next, effectiveNow, completed)
   next = finishSmith(next, effectiveNow, crafted)
   next = finishCare(next, effectiveNow)
@@ -486,6 +488,7 @@ function advance(state: GameState, now: number): GameState {
     autoRuns: autoTally.runs,
     autoGold: autoTally.gold,
     adClaimed: false,
+    aged,
   }
   return { ...next, absence }
 }
@@ -657,17 +660,19 @@ function seasonIndex(season: SeasonId): number {
   return index < 0 ? 0 : index
 }
 
-function moveCalendar(state: GameState, elapsed: number, wages: { paid: number }): GameState {
+function moveCalendar(state: GameState, elapsed: number, wages: { paid: number }, aged: { name: string; age: number }[]): GameState {
   let intoSeasonMs = state.calendar.intoSeasonMs + elapsed
   let index = seasonIndex(state.calendar.season)
   let year = state.calendar.year
   let gold = state.gold
   let warning = state.warning
+  let years = 0
   while (intoSeasonMs >= timeRules.seasonMs) {
     intoSeasonMs -= timeRules.seasonMs
     index = (index + 1) % timeRules.seasons.length
     if (index === 0) {
       year += 1
+      years += 1
     }
     const due = progression.wage * state.roster.length
     const paid = Math.min(gold, due)
@@ -675,12 +680,32 @@ function moveCalendar(state: GameState, elapsed: number, wages: { paid: number }
     wages.paid += paid
     warning = paid < due ? 'wages' : null
   }
+  const lived = years > 0 ? growOlder(state, years, aged) : state
   return {
-    ...state,
+    ...lived,
     gold,
     warning,
     calendar: { year, season: (timeRules.seasons[index] ?? 'spring') as SeasonId, intoSeasonMs },
   }
+}
+
+function growOlder(state: GameState, years: number, aged: { name: string; age: number }[]): GameState {
+  return {
+    ...state,
+    roster: state.roster.map((hero) => older(hero, years, aged)),
+    visitors: state.visitors.map((hero) => older(hero, years, aged)),
+  }
+}
+
+function older(hero: Hero, years: number, aged: { name: string; age: number }[]): Hero {
+  let next = hero
+  for (let year = 0; year < years; year += 1) {
+    next = ageUp(next)
+  }
+  if (next.age !== hero.age) {
+    aged.push({ name: next.name, age: next.age })
+  }
+  return next
 }
 
 function finishConstruction(state: GameState, now: number, completed: string[]): GameState {
@@ -1250,6 +1275,7 @@ function normalize(record: Record<string, unknown>, now: number): GameState {
           autoRuns: record.absence.autoRuns ?? 0,
           autoGold: record.absence.autoGold ?? 0,
           adClaimed: record.absence.adClaimed ?? false,
+          aged: readAged(record.absence.aged),
         }
       : null,
     ads: readAds(record.ads, now),
@@ -1274,6 +1300,20 @@ function isTactics(value: unknown): value is Tactics {
   }
   const tactics = value as Tactics
   return typeof tactics.healBelow === 'number' && typeof tactics.retreatBelow === 'number' && typeof tactics.target === 'string'
+}
+
+function readAged(value: unknown): { name: string; age: number }[] {
+  if (!Array.isArray(value)) {
+    return []
+  }
+  return value.flatMap((entry) => {
+    if (entry == null || typeof entry !== 'object') {
+      return []
+    }
+    const name = (entry as { name?: unknown }).name
+    const age = (entry as { age?: unknown }).age
+    return typeof name === 'string' && typeof age === 'number' ? [{ name, age }] : []
+  })
 }
 
 function isAbsence(value: unknown): value is AbsenceReport {

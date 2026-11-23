@@ -397,7 +397,10 @@ export function Absence({ save, busy, onWatch, onClose }: { save: GameState; bus
       {report.completed.length > 0 ? <p>{t('absence.completed', { names: report.completed.map((id) => t(`building.${id}`)).join(', ') })}</p> : null}
       {crafted.length > 0 ? <p>{t('absence.crafted', { names: crafted.map((id) => t(`item.${id}`)).join(', ') })}</p> : null}
       {report.visitors.length > 0 ? <p>{t('absence.visitors', { names: report.visitors.join(', ') })}</p> : null}
-      {report.completed.length === 0 && report.visitors.length === 0 && crafted.length === 0 ? <p className="muted">{t('absence.quiet')}</p> : null}
+      {(report.aged ?? []).length > 0 ? (
+        <p>{t('absence.aged', { names: (report.aged ?? []).map((hero) => t('absence.agedHero', { name: hero.name, age: hero.age })).join(', ') })}</p>
+      ) : null}
+      {report.completed.length === 0 && report.visitors.length === 0 && crafted.length === 0 && (report.aged ?? []).length === 0 ? <p className="muted">{t('absence.quiet')}</p> : null}
       <div className="actions">
         {report.adClaimed ? null : (
           <button type="button" className="btn ad" disabled={busy} onClick={onWatch}>

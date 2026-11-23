@@ -262,6 +262,8 @@
     "wages": "Wages paid {{gold}}.",
     "completed": "Finished: {{names}}",
     "visitors": "New visitors: {{names}}",
+    "aged": "A year older: {{names}}",
+    "agedHero": "{{name}} ({{age}})",
     "crafted": "Finished crafting: {{names}}",
     "auto": "Automatic runs {{count}}, gold {{gold}}",
     "dismiss": "Continue"
