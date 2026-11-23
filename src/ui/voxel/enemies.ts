@@ -94,12 +94,47 @@ const HUMANOIDS: Record<string, Omit<BodySpec, 'head' | 'stoop' | 'style' | 'bea
     shoe: '#5e5953',
     scale: 1.8,
   },
+  bandit_thug: {
+    outfit: { body: '#6a4a34', trim: '#3a2a22', pants: '#4a3830', weapon: 'mace', hat: 'hood' },
+    skin: '#d4a07a',
+    eye: '#2a1e18',
+    hair: null,
+    scale: 1.05,
+  },
+  crossbowman: {
+    outfit: { body: '#5a5450', trim: '#8a3a34', pants: '#3e3a38', weapon: 'bow', quiver: true },
+    skin: '#ecc39b',
+    eye: '#2a2522',
+    hair: '#3a3028',
+    style: 'short',
+    scale: 1,
+  },
+  cutthroat: {
+    outfit: { body: '#3a2a2e', trim: '#7a2e2e', pants: '#2a2224', weapon: 'dagger', scarf: true, hat: 'hood' },
+    skin: '#c99470',
+    eye: '#1a1210',
+    hair: null,
+    scale: 0.95,
+  },
+  bandit_chief: {
+    outfit: { body: '#5a2e2e', trim: '#c9a43a', pants: '#3a2828', weapon: 'pick', pads: true, robe: true },
+    skin: '#d4a07a',
+    eye: '#2a1e18',
+    hair: '#2a2220',
+    style: 'long',
+    beard: true,
+    scale: 1.45,
+  },
 }
 
 export function buildEnemy(refId: string): Actor {
   const humanoid = HUMANOIDS[refId]
   if (humanoid) {
-    return buildBody({ head: 1, stoop: 0, style: 'short', beard: false, ...humanoid })
+    const rig = buildBody({ head: 1, stoop: 0, style: 'short', beard: false, ...humanoid })
+    if (refId === 'cutthroat') {
+      addOffhandDagger(rig)
+    }
+    return rig
   }
   switch (refId) {
     case 'wolf':
@@ -131,6 +166,14 @@ export function buildEnemy(refId: string): Actor {
     default:
       return blob('#c96b6b', '#d98f8f', 1)
   }
+}
+
+function addOffhandDagger(rig: Rig) {
+  const dagger = new Builder()
+    .box(0.045, 0.1, 0.045, '#3a2a20', 0, -0.27, 0.03)
+    .box(0.13, 0.035, 0.05, '#8a3434', 0, -0.21, 0.03)
+    .box(0.05, 0.22, 0.03, '#cfd5dc', 0, -0.09, 0.03)
+  rig.armL.add(dagger.build({ castShadow: false }))
 }
 
 function creature(kind: Creature['kind'], height: number, hover = 0): Creature {
