@@ -58,7 +58,7 @@ Claude Code, Cursor, GPT(Codex)가 함께 쓰는 작업 목록이다. 작업 하
 | 16 | 초반 흐름 개편 코드 리뷰 (a1dd951) | GPT | `Docs/reviews/a1dd951.md` (새 파일만) | 완료 (5759763) |
 | 17 | 리뷰 a1dd951의 버그 두 개 수정 | GPT | `src/core/game.ts`, `src/core/flow.test.ts` | 완료 (6d79ef3) |
 | 18 | 밸런스 도구 리뷰 지적 수정 | GPT | `tools/first-hour.ts`, `tools/tune-curve.ts`, `Docs/dungeons.md` | 완료 (97d091e) |
-| 19 | 세대 화면 (가족·관계·청혼·인구·가계도) | Cursor | `src/ui/game/heroScreens.tsx`, `villageScreens.tsx`, `App.tsx`, `styles.css`, `src/locales/*` | 대기 (지금 시작 가능) |
+| 19 | 세대 화면 (가족·관계·청혼·인구·가계도) | Cursor | `src/ui/game/heroScreens.tsx`, `villageScreens.tsx`, `App.tsx`, `styles.css`, `src/locales/*` | 완료 (14395ae) |
 | 20 | 세대 3D 연출 (부부·아이·광장) | Cursor | `src/ui/voxel/VillageScene.ts`, `src/ui/VillageView.tsx` | 대기 (19 뒤) |
 | 21 | 세대 core 코드 리뷰 (443bde5) | GPT | `Docs/reviews/443bde5.md` (새 파일만) | 대기 (지금 시작 가능) |
 | 22 | 세대 시뮬레이터 | GPT | `tools/generations.ts` (새 파일), `package.json` 스크립트 한 줄 | 대기 (지금 시작 가능) |
@@ -614,7 +614,7 @@ Docs/generations.md를 읽고, core에 이미 들어간 세대 규칙을 화면�
 확인: npm run dev에서 디버그 시간 가속으로 결혼·출생까지 진행해 각 화면을 본다. 폰 폭(375px)에서도 본다. 확인 못 한 부분은 메모에 적는다.
 ```
 
-메모:
+메모: 가문 이름은 아이가 태어나기 전에는 없고, 태어나면 아버지 이름이 된다. 나중에 버튼은 청혼을 지우지 않고 이번 화면에서만 숨긴다. 청혼 카드와 결혼 토스트, 가족 칸, 가계도, 인구 표, 부재 보고서의 출생 줄, 375px 인구 창을 봤다. 출산 예정 칩과 집이 없을 때 승낙이 막히는 문구는 그 상태가 화면에 안 떠서 보지 못했다.
 
 ---
 
