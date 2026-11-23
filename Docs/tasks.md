@@ -61,7 +61,7 @@ Claude Code, Cursor, GPT(Codex)가 함께 쓰는 작업 목록이다. 작업 하
 | 19 | 세대 화면 (가족·관계·청혼·인구·가계도) | Cursor | `src/ui/game/heroScreens.tsx`, `villageScreens.tsx`, `App.tsx`, `styles.css`, `src/locales/*` | 완료 (14395ae) |
 | 20 | 세대 3D 연출 (부부·아이·광장) | Cursor | `src/ui/voxel/VillageScene.ts`, `src/ui/VillageView.tsx` | 완료 (dc01bce) |
 | 21 | 세대 core 코드 리뷰 (443bde5) | GPT | `Docs/reviews/443bde5.md` (새 파일만) | 완료 (이 커밋) |
-| 22 | 세대 시뮬레이터 | GPT | `tools/generations.ts` (새 파일), `package.json` 스크립트 한 줄 | 대기 (지금 시작 가능) |
+| 22 | 세대 시뮬레이터 | GPT | `tools/generations.ts` (새 파일), `package.json` 스크립트 한 줄 | 완료 (이 커밋) |
 | 23 | 첫 3시간 시뮬레이터를 여러 시드로 | GPT | `tools/first-hour.ts` | 대기 (22와 따로, 파일 안 겹침) |
 
 ---
@@ -677,6 +677,9 @@ package.json에 "sim:generations": "tsx tools/generations.ts" 한 줄만 추가�
 ```
 
 메모:
+- 시드 11의 20년 실행에서 첫 결혼 1.00일, 자녀 첫 출정 20.06일, 누적 출생 5명과 천재 1명을 기록했다.
+- 2년 차에 침대 10/10에 도달해 20년 차까지 3세대가 태어나지 않았다. 정원 초과는 0명이었다. 천재는 저장 플래그가 없어 유전 수치로 구별할 수 없는 경우 범위로 표시한다.
+- tsx가 PATH에 없으면 npx --package tsx -c 파일 실행 환경에서 npm run sim:generations를 실행할 수 있다.
 
 ---
 
