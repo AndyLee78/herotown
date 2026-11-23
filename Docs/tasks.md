@@ -58,10 +58,11 @@ Claude Code, Cursor, GPT(Codex)가 함께 쓰는 작업 목록이다. 작업 하
 | 16 | 초반 흐름 개편 코드 리뷰 (a1dd951) | GPT | `Docs/reviews/a1dd951.md` (새 파일만) | 완료 (5759763) |
 | 17 | 리뷰 a1dd951의 버그 두 개 수정 | GPT | `src/core/game.ts`, `src/core/flow.test.ts` | 완료 (6d79ef3) |
 | 18 | 밸런스 도구 리뷰 지적 수정 | GPT | `tools/first-hour.ts`, `tools/tune-curve.ts`, `Docs/dungeons.md` | 완료 (97d091e) |
-| 19 | 세대 화면 (가족·관계·청혼·인구·가계도) | Cursor | `src/ui/game/heroScreens.tsx`, `villageScreens.tsx`, `App.tsx`, `styles.css`, `src/locales/*` | 대기 (세대 core 커밋 뒤) |
+| 19 | 세대 화면 (가족·관계·청혼·인구·가계도) | Cursor | `src/ui/game/heroScreens.tsx`, `villageScreens.tsx`, `App.tsx`, `styles.css`, `src/locales/*` | 대기 (지금 시작 가능) |
 | 20 | 세대 3D 연출 (부부·아이·광장) | Cursor | `src/ui/voxel/VillageScene.ts`, `src/ui/VillageView.tsx` | 대기 (19 뒤) |
-| 21 | 세대 core 코드 리뷰 | GPT | `Docs/reviews/<해시>.md` (새 파일만) | 대기 (세대 core 커밋 뒤) |
-| 22 | 세대 시뮬레이터 | GPT | `tools/generations.ts` (새 파일), `package.json` 스크립트 한 줄 | 대기 (세대 core 커밋 뒤) |
+| 21 | 세대 core 코드 리뷰 (443bde5) | GPT | `Docs/reviews/443bde5.md` (새 파일만) | 대기 (지금 시작 가능) |
+| 22 | 세대 시뮬레이터 | GPT | `tools/generations.ts` (새 파일), `package.json` 스크립트 한 줄 | 대기 (지금 시작 가능) |
+| 23 | 첫 3시간 시뮬레이터를 여러 시드로 | GPT | `tools/first-hour.ts` | 대기 (22와 따로, 파일 안 겹침) |
 
 ---
 
@@ -594,7 +595,7 @@ Docs/reviews/a1dd951.md의 "낮음" 두 건을 고친다. tools/first-hour.ts, t
 
 ## 19. 세대 화면 (Cursor)
 
-설계: `Docs/generations.md`. **세대 core(단계 A) 커밋 뒤에 시작한다.**
+설계: `Docs/generations.md`. 세대 core는 443bde5에 들어갔다. 조회 함수와 필드 이름은 그 문서 7절에 있다.
 
 **전달할 내용**
 
@@ -640,12 +641,12 @@ Docs/generations.md를 읽고 마을 3D에서 가족이 보이게 한다. src/ui
 
 ## 21. 세대 core 코드 리뷰 (GPT)
 
-**세대 core(단계 A) 커밋 뒤에 시작한다.** 해시는 사용자가 알려준다.
+세대 core 커밋은 **443bde5**다.
 
 **전달할 내용**
 
 ```
-세대 core 커밋 <해시>를 리뷰한다. 코드는 고치지 않고 Docs/reviews/<해시>.md 새 파일 하나에만 쓴다. 형식은 Docs/reviews/README.md를 따른다.
+세대 core 커밋 443bde5를 리뷰한다(git show 443bde5). 코드는 고치지 않고 Docs/reviews/443bde5.md 새 파일 하나에만 쓴다. 형식은 Docs/reviews/README.md를 따른다.
 
 볼 것:
 - Docs/generations.md 규칙과 코드가 다른 곳(수치, 조건, 순서).
@@ -660,7 +661,7 @@ Docs/generations.md를 읽고 마을 3D에서 가족이 보이게 한다. src/ui
 
 ## 22. 세대 시뮬레이터 (GPT)
 
-**세대 core(단계 A) 커밋 뒤에 시작한다.**
+세대 core는 443bde5에 들어갔다.
 
 **전달할 내용**
 
@@ -671,6 +672,23 @@ tools/generations.ts 새 파일을 만든다. 실제 reduce를 써서 마을을 
 package.json에 "sim:generations": "tsx tools/generations.ts" 한 줄만 추가한다. 다른 파일은 고치지 않는다.
 
 완료 기준: 공통 기준 통과. 출력 요약과 눈에 띄는 밸런스 문제(예: 결혼이 너무 늦다, 인구가 침대를 넘친다)를 메모에 적는다. family.json 값은 바꾸지 않는다.
+```
+
+메모:
+
+---
+
+## 23. 첫 3시간 시뮬레이터를 여러 시드로 (GPT)
+
+**전달할 내용**
+
+```
+tools/first-hour.ts만 고친다. 지금은 시드 11 하나로만 돌아서, 친밀도 보너스 같은 작은 변화에도 결과가 크게 흔들린다(시드 11에서 파티 Lv 6.7 ↔ 10.4). 다른 시드(1–6)로 돌리면 "party Lv 0.0"이 찍히는 시드가 있어, 출정 후보가 없을 때의 집계나 플레이어 흉내가 막히는 곳이 있는 것 같다.
+
+1. 명령줄 인자로 시드 목록을 받는다(예: npx tsx tools/first-hour.ts 180 1,2,3,4,5,6). 기본은 지금처럼 11 하나. 시드가 여럿이면 시드별 한 줄 요약 + 중앙값·최소·최대(파티 레벨, 클리어 던전 수, 최근 10전 승수)를 출력한다.
+2. "party Lv 0.0"이 나오는 원인을 찾아 고친다. 시뮬레이터 쪽 문제면 고치고, 게임 규칙 문제(진짜로 막히는 상황)로 보이면 고치지 말고 재현 방법을 메모에 적는다.
+
+완료 기준: 공통 기준 통과. 시드 1–6, 11의 결과 요약을 커밋 메시지와 메모에 적는다.
 ```
 
 메모:
