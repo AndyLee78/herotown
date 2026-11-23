@@ -69,7 +69,7 @@ Claude Code, Cursor, GPT(Codex)가 함께 쓰는 작업 목록이다. 작업 하
 | 27 | 명예의 전당·묘지·조상 화면 | Cursor | `src/ui/game/heroScreens.tsx`, `villageScreens.tsx`, `App.tsx`, `styles.css`, `src/locales/*` | 완료 (75b80bd) |
 | 28 | 집 레벨별 모습·묘지 비석 3D | Cursor | `src/ui/voxel/VillageScene.ts`, `src/ui/voxel/world.ts` | 완료 (9d35253) |
 | 29 | 2b core 코드 리뷰 (f7fdf88) | GPT | `Docs/reviews/f7fdf88.md` (새 파일만) | 완료 (이 커밋) |
-| 30 | 세대 시뮬레이터 60년 | GPT | `tools/generations.ts` | 대기 (지금 시작 가능) |
+| 30 | 세대 시뮬레이터 60년 | GPT | `tools/generations.ts` | 완료 (이 커밋) |
 
 ---
 
@@ -859,3 +859,6 @@ tools/generations.ts만 고친다. 기본 기간을 60년으로 늘리고(인자
 ```
 
 메모:
+- 60년 시드 11/1/2/3/4/5 순: 누적 출생 18/35/21/19/34/12명, 3세대 첫 출생 57/54/57/124/56/64일, 가문 보너스를 받은 아이 6/8/0/0/12/3명.
+- 최종 침대 사용은 9/20, 20/20, 13/20, 19/20, 19/20, 9/15였고 정원 초과는 0명이었다. 시드 3의 첫 결혼은 69일(다른 시드 1일), 시드 1은 60년 말에도 만실이었다. 시드 2·3에서는 전설이 생겨도 보너스를 받은 출생이 없었다.
+- 프로젝트·도구 타입 검사, 테스트 131개, 프로덕션 빌드를 통과했다.
