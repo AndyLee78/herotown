@@ -1,6 +1,7 @@
 // Plays the first hours like a simple player would, to catch dead ends in
-// the early flow. Run: npx tsx tools/first-hour.ts [minutes] [seed,seed,...]
+// the early flow. Run: npx tsx tools/first-hour.ts [minutes] [seed,seed,...] [--fountain=off|ready|5min|compare]
 import { dungeons, progression, villageRules } from '../src/core/data'
+import { fountainWishes } from '../src/core/fountain'
 import { busyHeroIds, dungeonUnlocked, freshState, presetById, reduce, townLevel, type BuildingId, type GameState } from '../src/core/game'
 import { guideStatus } from '../src/core/guide'
 import { canDeploy } from '../src/core/hero'
@@ -57,11 +58,19 @@ function pickDungeon(state: GameState, training: Training | undefined): string {
   return [...difficultyOrder].reverse().find((dungeon) => dungeonUnlocked(state, dungeon.id) && dungeon.recommendedLevel <= level)?.id ?? 'hill_cave'
 }
 
-function simulate(minutes: number, seed: number) {
+const fountainModes = ['off', 'ready', '5min'] as const
+type FountainMode = typeof fountainModes[number]
+type Income = { fountain: number; expedition: number; guide: number; jackpots: number }
+const checkpoints = [60, 180]
+
+function simulate(minutes: number, seed: number, fountain: FountainMode, keepFountainAtLevelOne = false) {
   const firstClear: Record<string, number> = {}
   const start = 1_700_000_000_000
   let state = freshState(seed, start)
   let now = start
+  let nextFountainCheck = start
+  const income: Income = { fountain: 0, expedition: 0, guide: 0, jackpots: 0 }
+  const incomeAt: Record<number, Income> = {}
   const log: string[] = []
   const note = (text: string) => log.push(`${String(Math.round((now - start) / 60_000)).padStart(3)}m  ${text}`)
 
@@ -80,6 +89,15 @@ function simulate(minutes: number, seed: number) {
     lowGoldSince = state.gold < progression.hireCost ? lowGoldSince ?? now : undefined
   }
   while (now - start < minutes * 60_000) {
+    if (fountain !== 'off' && now >= nextFountainCheck) {
+      while (fountainWishes(state, now) > 0) {
+        state = reduce(state, { type: 'wish', now })
+        const wish = state.fountain.last!
+        income.fountain += wish.gold
+        if (wish.jackpot) income.jackpots += 1
+      }
+      if (fountain === '5min') nextFountainCheck += 5 * 60_000
+    }
     const missing = essentialRoles.filter((role) => !hasLivingRole(state, role))
     const wanted = [...state.visitors].sort((a, b) =>
       Number(missing.some((role) => role === b.classId)) - Number(missing.some((role) => role === a.classId))
@@ -106,16 +124,17 @@ function simulate(minutes: number, seed: number) {
         if (!revived.notice) { state = revived; note('revive ' + hero.classId) }
       }
     }
-    // The guide asks for one fountain wish; a player taps it once (task 34 adds regular tapping).
-    if (guideStatus(state).step?.id === 'wish' && state.fountain.made === 0) state = reduce(state, { type: 'wish', now })
     // Claim guide rewards.
     while (guideStatus(state).done) {
       note(`guide: ${guideStatus(state).step?.id}`)
+      const goldBefore = state.gold
       state = reduce(state, { type: 'claimGuide' })
+      income.guide += state.gold - goldBefore
     }
     // Build the cheapest thing we can afford.
     if (!state.construction) {
       const options = villageRules.buildings
+        .filter((building) => building.id !== 'fountain' || (fountain !== 'off' && !keepFountainAtLevelOne))
         .map((building) => ({ id: building.id as BuildingId, cost: building.levels.find((entry) => entry.level === state.buildings[building.id as BuildingId] + 1) }))
         .filter((entry) => entry.cost)
         .sort((a, b) => (a.cost?.gold ?? 0) - (b.cost?.gold ?? 0))
@@ -147,13 +166,15 @@ function simulate(minutes: number, seed: number) {
     recordGold()
     const clearedBefore = state.cleared.length
     const lastReturn = state.history[0]?.finishedAt
-    now = Math.min(now + 15_000, start + minutes * 60_000)
+    // Five seconds divides every fountain interval, so all modes use the same clock.
+    now = Math.min(now + 5_000, start + minutes * 60_000)
     state = reduce(state, { type: 'catchUp', now })
     recordGold()
-    for (const id of state.cleared.slice(clearedBefore)) firstClear[id] = (now - start) / 60_000
     const report = state.history[0]
     if (report && report.finishedAt !== lastReturn) {
+      income.expedition += report.gained?.gold ?? 0
       const dungeonId = report.dungeonId ?? state.dungeonId
+      for (const id of state.cleared.slice(clearedBefore)) firstClear[id] = ((report.finishedAt ?? now) - start) / 60_000
       if (report.victory) {
         recentWins.unshift(dungeonId)
         losingStreak = 0
@@ -174,6 +195,8 @@ function simulate(minutes: number, seed: number) {
         }
       }
     }
+    const elapsedMinutes = (now - start) / 60_000
+    if (checkpoints.includes(elapsedMinutes) || elapsedMinutes === minutes) incomeAt[elapsedMinutes] = { ...income }
     const level = townLevel(state.fame).level
     if (level > lastTown) {
       note(`town level ${level}`)
@@ -187,45 +210,89 @@ function simulate(minutes: number, seed: number) {
   }
   const wins = state.history.filter((report) => report.victory).length
   const party = selectedHeroes(state)
-  return { firstClear, seed, state, log, wins, maxLosingStreak, maxLowGoldMs, partyLevel: averageLevel(party), ready: party.filter((hero) => !isHurt(hero)).length, partySize: party.length }
+  return { firstClear, incomeAt, seed, state, log, wins, maxLosingStreak, maxLowGoldMs, partyLevel: averageLevel(party), ready: party.filter((hero) => !isHurt(hero)).length, partySize: party.length }
+}
+
+function median(sorted: number[]): number {
+  return (sorted[Math.floor((sorted.length - 1) / 2)]! + sorted[Math.floor(sorted.length / 2)]!) / 2
 }
 
 function summarize(values: number[]): string {
   if (values.length === 0) return 'n/a'
   const sorted = [...values].sort((a, b) => a - b)
-  const lower = sorted[Math.floor((sorted.length - 1) / 2)]!
-  const upper = sorted[Math.floor(sorted.length / 2)]!
-  return `median ${((lower + upper) / 2).toFixed(2)}, min ${sorted[0]!.toFixed(2)}, max ${sorted.at(-1)!.toFixed(2)}`
+  return `median ${median(sorted).toFixed(2)}, min ${sorted[0]!.toFixed(2)}, max ${sorted.at(-1)!.toFixed(2)}`
 }
 
-const minutes = Number(process.argv[2] ?? 60)
-const seedArgs = (process.argv[3] ?? '11').split(',').map((seed) => seed.trim())
+const args = process.argv.slice(2)
+const fountainArg = args.find((arg) => arg.startsWith('--fountain='))?.slice('--fountain='.length) ?? 'ready'
+const [minutesArg, seedsArg] = args.filter((arg) => !arg.startsWith('--fountain='))
+const compare = fountainArg === 'compare'
+const fountain = fountainModes.find((mode) => mode === fountainArg)
+const minutes = Number(minutesArg ?? (compare ? 180 : 60))
+const defaultSeeds = compare ? Array.from({ length: 20 }, (_, index) => index + 1).join(',') : '11'
+const seedArgs = (seedsArg ?? defaultSeeds).split(',').map((seed) => seed.trim())
 const seeds = seedArgs.map(Number)
-if (!Number.isFinite(minutes) || minutes <= 0 || seedArgs.some((seed, index) => !/^\d+$/.test(seed) || !Number.isSafeInteger(seeds[index]))) {
-  throw new Error('Usage: npx tsx tools/first-hour.ts [positive minutes] [seed,seed,...]')
+if ((!compare && !fountain) || !Number.isFinite(minutes) || minutes <= 0 || (compare && minutes < 180) || seedArgs.some((seed, index) => !/^\d+$/.test(seed) || !Number.isSafeInteger(seeds[index]))) {
+  throw new Error('Usage: npx tsx tools/first-hour.ts [positive minutes (compare: at least 180)] [seed,seed,...] [--fountain=off|ready|5min|compare]')
 }
-const results = seeds.map((seed) => simulate(minutes, seed))
-const displayLevel = (level: number | undefined) => level?.toFixed(1) ?? 'n/a'
-if (results.length === 1) {
-  const { state, log, wins, partyLevel, ready, partySize, maxLosingStreak } = results[0]!
-  console.log(log.join('\n'))
-  console.log(`\nafter ${minutes}m: gold ${state.gold}, party Lv ${displayLevel(partyLevel)} (${ready}/${partySize} ready), cleared ${state.cleared.join(', ')}, buildings ${JSON.stringify(state.buildings)}`)
-  console.log(`last ${state.history.length} trips: ${wins} wins`)
-  console.log(`max losing streak: ${maxLosingStreak}`)
-} else {
-  for (const { seed, state, wins, partyLevel, ready, partySize, maxLosingStreak, maxLowGoldMs } of results) {
-    console.log(`seed ${seed}: party Lv ${displayLevel(partyLevel)} (${ready}/${partySize} ready) · cleared ${state.cleared.length} · recent wins ${wins}/${state.history.length} · max losing streak ${maxLosingStreak} · low gold ${(maxLowGoldMs / 60_000).toFixed(2)}m`)
+
+type Simulation = ReturnType<typeof simulate>
+
+function incomeSummary(mode: string, at: number, results: Simulation[]) {
+  const samples = results.map(({ incomeAt }) => incomeAt[at]!)
+  const mid = (values: number[]) => values.length ? Number(median(values.sort((a, b) => a - b)).toFixed(1)) : '—'
+  const gross = ({ fountain, expedition, guide }: Income) => fountain + expedition + guide
+  return {
+    mode, minutes: at, 'gross gold': mid(samples.map(gross)),
+    'fountain gold': mid(samples.map((sample) => sample.fountain)),
+    'expedition gold': mid(samples.map((sample) => sample.expedition)),
+    'fountain % of gross': mid(samples.filter((sample) => gross(sample) > 0).map((sample) => 100 * sample.fountain / gross(sample))),
+    'fountain % of expedition': mid(samples.filter((sample) => sample.expedition > 0).map((sample) => 100 * sample.fountain / sample.expedition)),
+    jackpots: mid(samples.map((sample) => sample.jackpots)),
   }
-  const levels = results.flatMap(({ partyLevel }) => partyLevel == null ? [] : [partyLevel])
-  console.log(`party Lv: ${summarize(levels)} (${levels.length}/${results.length} seeds)`)
-  console.log(`cleared dungeons: ${summarize(results.map(({ state }) => state.cleared.length))}`)
-  console.log(`recent wins: ${summarize(results.map((result) => result.wins))}`)
-  console.log(`max losing streak: ${summarize(results.map((result) => result.maxLosingStreak))}`)
 }
-console.log(`seeds below hire cost for over 30m: ${results.filter((result) => result.maxLowGoldMs > 30 * 60_000).length}/${results.length}`)
 
 const order = ['hill_cave', 'moss_path', 'abandoned_mine', 'deep_shaft', 'barrow', 'sunken_crypt']
-console.log('first clear (minutes): ' + order.map((id) => {
-  const times = results.map((r) => r.firstClear[id]).filter((t): t is number => t != null).sort((a, b) => a - b)
-  return `${id} ${times.length ? times[Math.floor(times.length / 2)]!.toFixed(0) : '-'} (${times.length}/${results.length})`
-}).join(' · '))
+function firstClearSummary(results: Simulation[], at: number) {
+  return Object.fromEntries(order.map((id) => {
+    const times = results.flatMap((result) => {
+      const time = result.firstClear[id]
+      return time != null && time <= at ? [time] : []
+    }).sort((a, b) => a - b)
+    return [id, `${times.length ? median(times).toFixed(1) : '—'} (${times.length}/${results.length})`]
+  }))
+}
+
+if (compare) {
+  const runs = fountainModes.map((mode) => ({ mode, results: seeds.map((seed) => simulate(minutes, seed, mode)) }))
+  console.log('Per-seed medians. Gross gold includes wishes, expeditions and guide rewards, excluding starting gold.')
+  console.log('Off never taps or upgrades the fountain; the guide remains at its wish step.')
+  console.table(runs.flatMap(({ mode, results }) => checkpoints.map((at) => incomeSummary(mode, at, results))))
+  console.log('First clear in minutes among successful seeds (cleared/total at each cutoff)')
+  console.table(runs.flatMap(({ mode, results }) => checkpoints.map((at) => ({ mode, minutes: at, ...firstClearSummary(results, at) }))))
+  console.log('Level 1 control for the design target (fountain/expedition income)')
+  console.table([incomeSummary('ready, Lv1 only', 60, seeds.map((seed) => simulate(60, seed, 'ready', true)))])
+} else {
+  const results = seeds.map((seed) => simulate(minutes, seed, fountain!))
+  const displayLevel = (level: number | undefined) => level?.toFixed(1) ?? 'n/a'
+  if (results.length === 1) {
+    const { state, log, wins, partyLevel, ready, partySize, maxLosingStreak } = results[0]!
+    console.log(log.join('\n'))
+    console.log(`\nafter ${minutes}m: gold ${state.gold}, party Lv ${displayLevel(partyLevel)} (${ready}/${partySize} ready), cleared ${state.cleared.join(', ')}, buildings ${JSON.stringify(state.buildings)}`)
+    console.log(`last ${state.history.length} trips: ${wins} wins`)
+    console.log(`max losing streak: ${maxLosingStreak}`)
+  } else {
+    for (const { seed, state, wins, partyLevel, ready, partySize, maxLosingStreak, maxLowGoldMs } of results) {
+      console.log(`seed ${seed}: party Lv ${displayLevel(partyLevel)} (${ready}/${partySize} ready) · cleared ${state.cleared.length} · recent wins ${wins}/${state.history.length} · max losing streak ${maxLosingStreak} · low gold ${(maxLowGoldMs / 60_000).toFixed(2)}m`)
+    }
+    const levels = results.flatMap(({ partyLevel }) => partyLevel == null ? [] : [partyLevel])
+    console.log(`party Lv: ${summarize(levels)} (${levels.length}/${results.length} seeds)`)
+    console.log(`cleared dungeons: ${summarize(results.map(({ state }) => state.cleared.length))}`)
+    console.log(`recent wins: ${summarize(results.map((result) => result.wins))}`)
+    console.log(`max losing streak: ${summarize(results.map((result) => result.maxLosingStreak))}`)
+  }
+  console.log(`seeds below hire cost for over 30m: ${results.filter((result) => result.maxLowGoldMs > 30 * 60_000).length}/${results.length}`)
+
+  console.log('first clear (minutes): ' + Object.entries(firstClearSummary(results, minutes)).map(([id, value]) => `${id} ${value}`).join(' · '))
+  console.table([incomeSummary(fountain!, minutes, results)])
+}
