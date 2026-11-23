@@ -75,10 +75,10 @@ Claude Code, Cursor, GPT(Codex)가 함께 쓰는 작업 목록이다. 작업 하
 | 33 | 분수 core 코드 리뷰 (5322f86) | GPT | `Docs/reviews/5322f86.md` (새 파일만) | 완료 (a666f56) |
 | 34 | 분수가 초반 골드에 주는 몫 측정 | GPT | `tools/first-hour.ts` | 완료 (a47f68a) |
 | 35 | 독늪 몬스터·던전 그림 | Cursor | `src/ui/voxel/enemies.ts`, `portrait.ts` | 대기 (지금 시작 가능) |
-| 36 | 상태이상·물약 화면과 연금술 공방 | Cursor | `App.tsx`, `src/ui/game/*.tsx`, `styles.css`, `src/locales/*` | 대기 (3a core 뒤) |
+| 36 | 상태이상·물약 화면과 연금술 공방 | Cursor | `App.tsx`, `src/ui/game/*.tsx`, `styles.css`, `src/locales/*` | 대기 (지금 시작 가능) |
 | 37 | 상태 표시·물약 동작·공방 건물 3D | Cursor | `BattleScene.ts`, `replay.ts`, `world.ts`, `VillageScene.ts` | 대기 (36 뒤) |
-| 38 | 3a core 코드 리뷰 | GPT | `Docs/reviews/<해시>.md` (새 파일만) | 대기 (3a core 뒤) |
-| 39 | 독늪 밸런스 측정 | GPT | `tools/curve.ts`, `print-curve.ts`, `tune-curve.ts`, `first-hour.ts` | 대기 (3a core 뒤) |
+| 38 | 3a core 코드 리뷰 (1918eda) | GPT | `Docs/reviews/1918eda.md` (새 파일만) | 대기 (지금 시작 가능) |
+| 39 | 독늪 밸런스 측정 | GPT | `tools/curve.ts`, `print-curve.ts`, `tune-curve.ts`, `first-hour.ts` | 대기 (지금 시작 가능) |
 
 ---
 
@@ -982,7 +982,7 @@ Docs/depth.md의 3a를 읽고 독늪 습지의 3D 그림을 만든다. src/ui/vo
 
 ## 36. 상태이상·물약 화면과 연금술 공방 (Cursor)
 
-**3a core 커밋 뒤에 시작한다.** 조회 함수와 필드 이름은 core 커밋 메시지에 있다.
+3a core는 1918eda에 들어갔다. 조회 함수와 필드 이름은 그 커밋 메시지에 있다. 전투 로그 키: log.paralyze, log.paralyzed, log.slow, log.silence, log.sweep, log.potion(params.potion). 패배 이유: poisoned, silenced, paralyzed. 몬스터 이름 enemy.venom_toad 등, 던전 dungeon.venom_marsh, 재료 herb, 물약 4종도 문구가 필요하다.
 
 **전달할 내용**
 
@@ -1023,7 +1023,7 @@ src/ui/voxel/BattleScene.ts, src/ui/voxel/replay.ts, src/ui/voxel/world.ts, src/
 
 ## 38. 3a core 코드 리뷰 (GPT)
 
-**3a core 커밋 뒤에 시작한다.** 해시는 표의 38번 행.
+3a core 커밋은 **1918eda**다.
 
 **전달할 내용**
 
@@ -1044,9 +1044,9 @@ src/ui/voxel/BattleScene.ts, src/ui/voxel/replay.ts, src/ui/voxel/world.ts, src/
 
 ```
 tools/curve.ts, tools/print-curve.ts, tools/tune-curve.ts, tools/first-hour.ts만 고친다. 게임 코드와 data는 고치지 않는다(제안만).
-1. 곡선 도구에 "물약 지참" 조건(없음 / 해독 2 / 회복 2 + 해독 2 / 힐러 빼고 회복 4 + 해독 1)을 추가하고 독늪 Lv8–14 승률(중앙값/하위 25%)을 출력한다.
+1. 곡선 도구에 "물약 지참" 조건(없음 / 해독 2 / 회복 2 + 해독 2 / 힐러 빼고 회복 4 + 해독 1)을 추가하고 독늪 Lv8–14 승률(중앙값/하위 25%)을 출력한다. 참고: Claude가 잰 값은 Docs/depth.md 3a "밸런스 기준"에 있다(해독 4개 기준).
 2. first-hour.ts를 6시간까지 돌릴 수 있게 하고, 흉내 플레이어가 연금술 공방을 짓고 독늪 전에 물약을 만들어 들고 가게 한다.
-3. Docs/depth.md 3a "밸런스 기준"(물약 없이 하위 25% 약 30%, 해독 2개면 60% 이상; 물약 값은 반복 보상의 20–30%)과 비교해 메모에 적는다.
+3. Docs/depth.md 3a "밸런스 기준"(해독 4개면 하위 25%도 60% 이상; 물약 값은 반복 보상의 20–30%)과 비교하고, 힐러 없이 회복 물약으로 깨지는지도 메모에 적는다.
 ```
 
 메모:
