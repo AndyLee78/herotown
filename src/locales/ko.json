@@ -534,7 +534,8 @@
     "skipHour": "+1시간",
     "skipSeason": "+1계절",
     "resetOffset": "오프셋 초기화",
-    "icons": "아이콘"
+    "icons": "아이콘",
+    "previews": "던전 미리보기"
   },
   "ui": {
     "level": "Lv {{level}}",

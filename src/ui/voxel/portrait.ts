@@ -1,6 +1,5 @@
 import * as THREE from 'three'
 import type { Hero } from '../../core'
-import { battleTheme } from './BattleScene'
 import { buildCharacter, idlePose, type Rig } from './character'
 import { buildEnemy } from './enemies'
 import { Builder, disposeTree } from './kit'
@@ -60,48 +59,426 @@ export function monsterPortraitUrl(refId: string): string {
   return url
 }
 
-// One still of the dungeon: the battle theme's floor, wall, torch and crystal, plus the boss.
-export function dungeonPreviewUrl(dungeonId: string, tier: number, bossId: string): string {
-  const key = `dungeon:${dungeonId}`
+const PREVIEW_W = 360
+const PREVIEW_H = 168
+
+// One cached still of the dungeon entrance: sky, distant ridge, the doorway, and a small boss.
+export function dungeonPreviewUrl(dungeonId: string, tier: number, bossId: string, locked = false): string {
+  const key = `dungeon:${dungeonId}:${locked ? 'locked' : 'open'}`
   const cached = cache.get(key)
   if (cached) {
     return cached
   }
-  const theme = battleTheme(tier)
+  const mood = ENTRANCE[dungeonId] ?? ENTRANCE.hill_cave
+  void tier
   const { renderer, scene, camera } = getStage()
-  renderer.setClearColor(theme.sky, 1)
-  renderer.setSize(360, 168, false)
-  const room = new Builder()
-  for (let x = -3; x <= 3; x += 1) {
-    room.box(1, 0.3, 1, theme.floor[x & 1 ? 0 : 1] ?? theme.floor[0], x, -0.15, 0.4)
-    room.box(1, 1.5, 0.4, theme.wall[x & 1 ? 0 : 2] ?? theme.wall[0], x, 0.75, -1.1)
+  const hemi = scene.children.find((child): child is THREE.HemisphereLight => child instanceof THREE.HemisphereLight)
+  const sun = scene.children.find((child): child is THREE.DirectionalLight => child instanceof THREE.DirectionalLight)
+  const saved = {
+    sky: hemi?.color.clone(),
+    ground: hemi?.groundColor.clone(),
+    hemi: hemi?.intensity,
+    sun: sun?.color.clone(),
+    sunLevel: sun?.intensity,
+    sunPos: sun?.position.clone(),
+    far: camera.far,
   }
-  room.box(0.1, 0.4, 0.1, '#3a2a20', -2.2, 1.15, -0.75).box(0.16, 0.18, 0.16, theme.light, -2.2, 1.42, -0.75, { glow: true })
-  room.box(0.22, 0.5, 0.22, theme.crystal, 2.3, 0.25, 0.2, { glow: true })
-  const built = room.build()
-  const boss = buildEnemy(bossId)
-  if (isRig(boss)) {
-    idlePose(boss, 0, 0)
+  if (hemi) {
+    hemi.color.set(mood.hemiSky)
+    hemi.groundColor.set(mood.hemiGround)
+    hemi.intensity = mood.hemiLevel * (locked ? 0.3 : 1)
   }
-  boss.group.position.set(0.15, 0, 0.55)
-  boss.group.rotation.y = -0.35
-  scene.add(built, boss.group)
-  const halfW = 3.4
-  const halfH = halfW * (168 / 360)
+  if (sun) {
+    sun.color.set(mood.sun)
+    sun.intensity = mood.sunLevel * (locked ? 0.3 : 1)
+    sun.position.set(mood.sunX, 6, 4)
+  }
+  renderer.setClearColor(tone(mood.skyBottom, locked), 1)
+  renderer.setSize(PREVIEW_W, PREVIEW_H, false)
+  const halfW = 4.7
+  const halfH = halfW * (PREVIEW_H / PREVIEW_W)
   camera.left = -halfW
   camera.right = halfW
   camera.top = halfH
   camera.bottom = -halfH
-  camera.position.set(1.6, 1.7, 4.2)
-  camera.lookAt(0, 0.7, 0)
+  camera.far = 80
+  camera.position.set(4.6, 4.2, 6.4)
+  camera.lookAt(0, 1.05, -0.6)
   camera.updateProjectionMatrix()
+
+  const sky = makeSky(mood.skyTop, mood.skyBottom, locked)
+  const aim = new THREE.Vector3(0, 1.05, -0.6)
+  const back = aim.clone().sub(camera.position).normalize()
+  sky.position.copy(aim).addScaledVector(back, 10)
+  sky.lookAt(camera.position)
+
+  const land = new Builder()
+  ridge(land, locked, mood.ridge)
+  slab(land, locked, mood.ground)
+  mood.draw(land, locked)
+  if (locked) {
+    question(land)
+  }
+  const built = land.build({ castShadow: false, receiveShadow: false })
+  const water = mood.water ? waterSheet(locked) : null
+  const boss = buildEnemy(bossId)
+  if (isRig(boss)) {
+    idlePose(boss, 0, 0)
+  }
+  const scale = (halfH * 2 * 0.4) / Math.max(boss.height, 0.2)
+  boss.group.scale.setScalar(scale)
+  boss.group.position.set(0.15, 0.16, 0.7)
+  boss.group.rotation.y = 0.55
+  if (locked) {
+    blacken(boss.group)
+  }
+  scene.add(sky, built, boss.group)
+  if (water) {
+    scene.add(water)
+  }
   renderer.render(scene, camera)
   const url = renderer.domElement.toDataURL('image/png')
-  scene.remove(built, boss.group)
+  scene.remove(sky, built, boss.group)
+  if (water) {
+    scene.remove(water)
+    disposeMesh(water)
+  }
+  disposeMesh(sky)
   disposeTree(built)
   disposeTree(boss.group)
+  if (hemi && saved.sky && saved.ground != null && saved.hemi != null) {
+    hemi.color.copy(saved.sky)
+    hemi.groundColor.copy(saved.ground)
+    hemi.intensity = saved.hemi
+  }
+  if (sun && saved.sun && saved.sunLevel != null && saved.sunPos) {
+    sun.color.copy(saved.sun)
+    sun.intensity = saved.sunLevel
+    sun.position.copy(saved.sunPos)
+  }
+  camera.far = saved.far
   cache.set(key, url)
   return url
+}
+
+type Entrance = {
+  skyTop: string
+  skyBottom: string
+  hemiSky: string
+  hemiGround: string
+  sun: string
+  sunLevel: number
+  hemiLevel: number
+  sunX: number
+  ridge: string
+  ground: [string, string]
+  water?: boolean
+  draw: (land: Builder, locked: boolean) => void
+}
+
+const ENTRANCE: Record<string, Entrance> = {
+  hill_cave: {
+    skyTop: '#ffd7a8',
+    skyBottom: '#e36a3c',
+    hemiSky: '#ffd0a0',
+    hemiGround: '#6e8f45',
+    sun: '#ffb15a',
+    sunLevel: 2.1,
+    hemiLevel: 1.3,
+    sunX: -3,
+    ridge: '#6d6248',
+    ground: ['#7eae58', '#6c9848'],
+    draw: hillCave,
+  },
+  moss_path: {
+    skyTop: '#8eae86',
+    skyBottom: '#2c4634',
+    hemiSky: '#b7d0a4',
+    hemiGround: '#3d5a38',
+    sun: '#ffe2a8',
+    sunLevel: 1.2,
+    hemiLevel: 1.15,
+    sunX: 2,
+    ridge: '#3c4a38',
+    ground: ['#5d7a48', '#4e6a3c'],
+    draw: mossPath,
+  },
+  abandoned_mine: {
+    skyTop: '#d5dbe0',
+    skyBottom: '#8d97a0',
+    hemiSky: '#e4e8ea',
+    hemiGround: '#6a645c',
+    sun: '#fff2dc',
+    sunLevel: 1.6,
+    hemiLevel: 1.2,
+    sunX: 3,
+    ridge: '#6a6762',
+    ground: ['#8a8174', '#7a7266'],
+    draw: abandonedMine,
+  },
+  deep_shaft: {
+    skyTop: '#4a5564',
+    skyBottom: '#1a2028',
+    hemiSky: '#8aa0b4',
+    hemiGround: '#3a342c',
+    sun: '#d8e4ee',
+    sunLevel: 0.7,
+    hemiLevel: 0.7,
+    sunX: 1,
+    ridge: '#2c3138',
+    ground: ['#4a463f', '#3e3a34'],
+    draw: deepShaft,
+  },
+  barrow: {
+    skyTop: '#4a3470',
+    skyBottom: '#160e28',
+    hemiSky: '#b9a4e0',
+    hemiGround: '#3a3048',
+    sun: '#c8b4ee',
+    sunLevel: 0.8,
+    hemiLevel: 0.75,
+    sunX: -2,
+    ridge: '#3a3450',
+    ground: ['#4a5344', '#3e4638'],
+    draw: barrow,
+  },
+  sunken_crypt: {
+    skyTop: '#24506c',
+    skyBottom: '#0c2030',
+    hemiSky: '#8ec4d8',
+    hemiGround: '#1e4a58',
+    sun: '#9fd0e4',
+    sunLevel: 0.85,
+    hemiLevel: 0.8,
+    sunX: 2,
+    ridge: '#1e3848',
+    ground: ['#3d5a52', '#314a44'],
+    water: true,
+    draw: sunkenCrypt,
+  },
+}
+
+function hillCave(land: Builder, locked: boolean) {
+  tree(land, locked, -2.5, -0.2, 1.35, '#3f7a34', '#2f6a2c')
+  tree(land, locked, 2.7, -0.6, 1.6, '#4c8a3c', '#3a7430')
+  tree(land, locked, -3.4, 1.1, 1.05, '#5a9444', '#3e7c34')
+  arch(land, locked, 0, -1.15, '#5c564e', '#1a1614', '#6e675e')
+  land.box(0.7, 0.4, 0.55, tone('#8a8178', locked), 2.3, 0.28, 1.7)
+  land.box(0.4, 0.28, 0.35, tone('#6e675e', locked), 2.55, 0.5, 1.55)
+  land.box(0.35, 0.22, 0.3, tone('#7dae55', locked), -2.1, 0.18, 2.05)
+}
+
+function mossPath(land: Builder, locked: boolean) {
+  tree(land, locked, -2.8, -1.3, 2.15, '#2f6a38', '#245830')
+  tree(land, locked, 2.6, -1.1, 2.35, '#347444', '#2a6238')
+  tree(land, locked, -3.3, 0.6, 1.7, '#3d7a40', '#2e6434')
+  tree(land, locked, 3.3, 0.4, 1.55, '#2c6234', '#234e2c')
+  for (let step = 0; step < 5; step += 1) {
+    land.box(0.85, 0.14, 0.55, tone(step % 2 ? '#6d8a62' : '#7f9a70', locked), -0.15, 0.12, 1.6 - step * 0.55)
+    land.box(0.7, 0.08, 0.4, tone('#4e7a48', locked), -0.15, 0.2, 1.6 - step * 0.55)
+  }
+  arch(land, locked, 0.1, -1.35, '#5e6a58', '#142018', '#6e7a66')
+  for (const [x, y, z] of [[-1.4, 1.5, 0.2], [1.6, 1.9, -0.4], [0.8, 1.2, 1.1], [-0.6, 2.1, 0.8]] as const) {
+    land.box(0.12, 0.12, 0.12, tone('#d8f08a', locked), x, y, z, { glow: true })
+  }
+  land.box(0.45, 0.28, 0.4, tone('#6a7a58', locked), 2.2, 0.22, 1.85)
+}
+
+function abandonedMine(land: Builder, locked: boolean) {
+  land.box(4.4, 2.6, 1.3, tone('#7a756e', locked), 0, 1.3, -1.7)
+  land.box(3.2, 1.8, 0.5, tone('#2a2622', locked), 0, 0.9, -1.15)
+  timber(land, locked, 0, -1.05)
+  for (let z = -0.6; z <= 1.8; z += 0.45) {
+    land.box(0.08, 0.08, 0.4, tone('#5c5148', locked), -0.28, 0.12, z)
+    land.box(0.08, 0.08, 0.4, tone('#5c5148', locked), 0.28, 0.12, z)
+    land.box(0.7, 0.05, 0.08, tone('#6a5a48', locked), 0, 0.1, z)
+  }
+  land.box(0.7, 0.45, 0.5, tone('#6b5344', locked), 0.15, 0.4, 1.15)
+  land.box(0.85, 0.28, 0.62, tone('#4a4038', locked), 0.15, 0.62, 1.15)
+  land.box(0.12, 0.55, 0.12, tone('#3a2a20', locked), -2.15, 0.45, 1.5)
+  land.box(0.22, 0.22, 0.22, tone('#ffb15a', locked), -2.15, 0.82, 1.5, { glow: true })
+  land.box(0.55, 0.32, 0.4, tone('#8a8174', locked), 2.35, 0.24, 1.9)
+}
+
+function deepShaft(land: Builder, locked: boolean) {
+  land.box(2.4, 0.2, 2.2, tone('#1a1816', locked), 0, 0.2, -0.3)
+  land.box(0.16, 2.3, 0.16, tone('#8a6a42', locked), -1.15, 1.15, -1.15)
+  land.box(0.16, 2.3, 0.16, tone('#8a6a42', locked), 1.15, 1.15, -1.15)
+  land.box(0.16, 1.5, 0.16, tone('#8a6a42', locked), -1.15, 0.75, 0.55)
+  land.box(0.16, 1.5, 0.16, tone('#8a6a42', locked), 1.15, 0.75, 0.55)
+  land.box(2.5, 0.14, 0.14, tone('#a07a48', locked), 0, 2.25, -1.15)
+  land.box(0.14, 0.14, 1.9, tone('#a07a48', locked), -1.15, 1.45, -0.3)
+  land.box(0.14, 0.14, 1.9, tone('#a07a48', locked), 1.15, 1.45, -0.3)
+  land.box(0.55, 0.55, 0.16, tone('#6a5a48', locked), 0, 2.15, -1.15)
+  land.box(0.16, 0.16, 0.16, tone('#c8b090', locked), 0, 2.15, -1.05)
+  land.box(0.06, 1.7, 0.06, tone('#c2b6a2', locked), 0, 1.2, -0.85)
+  land.box(0.28, 0.7, 0.28, tone('#ffe08a', locked), 1.7, 0.55, 0.4, { glow: true })
+  land.box(0.4, 0.22, 0.35, tone('#5a5048', locked), -2.2, 0.2, 1.9)
+}
+
+function barrow(land: Builder, locked: boolean) {
+  land.box(0.7, 0.7, 0.7, tone('#f4efe4', locked), 2.15, 3.15, -2.2, { glow: true })
+  land.box(0.28, 0.08, 0.28, tone('#f4efe4', locked), 2.15, 3.15, -2.2, { glow: true })
+  arch(land, locked, 0, -1.2, '#6a645c', '#120e18', '#7a746c')
+  land.box(0.9, 1.15, 0.18, tone('#5a544c', locked), 0, 0.65, -1.05)
+  for (const [x, z] of [[-1.8, 0.2], [-2.3, 1.2], [1.7, 0.35], [2.2, 1.3]] as const) {
+    land.box(0.28, 0.62, 0.1, tone('#8a847c', locked), x, 0.4, z)
+    land.box(0.18, 0.18, 0.12, tone('#6a645c', locked), x, 0.78, z)
+  }
+  land.box(0.22, 1.3, 0.22, tone('#4a3828', locked), -2.7, 0.65, -0.4)
+  land.box(0.7, 0.1, 0.1, tone('#3a2c22', locked), -2.35, 1.15, -0.4, { rz: 0.5 })
+  land.box(0.55, 0.1, 0.1, tone('#3a2c22', locked), -3.05, 1.25, -0.4, { rz: -0.6 })
+  land.box(0.4, 0.2, 0.3, tone('#5a5448', locked), 2.4, 0.18, 1.95)
+}
+
+function sunkenCrypt(land: Builder, locked: boolean) {
+  arch(land, locked, 0, -1.35, '#4a6670', '#07141c', '#5a7680')
+  land.box(0.45, 1.35, 0.45, tone('#6a7c84', locked), -1.9, 0.67, -0.2)
+  land.box(0.4, 0.55, 0.4, tone('#5a6c74', locked), -1.85, 1.5, -0.15)
+  land.box(0.4, 0.7, 0.4, tone('#647880', locked), 1.85, 0.35, 0.3)
+  land.box(0.55, 0.28, 0.5, tone('#7a8c90', locked), 1.7, 0.14, 0.55)
+  land.box(0.32, 0.7, 0.32, tone('#b48cff', locked), -2.3, 0.5, 1.15, { glow: true })
+  land.box(0.22, 0.45, 0.22, tone('#c9a6ff', locked), 2.15, 0.4, 1.55, { glow: true })
+  land.box(0.5, 0.18, 0.35, tone('#4a5c60', locked), -2.5, 0.16, 1.9)
+}
+
+function ridge(land: Builder, locked: boolean, color: string) {
+  const peaks: Array<[number, number, number]> = [
+    [-3.6, 1.5, 2.1],
+    [-1.5, 2.05, 2.4],
+    [0.7, 1.35, 1.8],
+    [2.8, 1.85, 2.2],
+    [4.6, 1.15, 1.6],
+  ]
+  for (const [x, height, width] of peaks) {
+    land.box(width, height, 1.4, tone(color, locked), x, height / 2 - 0.1, -3.5)
+  }
+}
+
+function slab(land: Builder, locked: boolean, colors: [string, string]) {
+  land.box(14, 0.35, 12, tone(colors[0], locked), 0, -0.16, 0.4)
+  for (let x = -4; x <= 4; x += 1) {
+    for (let z = -1; z <= 3; z += 1) {
+      land.box(0.96, 0.12, 0.96, tone((x + z) % 2 === 0 ? colors[0] : colors[1], locked), x, 0.08, z)
+    }
+  }
+}
+
+function arch(land: Builder, locked: boolean, x: number, z: number, stone: string, mouth: string, cap: string) {
+  land.box(0.55, 1.7, 0.75, tone(stone, locked), x - 0.95, 0.85, z)
+  land.box(0.55, 1.7, 0.75, tone(stone, locked), x + 0.95, 0.85, z)
+  land.box(2.45, 0.48, 0.75, tone(cap, locked), x, 1.85, z)
+  land.box(1.2, 1.15, 0.4, tone(mouth, locked), x, 0.72, z + 0.08)
+}
+
+function timber(land: Builder, locked: boolean, x: number, z: number) {
+  const wood = tone('#a07848', locked)
+  land.box(0.16, 1.7, 0.16, wood, x - 0.85, 0.85, z)
+  land.box(0.16, 1.7, 0.16, wood, x + 0.85, 0.85, z)
+  land.box(1.9, 0.16, 0.16, wood, x, 1.7, z)
+  land.box(0.14, 1.15, 0.14, tone('#c4a06a', locked), x - 0.55, 0.7, z + 0.15, { rz: 0.15 })
+  land.box(0.14, 1.15, 0.14, tone('#c4a06a', locked), x + 0.55, 0.7, z + 0.15, { rz: -0.15 })
+}
+
+function tree(land: Builder, locked: boolean, x: number, z: number, height: number, leaf: string, shadeLeaf: string) {
+  land.box(0.28, height, 0.28, tone('#6b4630', locked), x, height / 2, z)
+  land.box(1.05, 0.7, 1.05, tone(leaf, locked), x, height + 0.15, z)
+  land.box(0.75, 0.5, 0.75, tone(shadeLeaf, locked), x, height + 0.55, z)
+}
+
+function question(land: Builder) {
+  const cells: Array<[number, number]> = [
+    [0, 6],
+    [1, 6],
+    [2, 6],
+    [-1, 5],
+    [3, 5],
+    [3, 4],
+    [2, 3],
+    [1, 2],
+    [1, 1],
+    [1, -1],
+  ]
+  for (const [x, y] of cells) {
+    land.box(0.46, 0.46, 0.28, '#5c3b22', x * 0.4, 1.25 + y * 0.4, 1.05, { glow: true })
+    land.box(0.34, 0.34, 0.34, '#fff6e4', x * 0.4, 1.25 + y * 0.4, 1.12, { glow: true })
+  }
+}
+
+function waterSheet(locked: boolean): THREE.Mesh {
+  const color = new THREE.Color('#3d8ec8')
+  if (locked) {
+    color.multiplyScalar(0.3)
+  }
+  const mesh = new THREE.Mesh(
+    new THREE.BoxGeometry(8, 0.1, 6),
+    new THREE.MeshLambertMaterial({ color, transparent: true, opacity: 0.55 }),
+  )
+  mesh.position.set(0, 0.18, 0.5)
+  return mesh
+}
+
+function makeSky(top: string, bottom: string, locked: boolean): THREE.Mesh {
+  const geometry = new THREE.PlaneGeometry(18, 10, 1, 1)
+  const position = geometry.getAttribute('position')
+  let minY = Infinity
+  let maxY = -Infinity
+  for (let index = 0; index < position.count; index += 1) {
+    const y = position.getY(index)
+    minY = Math.min(minY, y)
+    maxY = Math.max(maxY, y)
+  }
+  const hi = new THREE.Color(top)
+  const lo = new THREE.Color(bottom)
+  if (locked) {
+    hi.multiplyScalar(0.3)
+    lo.multiplyScalar(0.3)
+  }
+  const colors = new Float32Array(position.count * 3)
+  for (let index = 0; index < position.count; index += 1) {
+    const blend = (position.getY(index) - minY) / (maxY - minY || 1)
+    const color = lo.clone().lerp(hi, blend)
+    colors[index * 3] = color.r
+    colors[index * 3 + 1] = color.g
+    colors[index * 3 + 2] = color.b
+  }
+  geometry.setAttribute('color', new THREE.BufferAttribute(colors, 3))
+  return new THREE.Mesh(geometry, new THREE.MeshBasicMaterial({ vertexColors: true, side: THREE.DoubleSide }))
+}
+
+function blacken(root: THREE.Object3D) {
+  root.traverse((object) => {
+    if (!(object instanceof THREE.Mesh)) {
+      return
+    }
+    const color = object.geometry.getAttribute('color')
+    if (!color) {
+      return
+    }
+    for (let index = 0; index < color.count; index += 1) {
+      color.setXYZ(index, 0.02, 0.02, 0.03)
+    }
+    color.needsUpdate = true
+  })
+}
+
+function tone(hex: string, locked: boolean): string {
+  if (!locked) {
+    return hex
+  }
+  return `#${new THREE.Color(hex).multiplyScalar(0.3).getHexString()}`
+}
+
+function disposeMesh(mesh: THREE.Mesh) {
+  mesh.geometry.dispose()
+  const material = mesh.material
+  if (Array.isArray(material)) {
+    for (const entry of material) {
+      entry.dispose()
+    }
+  } else {
+    material.dispose()
+  }
 }
 
 function isRig(actor: { kind?: string }): actor is Rig {

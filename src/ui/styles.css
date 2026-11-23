@@ -1443,19 +1443,18 @@ input[type='range'] {
   object-fit: cover;
 }
 
-.dungeon-preview.locked img {
-  filter: brightness(0.28) saturate(0.4);
+.preview-sheet {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
 }
 
-.dungeon-preview.locked span {
-  position: absolute;
-  inset: 0;
-  display: grid;
-  place-items: center;
-  color: #fff8ec;
-  font-family: 'Jua', system-ui, sans-serif;
-  font-size: 64px;
-  text-shadow: 0 3px 0 #3b2a1e;
+.preview-sheet img {
+  width: 168px;
+  height: 78px;
+  object-fit: cover;
+  border-radius: 8px;
+  background: #2a2622;
 }
 
 .stamp-stage {

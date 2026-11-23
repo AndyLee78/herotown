@@ -21,6 +21,7 @@ import {
 import { gameNow, gameOffset, offsetParts, subscribeGameClock } from '../clock'
 import { loadSoundPrefs, saveSoundPrefs, SOUND_NAMES } from '../sound'
 import { canReplay } from '../voxel/replay'
+import { dungeonPreviewUrl } from '../voxel/portrait'
 import { bonusValue } from './heroScreens'
 import { Bar, Chip, CostList, Res, Window, affordable, formatEntry, itemLabel, useNow, waitLabel } from './kit'
 
@@ -380,6 +381,8 @@ export function Settings({
           </div>
           <h3 className="section-title">{t('debug.icons')}</h3>
           <IconSheet />
+          <h3 className="section-title">{t('debug.previews')}</h3>
+          <DungeonPreviewSheet />
         </>
       ) : null}
     </>
@@ -421,6 +424,23 @@ export function Absence({ save, busy, onWatch, onClose }: { save: GameState; bus
         </button>
       </div>
     </Window>
+  )
+}
+
+function DungeonPreviewSheet() {
+  const shots = dungeons.map((dungeon) => ({
+    id: dungeon.id,
+    tier: dungeon.tier,
+    boss: dungeon.floors[dungeon.floors.length - 1]?.monsters[0] ?? 'slime',
+  }))
+  const first = shots[0]
+  return (
+    <div className="preview-sheet">
+      {shots.map((shot) => (
+        <img key={shot.id} src={dungeonPreviewUrl(shot.id, shot.tier, shot.boss)} alt="" width={168} height={78} />
+      ))}
+      {first ? <img src={dungeonPreviewUrl(first.id, first.tier, first.boss, true)} alt="" width={168} height={78} /> : null}
+    </div>
   )
 }
 

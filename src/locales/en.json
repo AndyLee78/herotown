@@ -534,7 +534,8 @@
     "skipHour": "+1 hour",
     "skipSeason": "+1 season",
     "resetOffset": "Reset offset",
-    "icons": "Icons"
+    "icons": "Icons",
+    "previews": "Dungeon previews"
   },
   "ui": {
     "level": "Lv {{level}}",

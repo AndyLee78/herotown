@@ -170,11 +170,10 @@ function DungeonBoard({ save, onAction, onPrepare }: { save: GameState; onAction
 }
 
 function DungeonStill({ dungeonId, tier, bossId, locked }: { dungeonId: string; tier: number; bossId: string; locked: boolean }) {
-  const src = useMemo(() => dungeonPreviewUrl(dungeonId, tier, bossId), [dungeonId, tier, bossId])
+  const src = useMemo(() => dungeonPreviewUrl(dungeonId, tier, bossId, locked), [dungeonId, tier, bossId, locked])
   return (
-    <div className={locked ? 'dungeon-preview locked' : 'dungeon-preview'}>
+    <div className="dungeon-preview">
       <img src={src} alt="" />
-      {locked ? <span>?</span> : null}
     </div>
   )
 }
