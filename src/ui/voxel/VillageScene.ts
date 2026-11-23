@@ -318,6 +318,19 @@ export class VillageScene {
     })
   }
 
+  private bobCrystals(time: number) {
+    this.lots.get('magic')?.group.traverse((object) => {
+      if (object.name !== 'crystal') {
+        return
+      }
+      const base = object.userData.baseY
+      if (typeof base === 'number') {
+        object.position.y = base + Math.sin(time * 1.8 + base * 3) * 0.12
+        object.rotation.y = time * 0.6 + base
+      }
+    })
+  }
+
   private bobFountain(time: number) {
     this.lots.get('fountain')?.group.traverse((object) => {
       if (object.name !== 'jet') {
@@ -659,6 +672,7 @@ export class VillageScene {
     }
     this.bobFountain(time)
     this.bobSmoke(time)
+    this.bobCrystals(time)
     this.stepBursts(delta)
     this.controls.update()
     this.clampPan()

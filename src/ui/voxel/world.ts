@@ -17,10 +17,9 @@ export const LOTS: Record<BuildingId, Lot> = {
   temple: { x: -1.5, z: -10.5, w: 4, d: 3.2 },
   // The lucky fountain stands in the middle of the square (Docs/fountain.md).
   fountain: { x: 0, z: 0, w: 2.2, d: 2.2 },
-  // Placeholder spot for the alchemy workshop; task 37 gives it a model.
   alchemy: { x: -10.5, z: -1.5, w: 3, d: 2.6 },
-  // Placeholder spot for the magic workshop until it gets a model (3b).
-  magic: { x: 10.5, z: -2, w: 3, d: 2.6 },
+  // East of the temple, facing the plaza, so floating crystals catch the light.
+  magic: { x: 5.2, z: -10.2, w: 3, d: 2.6 },
 }
 
 export const PLAZA = { min: -5.3, max: 5.3 }
@@ -220,6 +219,9 @@ export function buildLot(id: BuildingId, level: number, constructing: boolean): 
     const grow = level - 1
     group.add(alchemySmoke(level, lot.w - 0.6 + Math.min(0.6, grow * 0.3), lot.d - 0.4 + Math.min(0.4, grow * 0.2)))
   }
+  if (id === 'magic' && level > 0) {
+    group.add(magicCrystals(level))
+  }
   group.position.set(lot.x, 0, lot.z)
   return { group, top }
 }
@@ -315,6 +317,48 @@ function drawAlchemy(b: Builder, w: number, d: number, level: number): number {
   return top + 0.4
 }
 
+function drawMagic(b: Builder, w: number, d: number, level: number): number {
+  const top = house(b, { w, d, h: 1.4 + (level - 1) * 0.15, wall: '#d8cce8', roof: '#6b4aa8', timber: true })
+  b.box(0.5, 0.9, 0.5, '#5a4680', w * 0.28, top + 0.2, -d * 0.15)
+  b.box(0.28, 0.28, 0.28, '#c79bff', w * 0.28, top + 0.75, -d * 0.15, { glow: true })
+  b.box(0.7, 0.12, 0.2, '#4a3a68', 0, 0.55, d / 2 + 0.05)
+  if (level >= 2) {
+    b.box(0.35, 0.08, 0.55, '#8a6ab8', -w * 0.3, 0.7, d * 0.2)
+    for (const x of [-0.45, -0.25, -0.05]) {
+      b.box(0.1, 0.22, 0.1, '#e6d4ff', x, 0.88, d * 0.2, { glow: true })
+    }
+  }
+  if (level >= 3) {
+    b.box(0.4, 0.18, 0.08, '#d9b54a', -w * 0.25, 1.2, d / 2 + 0.05)
+  }
+  return top + 1
+}
+
+function magicCrystals(level: number): THREE.Group {
+  const group = new THREE.Group()
+  const materials: THREE.Material[] = []
+  const add = (x: number, y: number, z: number, size: number, hex: number) => {
+    const material = new THREE.MeshBasicMaterial({ color: hex, transparent: true, opacity: 0.85 })
+    materials.push(material)
+    const mesh = new THREE.Mesh(new THREE.BoxGeometry(size, size * 1.4, size), material)
+    mesh.name = 'crystal'
+    mesh.position.set(x, y, z)
+    mesh.userData.baseY = y
+    group.add(mesh)
+  }
+  add(0.85, 1.55, 0.35, 0.22, 0xb48cff)
+  add(-0.7, 1.85, 0.15, 0.18, 0xd7c4ff)
+  add(0.2, 2.15, -0.45, 0.16, 0x9fe8ff)
+  if (level >= 2) {
+    add(-0.2, 2.45, 0.55, 0.14, 0xe6d4ff)
+  }
+  if (level >= 3) {
+    add(0.55, 2.7, -0.2, 0.2, 0xffe56a)
+  }
+  group.userData.materials = materials
+  return group
+}
+
 function alchemySmoke(level: number, w: number, d: number): THREE.Group {
   const group = new THREE.Group()
   const materials: THREE.Material[] = []
@@ -399,6 +443,9 @@ function drawBuilding(b: Builder, id: BuildingId, lot: Lot, level: number): numb
   }
   if (id === 'alchemy') {
     return drawAlchemy(b, w, d, level)
+  }
+  if (id === 'magic') {
+    return drawMagic(b, w, d, level)
   }
   if (id === 'smith') {
     const top = house(b, { w, d, h: 1.4 + grow * 0.25, wall: '#9a7a5c', roof: '#6d6d6d', steps: 3 })

@@ -17,6 +17,11 @@ export type ReplayStep =
   | (Base & { type: 'dot'; targetId: string; amount: number })
   | (Base & { type: 'status'; targetId: string; status: StatusMark; on: boolean })
   | (Base & { type: 'potion'; actorId: string; potion: string })
+  | (Base & { type: 'trap' })
+  | (Base & { type: 'trapHit'; targetId: string; amount: number })
+  | (Base & { type: 'disarm'; actorId: string })
+  | (Base & { type: 'alert'; actorId: string })
+  | (Base & { type: 'ambush'; actorId: string; targetId: string; amount: number })
   | (Base & { type: 'clear'; floor: number })
   | (Base & { type: 'retreat' })
   | (Base & { type: 'end'; victory: boolean })
@@ -41,6 +46,12 @@ export function buildSteps(report: DungeonReport): ReplayStep[] {
         break
       }
       case 'log.attack':
+        // An ambush logs first, then the strike; fold the damage into that step.
+        if (previous?.type === 'ambush' && previous.actorId === actorId && previous.targetId === targetId && entry.tick === lastTick) {
+          previous.amount = amount
+          previous.log = index
+          break
+        }
         // One actor hitting several targets on the same tick is an area attack.
         if (previous?.type === 'attack' && previous.actorId === actorId && entry.tick === lastTick) {
           previous.hits.push({ targetId, amount })
@@ -74,6 +85,21 @@ export function buildSteps(report: DungeonReport): ReplayStep[] {
         break
       case 'log.potion':
         steps.push({ type: 'potion', actorId, potion: text(entry, 'potion'), log: index, downs: [] })
+        break
+      case 'log.trap':
+        steps.push({ type: 'trap', log: index, downs: [] })
+        break
+      case 'log.trapHit':
+        steps.push({ type: 'trapHit', targetId: actorId, amount, log: index, downs: [] })
+        break
+      case 'log.disarm':
+        steps.push({ type: 'disarm', actorId, log: index, downs: [] })
+        break
+      case 'log.alert':
+        steps.push({ type: 'alert', actorId, log: index, downs: [] })
+        break
+      case 'log.ambush':
+        steps.push({ type: 'ambush', actorId, targetId, amount: 0, log: index, downs: [] })
         break
       case 'log.down':
         if (previous) {

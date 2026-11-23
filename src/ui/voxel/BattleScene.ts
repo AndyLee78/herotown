@@ -9,7 +9,7 @@ import type { Hit, ReplayStep, StatusMark } from './replay'
 // Plays a dungeon report back as a 3D auto battle. The outcome is already
 // decided by the core; this only shows the steps in order.
 
-type AnimType = 'melee' | 'cast' | 'hit' | 'shout' | 'spawn' | 'die' | 'flee' | 'cheer' | 'drink'
+type AnimType = 'melee' | 'cast' | 'hit' | 'shout' | 'spawn' | 'die' | 'flee' | 'cheer' | 'drink' | 'disarm' | 'ambush'
 
 type Anim = {
   type: AnimType
@@ -69,6 +69,11 @@ const DURATION: Record<ReplayStep['type'], number> = {
   dot: 0.45,
   status: 0.35,
   potion: 0.7,
+  trap: 0.7,
+  trapHit: 0.35,
+  disarm: 0.75,
+  alert: 0.45,
+  ambush: 0.95,
   clear: 0.8,
   retreat: 1.4,
   end: 0,
@@ -391,6 +396,68 @@ export class BattleScene {
         })
         break
       }
+      case 'trap':
+        this.springTraps(instant)
+        break
+      case 'trapHit': {
+        const victim = this.fighters.get(step.targetId)
+        if (victim) {
+          this.damage(victim, step.amount, '#c9a36b', instant)
+        }
+        break
+      }
+      case 'disarm': {
+        const rogue = this.fighters.get(step.actorId)
+        this.act(step.actorId, 'disarm', instant, () => {
+          if (!rogue) {
+            return
+          }
+          this.burst(this.chest(rogue), '#d9b54a', 8)
+          const gear = gearIcon()
+          gear.position.set(0, 0.25, 0)
+          rogue.marks.add(gear)
+          window.setTimeout(() => {
+            rogue.marks.remove(gear)
+            disposeTree(gear)
+          }, 700)
+        })
+        break
+      }
+      case 'alert': {
+        const watcher = this.fighters.get(step.actorId)
+        if (watcher) {
+          this.number('!', '#ffe14a', watcher)
+          this.burst(new THREE.Vector3(watcher.root.position.x, watcher.actor.height + 0.4, watcher.root.position.z), '#ffe14a', 6)
+        }
+        break
+      }
+      case 'ambush': {
+        const hunter = this.fighters.get(step.actorId)
+        const prey = this.fighters.get(step.targetId)
+        if (!hunter || !prey) {
+          break
+        }
+        const beside = prey.root.position.clone()
+        beside.x += hunter.side === 'enemy' ? -0.85 : 0.85
+        beside.z += 0.15
+        if (instant) {
+          this.damage(prey, step.amount, '#ff7a5a', true)
+          break
+        }
+        this.burst(hunter.root.position.clone().setY(0.4), '#6a6a6a', 10)
+        hunter.anim = {
+          type: 'ambush',
+          t: 0,
+          dur: DURATION.ambush,
+          to: beside,
+          onImpact: () => {
+            this.burst(beside.clone().setY(0.5), '#6a6a6a', 8)
+            this.damage(prey, step.amount, '#ff7a5a', false)
+          },
+          impactAt: 0.35,
+        }
+        break
+      }
       case 'clear':
         for (const fighter of this.fighters.values()) {
           if (fighter.side === 'hero' && fighter.alive && !instant) {
@@ -534,6 +601,29 @@ export class BattleScene {
     for (const status of ['poison', 'paralyze', 'slow', 'silence'] as const) {
       this.setStatus(fighter, status, false)
     }
+  }
+
+  private springTraps(instant: boolean) {
+    if (instant || this.quiet) {
+      return
+    }
+    let material = this.sparkMaterials.get('#8a8f98')
+    if (!material) {
+      material = new THREE.MeshBasicMaterial({ color: '#8a8f98' })
+      this.sparkMaterials.set('#8a8f98', material)
+    }
+    for (const [x, z] of [[-1.6, 0.4], [-0.4, -0.3], [0.8, 0.5], [-1.1, 1.1], [0.2, 1.0]] as const) {
+      const spike = new THREE.Mesh(this.sparkGeometry, material)
+      spike.scale.set(0.12, 0.7, 0.12)
+      spike.position.set(x, 0.02, z)
+      this.scene.add(spike)
+      this.particles.push({
+        mesh: spike,
+        life: 0.65,
+        velocity: new THREE.Vector3(0, 1.6, 0),
+      })
+    }
+    this.burst(new THREE.Vector3(-0.4, 0.3, 0.4), '#c9a36b', 14)
   }
 
   private holdBottle(fighter: Fighter) {
@@ -785,6 +875,24 @@ export class BattleScene {
       } else {
         actor.group.rotation.z = tilt * 0.2
       }
+    } else if (anim.type === 'disarm') {
+      root.position.y = fighter.home.y - 0.22 * Math.sin(Math.min(1, p * 2) * Math.PI)
+      if (humanoid) {
+        humanoid.armR.rotation.x = -1.2 - Math.sin(p * Math.PI * 4) * 0.5
+        humanoid.armL.rotation.x = -0.8 - Math.sin(p * Math.PI * 4 + 1) * 0.4
+        humanoid.legL.rotation.x = 0.6
+        humanoid.legR.rotation.x = 0.9
+      } else {
+        actor.group.position.y = -0.15
+      }
+    } else if (anim.type === 'ambush' && anim.to) {
+      const k = p < 0.35 ? easeOut(p / 0.35) : p < 0.55 ? 1 : 1 - easeIn((p - 0.55) / 0.45)
+      root.position.lerpVectors(fighter.home, anim.to, k)
+      if (p < 0.2 || p > 0.8) {
+        actor.group.scale.setScalar(0.2 + Math.min(1, p < 0.2 ? p / 0.2 : (1 - p) / 0.2) * 0.8)
+      } else {
+        actor.group.scale.setScalar(1)
+      }
     } else if (anim.type === 'cheer') {
       actor.group.position.y = Math.abs(Math.sin(p * Math.PI * 3)) * 0.35
       if (humanoid) {
@@ -925,6 +1033,15 @@ export class BattleScene {
 
 function enemyBolt(fighter: Fighter): string {
   return fighter.caster ? '#b48cff' : '#a6e05a'
+}
+
+function gearIcon(): THREE.Group {
+  return new Builder()
+    .box(0.22, 0.06, 0.06, '#d9b54a')
+    .box(0.06, 0.22, 0.06, '#d9b54a')
+    .box(0.14, 0.14, 0.06, '#c9a36b')
+    .box(0.06, 0.06, 0.08, '#6b4a30')
+    .build({ castShadow: false })
 }
 
 function statusIcon(status: StatusMark): THREE.Group {
