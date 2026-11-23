@@ -264,26 +264,26 @@
         },
         {
           "level": 2,
-          "gold": 40,
+          "gold": 60,
           "wood": 0,
-          "stone": 15,
+          "stone": 20,
           "iron": 0,
           "ms": 300000
         },
         {
           "level": 3,
-          "gold": 90,
+          "gold": 120,
           "wood": 0,
-          "stone": 30,
+          "stone": 40,
           "iron": 0,
           "ms": 600000
         },
         {
           "level": 4,
-          "gold": 160,
+          "gold": 200,
           "wood": 0,
-          "stone": 50,
-          "iron": 5,
+          "stone": 60,
+          "iron": 10,
           "ms": 1200000
         }
       ]

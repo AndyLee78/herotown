@@ -93,3 +93,42 @@ describe('lucky fountain', () => {
     expect(loaded.fountain.wishes).toBe(fountainRules.startWishes)
   })
 })
+
+describe('review 5322f86 fixes', () => {
+  it('fills at the old level until an upgrade finishes, the same in one catch-up or two', () => {
+    const level2 = fountainLevel(2)
+    const emptyAt = now
+    const finishAt = now + level2.intervalMs
+    const start = town({
+      fountain: { ...freshFountain(emptyAt), wishes: 0 },
+      construction: { id: 'fountain', finishAt },
+    })
+    const end = finishAt + 1000
+    const once = reduce(start, { type: 'catchUp', now: end })
+    const twice = reduce(reduce(start, { type: 'catchUp', now: finishAt - 1000 }), { type: 'catchUp', now: end })
+    expect(once.buildings.fountain).toBe(2)
+    // Level 2's shorter interval must not count the time spent under construction at level 1.
+    expect(once.fountain.wishes).toBe(Math.floor((finishAt - emptyAt) / level1.intervalMs))
+    expect(twice.fountain).toEqual(once.fountain)
+  })
+
+  it('starts the new slot filling when a full fountain finishes its upgrade', () => {
+    const level2 = fountainLevel(2)
+    const finishAt = now + 10_000
+    const start = town({ fountain: { ...freshFountain(now), wishes: level1.cap }, construction: { id: 'fountain', finishAt } })
+    const done = reduce(start, { type: 'catchUp', now: finishAt + level2.intervalMs - 1 })
+    expect(done.fountain.wishes).toBe(level1.cap)
+    expect(fountainNextAt(done, finishAt + level2.intervalMs - 1)).toBe(finishAt + level2.intervalMs)
+  })
+
+  it('never charges the same time twice when the clock goes backwards and returns', () => {
+    const state = town()
+    const first = reduce(state, { type: 'wish', now })
+    const back = reduce(first, { type: 'wish', now: now - level1.intervalMs })
+    expect(back.notice).toBe('noWish')
+    const returned = reduce(back, { type: 'wish', now })
+    expect(returned.notice).toBe('noWish')
+    expect(returned.fountain.made).toBe(1)
+    expect(reduce(returned, { type: 'wish', now: now + level1.intervalMs }).fountain.made).toBe(2)
+  })
+})

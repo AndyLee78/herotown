@@ -2,7 +2,7 @@
   "levels": [
     {
       "level": 1,
-      "intervalMs": 60000,
+      "intervalMs": 90000,
       "cap": 5,
       "gold": 2,
       "jackpotChance": 0.02,
@@ -10,25 +10,25 @@
     },
     {
       "level": 2,
-      "intervalMs": 50000,
+      "intervalMs": 75000,
       "cap": 6,
-      "gold": 3,
+      "gold": 2,
       "jackpotChance": 0.025,
       "jackpotMultiplier": 15
     },
     {
       "level": 3,
-      "intervalMs": 40000,
+      "intervalMs": 65000,
       "cap": 8,
-      "gold": 3,
+      "gold": 2,
       "jackpotChance": 0.03,
       "jackpotMultiplier": 20
     },
     {
       "level": 4,
-      "intervalMs": 35000,
+      "intervalMs": 85000,
       "cap": 10,
-      "gold": 4,
+      "gold": 3,
       "jackpotChance": 0.03,
       "jackpotMultiplier": 20
     }

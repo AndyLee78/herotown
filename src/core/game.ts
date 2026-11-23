@@ -1,4 +1,4 @@
-import { chargeFountain, freshFountain, makeWish, readFountain, type FountainState } from './fountain'
+import { chargeFountain, freshFountain, makeWish, readFountain, upgradeFountain, type FountainState } from './fountain'
 import { claimGuide, guideSteps } from './guide'
 import { adRules, classById, classList, combatRules, dungeonById, dungeons, expeditionRules, lifeRules, progression, retirementRules, smithRules, timeRules, villageRules } from './data'
 import { forgeGear, normalizeGear, recipeById } from './gear'
@@ -831,8 +831,11 @@ function finishConstruction(state: GameState, now: number, completed: string[]):
   }
   const id = state.construction.id
   completed.push(id)
+  // The fountain fills at its old level until the upgrade is done (Docs/fountain.md 2).
+  const fountain = id === 'fountain' ? upgradeFountain(state.fountain, state.buildings.fountain, state.buildings.fountain + 1, state.construction.finishAt) : state.fountain
   return {
     ...state,
+    fountain,
     construction: null,
     fame: state.fame + villageRules.buildingFame,
     buildings: { ...state.buildings, [id]: state.buildings[id] + 1 },

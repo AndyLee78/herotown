@@ -31,12 +31,13 @@ export function freshFountain(now: number): FountainState {
 // Brings the stored wishes up to `now`, keeping progress on the next one.
 export function chargeFountain(fountain: FountainState, level: number, now: number): FountainState {
   const rule = fountainLevel(level)
+  // Time never runs backwards for the fountain: an earlier clock fills nothing
+  // and moves nothing, so the same stretch can never be charged twice.
+  if (now < fountain.chargedAt) {
+    return fountain
+  }
   if (fountain.wishes >= rule.cap) {
     return fountain.chargedAt === now ? fountain : { ...fountain, wishes: rule.cap, chargedAt: now }
-  }
-  // A clock that went backwards just restarts the wish in progress.
-  if (now < fountain.chargedAt) {
-    return { ...fountain, chargedAt: now }
   }
   const gained = Math.floor((now - fountain.chargedAt) / rule.intervalMs)
   if (gained <= 0) {
@@ -44,6 +45,21 @@ export function chargeFountain(fountain: FountainState, level: number, now: numb
   }
   const wishes = Math.min(rule.cap, fountain.wishes + gained)
   return { ...fountain, wishes, chargedAt: wishes >= rule.cap ? now : fountain.chargedAt + gained * rule.intervalMs }
+}
+
+// An upgrade finishing at `at`: fill at the old level until then, then carry
+// the wish in progress over as the same share of the new interval, so the
+// new level never counts time spent at the old one.
+export function upgradeFountain(fountain: FountainState, from: number, to: number, at: number): FountainState {
+  const charged = chargeFountain(fountain, from, at)
+  const before = fountainLevel(from)
+  const after = fountainLevel(to)
+  if (charged.wishes >= before.cap) {
+    // Full at the old cap: the new slots start filling now.
+    return { ...charged, chargedAt: at }
+  }
+  const share = Math.min(1, Math.max(0, (at - charged.chargedAt) / before.intervalMs))
+  return { ...charged, chargedAt: at - share * after.intervalMs }
 }
 
 export function fountainWishes(state: GameState, now: number): number {
@@ -63,7 +79,8 @@ export function jackpotChance(state: GameState): number {
   return fountainLevel(state.buildings.fountain).jackpotChance + (kept ? retirementRules.bonus.fountain : 0)
 }
 
-export function makeWish(state: GameState, now: number): GameState {
+export function makeWish(state: GameState, requested: number): GameState {
+  const now = Math.max(requested, state.fountain.chargedAt)
   const level = state.buildings.fountain
   const charged = chargeFountain(state.fountain, level, now)
   if (charged.wishes < 1) {
