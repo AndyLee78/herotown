@@ -65,7 +65,7 @@ Claude Code, Cursor, GPT(Codex)가 함께 쓰는 작업 목록이다. 작업 하
 | 23 | 첫 3시간 시뮬레이터를 여러 시드로 | GPT | `tools/first-hour.ts` | 완료 (이 커밋) |
 | 24 | 첫 3시간 시뮬레이터의 플레이어를 사람처럼 | GPT | `tools/first-hour.ts` | 완료 (이 커밋) |
 | 25 | 권장 레벨을 여러 파티 구성으로 재기 | GPT | `tools/curve.ts`, `tools/print-curve.ts`, `tools/tune-curve.ts` | 완료 (이 커밋) |
-| 26 | 출발 준비의 파티 구성 안내 | Cursor | `src/ui/game/battleScreens.tsx`, `src/locales/*` | 대기 (지금 시작 가능) |
+| 26 | 출발 준비의 파티 구성 안내 | Cursor | `src/ui/game/battleScreens.tsx`, `src/locales/*` | 완료 (6bc08f1) |
 | 27 | 명예의 전당·묘지·조상 화면 | Cursor | `src/ui/game/heroScreens.tsx`, `villageScreens.tsx`, `App.tsx`, `styles.css`, `src/locales/*` | 대기 (26 뒤, 2b core는 들어감) |
 | 28 | 집 레벨별 모습·묘지 비석 3D | Cursor | `src/ui/voxel/VillageScene.ts`, `src/ui/voxel/world.ts` | 대기 (27 뒤) |
 | 29 | 2b core 코드 리뷰 (f7fdf88) | GPT | `Docs/reviews/f7fdf88.md` (새 파일만) | 대기 (지금 시작 가능) |
@@ -780,7 +780,7 @@ src/ui/game/battleScreens.tsx(출발 준비 Prep, 파티 편성 PartyEditor)와 
 확인: npm run dev에서 일부러 탱커·힐러를 빼거나 음유시인 둘을 넣어 칩을 본다. 375px 폭에서도 본다.
 ```
 
-메모:
+메모: 빈 파티에는 역할 칩을 붙이지 않고, 사람이 있으면 탱커·힐러 없음은 빨강, 딜러 1명 이하는 노랑, 같은 지원 직업 2명 이상은 직업 이름으로 노란 칩을 붙인다. 출발은 막지 않고 권장 레벨 줄은 그대로 둔다. 375px에서 음유시인 둘·힐러만 있는 파티의 칩이 카드 안에서 줄바꿈되는 것을 봤다.
 
 ---
 
