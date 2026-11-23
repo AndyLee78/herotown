@@ -56,8 +56,8 @@ Claude Code, Cursor, GPT(Codex)가 함께 쓰는 작업 목록이다. 작업 하
 | 14 | 던전 미리보기를 배경 일러스트처럼 | Cursor | `src/ui/voxel/portrait.ts` | 완료 (1dce191) |
 | 15 | 영어 문구 다듬기 | GPT | `src/locales/en.json` | 완료 (e6754c1) |
 | 16 | 초반 흐름 개편 코드 리뷰 (a1dd951) | GPT | `Docs/reviews/a1dd951.md` (새 파일만) | 완료 (5759763) |
-| 17 | 리뷰 a1dd951의 버그 두 개 수정 | GPT | `src/core/game.ts`, `src/core/flow.test.ts` | 대기 (세대 core보다 먼저) |
-| 18 | 밸런스 도구 리뷰 지적 수정 | GPT | `tools/first-hour.ts`, `tools/tune-curve.ts`, `Docs/dungeons.md` | 대기 |
+| 17 | 리뷰 a1dd951의 버그 두 개 수정 | GPT | `src/core/game.ts`, `src/core/flow.test.ts` | 완료 (6d79ef3) |
+| 18 | 밸런스 도구 리뷰 지적 수정 | GPT | `tools/first-hour.ts`, `tools/tune-curve.ts`, `Docs/dungeons.md` | 완료 (97d091e) |
 | 19 | 세대 화면 (가족·관계·청혼·인구·가계도) | Cursor | `src/ui/game/heroScreens.tsx`, `villageScreens.tsx`, `App.tsx`, `styles.css`, `src/locales/*` | 대기 (세대 core 커밋 뒤) |
 | 20 | 세대 3D 연출 (부부·아이·광장) | Cursor | `src/ui/voxel/VillageScene.ts`, `src/ui/VillageView.tsx` | 대기 (19 뒤) |
 | 21 | 세대 core 코드 리뷰 | GPT | `Docs/reviews/<해시>.md` (새 파일만) | 대기 (세대 core 커밋 뒤) |
@@ -567,6 +567,8 @@ Docs/reviews/a1dd951.md의 "보통" 두 건을 고친다. 이 작업은 src/core
 ```
 
 메모:
+- 신전의 시간 완료와 광고 완료가 같은 치료 규칙을 사용한다. 두 경로에서 부상·중상은 피로로 바뀌고 치료·회복 타이머가 지워진다.
+- 귀환한 영웅은 귀환 후에만 자연 회복하며 자동 출정 전에 회복을 반영한다. 회귀 테스트 2개를 추가했으며 세이브 버전은 그대로다.
 
 ---
 
@@ -584,6 +586,9 @@ Docs/reviews/a1dd951.md의 "낮음" 두 건을 고친다. tools/first-hour.ts, t
 ```
 
 메모:
+- 출정 후보의 평균과 최근 귀환 시각을 쓰도록 수정했다. 180분 결과 마을 Lv 3·파티 Lv 6.7, 던전 4곳 클리어, 최근 10전 6승이다.
+- 기존 조정 기준인 승률 60%를 유지했다. 30표본에서 여섯 목표를 달성했다. 이끼 길·광산·수직갱·묘지의 새 배수 후보는 다른 시드로 재검증한 뒤 적용할지 판단할 수 있다.
+- 타입 검사, 테스트 99개, 프로덕션 빌드가 통과했다.
 
 ---
 
