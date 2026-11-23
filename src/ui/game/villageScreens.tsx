@@ -9,6 +9,7 @@ import {
   bedCount,
   dungeons,
   expeditionSlots,
+  hallOfFame,
   population,
   smithRules,
   timeRules,
@@ -19,12 +20,13 @@ import {
   type DungeonReport,
   type GameAction,
   type GameState,
+  type Grave,
 } from '../../core'
 import { gameNow, gameOffset, offsetParts, subscribeGameClock } from '../clock'
 import { loadSoundPrefs, saveSoundPrefs, SOUND_NAMES } from '../sound'
 import { canReplay } from '../voxel/replay'
 import { dungeonPreviewUrl } from '../voxel/portrait'
-import { bonusValue } from './heroScreens'
+import { GraveFace, bonusValue } from './heroScreens'
 import { Bar, Chip, CostList, Res, Window, affordable, formatEntry, itemLabel, useNow, waitLabel } from './kit'
 
 const BattleView = lazy(() => import('../BattleView').then((mod) => ({ default: mod.BattleView })))
@@ -34,6 +36,7 @@ type Act = (action: GameAction) => void
 export function Town({ save, onAction, busy, onWatch }: { save: GameState; onAction: Act; busy: boolean; onWatch: () => void }) {
   const { t } = useTranslation()
   const [census, setCensus] = useState(false)
+  const [hall, setHall] = useState(false)
   const level = townLevel(save.fame)
   const people = population(save)
   const next = villageRules.levels.find((entry) => entry.level === level.level + 1)
@@ -53,6 +56,9 @@ export function Town({ save, onAction, busy, onWatch }: { save: GameState; onAct
           <Chip>{t('town.beds', { used: save.roster.length, count: bedCount(save.buildings.house) })}</Chip>
           <button type="button" className="chip" onClick={() => setCensus(true)}>
             {t('family.population')}
+          </button>
+          <button type="button" className="chip" onClick={() => setHall(true)}>
+            {t('family.hall')}
           </button>
           <Chip>{t('town.parties', { count: expeditionSlots(save.buildings.guild) })}</Chip>
           <Chip>{t('town.visitors', { count: visitorCap(save.buildings.inn) })}</Chip>
@@ -150,7 +156,43 @@ export function Town({ save, onAction, busy, onWatch }: { save: GameState; onAct
           </span>
         </Window>
       ) : null}
+      {hall ? <Hall save={save} onClose={() => setHall(false)} /> : null}
     </>
+  )
+}
+
+function Hall({ save, onClose }: { save: GameState; onClose: () => void }) {
+  const { t } = useTranslation()
+  const groups = new Map<string, Grave[]>()
+  for (const grave of hallOfFame(save)) {
+    const house = grave.family ?? grave.name
+    groups.set(house, [...(groups.get(house) ?? []), grave])
+  }
+  return (
+    <Window title={t('family.hall')} onClose={onClose} small>
+      {groups.size === 0 ? <p className="empty">{t('family.hallEmpty')}</p> : null}
+      {[...groups.entries()].map(([house, graves]) => (
+        <section key={house}>
+          <h3 className="section-title">{house}</h3>
+          {graves.map((grave) => (
+            <article key={grave.id} className="grave legend">
+              <GraveFace grave={grave} />
+              <span className="hero-row-body">
+                <strong>{grave.name}</strong>
+                <span className="chips">
+                  <Chip tone="info">{t(`class.${grave.classId}`)}</Chip>
+                  <Chip>{t('ui.level', { level: grave.level })}</Chip>
+                  {grave.age != null ? <Chip>{t('hero.age', { age: grave.age })}</Chip> : null}
+                </span>
+                <span className="muted">
+                  {grave.clears.length > 0 ? grave.clears.map((id) => t(`dungeon.${id}.name`)).join(', ') : t('family.noClears')}
+                </span>
+              </span>
+            </article>
+          ))}
+        </section>
+      ))}
+    </Window>
   )
 }
 
@@ -448,7 +490,8 @@ export function Absence({ save, busy, onWatch, onClose }: { save: GameState; bus
       ) : null}
       {(report.proposals ?? 0) > 0 ? <p>{t('absence.proposals', { count: report.proposals })}</p> : null}
       {(report.births ?? []).length > 0 ? <p>{t('absence.births', { names: (report.births ?? []).join(', ') })}</p> : null}
-      {report.completed.length === 0 && report.visitors.length === 0 && crafted.length === 0 && (report.aged ?? []).length === 0 && (report.proposals ?? 0) === 0 && (report.births ?? []).length === 0 ? <p className="muted">{t('absence.quiet')}</p> : null}
+      {(report.deaths ?? []).length > 0 ? <p>{t('absence.deaths', { names: (report.deaths ?? []).join(', ') })}</p> : null}
+      {report.completed.length === 0 && report.visitors.length === 0 && crafted.length === 0 && (report.aged ?? []).length === 0 && (report.proposals ?? 0) === 0 && (report.births ?? []).length === 0 && (report.deaths ?? []).length === 0 ? <p className="muted">{t('absence.quiet')}</p> : null}
       <div className="actions">
         {report.adClaimed ? null : (
           <button type="button" className="btn ad" disabled={busy} onClick={onWatch}>

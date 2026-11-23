@@ -1,13 +1,16 @@
-import { ChevronLeft, Clock } from 'lucide-react'
-import { useState } from 'react'
+import { ChevronLeft, Clock, Hourglass, Swords } from 'lucide-react'
+import { useMemo, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import {
   STAT_KEYS,
   adRules,
   adsRemaining,
+  ancestorsOf,
   canDeploy,
   classById,
+  familyLegends,
   familyOf,
+  legendBonus,
   lifeRules,
   potentialBand,
   progression,
@@ -18,6 +21,7 @@ import {
   visitorStay,
   type GameAction,
   type GameState,
+  type Grave,
   type Hero,
   retirementAdvised,
   retirementRules,
@@ -26,6 +30,7 @@ import {
 } from '../../core'
 import { gameNow } from '../clock'
 import { josa } from '../josa'
+import { portraitUrl } from '../voxel/portrait'
 import {
   Bar,
   Chip,
@@ -168,8 +173,23 @@ export function Roster({
             <h3 className="section-title">{t('label.graveyard')}</h3>
             <ul className="plain">
               {save.graveyard.map((grave) => (
-                <li key={grave.id}>
-                  {grave.name} · {t(`class.${grave.classId}`)} · {t('hero.level', { level: grave.level })} · {t('hero.clears', { count: grave.clears.length })}
+                <li key={grave.id} className={grave.legend ? 'grave legend' : 'grave'}>
+                  <GraveFace grave={grave} />
+                  <span className="hero-row-body">
+                    <strong>{grave.family ? `${grave.name} · ${grave.family}` : grave.name}</strong>
+                    <span className="chips">
+                      <Chip tone="info">{t(`class.${grave.classId}`)}</Chip>
+                      <Chip>{t('ui.level', { level: grave.level })}</Chip>
+                      {grave.year != null ? <Chip>{t('family.year', { year: grave.year })}</Chip> : null}
+                      {grave.age != null ? <Chip>{t('hero.age', { age: grave.age })}</Chip> : null}
+                      {grave.cause ? (
+                        <Chip tone={grave.cause === 'battle' ? 'bad' : 'warn'}>
+                          {grave.cause === 'battle' ? <Swords size={12} /> : <Hourglass size={12} />}
+                          {t(`family.cause.${grave.cause}`)}
+                        </Chip>
+                      ) : null}
+                    </span>
+                  </span>
                 </li>
               ))}
             </ul>
@@ -380,6 +400,9 @@ function FamilyPanel({
           <span className="muted">{t('family.none')}</span>
         )}
       </p>
+      {house ? (
+        <p className="muted">{t('family.legends', { count: familyLegends(save, house).length, bonus: legendBonus(save, house) })}</p>
+      ) : null}
       <FamilyLine label={t('family.spouse')} people={family.spouse ? [family.spouse] : []} empty={t('family.noSpouse')} onSelect={onSelect} />
       <FamilyLine label={t('family.parents')} people={family.parents} empty={t('family.noParents')} onSelect={onSelect} />
       <FamilyLine label={t('family.children')} people={family.children} empty={t('family.noChildren')} onSelect={onSelect} />
@@ -424,21 +447,37 @@ function FamilyLine({ label, people, empty, onSelect }: { label: string; people:
   )
 }
 
+type TreeNode = {
+  id: string
+  name: string
+  parents?: [string, string]
+  spouseId?: string
+  hero?: Hero
+  grave?: Grave
+}
+
 function FamilyTree({ save, house, onSelect, onClose }: { save: GameState; house: string; onSelect: (id: string) => void; onClose: () => void }) {
   const { t } = useTranslation()
-  const members = houseMembers(residents(save), house)
+  const members = treeNodes(save, house)
   const rows = generationRows(members)
   return (
     <Window title={t('family.tree', { house })} onClose={onClose} small>
       {rows.length === 0 ? <p className="empty">{t('family.emptyTree')}</p> : null}
       {rows.map((row, index) => (
-        <div key={row.map((hero) => hero.id).join('-')} className={index === 0 ? 'tree-row' : 'tree-row next'}>
+        <div key={row.map((node) => node.id).join('-')} className={index === 0 ? 'tree-row' : 'tree-row next'}>
           {pairCouples(row).map((group) => (
-            <div key={group.map((hero) => hero.id).join('-')} className={group.length > 1 ? 'tree-couple' : 'tree-one'}>
-              {group.map((hero) => (
-                <button key={hero.id} type="button" className="tree-person" onClick={() => onSelect(hero.id)}>
-                  <Portrait hero={hero} />
-                  <span>{hero.name}</span>
+            <div key={group.map((node) => node.id).join('-')} className={group.length > 1 ? 'tree-couple' : 'tree-one'}>
+              {group.map((node) => (
+                <button
+                  key={node.id}
+                  type="button"
+                  className={node.grave ? 'tree-person gone' : 'tree-person'}
+                  disabled={node.hero == null}
+                  onClick={() => node.hero && onSelect(node.hero.id)}
+                >
+                  {node.hero ? <Portrait hero={node.hero} /> : node.grave ? <GraveFace grave={node.grave} /> : null}
+                  <span>{node.name}</span>
+                  {node.grave ? <span className="tree-stone">{t('family.stone')}</span> : null}
                 </button>
               ))}
             </div>
@@ -449,6 +488,59 @@ function FamilyTree({ save, house, onSelect, onClose }: { save: GameState; house
   )
 }
 
+function treeNodes(save: GameState, house: string): TreeNode[] {
+  const nodes = new Map<string, TreeNode>()
+  const addHero = (hero: Hero) => {
+    if (!nodes.has(hero.id)) {
+      nodes.set(hero.id, { id: hero.id, name: hero.name, parents: hero.parents, spouseId: hero.spouseId, hero })
+    }
+  }
+  const addGrave = (grave: Grave) => {
+    if (!nodes.has(grave.id)) {
+      nodes.set(grave.id, { id: grave.id, name: grave.name, parents: grave.parents, spouseId: grave.spouseId, grave })
+    }
+  }
+  for (const hero of houseMembers(residents(save), house)) {
+    addHero(hero)
+  }
+  for (const hero of [...nodes.values()]) {
+    if (!hero.hero) {
+      continue
+    }
+    for (const ancestor of ancestorsOf(save, hero.hero.id)) {
+      if (ancestor.hero) {
+        addHero(ancestor.hero)
+      } else if (ancestor.grave) {
+        addGrave(ancestor.grave)
+      }
+    }
+  }
+  for (const grave of save.graveyard) {
+    if (grave.spouseId && nodes.has(grave.spouseId)) {
+      addGrave(grave)
+    }
+  }
+  return [...nodes.values()]
+}
+
+export function GraveFace({ grave }: { grave: Grave }) {
+  const src = useMemo(() => {
+    const face = {
+      id: grave.id,
+      classId: grave.classId,
+      gender: grave.gender ?? 'male',
+      age: grave.age ?? 30,
+      genes: grave.genes,
+    }
+    return portraitUrl(face)
+  }, [grave])
+  return (
+    <span className="portrait">
+      <img className="portrait-img" src={src} alt="" width={64} height={64} />
+    </span>
+  )
+}
+
 function houseMembers(all: Hero[], house: string): Hero[] {
   const named = all.filter((hero) => hero.family === house || (hero.family == null && hero.name === house))
   const ids = new Set(named.map((hero) => hero.id))
@@ -456,9 +548,9 @@ function houseMembers(all: Hero[], house: string): Hero[] {
   return [...named, ...spouses]
 }
 
-function generationRows(members: Hero[]): Hero[][] {
+function generationRows(members: TreeNode[]): TreeNode[][] {
   const ids = new Set(members.map((hero) => hero.id))
-  const rows: Hero[][] = []
+  const rows: TreeNode[][] = []
   const seen = new Set<string>()
   let current = members.filter((hero) => !hero.parents?.some((parent) => ids.has(parent)))
   while (current.length > 0) {
@@ -480,9 +572,9 @@ function generationRows(members: Hero[]): Hero[][] {
   return rows
 }
 
-function pairCouples(row: Hero[]): Hero[][] {
+function pairCouples(row: TreeNode[]): TreeNode[][] {
   const placed = new Set<string>()
-  const groups: Hero[][] = []
+  const groups: TreeNode[][] = []
   for (const hero of row) {
     if (placed.has(hero.id)) {
       continue

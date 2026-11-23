@@ -1455,6 +1455,29 @@ input[type='range'] {
   border-radius: 14px;
 }
 
+.grave {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.grave.legend {
+  padding: 6px;
+  border: 2px solid var(--gold-dark);
+  border-radius: 14px;
+  background: rgba(244, 189, 58, 0.16);
+}
+
+.tree-person.gone {
+  opacity: 0.55;
+}
+
+.tree-stone {
+  font-size: 11px;
+  font-weight: 800;
+  color: var(--wood);
+}
+
 .tree-person {
   display: flex;
   flex-direction: column;

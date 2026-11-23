@@ -275,6 +275,7 @@
     "auto": "자동 출정 {{count}}회, 골드 {{gold}}",
     "proposals": "새 청혼 {{count}}건",
     "births": "태어난 아이: {{names}}",
+    "deaths": "세상을 떠난 영웅: {{names}}",
     "dismiss": "계속"
   },
   "family": {
@@ -305,6 +306,17 @@
     "needHouse": "집을 올리면 신혼집이 생겨요",
     "married": "{{a}}와 {{b}}가 결혼했습니다",
     "born": "아이가 태어났습니다: {{names}}",
+    "passed": "{{name}} {{age}}세로 세상을 떠났습니다",
+    "legends": "가문의 전설 {{count}}명 · 잠재력 +{{bonus}}",
+    "hall": "명예의 전당",
+    "hallEmpty": "아직 전설이 없습니다",
+    "stone": "비석",
+    "year": "{{year}}년",
+    "noClears": "클리어한 던전 없음",
+    "cause": {
+      "battle": "전투",
+      "oldAge": "노환"
+    },
     "population": "마을 인구",
     "marriedCount": "기혼 {{count}}",
     "singleCount": "미혼 {{count}}",

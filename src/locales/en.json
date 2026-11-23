@@ -275,6 +275,7 @@
     "auto": "Auto trips: {{count}} · Gold: {{gold}}",
     "proposals": "New proposals: {{count}}",
     "births": "Children born: {{names}}",
+    "deaths": "Passed away: {{names}}",
     "dismiss": "Continue"
   },
   "family": {
@@ -305,6 +306,17 @@
     "needHouse": "Upgrade the houses and a home for newlyweds appears",
     "married": "{{a}} and {{b}} got married",
     "born": "A child was born: {{names}}",
+    "passed": "{{name}} passed away at {{age}}.",
+    "legends": "{{count}} family legends · potential +{{bonus}}",
+    "hall": "Hall of fame",
+    "hallEmpty": "No legends yet",
+    "stone": "Stone",
+    "year": "Year {{year}}",
+    "noClears": "No dungeons cleared",
+    "cause": {
+      "battle": "Battle",
+      "oldAge": "Old age"
+    },
     "population": "Town population",
     "marriedCount": "Married {{count}}",
     "singleCount": "Unmarried {{count}}",

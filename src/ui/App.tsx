@@ -21,6 +21,7 @@ import {
 } from '../core'
 import { rewardedAds } from './ads'
 import { addGameOffset, gameNow, offsetSteps, resetGameOffset } from './clock'
+import { josa } from './josa'
 import { BattleHub } from './game/battleScreens'
 import { Inn, Roster } from './game/heroScreens'
 import { UiIcon, TownLogo, type ResourceKind } from './game/icons'
@@ -268,6 +269,29 @@ export function App() {
     // The toast follows a new absence report. pushToast changes every render.
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [bornKey])
+
+  const deathMark = useRef<string | null>(null)
+  const dead = save?.absence?.deaths ?? []
+  const deathKey = dead.length > 0 ? `${save?.lastTickAt ?? 0}|${dead.join(',')}` : ''
+  useEffect(() => {
+    if (!save) {
+      return
+    }
+    if (deathMark.current === null) {
+      deathMark.current = deathKey
+      return
+    }
+    if (deathKey && deathKey !== deathMark.current) {
+      const graves = [...save.graveyard].reverse()
+      const korean = i18n.language.startsWith('ko')
+      for (const name of dead) {
+        const age = graves.find((grave) => grave.name === name)?.age
+        pushToast(t('family.passed', { name: korean ? josa(name, '이') : name, age: age ?? '?' }))
+      }
+    }
+    deathMark.current = deathKey
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [deathKey])
 
   const jumpClock = (ms: number) => {
     const base = gameNow()
