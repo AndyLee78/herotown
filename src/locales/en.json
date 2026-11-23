@@ -89,7 +89,8 @@
     "autoDungeon": "Auto trips",
     "smith": "Crafting",
     "stash": "Storage",
-    "trinkets": "Trinkets"
+    "trinkets": "Trinkets",
+    "blast": "Against blasts"
   },
   "hint": {
     "village": "Select a hero in the village.",
@@ -211,7 +212,8 @@
     "paralyzed": "Paralysis and slow cost them their turns. Pack tonics.",
     "silenced": "Silence cut off the healing. Pack clarity or healing potions.",
     "trapped": "Traps hurt the party badly. Bring a rogue or wear a Trap Sense Ring.",
-    "ambushed": "An ambush broke the back row. Wear a Watchful Charm."
+    "ambushed": "An ambush broke the back row. Wear a Watchful Charm.",
+    "blasted": "The boss's blast went unbroken. Bring a warrior, rogue or archer, or set tactics to 'Brace'."
   },
   "dungeon": {
     "hill_cave": {
@@ -247,6 +249,10 @@
     "bandit_fort": {
       "name": "Bandit Fortress",
       "hint": "Traps and ambushes wait inside. Bring a rogue or the right trinkets."
+    },
+    "haunted_citadel": {
+      "name": "Haunted Citadel",
+      "hint": "The Citadel Lord gathers power, then blasts the party. Break it with a warrior, rogue or archer, or brace."
     }
   },
   "policy": {
@@ -582,7 +588,11 @@
     "bandit_thug": "Bandit Thug",
     "crossbowman": "Crossbowman",
     "cutthroat": "Cutthroat",
-    "bandit_chief": "Bandit Chief"
+    "bandit_chief": "Bandit Chief",
+    "grave_knight": "Grave Knight",
+    "bone_archer": "Bone Archer",
+    "citadel_lord": "Citadel Lord",
+    "specter": "Specter"
   },
   "battle": {
     "label": "Battle replay",
@@ -679,7 +689,13 @@
     "trapHit": "{{actor}} takes {{amount}} from the trap",
     "disarm": "{{actor}} disarms a trap",
     "alert": "{{actor}} spots the ambush",
-    "ambush": "{{actor}} ambushes {{target}}"
+    "ambush": "{{actor}} ambushes {{target}}",
+    "charge": "{{actor}} gathers power!",
+    "blast": "{{actor}} unleashes a blast!",
+    "interrupt": "{{actor}} breaks {{target}}'s blast",
+    "brace": "{{actor}} braces",
+    "phase": "{{actor}} enters phase {{phase}}",
+    "summon": "{{actor}} calls for help"
   },
   "sound": {
     "title": "Sound",
@@ -799,6 +815,14 @@
       "poisonWard": "Halves poison damage taken.",
       "steady": "Halves the chance of paralysis and slow.",
       "calm": "Halves the chance of silence."
+    }
+  },
+  "blast": {
+    "interrupt": "Break",
+    "brace": "Brace",
+    "hint": {
+      "interrupt": "Warriors, rogues and archers break a charged blast.",
+      "brace": "When a blast is coming, heroes brace to take less of it."
     }
   }
 }

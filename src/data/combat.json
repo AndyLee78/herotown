@@ -25,5 +25,8 @@
   "silencedTurns": 3,
   "stunnedTurns": 4,
   "trappedShare": 0.15,
-  "ambushedShare": 0.08
+  "ambushedShare": 0.08,
+  "braceFactor": 0.55,
+  "blastedShare": 0.25,
+  "chargeTicks": 2
 }

@@ -41,6 +41,12 @@
       "fame": 140,
       "visitorPotential": 30,
       "maxBuildingLevel": 4
+    },
+    {
+      "level": 6,
+      "fame": 200,
+      "visitorPotential": 35,
+      "maxBuildingLevel": 4
     }
   ],
   "inn": {
@@ -108,6 +114,12 @@
       "material": "crystal",
       "amount": 10,
       "fame": 44
+    },
+    "haunted_citadel": {
+      "material": "bone",
+      "amount": 14,
+      "fame": 52,
+      "crystal": 4
     }
   },
   "buildings": [

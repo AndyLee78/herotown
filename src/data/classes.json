@@ -3,6 +3,7 @@
     {
       "id": "warrior",
       "role": "tank",
+      "interrupt": true,
       "femaleOnly": false,
       "reach": "melee",
       "aoe": false,
@@ -23,6 +24,7 @@
     {
       "id": "rogue",
       "role": "dps",
+      "interrupt": true,
       "femaleOnly": false,
       "reach": "melee",
       "aoe": false,
@@ -43,6 +45,7 @@
     {
       "id": "archer",
       "role": "dps",
+      "interrupt": true,
       "femaleOnly": false,
       "reach": "ranged",
       "aoe": false,

@@ -89,7 +89,8 @@
     "autoDungeon": "자동 던전",
     "smith": "제작",
     "stash": "창고",
-    "trinkets": "장신구"
+    "trinkets": "장신구",
+    "blast": "광역기 대응"
   },
   "hint": {
     "village": "마을에서 영웅을 누르면 선택됩니다.",
@@ -211,7 +212,8 @@
     "paralyzed": "마비·둔화로 손을 못 썼다. 각성 물약을 챙기자.",
     "silenced": "침묵으로 회복이 끊겼다. 명료 물약이나 회복 물약을 챙기자.",
     "trapped": "함정에 크게 다쳤다. 도적을 데려가거나 함정 감지 반지를 끼자.",
-    "ambushed": "기습에 후열이 무너졌다. 경계의 부적을 끼자."
+    "ambushed": "기습에 후열이 무너졌다. 경계의 부적을 끼자.",
+    "blasted": "광역기를 끊지 못했다. 전사·도적·궁수를 데려가거나 작전을 '버티기'로 바꾸자."
   },
   "dungeon": {
     "hill_cave": {
@@ -247,6 +249,10 @@
     "bandit_fort": {
       "name": "도적 요새",
       "hint": "함정과 기습이 기다린다. 도적이나 장신구로 대비하자."
+    },
+    "haunted_citadel": {
+      "name": "마량 성채",
+      "hint": "성채 군주가 힘을 모은 뒤 광역기를 쓴다. 전사·도적·궁수로 끊거나 버티자."
     }
   },
   "policy": {
@@ -582,7 +588,11 @@
     "bandit_thug": "도적 졸개",
     "crossbowman": "석궁병",
     "cutthroat": "암살자",
-    "bandit_chief": "도적 두목"
+    "bandit_chief": "도적 두목",
+    "grave_knight": "무덤 기사",
+    "bone_archer": "뼈 궁수",
+    "citadel_lord": "성채 군주",
+    "specter": "원령"
   },
   "battle": {
     "label": "전투 다시 보기",
@@ -679,7 +689,13 @@
     "trapHit": "{{actor}}, 함정 피해 {{amount}}",
     "disarm": "{{actor}}, 함정을 해제했다",
     "alert": "{{actor}}, 기습을 알아챘다",
-    "ambush": "{{actor}}, {{target}}에게 기습"
+    "ambush": "{{actor}}, {{target}}에게 기습",
+    "charge": "{{actor}}, 힘을 모은다!",
+    "blast": "{{actor}}, 광역기!",
+    "interrupt": "{{actor}}, {{target}}의 광역기를 끊었다",
+    "brace": "{{actor}}, 방어 자세",
+    "phase": "{{actor}}, {{phase}}단계로 바뀐다",
+    "summon": "{{actor}}, 부하를 불렀다"
   },
   "sound": {
     "title": "효과음",
@@ -799,6 +815,14 @@
       "poisonWard": "받는 중독 피해가 절반이 된다.",
       "steady": "마비·둔화에 걸릴 확률이 절반이 된다.",
       "calm": "침묵에 걸릴 확률이 절반이 된다."
+    }
+  },
+  "blast": {
+    "interrupt": "끊기",
+    "brace": "버티기",
+    "hint": {
+      "interrupt": "전사·도적·궁수가 예고된 광역기를 끊는다.",
+      "brace": "예고가 나오면 방어 자세로 광역기 피해를 줄인다."
     }
   }
 }

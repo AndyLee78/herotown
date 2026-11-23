@@ -150,7 +150,8 @@ export function validateGameData(data: GameData): void {
       throw new Error(`${dungeon.id} must end on a boss floor`)
     }
     for (const floor of dungeon.floors) {
-      for (const id of floor.monsters) {
+      const summoned = floor.monsters.flatMap((id) => data.monsters.find((monster) => monster.id === id)?.phases?.flatMap((phase) => phase.summon ?? []) ?? [])
+      for (const id of [...floor.monsters, ...summoned]) {
         if (!monsterIds.has(id)) {
           throw new Error(`${dungeon.id} references missing monster ${id}`)
         }

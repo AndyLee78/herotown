@@ -2,7 +2,7 @@ import { alchemyRules, classById, combatRules, lifeRules, magicRules, monsterByI
 import { heroGearMods } from './gear'
 import { heroTrinkets } from './magic'
 import type { Rng } from './rng'
-import type { LogEntry, MonsterDef, PartyMember, PotionId, ReplayUnit, Row, Supplies, Tactics, UnitReport } from './types'
+import type { BossPhase, LogEntry, MonsterDef, PartyMember, PotionId, ReplayUnit, Row, Supplies, Tactics, UnitReport } from './types'
 
 export type BattleUnit = {
   id: string
@@ -71,6 +71,17 @@ export type BattleUnit = {
   calm: number
   trapTaken: number
   ambushTaken: number
+  // Boss patterns (Docs/depth.md 3c).
+  interrupt: boolean
+  blastEvery: number
+  blastPower: number
+  phases: BossPhase[]
+  phase: number
+  sinceBlast: number
+  charging: boolean
+  blastAt: number
+  braced: boolean
+  blastTaken: number
 }
 
 // Potions a party carries into a fight and what it has drunk.
@@ -101,6 +112,16 @@ const STATUS_FREE = {
   calm: 1,
   trapTaken: 0,
   ambushTaken: 0,
+  interrupt: false,
+  blastEvery: 0,
+  blastPower: 1,
+  phases: [] as BossPhase[],
+  phase: 0,
+  sinceBlast: 0,
+  charging: false,
+  blastAt: 0,
+  braced: false,
+  blastTaken: 0,
 }
 
 export type FloorOutcome = 'victory' | 'wipe' | 'retreat' | 'timeout'
@@ -176,6 +197,7 @@ export function createHeroUnit(member: PartyMember, index: number): BattleUnit {
     poisonWard: trinkets.has('poisonWard') ? magicRules.ward : 1,
     steady: trinkets.has('steady') ? magicRules.ward : 1,
     calm: trinkets.has('calm') ? magicRules.ward : 1,
+    interrupt: klass.interrupt ?? false,
   }
 }
 
@@ -227,6 +249,14 @@ export function simulateFloor(
     const ready = [...heroes, ...enemies]
       .filter((unit) => unit.hp > 0 && unit.gauge >= combatRules.gaugeThreshold)
       .sort((a, b) => b.gauge - a.gauge || a.index - b.index || a.id.localeCompare(b.id))
+    // A charged blast lands on its own clock, ahead of anyone's gauge (Docs/depth.md 3c).
+    const blaster = enemies.find((enemy) => enemy.hp > 0 && enemy.charging && tick >= enemy.blastAt)
+    if (blaster) {
+      enemyAct(blaster, heroes, rng, tick, log)
+      endTurn(blaster, false)
+      advancePhases(enemies, monsterScale, tick, log)
+      continue
+    }
     const actor = ready[0]
     if (!actor) {
       continue
@@ -236,6 +266,7 @@ export function simulateFloor(
       const dotDamage = Math.max(1, Math.round(actor.dot * (actor.ironWill ? combatRules.ironWillDot : 1) * actor.poisonWard))
       actor.poisonTaken += dotDamage
       hurt(actor, dotDamage, tick, log, 'log.dot')
+      advancePhases(enemies, monsterScale, tick, log)
       if (actor.hp <= 0) {
         continue
       }
@@ -271,8 +302,16 @@ export function simulateFloor(
       }
     } else {
       enemyAct(actor, heroes, rng, tick, log)
+      // With the brace tactic the whole party takes its stance at the warning.
+      if (tactics.blast === 'brace' && actor.charging && actor.blastAt === tick + combatRules.chargeTicks) {
+        for (const hero of living(heroes)) {
+          hero.braced = true
+          push(log, tick, 'log.brace', actorParams(hero))
+        }
+      }
     }
     endTurn(actor, false)
+    advancePhases(enemies, monsterScale, tick, log)
   }
   push(log, tick, 'log.defeat')
   return { outcome: 'timeout', ticks: tick, trap }
@@ -330,6 +369,25 @@ function heroAct(
   tick: number,
   log: LogEntry[],
 ) {
+  // A boss is gathering power: break it, or brace for it (Docs/depth.md 3c).
+  const charger = living(enemies).find((enemy) => enemy.charging)
+  if (charger) {
+    if (actor.braced) {
+      // Bracing heroes hold their stance until the blast lands; a healer still heals.
+      const patient = actor.role === 'healer' && actor.silenced <= 0 ? lowestRatio(living(heroes)) : undefined
+      if (!(patient && patient.hp / patient.maxHp < tactics.healBelow / 100)) {
+        return
+      }
+    } else if (tactics.blast !== 'brace' && actor.interrupt && actor.silenced <= 0) {
+      const reach = actor.reach === 'melee' ? frontOrAll(enemies) : living(enemies)
+      if (reach.includes(charger)) {
+        charger.charging = false
+        charger.sinceBlast = 0
+        push(log, tick, 'log.interrupt', { ...actorParams(actor), ...targetParams(charger) })
+        return
+      }
+    }
+  }
   // Silence leaves only plain attacks: no taunt, healing, buffs or debuffs.
   if (actor.silenced > 0) {
     if (actor.role === 'healer' || actor.role === 'support' || (actor.role === 'tank' && !actor.opened)) {
@@ -443,6 +501,31 @@ function enemyAct(actor: BattleUnit, heroes: BattleUnit[], rng: Rng, tick: numbe
   const pool = actor.reach === 'melee' ? frontOrAll(heroes) : living(heroes)
   if (!pool.length) {
     return
+  }
+  // Boss pattern: every few actions it charges, and the next one blasts everyone.
+  if (actor.blastEvery > 0) {
+    if (actor.charging) {
+      actor.charging = false
+      actor.sinceBlast = 0
+      push(log, tick, 'log.blast', actorParams(actor))
+      for (const target of living(heroes)) {
+        const before = target.hp
+        strike(actor, target, rng, tick, log, actor.blastPower * (target.braced ? combatRules.braceFactor : 1))
+        target.blastTaken += before - target.hp
+      }
+      for (const hero of heroes) {
+        hero.braced = false
+      }
+      return
+    }
+    if (actor.sinceBlast + 1 >= actor.blastEvery) {
+      actor.charging = true
+      // The blast lands a few ticks later: only heroes about to act can break it.
+      actor.blastAt = tick + combatRules.chargeTicks
+      push(log, tick, 'log.charge', actorParams(actor))
+      return
+    }
+    actor.sinceBlast += 1
   }
   // An ambusher's first strike goes past the front row (Docs/depth.md 3b).
   if (actor.ambushing) {
@@ -618,6 +701,36 @@ function enemyUnit(monster: MonsterDef, index: number, scale: number): BattleUni
     aoeEvery: monster.aoeEvery ?? 0,
     poisonCap: monster.poisonCap ?? 0,
     ambush: monster.ambush ?? false,
+    blastEvery: monster.blastEvery ?? 0,
+    blastPower: monster.blastPower ?? 1,
+    phases: monster.phases ?? [],
+  }
+}
+
+// A boss crossing a health line moves to its next phase: it may call help,
+// blast more often, or hit harder. Two lines at once run in order.
+function advancePhases(enemies: BattleUnit[], scale: number, tick: number, log: LogEntry[]) {
+  for (const boss of [...enemies]) {
+    while (boss.hp > 0 && boss.phase < boss.phases.length && boss.hp / boss.maxHp <= boss.phases[boss.phase]!.at) {
+      const phase = boss.phases[boss.phase]!
+      boss.phase += 1
+      push(log, tick, 'log.phase', { ...actorParams(boss), phase: boss.phase + 1 })
+      if (phase.blastEvery) {
+        boss.blastEvery = phase.blastEvery
+      }
+      if (phase.attackUp) {
+        boss.attack *= phase.attackUp
+      }
+      if (phase.summon?.length) {
+        const called = phase.summon.map((id) => enemyUnit(monsterById(id), enemies.length, scale))
+        for (const unit of called) {
+          unit.index = enemies.length
+          unit.id = `${unit.refId}-${unit.index + 1}`
+          enemies.push(unit)
+        }
+        push(log, tick, 'log.summon', { ...actorParams(boss), units: called.map((unit) => unit.id).join(','), refs: called.map((unit) => unit.refId).join(',') })
+      }
+    }
   }
 }
 

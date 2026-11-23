@@ -238,6 +238,38 @@
           ]
         }
       ]
+    },
+    {
+      "id": "haunted_citadel",
+      "tier": 6,
+      "recommendedLevel": 16,
+      "monsterScale": 4.5,
+      "betweenHeal": 0.25,
+      "gold": 170,
+      "xp": 170,
+      "floors": [
+        {
+          "monsters": [
+            "grave_knight",
+            "specter",
+            "bone_archer"
+          ]
+        },
+        {
+          "monsters": [
+            "grave_knight",
+            "grave_knight",
+            "specter",
+            "bone_archer"
+          ]
+        },
+        {
+          "monsters": [
+            "citadel_lord",
+            "specter"
+          ]
+        }
+      ]
     }
   ]
 }

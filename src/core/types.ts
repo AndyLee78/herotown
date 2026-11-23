@@ -13,7 +13,7 @@ export type SkillKind = 'attack' | 'taunt' | 'heal' | 'buff' | 'debuff'
 export type TraitId = 'tough' | 'coward' | 'nocturnal' | 'treasure' | 'ironWill' | 'frail'
 export type Condition = 'healthy' | 'fatigued' | 'injured' | 'critical' | 'dead'
 export type TargetPriority = 'lowestHp' | 'backRow' | 'boss'
-export type DefeatReason = 'noTank' | 'noHealer' | 'retreated' | 'wiped' | 'outmatched' | 'tooWeak' | 'poisoned' | 'paralyzed' | 'silenced' | 'trapped' | 'ambushed'
+export type DefeatReason = 'noTank' | 'noHealer' | 'retreated' | 'wiped' | 'outmatched' | 'tooWeak' | 'poisoned' | 'paralyzed' | 'silenced' | 'trapped' | 'ambushed' | 'blasted'
 export type PotionId = 'heal' | 'antidote' | 'tonic' | 'clarity'
 // Trinkets from the magic workshop (Docs/depth.md 3b).
 export type TrinketId = 'alert' | 'trapSense' | 'poisonWard' | 'steady' | 'calm'
@@ -48,6 +48,8 @@ export type ClassDef = {
   attackScale: number
   defenseScale: number
   healScale: number
+  // Can break a boss's charged blast (Docs/depth.md 3c).
+  interrupt?: boolean
   skills: SkillDef[]
   potentialBias: Stats
 }
@@ -58,7 +60,7 @@ export type TraitDef = {
 
 export type MonsterDef = {
   id: string
-  tier: 1 | 2 | 3 | 4 | 5
+  tier: 1 | 2 | 3 | 4 | 5 | 6
   boss: boolean
   row: Row
   reach: Reach
@@ -81,6 +83,18 @@ export type MonsterDef = {
   poisonCap?: number
   // Starts a floor ready to strike the back row, unless someone is on watch (3b).
   ambush?: boolean
+  // Boss patterns (Docs/depth.md 3c): every n-th action charges, the next blasts.
+  blastEvery?: number
+  blastPower?: number
+  phases?: BossPhase[]
+}
+
+export type BossPhase = {
+  // Starts when the boss's health falls to this share.
+  at: number
+  summon?: string[]
+  blastEvery?: number
+  attackUp?: number
 }
 
 export type DungeonFloor = {
@@ -91,7 +105,7 @@ export type DungeonFloor = {
 
 export type DungeonDef = {
   id: string
-  tier: 1 | 2 | 3 | 4 | 5
+  tier: 1 | 2 | 3 | 4 | 5 | 6
   recommendedLevel: number
   // Multiplies monster health and attack in this dungeon (1 = as listed).
   monsterScale?: number
@@ -173,6 +187,8 @@ export type Tactics = {
   retreatBelow: number
   // Drink a healing potion below this HP %. Missing on older presets.
   potionBelow?: number
+  // Against a charged blast: break it, or brace for it (Docs/depth.md 3c).
+  blast?: 'interrupt' | 'brace'
 }
 
 export type PartyMember = {

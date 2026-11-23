@@ -141,7 +141,7 @@ export function applyReport(hero: Hero, report: DungeonReport): Hero {
   }
 }
 
-export type StatusToll = { poisonShare: number; stunned: number; muted: number; trapShare?: number; ambushShare?: number }
+export type StatusToll = { poisonShare: number; stunned: number; muted: number; trapShare?: number; ambushShare?: number; blastShare?: number }
 
 // How much the statuses cost the party: poison's share of the damage taken,
 // turns lost to paralysis or slow, and support turns lost to silence.
@@ -154,12 +154,13 @@ function statusToll(heroes: BattleUnit[]): StatusToll {
     muted: heroes.reduce((sum, hero) => sum + hero.muted, 0),
     trapShare: taken > 0 ? heroes.reduce((sum, hero) => sum + hero.trapTaken, 0) / taken : 0,
     ambushShare: taken > 0 ? heroes.reduce((sum, hero) => sum + hero.ambushTaken, 0) / taken : 0,
+    blastShare: taken > 0 ? heroes.reduce((sum, hero) => sum + hero.blastTaken, 0) / taken : 0,
   }
 }
 
 export function defeatReason(
   outcome: 'wipe' | 'retreat' | 'timeout' | 'victory',
-  tier: 1 | 2 | 3 | 4 | 5,
+  tier: 1 | 2 | 3 | 4 | 5 | 6,
   hadTank: boolean,
   hadHealer: boolean,
   averageLevel: number,
@@ -192,6 +193,10 @@ export function defeatReason(
   }
   if ((toll.ambushShare ?? 0) >= combatRules.ambushedShare) {
     return 'ambushed'
+  }
+  // A boss blast nobody broke or braced for (Docs/depth.md 3c).
+  if ((toll.blastShare ?? 0) >= combatRules.blastedShare) {
+    return 'blasted'
   }
   if ((outcome === 'wipe' || outcome === 'timeout') && averageLevel < recommendedLevel) {
     return 'tooWeak'
