@@ -520,6 +520,12 @@
     "editParty": "Edit party {{number}}",
     "supplies": "Supplies",
     "suppliesLater": "Potions and bombs arrive with the alchemy workshop.",
+    "warn": {
+      "noTank": "Without a tank, the back row falls.",
+      "noHealer": "Without a healer, the party cannot last.",
+      "fewDps": "Too few dealers — a long fight is easy to lose.",
+      "overlap": "Two {{class}}s share one effect."
+    },
     "role": {
       "all": "All",
       "tank": "Tank",

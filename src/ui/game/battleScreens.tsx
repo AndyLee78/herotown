@@ -1,5 +1,6 @@
 import { ChevronLeft, Clock, Lock } from 'lucide-react'
 import { useMemo, useState } from 'react'
+import type { TFunction } from 'i18next'
 import { useTranslation } from 'react-i18next'
 import {
   canDeploy,
@@ -20,6 +21,7 @@ import {
   type TargetPriority,
 } from '../../core'
 import { gameNow } from '../clock'
+import { josa } from '../josa'
 import { ResourceIcon, type ResourceKind } from './icons'
 import { Bar, Chip, Portrait, Res, clampPercent, fatigueTone, needsWarning, useNow, waitLabel } from './kit'
 import { Report } from './villageScreens'
@@ -204,6 +206,56 @@ function presetHeroes(save: GameState, preset: PartyPreset): Hero[] {
   })
 }
 
+type PartyNote = { key: string; tone: 'bad' | 'warn'; text: string }
+
+function partyNotes(heroes: Hero[], t: TFunction, korean: boolean): PartyNote[] {
+  if (heroes.length === 0) {
+    return []
+  }
+  const notes: PartyNote[] = []
+  const roles = heroes.map((hero) => classById(hero.classId).role)
+  if (!roles.includes('tank')) {
+    notes.push({ key: 'noTank', tone: 'bad', text: t('battle.warn.noTank') })
+  }
+  if (!roles.includes('healer')) {
+    notes.push({ key: 'noHealer', tone: 'bad', text: t('battle.warn.noHealer') })
+  }
+  if (roles.filter((role) => role === 'dps').length <= 1) {
+    notes.push({ key: 'fewDps', tone: 'warn', text: t('battle.warn.fewDps') })
+  }
+  const supports = new Map<string, number>()
+  for (const hero of heroes) {
+    const klass = classById(hero.classId)
+    if (klass.role === 'support') {
+      supports.set(hero.classId, (supports.get(hero.classId) ?? 0) + 1)
+    }
+  }
+  for (const [classId, count] of supports) {
+    if (count >= 2) {
+      const name = t(`class.${classId}`)
+      notes.push({ key: classId, tone: 'warn', text: t('battle.warn.overlap', { class: korean ? josa(name, '이') : name }) })
+    }
+  }
+  return notes
+}
+
+function PartyNotes({ heroes }: { heroes: Hero[] }) {
+  const { t, i18n } = useTranslation()
+  const notes = partyNotes(heroes, t, i18n.language.startsWith('ko'))
+  if (notes.length === 0) {
+    return null
+  }
+  return (
+    <span className="chips">
+      {notes.map((note) => (
+        <Chip key={note.key} tone={note.tone}>
+          {note.text}
+        </Chip>
+      ))}
+    </span>
+  )
+}
+
 function Prep({
   save,
   onAction,
@@ -217,7 +269,8 @@ function Prep({
   onDepart: (presetId: string) => void
   onDungeons: () => void
 }) {
-  const { t } = useTranslation()
+  const { t, i18n } = useTranslation()
+  const korean = i18n.language.startsWith('ko')
   const now = useNow(save.expeditions.length > 0)
   const dungeon = dungeonById(save.dungeonId)
   const slots = expeditionSlots(save.buildings.guild)
@@ -283,6 +336,11 @@ function Prep({
                 {members.some(needsWarning) ? <Chip tone="bad">{t('hero.warning')}</Chip> : null}
                 {members.some((hero) => hero.deaths > 0) ? <Chip tone="bad">{t('hero.seenDeath')}</Chip> : null}
                 {members.length === 0 ? <Chip>{t('battle.emptyPreset')}</Chip> : null}
+                {partyNotes(members, t, korean).map((note) => (
+                  <Chip key={note.key} tone={note.tone}>
+                    {note.text}
+                  </Chip>
+                ))}
               </span>
             </button>
           )
@@ -420,8 +478,11 @@ function PartyEditor({ save, onAction, onBack }: { save: GameState; onAction: Ac
     size: row === 'front' ? combatRules.frontRowSize : combatRules.backRowSize,
     slots: preset.slots.filter((slot) => slot.row === row),
   }))
+  const members = presetHeroes(save, preset)
   return (
-    <div className="split wide-right editor">
+    <div className="column">
+      <PartyNotes heroes={members} />
+      <div className="split wide-right editor">
       <div className="column">
         <div className="row">
           {(['all', 'tank', 'dps', 'healer', 'support'] as const).map((entry) => (
@@ -516,6 +577,7 @@ function PartyEditor({ save, onAction, onBack }: { save: GameState; onAction: Ac
         <button type="button" className="btn primary" onClick={onBack}>
           {t('battle.done')}
         </button>
+      </div>
       </div>
     </div>
   )

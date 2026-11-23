@@ -520,6 +520,12 @@
     "editParty": "파티 {{number}} 구성하기",
     "supplies": "준비물",
     "suppliesLater": "연금술 공방이 생기면 물약과 폭탄을 챙길 수 있다.",
+    "warn": {
+      "noTank": "탱커가 없으면 후열이 무너지기 쉬워요",
+      "noHealer": "치유사가 없으면 피해를 버티기 어려워요",
+      "fewDps": "딜러가 부족해요 — 오래 싸우다 지기 쉬워요",
+      "overlap": "{{class}} 둘이면 효과가 겹쳐요"
+    },
     "role": {
       "all": "전체",
       "tank": "탱",
