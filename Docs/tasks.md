@@ -64,7 +64,7 @@ Claude Code, Cursor, GPT(Codex)가 함께 쓰는 작업 목록이다. 작업 하
 | 22 | 세대 시뮬레이터 | GPT | `tools/generations.ts` (새 파일), `package.json` 스크립트 한 줄 | 완료 (이 커밋) |
 | 23 | 첫 3시간 시뮬레이터를 여러 시드로 | GPT | `tools/first-hour.ts` | 완료 (이 커밋) |
 | 24 | 첫 3시간 시뮬레이터의 플레이어를 사람처럼 | GPT | `tools/first-hour.ts` | 완료 (이 커밋) |
-| 25 | 권장 레벨을 여러 파티 구성으로 재기 | GPT | `tools/curve.ts`, `tools/print-curve.ts`, `tools/tune-curve.ts` | 대기 |
+| 25 | 권장 레벨을 여러 파티 구성으로 재기 | GPT | `tools/curve.ts`, `tools/print-curve.ts`, `tools/tune-curve.ts` | 완료 (이 커밋) |
 
 ---
 
@@ -747,3 +747,6 @@ tools/curve.ts, tools/print-curve.ts, tools/tune-curve.ts만 고친다. 게임 �
 ```
 
 메모:
+- 초기 방문자 40개 파티 × 전투 10회로 중앙값/P25를 측정했다. 이끼 길 Lv1은 100%/70%, 광산 Lv2는 100%/0%였다. 음유시인 2명인 시드 2의 이끼 길 승률은 Lv2 40%, Lv4 100%로, 건강한 파티 곡선에서는 Lv4 전멸이 재현되지 않았다.
+- P25 조정 후보(동굴·이끼 길·광산·수직갱·묘지·묘실 순)는 3.75/5.40/1.80/2.10/3.05/3.85, 목표 P25는 60/60/90/60/60/60%다. 특히 동굴 배수는 초반 흐름 시뮬레이션으로 따로 검증할 후보로 남겼다.
+- 기존 고정 파티 출력과 조정 모드도 실행했다. 프로젝트·도구 타입 검사, 테스트 124개, 프로덕션 빌드 통과.

@@ -1,33 +1,70 @@
-// Finds each dungeon's monsterScale so a party of ordinary visitors first
-// meets the win-rate threshold at the target level. Prints the candidate
-// scale and its measured win rate. Run: npx tsx tools/tune-curve.ts [samples]
+// Run: npx tsx tools/tune-curve.ts [samples] [--quartile]
 import { dungeons } from '../src/core/data'
-import { winRate } from './curve'
+import { BATTLES_PER_PARTY, DEFAULT_PARTY_SAMPLES, starterParties, starterWinRates, winRate } from './curve'
 
-const TARGET: Record<string, number> = { hill_cave: 1, moss_path: 2, abandoned_mine: 4, deep_shaft: 5, barrow: 7, sunken_crypt: 9 }
 const TARGET_WIN_RATE = 0.6
-const samples = Number(process.argv[2] ?? 30)
+const SCALE_STEPS = 20
+const MAX_SCALE = 6
+const MAX_LEVEL = 14
+const args = process.argv.slice(2)
+const quartile = args.includes('--quartile')
+const samples = Number(args.find((arg) => arg !== '--quartile') ?? DEFAULT_PARTY_SAMPLES)
+if (!Number.isSafeInteger(samples) || samples < 1) {
+  throw new Error('Usage: npx tsx tools/tune-curve.ts [positive samples] [--quartile]')
+}
+const parties = quartile ? starterParties(samples) : []
+const measure = (id: string, level: number) => quartile
+  ? starterWinRates(parties, id, level).lowerQuartile
+  : winRate(id, level, samples)
 
-function firstWinningLevel(dungeonId: string, ceiling: number): number {
+// Search the 0.05 grid assuming win rate generally falls as scale rises.
+// The selected candidate and its first passing level are measured again.
+function strongestPassingScale(passes: (step: number) => boolean): number {
+  let low = 0
+  let high = MAX_SCALE * SCALE_STEPS + 1
+  while (high - low > 1) {
+    const middle = Math.floor((low + high) / 2)
+    if (passes(middle)) low = middle
+    else high = middle
+  }
+  return Math.max(1, low)
+}
+
+function firstPassingLevel(dungeonId: string, ceiling: number): number | undefined {
   for (let level = 1; level <= ceiling; level += 1) {
-    if (winRate(dungeonId, level, samples) >= TARGET_WIN_RATE) {
-      return level
-    }
+    if (measure(dungeonId, level) >= TARGET_WIN_RATE) return level
   }
-  return ceiling + 1
+  return undefined
 }
 
-for (const dungeon of dungeons) {
-  const target = TARGET[dungeon.id] ?? 1
-  let scale = 1
-  dungeon.monsterScale = scale
-  // Raise the scale until the party needs the target level, then stop.
-  while (scale < 6 && firstWinningLevel(dungeon.id, target - 1) < target) {
-    scale = Math.round((scale + 0.05) * 100) / 100
+const rows = dungeons.map((dungeon) => {
+  const originalScale = dungeon.monsterScale
+  const target = dungeon.recommendedLevel
+  try {
+    let step = SCALE_STEPS
+    if (quartile) {
+      step = strongestPassingScale((candidate) => {
+        dungeon.monsterScale = candidate / SCALE_STEPS
+        return measure(dungeon.id, target) >= TARGET_WIN_RATE
+      })
+    } else {
+      // Preserve the fixed-lineup calibration for comparison.
+      dungeon.monsterScale = 1
+      while (step < MAX_SCALE * SCALE_STEPS && firstPassingLevel(dungeon.id, target - 1) != null) {
+        step += 1
+        dungeon.monsterScale = step / SCALE_STEPS
+      }
+    }
+    const scale = step / SCALE_STEPS
     dungeon.monsterScale = scale
+    const rate = measure(dungeon.id, target)
+    const level = firstPassingLevel(dungeon.id, MAX_LEVEL)
+    const status = rate < TARGET_WIN_RATE ? '목표 미달' : level !== target ? '목표보다 낮은 레벨에서 달성' : '목표 달성'
+    return { dungeon: dungeon.id, target, recommended: level ?? '—', monsterScale: scale, targetWinRate: `${Math.round(rate * 100)}%`, status }
+  } finally {
+    dungeon.monsterScale = originalScale
   }
-  const level = firstWinningLevel(dungeon.id, 14)
-  const targetWinRate = winRate(dungeon.id, target, samples)
-  const status = targetWinRate < TARGET_WIN_RATE ? '목표 미달' : level < target ? '목표보다 낮은 레벨에서 달성' : '목표 달성'
-  console.log(dungeon.id, JSON.stringify({ scale, level, target, targetWinRate, status }))
-}
+})
+
+console.log(quartile ? `P25 ≥ 60% · ${samples} starter parties × ${BATTLES_PER_PARTY} battles` : `Fixed lineup ≥ 60% · ${samples} battles`)
+console.table(rows)
