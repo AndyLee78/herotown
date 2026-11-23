@@ -9,7 +9,7 @@ Claude Code와 Cursor를 번갈아 쓰기 위한 작업 목록이다. 작업 하
 | Claude Code | 첫 접속 길잡이 의뢰 | 코어 상태·보상·UI를 함께 설계 |
 | Claude Code | 은퇴 → 호감도·결혼·출산·유전 (단계 2) | 코어·세이브·3D 외형(look.ts)을 함께 바꾸는 큰 설계 |
 | Cursor | 9 PWA·오프라인, 10 효과음, 11 나이 먹기 | 범위가 분명하고 다른 작업과 파일이 겹치지 않음 |
-| 사용자 | 공개할 호스팅 결정 | 계정이 필요함. 정해지면 배포 작업을 Cursor에 추가 |
+| 사용자 | GitHub 저장소 만들기·첫 push·Pages 켜기 | 계정이 필요함. 12번 앞의 "먼저 사용자가 할 일" 참고 |
 
 Cursor 작업 9–11은 서로 겹치지 않아 순서 상관없다. 11번은 core/game.ts를 건드리므로 Claude Code가 길잡이 작업을 커밋한 뒤에 넘긴다.
 
@@ -39,6 +39,7 @@ Cursor 작업 9–11은 서로 겹치지 않아 순서 상관없다. 11번은 co
 | 9 | PWA·오프라인 실행·업데이트 알림 | 중간 | 대기 |
 | 10 | 효과음 (코드 합성) + 음량 설정 | 중간 | 대기 |
 | 11 | 해가 바뀌면 나이 먹기 | 작음 | 대기 |
+| 12 | GitHub Pages 배포 | 작음 | 대기 (사용자가 저장소를 먼저 올려야 함) |
 
 ---
 
@@ -362,6 +363,45 @@ GDD 5.1(1년 = 4계절)과 5.2(나이대별 변화). 지금은 시간이 흘러�
 6. 테스트: 계절 4번이 지나면 나이 +1, 나이대가 바뀌면 능력치가 바뀜, 디버그 "+1계절" 4번과 같은 결과.
 
 완료 기준: 테스트 통과. 디버그 시계로 1년을 넘기면 영웅 상세의 나이와 능력치가 바뀌고 부재 중 보고서에 나온다.
+```
+
+메모:
+
+---
+
+## 12. GitHub Pages 배포
+
+공개 호스팅은 GitHub Pages로 정했다(2026-11-23). 저장소는 아직 원격이 없다.
+
+**먼저 사용자가 할 일 (Cursor 작업 전)**
+
+1. GitHub에 새 저장소를 만든다(예: `herotown`). 무료 계정에서 Pages를 쓰려면 **공개(Public)** 저장소여야 한다. 비공개로 두려면 유료 플랜이 필요하다.
+2. 이 PC에서 원격을 연결하고 올린다:
+   `git remote add origin https://github.com/<계정>/herotown.git` → `git push -u origin main`
+3. 저장소 Settings → Pages → Build and deployment → Source를 **GitHub Actions**로 바꾼다.
+4. 주소는 `https://<계정>.github.io/herotown/`가 된다. 저장소 이름을 Cursor에 알려 준다.
+
+**전달할 내용**
+
+```
+GitHub Pages(프로젝트 사이트, 주소 https://<계정>.github.io/<저장소 이름>/)로 배포한다. 저장소 이름: <여기에 적기>
+
+할 일:
+1. Vite의 base 경로를 배포 경로에 맞춘다. 환경 변수(예: BASE_PATH)로 받아서 기본은 '/', GitHub Actions에서는 '/<저장소 이름>/'.
+   npm run dev와 npm run build(로컬)는 지금처럼 '/'에서 동작해야 한다.
+2. 경로를 하드코딩한 곳을 모두 base 기준으로 바꾼다: public/의 favicon·폰트, index.html의 아이콘 링크,
+   (9번 PWA가 끝났다면) manifest의 start_url·scope·아이콘 경로와 service worker 범위.
+   import.meta.env.BASE_URL을 쓴다.
+3. .github/workflows/deploy.yml: main에 push하면 npm ci → npx tsc --noEmit → npm test → npm run build → Pages에 올린다.
+   공식 액션(actions/checkout, actions/setup-node, actions/configure-pages, actions/upload-pages-artifact, actions/deploy-pages)을 쓰고 Node 버전은 package.json과 맞춘다.
+   테스트가 실패하면 배포하지 않는다.
+4. 정적 호스팅이라 새로고침 시 404가 날 경로가 있는지 확인한다(지금은 라우터가 없어 단일 페이지라 문제없을 것). 필요하면 404.html을 index.html 복사로 둔다.
+5. 세이브 주의: github.io의 같은 계정 사이트들은 출처(origin)를 공유한다. IndexedDB 이름 'herotown'이 다른 프로젝트와 겹치지 않는지만 확인하고, 바꾸지는 않는다(바꾸면 기존 세이브가 사라진다).
+6. README.md에 플레이 주소와 배포 방법을 짧게 적는다.
+7. prototypes/ 폴더는 배포에 넣지 않는다.
+
+완료 기준: 로컬에서 BASE_PATH=/<저장소 이름>/ npm run build 후 npx vite preview --base /<저장소 이름>/ 로 열어 마을·3D·폰트·아이콘이 모두 보인다.
+사용자가 push한 뒤 Actions가 초록색으로 끝나고 Pages 주소에서 게임이 열린다.
 ```
 
 메모:
