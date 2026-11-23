@@ -56,7 +56,7 @@
           ]
         }
       ],
-      "monsterScale": 1.4
+      "monsterScale": 1.6
     },
     {
       "id": "moss_path",
@@ -84,7 +84,7 @@
           ]
         }
       ],
-      "monsterScale": 4.7
+      "monsterScale": 5
     },
     {
       "id": "deep_shaft",
@@ -112,7 +112,7 @@
           ]
         }
       ],
-      "monsterScale": 1.7
+      "monsterScale": 1.9
     },
     {
       "id": "barrow",
@@ -140,7 +140,7 @@
           ]
         }
       ],
-      "monsterScale": 2.6
+      "monsterScale": 2.8
     },
     {
       "id": "sunken_crypt",
@@ -169,7 +169,7 @@
           ]
         }
       ],
-      "monsterScale": 3.3
+      "monsterScale": 3.6
     }
   ]
 }

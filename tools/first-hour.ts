@@ -58,6 +58,7 @@ function pickDungeon(state: GameState, training: Training | undefined): string {
 }
 
 function simulate(minutes: number, seed: number) {
+  const firstClear: Record<string, number> = {}
   const start = 1_700_000_000_000
   let state = freshState(seed, start)
   let now = start
@@ -142,10 +143,12 @@ function simulate(minutes: number, seed: number) {
       }
     }
     recordGold()
+    const clearedBefore = state.cleared.length
     const lastReturn = state.history[0]?.finishedAt
     now = Math.min(now + 15_000, start + minutes * 60_000)
     state = reduce(state, { type: 'catchUp', now })
     recordGold()
+    for (const id of state.cleared.slice(clearedBefore)) firstClear[id] = (now - start) / 60_000
     const report = state.history[0]
     if (report && report.finishedAt !== lastReturn) {
       const dungeonId = report.dungeonId ?? state.dungeonId
@@ -182,7 +185,7 @@ function simulate(minutes: number, seed: number) {
   }
   const wins = state.history.filter((report) => report.victory).length
   const party = selectedHeroes(state)
-  return { seed, state, log, wins, maxLosingStreak, maxLowGoldMs, partyLevel: averageLevel(party), ready: party.filter((hero) => !isHurt(hero)).length, partySize: party.length }
+  return { firstClear, seed, state, log, wins, maxLosingStreak, maxLowGoldMs, partyLevel: averageLevel(party), ready: party.filter((hero) => !isHurt(hero)).length, partySize: party.length }
 }
 
 function summarize(values: number[]): string {
@@ -218,3 +221,9 @@ if (results.length === 1) {
   console.log(`max losing streak: ${summarize(results.map((result) => result.maxLosingStreak))}`)
 }
 console.log(`seeds below hire cost for over 30m: ${results.filter((result) => result.maxLowGoldMs > 30 * 60_000).length}/${results.length}`)
+
+const order = ['hill_cave', 'moss_path', 'abandoned_mine', 'deep_shaft', 'barrow', 'sunken_crypt']
+console.log('first clear (minutes): ' + order.map((id) => {
+  const times = results.map((r) => r.firstClear[id]).filter((t): t is number => t != null).sort((a, b) => a - b)
+  return `${id} ${times.length ? times[Math.floor(times.length / 2)]!.toFixed(0) : '-'} (${times.length}/${results.length})`
+}).join(' · '))
