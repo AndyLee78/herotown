@@ -2,6 +2,8 @@ import { Clock } from 'lucide-react'
 import { lazy, Suspense, useEffect, useRef, useState, type ReactNode } from 'react'
 import { useTranslation } from 'react-i18next'
 import {
+  fountainLevel,
+  fountainWishes,
   guideStatus,
   exportSave,
   housingFree,
@@ -381,6 +383,11 @@ export function App() {
           buildingLabels={buildingLabels}
           expeditions={save.expeditions.length}
           graves={save.graveyard}
+          wishes={fountainWishes(save, gameNow())}
+          wishCap={fountainLevel(save.buildings.fountain).cap}
+          wishAt={save.fountain.last?.at ?? null}
+          wishJackpot={save.fountain.last?.jackpot ?? false}
+          onWish={() => apply({ type: 'wish', now: gameNow() })}
           active={!covered}
         />
       </Suspense>

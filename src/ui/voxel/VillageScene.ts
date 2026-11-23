@@ -22,6 +22,10 @@ export type VillageSceneProps = {
   weddings: [string, string][]
   births: string[]
   graves: { legend?: boolean }[]
+  wishes: number
+  wishCap: number
+  wishBurst: boolean
+  wishJackpot: boolean
 }
 
 type Area = { minX: number; maxX: number; minZ: number; maxZ: number }
@@ -75,6 +79,8 @@ export class VillageScene {
   private gateCount = -1
   private cemeteryKey = ''
   private cemetery: THREE.Group | null = null
+  private wishMode = ''
+  private wishDecor: THREE.Group | null = null
   private active = true
   private readonly spouseOf = new Map<string, string>()
   private readonly parentOf = new Map<string, string>()
@@ -86,6 +92,7 @@ export class VillageScene {
     private readonly canvas: HTMLCanvasElement,
     private readonly onPick: (id: string) => void,
     private readonly onPickLot?: (id: BuildingId) => void,
+    private readonly onWish?: () => void,
   ) {
     this.renderer = new THREE.WebGLRenderer({ canvas, antialias: true })
     this.renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2))
@@ -149,6 +156,10 @@ export class VillageScene {
     for (const id of props.births) {
       this.playBirth(id)
     }
+    this.syncWishDecor(props.wishes, props.wishCap)
+    if (props.wishBurst) {
+      this.playWish(props.wishJackpot)
+    }
     const party = new Set(props.partyIds)
     for (const walker of this.walkers.values()) {
       this.setMarker(walker, walker.kind === 'roster' && party.has(walker.id))
@@ -167,6 +178,7 @@ export class VillageScene {
     this.canvas.removeEventListener('pointerdown', this.handleDown)
     this.canvas.removeEventListener('pointerup', this.handleUp)
     this.controls.dispose()
+    freeOwnMaterials(this.scene)
     disposeTree(this.scene)
     this.renderer.dispose()
   }
@@ -268,7 +280,9 @@ export class VillageScene {
         }
         const velocity = child.userData.velocity as THREE.Vector3
         child.position.addScaledVector(velocity, delta)
-        velocity.y -= delta * 0.28
+        if (!child.userData.float) {
+          velocity.y -= delta * 0.28
+        }
         child.rotation.x += delta * 2
         child.rotation.y += delta * 3
       }
@@ -290,6 +304,82 @@ export class VillageScene {
         this.bursts.splice(index, 1)
       }
     }
+  }
+
+  private bobFountain(time: number) {
+    this.lots.get('fountain')?.group.traverse((object) => {
+      if (object.name !== 'jet') {
+        return
+      }
+      const base = object.userData.baseY
+      if (typeof base === 'number') {
+        object.position.y = base + Math.sin(time * 3 + base) * 0.08
+      }
+    })
+    this.wishDecor?.children.forEach((child, index) => {
+      const base = child.userData.baseY
+      if (typeof base === 'number') {
+        child.position.y = base + Math.sin(time * 4 + index) * 0.05
+      }
+      child.rotation.y = time * 2
+    })
+  }
+
+  private syncWishDecor(wishes: number, cap: number) {
+    const mode = wishes <= 0 ? 'empty' : wishes >= cap ? 'full' : 'ready'
+    if (mode === this.wishMode) {
+      return
+    }
+    this.wishMode = mode
+    if (this.wishDecor) {
+      this.scene.remove(this.wishDecor)
+      freeOwnMaterials(this.wishDecor)
+      disposeTree(this.wishDecor)
+      this.wishDecor = null
+    }
+    if (mode === 'empty') {
+      return
+    }
+    const group = new THREE.Group()
+    const count = mode === 'full' ? 5 : 4
+    for (let index = 0; index < count; index += 1) {
+      const coin = mode === 'full'
+      const material = new THREE.MeshBasicMaterial({ color: coin ? '#e2b340' : '#f4fbff' })
+      const mesh = new THREE.Mesh(new THREE.BoxGeometry(coin ? 0.16 : 0.08, coin ? 0.05 : 0.08, coin ? 0.16 : 0.08), material)
+      const angle = (index / count) * Math.PI * 2
+      mesh.position.set(Math.cos(angle) * 0.38, 0.06, Math.sin(angle) * 0.38)
+      mesh.userData.baseY = mesh.position.y
+      mesh.userData.materials = [material]
+      group.add(mesh)
+    }
+    group.position.set(0, 0.42, 0)
+    this.scene.add(group)
+    this.wishDecor = group
+  }
+
+  private playWish(jackpot: boolean) {
+    const group = new THREE.Group()
+    const count = jackpot ? 16 : 4
+    for (let index = 0; index < count; index += 1) {
+      const material = new THREE.MeshBasicMaterial({ color: jackpot ? '#ffe27a' : '#e2b340' })
+      const mesh = new THREE.Mesh(new THREE.BoxGeometry(0.14, 0.05, 0.14), material)
+      const angle = (index / count) * Math.PI * 2
+      const speed = jackpot ? 1.3 : 0.85
+      mesh.userData.velocity = new THREE.Vector3(Math.cos(angle) * speed, 1.5 + (index % 3) * 0.2, Math.sin(angle) * speed)
+      mesh.userData.materials = [material]
+      group.add(mesh)
+    }
+    if (jackpot) {
+      const material = new THREE.MeshBasicMaterial({ color: '#ffe27a', transparent: true, opacity: 0.85 })
+      const jet = new THREE.Mesh(new THREE.BoxGeometry(0.22, 1.5, 0.22), material)
+      jet.position.y = 1.1
+      jet.userData.velocity = new THREE.Vector3(0, 0.2, 0)
+      jet.userData.float = true
+      jet.userData.materials = [material]
+      group.add(jet)
+    }
+    this.scene.add(group)
+    this.bursts.push({ group, life: jackpot ? 2.6 : 1.4 })
   }
 
   private syncCemetery(graves: { legend?: boolean }[]) {
@@ -320,6 +410,7 @@ export class VillageScene {
       if (!view || view.key !== key) {
         if (view) {
           this.scene.remove(view.group)
+          freeOwnMaterials(view.group)
           disposeTree(view.group)
         }
         const built = buildLot(id, level, constructing)
@@ -554,6 +645,7 @@ export class VillageScene {
     for (const walker of this.walkers.values()) {
       this.step(walker, delta, time)
     }
+    this.bobFountain(time)
     this.stepBursts(delta)
     this.controls.update()
     this.clampPan()
@@ -702,11 +794,22 @@ export class VillageScene {
         object = object.parent
       }
       if (object) {
-        this.onPickLot?.(id)
+        if (id === 'fountain') {
+          this.onWish?.()
+        } else {
+          this.onPickLot?.(id)
+        }
         return
       }
     }
   }
+}
+
+function freeOwnMaterials(root: THREE.Object3D) {
+  root.traverse((object) => {
+    const materials = object.userData.materials as THREE.Material[] | undefined
+    materials?.forEach((material) => material.dispose())
+  })
 }
 
 function turnToward(current: number, target: number, step: number): number {

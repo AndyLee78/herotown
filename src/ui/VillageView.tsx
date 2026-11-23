@@ -19,9 +19,14 @@ type Props = {
   expeditions: number
   active: boolean
   graves: { legend?: boolean }[]
+  wishes: number
+  wishCap: number
+  wishAt: number | null
+  wishJackpot: boolean
+  onWish: () => void
 }
 
-export function VillageView({ roster, visitors, awayIds, retirees, partyIds, selectedId, onSelect, onPickBuilding, villageLabel, buildings, constructing, buildingLabels, expeditions, active, graves }: Props) {
+export function VillageView({ roster, visitors, awayIds, retirees, partyIds, selectedId, onSelect, onPickBuilding, villageLabel, buildings, constructing, buildingLabels, expeditions, active, graves, wishes, wishCap, wishAt, wishJackpot, onWish }: Props) {
   const canvasRef = useRef<HTMLCanvasElement>(null)
   const sceneRef = useRef<VillageScene | null>(null)
   const onSelectRef = useRef(onSelect)
@@ -29,6 +34,9 @@ export function VillageView({ roster, visitors, awayIds, retirees, partyIds, sel
   const onPickBuildingRef = useRef(onPickBuilding)
   onPickBuildingRef.current = onPickBuilding
   const seenRoster = useRef<Map<string, string | null> | null>(null)
+  const seenWish = useRef<number | null | undefined>(undefined)
+  const onWishRef = useRef(onWish)
+  onWishRef.current = onWish
 
   useEffect(() => {
     const canvas = canvasRef.current
@@ -39,6 +47,7 @@ export function VillageView({ roster, visitors, awayIds, retirees, partyIds, sel
       canvas,
       (id) => onSelectRef.current(id),
       (id) => onPickBuildingRef.current(id),
+      () => onWishRef.current(),
     )
     sceneRef.current = scene
     return () => {
@@ -50,6 +59,11 @@ export function VillageView({ roster, visitors, awayIds, retirees, partyIds, sel
   useEffect(() => {
     const weddings: [string, string][] = []
     const births: string[] = []
+    let wishBurst = false
+    if (seenWish.current !== undefined && wishAt != null && wishAt !== seenWish.current) {
+      wishBurst = true
+    }
+    seenWish.current = wishAt
     const previous = seenRoster.current
     if (previous) {
       for (const hero of roster) {
@@ -77,6 +91,10 @@ export function VillageView({ roster, visitors, awayIds, retirees, partyIds, sel
       weddings,
       births,
       graves,
+      wishes,
+      wishCap,
+      wishBurst,
+      wishJackpot,
     })
   })
 

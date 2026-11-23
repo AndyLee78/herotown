@@ -209,8 +209,81 @@ export function buildLot(id: BuildingId, level: number, constructing: boolean): 
     }
   }
   const group = b.build()
+  if (id === 'fountain' && level > 0) {
+    group.add(fountainWater(level))
+  }
   group.position.set(lot.x, 0, lot.z)
   return { group, top }
+}
+
+const STONE = '#c5c9ce'
+const RIM = '#9aa0a6'
+const GOLD = '#e2b340'
+
+// A wider basin at each level: one bowl, a second tier, a statue, then gold trim.
+function drawFountain(b: Builder, level: number): number {
+  const bowl = 0.7 + level * 0.08
+  const trim = level >= 4 ? GOLD : RIM
+  basin(b, bowl * 2.2, bowl * 2.2, 0.42, 0.12, STONE, trim)
+  if (level >= 2) {
+    basin(b, bowl * 1.25, bowl * 1.25, 0.38, 0.58, STONE, trim)
+  }
+  if (level >= 3) {
+    b.box(0.22, 0.55, 0.16, '#d7c4a8', 0, 1.15, 0)
+    b.box(0.18, 0.18, 0.16, '#f0d2b0', 0, 1.5, 0)
+    b.box(0.08, 0.28, 0.08, '#d7c4a8', -0.18, 1.15, 0)
+    b.box(0.08, 0.28, 0.08, '#d7c4a8', 0.18, 1.15, 0)
+  }
+  if (level >= 4) {
+    b.box(0.28, 0.06, 0.28, GOLD, 0, 1.66, 0)
+  }
+  return level >= 3 ? 1.8 : level >= 2 ? 1.1 : 0.55
+}
+
+// Four walls around an open floor, so the water in the middle stays visible.
+function basin(b: Builder, w: number, d: number, h: number, y: number, wall: string, trim: string) {
+  const lip = 0.14
+  b.box(w, 0.08, d, wall, 0, y, 0)
+  b.box(w, h, lip, wall, 0, y + h / 2, d / 2 - lip / 2)
+  b.box(w, h, lip, wall, 0, y + h / 2, -d / 2 + lip / 2)
+  b.box(lip, h, d, wall, w / 2 - lip / 2, y + h / 2, 0)
+  b.box(lip, h, d, wall, -w / 2 + lip / 2, y + h / 2, 0)
+  b.box(w + 0.08, 0.06, lip, trim, 0, y + h, d / 2)
+  b.box(w + 0.08, 0.06, lip, trim, 0, y + h, -d / 2)
+  b.box(lip, 0.06, d + 0.08, trim, w / 2, y + h, 0)
+  b.box(lip, 0.06, d + 0.08, trim, -w / 2, y + h, 0)
+}
+
+// Translucent water and a jet the scene bobs. Materials are listed so the lot can free them.
+function fountainWater(level: number): THREE.Group {
+  const group = new THREE.Group()
+  const materials: THREE.Material[] = []
+  const material = (color: number, opacity: number) => {
+    const entry = new THREE.MeshBasicMaterial({ color, transparent: true, opacity })
+    materials.push(entry)
+    return entry
+  }
+  const bowl = 0.62 + level * 0.1
+  const pool = new THREE.Mesh(new THREE.BoxGeometry(bowl * 1.5, 0.1, bowl * 1.5), material(0x5eb6e8, 0.72))
+  pool.position.y = 0.28
+  group.add(pool)
+  const jet = new THREE.Mesh(new THREE.BoxGeometry(0.1, 0.42 + level * 0.06, 0.1), material(0x9fd4f5, 0.8))
+  jet.name = 'jet'
+  jet.position.y = 0.62
+  jet.userData.baseY = jet.position.y
+  group.add(jet)
+  if (level >= 2) {
+    const upper = new THREE.Mesh(new THREE.BoxGeometry(bowl * 0.95, 0.06, bowl * 0.95), material(0x7ec8ef, 0.5))
+    upper.position.y = 0.9
+    group.add(upper)
+    const upperJet = new THREE.Mesh(new THREE.BoxGeometry(0.08, 0.36, 0.08), material(0xc6ebff, 0.85))
+    upperJet.name = 'jet'
+    upperJet.position.y = 1.12
+    upperJet.userData.baseY = upperJet.position.y
+    group.add(upperJet)
+  }
+  group.userData.materials = materials
+  return group
 }
 
 function drawEmptyLot(b: Builder, lot: Lot) {
@@ -263,9 +336,7 @@ function drawBuilding(b: Builder, id: BuildingId, lot: Lot, level: number): numb
     return drawHome(b, w, d, level)
   }
   if (id === 'fountain') {
-    // Placeholder basin; task 31 gives each level its own shape.
-    b.box(w, 0.4, d, '#b9bec4', 0, 0.2, 0).box(w - 0.4, 0.06, d - 0.4, '#6fb7e6', 0, 0.4, 0).box(0.3, 0.9, 0.3, '#c9cdd2', 0, 0.85, 0)
-    return 1.4
+    return drawFountain(b, level)
   }
   if (id === 'guild') {
     const top = house(b, { w, d, h: 1.6 + grow * 0.3, wall: '#e2dccb', roof: '#4f7fb5', timber: true })
