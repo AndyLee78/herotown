@@ -72,3 +72,40 @@ GDD 6장(결혼·출산·2세)을 실제 규칙으로 옮긴다. 마을 영웅�
 
 - 순서: 0 → A → (B, D, E 동시) → C. 0′은 언제든 같이 돌릴 수 있다.
 - B와 C는 같은 Cursor가 하므로 차례로 한다. B가 `src/locales`를 건드리므로 그동안 다른 작업은 문구 파일을 고치지 않는다.
+
+---
+
+# 2b: 인구 순환 (설계 2026-11-23)
+
+세대 시뮬레이터(작업 22)에서 2년 차에 침대 10/10이 차고 20년 동안 3세대가 태어나지 않았다. 마을이 계속 바뀌도록 **늘어나는 집, 노년의 죽음, 기억되는 조상**을 넣는다. 수치는 `src/data/family.json`과 `village.json`에 둔다.
+
+## 9. 집 확장
+
+- 집(house)에 3·4레벨을 추가한다. 침대는 지금처럼 레벨 × 5(15, 20). 3레벨은 마을 Lv2, 4레벨은 마을 Lv3부터(`maxBuildingLevel`).
+  - 3레벨: 골드 90, 나무 40, 돌 20, 10분. 4레벨: 골드 160, 나무 60, 돌 40, 철 10, 20분.
+- 신혼집은 집 레벨 × `couplesPerHouseLevel`. 2로 올려 4레벨이면 부부 8쌍.
+
+## 10. 자연사
+
+- 해가 바뀔 때 `oldAgeFrom`(60)세 이상인 영웅은 `(나이 − 59) × oldAgeChancePerYear`(0.04) 확률로 세상을 떠난다(61세 8%, 70세 44%). 최고 나이(80)가 되면 반드시 떠난다.
+- 마을 영웅(roster)과 은퇴자 모두 해당한다. 원정 중인 영웅은 그해를 넘기고 돌아온 뒤 다음 해에 판정한다.
+- 떠난 영웅은 묘지(`state.graveyard`)로 간다. 무덤에 사인(`cause`: battle/oldAge), 떠난 해, 나이, 성별, 가문, 부모, 배우자, 외형 유전자를 남겨 가계도에서 조상으로 계속 보인다. 전투 사망 무덤도 같은 정보를 남긴다(예전 무덤은 없는 칸을 비운다).
+- 배우자는 기존 규칙대로 사별(애도 1계절 뒤 재혼 가능). 은퇴자가 떠나면 그 건물 자리가 빈다.
+- 부재 보고서에 `deaths`(떠난 영웅 이름)를 더한다.
+
+## 11. 명예의 전당과 가문 보너스
+
+- 영웅이 묘지로 갈 때 `legendLevel`(12) 이상이거나 티어 3 던전을 클리어했으면 **명예의 전당**에 오른다(무덤의 `legend: true`).
+- 아이가 태어날 때(임신 시점에 결정) 같은 가문 이름의 전설 수 × `legendPotential`(5)만큼 잠재력이 오른다. 최대 `legendPotentialMax`(15).
+- 조회 함수: `hallOfFame(state)`(전설 무덤 목록, 최근 순), `ancestorsOf(state, id)`(살아 있는 사람과 무덤을 합친 부모·조부모), `familyLegends(state, family)`.
+
+## 12. 2b 작업 분담
+
+| 단계 | 내용 | 담당 | 건드리는 파일 |
+| --- | --- | --- | --- |
+| P | 출발 준비의 파티 구성 안내(딜러 부족·힐러 없음·탱커 없음) | Cursor (작업 26, 지금) | `src/ui/game/battleScreens.tsx`, `src/locales/*` |
+| A | core: 9–11절 전부, 세이브 9, 테스트 | Claude Code | `src/core/*`, `src/data/family.json`, `village.json` |
+| B | 화면: 명예의 전당, 묘지(사인·나이·가문), 가계도에 조상 무덤, 자연사 알림·부재 보고서 줄, 집 3·4레벨 | Cursor (작업 27, P와 A 다음) | `src/ui/game/heroScreens.tsx`, `villageScreens.tsx`, `App.tsx`, `styles.css`, `src/locales/*` |
+| C | 3D: 집 레벨별 모습(3·4레벨 집 추가), 묘지 비석 | Cursor (작업 28, B 다음) | `src/ui/voxel/VillageScene.ts`, `src/ui/voxel/world.ts` |
+| D | A 코드 리뷰 | GPT (작업 29) | `Docs/reviews/<해시>.md` |
+| E | 세대 시뮬레이터 60년, 은퇴·집 짓기 하는 플레이어 | GPT (작업 30) | `tools/generations.ts` |
