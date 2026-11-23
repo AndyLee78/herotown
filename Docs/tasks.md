@@ -84,6 +84,11 @@ Claude Code, Cursor, GPT(Codex)가 함께 쓰는 작업 목록이다. 작업 하
 | 42 | 함정·기습 연출과 마법 공방 건물 3D | Cursor | `BattleScene.ts`, `replay.ts`, `world.ts`, `VillageScene.ts` | 완료 (7893f0c) |
 | 43 | 3b core 코드 리뷰 (1f690a1) | GPT | `Docs/reviews/1f690a1.md` (새 파일만) | 완료 (1c5c70e) |
 | 44 | 도적 요새 밸런스 측정 | GPT | `tools/curve.ts`, `print-curve.ts`, `tune-curve.ts`, `first-hour.ts` | 완료 (6d9ffd1) |
+| 45 | 마량 성채 몬스터·던전 그림 | Cursor | `src/ui/voxel/enemies.ts`, `portrait.ts` | 대기 |
+| 46 | 광역기 작전·리포트·로그 화면 | Cursor | `App.tsx`, `src/ui/game/*.tsx`, `styles.css`, `src/locales/*` | 대기 |
+| 47 | 예고·광역기·끊기·버티기·소환 연출 | Cursor | `BattleScene.ts`, `replay.ts` | 대기 (46 뒤) |
+| 48 | 3c core 코드 리뷰 (7eaca30) | GPT | `Docs/reviews/7eaca30.md` (새 파일만) | 대기 |
+| 49 | 마량 성채 밸런스 측정 | GPT | `tools/curve.ts`, `print-curve.ts`, `tune-curve.ts`, `first-hour.ts` | 대기 |
 
 ---
 
@@ -1166,3 +1171,94 @@ tools/curve.ts, tools/print-curve.ts, tools/tune-curve.ts, tools/first-hour.ts�
 - 40파티×10전 Lv14 중앙값/P25. 도적 없음에서 미착용/경계/경계+감지는 40/20, 100/70, 100/90%. 도적 있음은 90/70, 100/100, 100/100%. 1차 측정의 무도적 미착용 50/10%보다 중앙값이 낮고, 미대비 패배 238회 중 기습은 153회였다.
 - 대비 조건의 P25 목표 60%를 충족했다. 미대비 중앙값은 목표 약 60%보다 낮다. 기습 피해 배수 1.4→1.25 실험에서 미대비 50/20%, 도적만 90/80%, 경계+감지 100/90%여서 재측정 후보로 남긴다.
 - 독늪 Lv12 P25는 목걸이 1/2개(전사/서로 다른 영웅) 30/50%, 해독 2/3개 20/60%로, 이 수준에서는 목걸이 1–2개가 해독 2–3개 사이였다. Lv11은 P25가 모두 0%. 프로젝트·도구 타입 검사, 테스트 180개, 빌드 통과.
+
+---
+
+## 45. 마량 성채 몬스터·던전 그림 (Cursor)
+
+**지금 시작할 수 있다.** 3c core는 7eaca30에 들어갔다. 설계: `Docs/depth.md` 3c.
+
+**전달할 내용**
+
+```
+Docs/depth.md의 3c를 읽고 마량 성채의 3D 그림을 만든다. src/ui/voxel/enemies.ts, src/ui/voxel/portrait.ts만 고친다. core와 data는 고치지 않는다.
+
+몬스터 id: grave_knight(무덤 기사, 녹슨 갑옷·방패, 앞줄), bone_archer(뼈 궁수, 후열), specter(원령, 떠다니는 푸른 혼령, 후열. 티어 3의 wraith와 다르게 보이게), citadel_lord(보스 성채 군주, 큰 체구·뿔 투구·검은 망토·빛나는 눈, 앞줄).
+던전 id: haunted_citadel(마량 성채, 티어 6).
+
+1. buildEnemy에 네 몬스터. 기존 언데드 계열 색과 어울리되 성채 쪽은 회청색·녹·보라 빛.
+2. dungeonPreviewUrl이 haunted_citadel을 부서진 성벽과 탑, 푸른 불빛이 있는 성채 입구로 그린다.
+3. monsterPortraitUrl이 네 몬스터를 그린다.
+
+확인: portrait 함수를 직접 불러 네 초상과 입구를 확인하고 스크린샷을 메모에. 임시 코드는 커밋하지 않는다.
+```
+
+---
+
+## 46. 광역기 작전·리포트·로그 화면 (Cursor)
+
+**지금 시작할 수 있다(작업 45와 파일이 겹치지 않는다).** 3c core는 7eaca30.
+
+**전달할 내용**
+
+```
+Docs/depth.md 3c를 읽고 화면을 만든다. src/ui/App.tsx, src/ui/game/*.tsx, src/ui/styles.css, src/locales/*만 고친다. core는 고치지 않는다.
+
+core에 이미 있는 것:
+- 작전 필드 tactics.blast: 'interrupt' | 'brace' (없으면 'interrupt'). 기존 { type: 'tactics', tactics, presetId } 동작으로 저장한다.
+- 직업 정의 classById(id).interrupt (전사·도적·궁수 true).
+- 로그 키: log.charge, log.blast, log.interrupt, log.brace, log.phase(params.phase), log.summon(params.units, params.refs: 쉼표로 이은 id).
+- 패배 이유 blasted. 문구 키: defeat.blasted, label.blast, blast.interrupt, blast.brace, blast.hint.<id>, enemy.grave_knight/bone_archer/specter/citadel_lord, dungeon.haunted_citadel.
+
+1. 작전 편집: "광역기 대응: 끊기 / 버티기" 두 버튼과 한 줄 설명(blast.hint).
+2. 출발 준비(Prep): 마량 성채를 고르면 "끊을 수 있는 영웅: N명(이름)"과 현재 광역기 작전을 한 줄로 보여 준다. 0명이고 작전이 끊기면 경고 색.
+3. 원정 기록·리포트: 끊은 횟수(log.interrupt 수)와 맞은 광역기 수(log.blast 수), 새 패배 이유 문구.
+4. 진행 패널·전투 로그: 새 로그 키 문구. 소환으로 나온 적 이름은 refs로 찾는다.
+5. 문구 ko/en 같은 키. 이미 넣은 키는 다듬어도 된다.
+
+확인: npm run dev에서 디버그로 요새까지 클리어한 세이브를 만들어 성채에 끊기·버티기로 한 번씩 나가 본다. 확인 못 한 부분은 메모에.
+```
+
+---
+
+## 47. 예고·광역기·끊기·버티기·소환 연출 (Cursor)
+
+**작업 46 뒤에 시작한다.**
+
+**전달할 내용**
+
+```
+src/ui/voxel/BattleScene.ts, src/ui/voxel/replay.ts만 고친다.
+1. log.charge: 보스 주위에 모이는 빛과 머리 위 경고 표시. log.blast: 파티 쪽으로 퍼지는 충격파, 맞은 영웅마다 피해 숫자(뒤따르는 log.attack이 피해를 담는다). log.interrupt: 끊은 영웅이 보스에게 달려들거나 쏘고, 빛이 깨진다.
+2. log.brace: 영웅이 방패·팔을 들어 웅크린 자세, 광역기가 터지면 풀린다.
+3. log.phase: 보스가 붉게 번쩍이고 몸이 조금 커진다. log.summon: params.units의 id(params.refs의 몬스터 종류)로 새 적을 연기와 함께 적 진영 빈자리에 세운다. 이 적들은 층 시작 스냅숏(floors)에 없으므로 replay가 로그에서 추가해야 체력 막대와 공격 대상이 맞는다.
+확인: 스크린샷을 메모에.
+```
+
+---
+
+## 48. 3c core 코드 리뷰 (GPT)
+
+3c core 커밋은 **7eaca30**이다.
+
+**전달할 내용**
+
+```
+3c core 커밋 7eaca30을 리뷰한다. 코드는 고치지 않고 Docs/reviews/7eaca30.md 새 파일 하나에만 쓴다(Docs/reviews/README.md 형식).
+볼 것: Docs/depth.md 3c와 수치·규칙 차이, 예고 뒤 광역기 시계(blastAt)와 보스 게이지·마비·침묵의 관계, 끊기의 사거리·침묵 조건, 버티기 중 힐러 예외와 버티기가 풀리는 시점(보스가 예고 중에 죽거나 층이 끝날 때 braced가 남는지), 페이즈 두 문턱 동시 통과·소환 유닛 id 충돌·소환 유닛과 replay 스냅숏, 패배 이유 순서, 기존 던전 결과가 바뀌지 않았는지(부모 커밋과 시드 전투 비교).
+```
+
+---
+
+## 49. 마량 성채 밸런스 측정 (GPT)
+
+**지금 시작할 수 있다(작업 48과 파일이 겹치지 않는다).**
+
+**전달할 내용**
+
+```
+tools/curve.ts, tools/print-curve.ts, tools/tune-curve.ts, tools/first-hour.ts만 고친다. 게임 코드와 data는 고치지 않는다(제안만).
+1. 곡선 도구에 성채 조건을 추가한다: 끊을 수 있는 영웅 수(탱커 전사만 / 도적·궁수 1명 / 2명 이상) × 작전(끊기 / 버티기). haunted_citadel Lv14–18 승률(중앙값/하위 25%), 패배 이유 분포, 예고 대비 끊은 비율을 출력한다.
+2. first-hour.ts를 9시간까지 돌릴 수 있게 하고, 흉내 플레이어가 성채에 갈 때 끊을 영웅이 없으면 버티기 작전을 고르게 한다. 성채 첫 클리어 시각을 출력한다.
+3. Docs/depth.md 3c "밸런스 기준"과 1차 측정표(Claude)와 비교해 메모에 적는다. 기준을 벗어나면 고칠 수치(blastPower, braceFactor, chargeTicks, 배수)를 제안한다.
+```
