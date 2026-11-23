@@ -19,6 +19,8 @@ export const LOTS: Record<BuildingId, Lot> = {
   fountain: { x: 0, z: 0, w: 2.2, d: 2.2 },
   // Placeholder spot for the alchemy workshop; task 37 gives it a model.
   alchemy: { x: -10.5, z: -1.5, w: 3, d: 2.6 },
+  // Placeholder spot for the magic workshop until it gets a model (3b).
+  magic: { x: 10.5, z: -2, w: 3, d: 2.6 },
 }
 
 export const PLAZA = { min: -5.3, max: 5.3 }

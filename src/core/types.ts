@@ -13,8 +13,10 @@ export type SkillKind = 'attack' | 'taunt' | 'heal' | 'buff' | 'debuff'
 export type TraitId = 'tough' | 'coward' | 'nocturnal' | 'treasure' | 'ironWill' | 'frail'
 export type Condition = 'healthy' | 'fatigued' | 'injured' | 'critical' | 'dead'
 export type TargetPriority = 'lowestHp' | 'backRow' | 'boss'
-export type DefeatReason = 'noTank' | 'noHealer' | 'retreated' | 'wiped' | 'outmatched' | 'tooWeak' | 'poisoned' | 'paralyzed' | 'silenced'
+export type DefeatReason = 'noTank' | 'noHealer' | 'retreated' | 'wiped' | 'outmatched' | 'tooWeak' | 'poisoned' | 'paralyzed' | 'silenced' | 'trapped' | 'ambushed'
 export type PotionId = 'heal' | 'antidote' | 'tonic' | 'clarity'
+// Trinkets from the magic workshop (Docs/depth.md 3b).
+export type TrinketId = 'alert' | 'trapSense' | 'poisonWard' | 'steady' | 'calm'
 // Potions by kind: the village stock, what a party carries, or what it used.
 export type Supplies = Partial<Record<PotionId, number>>
 export type CombatError = 'emptyParty' | 'partyTooLarge' | 'underage' | 'badFormation' | 'dead'
@@ -56,7 +58,7 @@ export type TraitDef = {
 
 export type MonsterDef = {
   id: string
-  tier: 1 | 2 | 3 | 4
+  tier: 1 | 2 | 3 | 4 | 5
   boss: boolean
   row: Row
   reach: Reach
@@ -77,15 +79,19 @@ export type MonsterDef = {
   aoeEvery?: number
   // Poison this monster can stack up to (default combatRules.dotCap).
   poisonCap?: number
+  // Starts a floor ready to strike the back row, unless someone is on watch (3b).
+  ambush?: boolean
 }
 
 export type DungeonFloor = {
   monsters: string[]
+  // Chance of a trap before the fight (Docs/depth.md 3b).
+  trapChance?: number
 }
 
 export type DungeonDef = {
   id: string
-  tier: 1 | 2 | 3 | 4
+  tier: 1 | 2 | 3 | 4 | 5
   recommendedLevel: number
   // Multiplies monster health and attack in this dungeon (1 = as listed).
   monsterScale?: number
@@ -95,7 +101,7 @@ export type DungeonDef = {
   floors: DungeonFloor[]
 }
 
-export type GearSlot = 'weapon' | 'armor'
+export type GearSlot = 'weapon' | 'armor' | 'trinket'
 export type GearGrade = 'common' | 'fine' | 'rare'
 export type GearElement = 'flame' | 'silver'
 export type GearOption = 'power' | 'guard'
@@ -222,8 +228,10 @@ export type DungeonReport = {
   // Filled in when an expedition comes home.
   presetId?: string
   finishedAt?: number
-  gained?: { gold: number; fame: number; materials: Partial<Record<'wood' | 'stone' | 'iron' | 'bone' | 'herb', number>> }
+  gained?: { gold: number; fame: number; materials: Partial<Record<'wood' | 'stone' | 'iron' | 'bone' | 'herb' | 'crystal', number>> }
   potionsUsed?: Supplies
+  // Traps met on the way, in dungeons that have them.
+  traps?: { sprung: number; disarmed: number }
   victory: boolean
   defeatReason: DefeatReason | null
   ticks: number

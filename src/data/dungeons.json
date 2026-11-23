@@ -203,6 +203,41 @@
           ]
         }
       ]
+    },
+    {
+      "id": "bandit_fort",
+      "tier": 5,
+      "recommendedLevel": 14,
+      "monsterScale": 3.8,
+      "betweenHeal": 0.25,
+      "gold": 140,
+      "xp": 140,
+      "floors": [
+        {
+          "monsters": [
+            "bandit_thug",
+            "cutthroat",
+            "crossbowman"
+          ],
+          "trapChance": 0.6
+        },
+        {
+          "monsters": [
+            "bandit_thug",
+            "cutthroat",
+            "crossbowman",
+            "cutthroat"
+          ],
+          "trapChance": 0.6
+        },
+        {
+          "monsters": [
+            "bandit_chief",
+            "bandit_thug",
+            "crossbowman"
+          ]
+        }
+      ]
     }
   ]
 }

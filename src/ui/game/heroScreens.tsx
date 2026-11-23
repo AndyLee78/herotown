@@ -303,7 +303,7 @@ function HeroDetail({
           <li key={item.id} className="line">
             <span>{itemLabel(t, item, hero.classId)}</span>
             {inRoster ? (
-              <button type="button" className="btn small" onClick={() => onAction({ type: 'unequip', heroId: hero.id, slot: item.slot })}>
+              <button type="button" className="btn small" onClick={() => onAction({ type: 'unequip', heroId: hero.id, slot: item.slot, gearId: item.id })}>
                 {t('ui.unequip')}
               </button>
             ) : null}

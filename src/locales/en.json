@@ -111,7 +111,8 @@
     "smith": "Smithy",
     "temple": "Temple",
     "fountain": "Lucky Fountain",
-    "alchemy": "Alchemy Workshop"
+    "alchemy": "Alchemy Workshop",
+    "magic": "Magic Workshop"
   },
   "buildingHint": {
     "hall": "See your village level and next goal.",
@@ -121,7 +122,8 @@
     "smith": "Craft and enhance gear. Upgrade to unlock better gear.",
     "temple": "Treat wounds or revive a hero after their first death.",
     "fountain": "Tap it when a wish is ready for a few coins. Now and then, a jackpot.",
-    "alchemy": "Brews potions. They go into the village stock, and parties carry them out."
+    "alchemy": "Brews potions. They go into the village stock, and parties carry them out.",
+    "magic": "Makes trinkets. Each hero can wear two."
   },
   "resource": {
     "wood": "Wood {{amount}}",
@@ -129,7 +131,8 @@
     "iron": "Iron {{amount}}",
     "fame": "Fame {{amount}}",
     "bone": "Bone {{amount}}",
-    "herb": "Herb {{amount}}"
+    "herb": "Herb {{amount}}",
+    "crystal": "Mana Crystal {{amount}}"
   },
   "town": {
     "level": "Village Lv {{level}}",
@@ -190,7 +193,9 @@
     "postTaken": "Another retiree already runs that building.",
     "noWish": "No wish is ready yet.",
     "noAlchemy": "There is no alchemy workshop yet.",
-    "alchemyBusy": "The workshop is already brewing."
+    "alchemyBusy": "The workshop is already brewing.",
+    "noMagic": "There is no magic workshop yet.",
+    "magicBusy": "The workshop is already making a trinket."
   },
   "defeat": {
     "noHealer": "Bring a healer to keep the party going.",
@@ -201,7 +206,9 @@
     "tooWeak": "Train in an easier dungeon and try again (recommended Lv {{level}}).",
     "poisoned": "Poison brought the party down. Pack antidotes.",
     "paralyzed": "Paralysis and slow cost them their turns. Pack tonics.",
-    "silenced": "Silence cut off the healing. Pack clarity or healing potions."
+    "silenced": "Silence cut off the healing. Pack clarity or healing potions.",
+    "trapped": "Traps hurt the party badly. Bring a rogue or wear a Trap Sense Ring.",
+    "ambushed": "An ambush broke the back row. Wear a Watchful Charm."
   },
   "dungeon": {
     "hill_cave": {
@@ -233,7 +240,11 @@
       "hint": "Poison, paralysis and silence stack up. Antidotes open the way."
     },
     "cleared": "Cleared",
-    "recommended": "Rec. Lv {{level}}"
+    "recommended": "Rec. Lv {{level}}",
+    "bandit_fort": {
+      "name": "Bandit Fortress",
+      "hint": "Traps and ambushes wait inside. Bring a rogue or the right trinkets."
+    }
   },
   "policy": {
     "safe": "Leave the injured behind",
@@ -245,7 +256,8 @@
     "stone": "Stone",
     "iron": "Iron",
     "bone": "Bone",
-    "herb": "Herb"
+    "herb": "Herb",
+    "crystal": "Mana Crystal"
   },
   "class": {
     "warrior": "Warrior",
@@ -488,6 +500,13 @@
     },
     "silver": {
       "edge": "Silver edge"
+    },
+    "trinket": {
+      "alert": "Watchful Charm",
+      "trapSense": "Trap Sense Ring",
+      "poisonWard": "Antidote Amulet",
+      "steady": "Steady Bracelet",
+      "calm": "Calm Earring"
     }
   },
   "potion": {
@@ -545,7 +564,11 @@
     "bog_leech": "Bog leech",
     "moss_golem": "Moss golem",
     "wisp": "Wisp",
-    "bog_queen": "Bog queen"
+    "bog_queen": "Bog queen",
+    "bandit_thug": "Bandit Thug",
+    "crossbowman": "Crossbowman",
+    "cutthroat": "Cutthroat",
+    "bandit_chief": "Bandit Chief"
   },
   "battle": {
     "label": "Battle replay",
@@ -628,7 +651,12 @@
     "slow": "{{target}} is slowed.",
     "silence": "{{target}} is silenced.",
     "sweep": "{{actor}} strikes everyone.",
-    "potion": "{{actor}} drinks a {{potion}}."
+    "potion": "{{actor}} drinks a {{potion}}.",
+    "trap": "A trap goes off!",
+    "trapHit": "{{actor}} takes {{amount}} from the trap",
+    "disarm": "{{actor}} disarms a trap",
+    "alert": "{{actor}} spots the ambush",
+    "ambush": "{{actor}} ambushes {{target}}"
   },
   "sound": {
     "title": "Sound",
@@ -737,7 +765,17 @@
       "smith": "Enhance odds +{{value}} pts",
       "temple": "Care time −{{value}}%",
       "fountain": "Fountain jackpot chance +{{value}}%p",
-      "alchemy": "Brewing time −{{value}}%"
+      "alchemy": "Brewing time −{{value}}%",
+      "magic": "Trinket making time −{{value}}%"
+    }
+  },
+  "trinket": {
+    "hint": {
+      "alert": "The party cannot be ambushed.",
+      "trapSense": "Disarms traps 55% of the time.",
+      "poisonWard": "Halves poison damage taken.",
+      "steady": "Halves the chance of paralysis and slow.",
+      "calm": "Halves the chance of silence."
     }
   }
 }

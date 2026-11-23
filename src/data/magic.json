@@ -1,0 +1,51 @@
+{
+  "trinketSlots": 2,
+  "speedByLevel": [
+    1,
+    0.8,
+    0.65
+  ],
+  "disarm": 0.85,
+  "senseDisarm": 0.55,
+  "disarmGold": 0.08,
+  "trapDamage": 0.22,
+  "ambushPower": 1.4,
+  "ward": 0.5,
+  "trinkets": [
+    {
+      "id": "alert",
+      "magicLevel": 1,
+      "gold": 30,
+      "crystal": 4,
+      "ms": 900000
+    },
+    {
+      "id": "trapSense",
+      "magicLevel": 1,
+      "gold": 30,
+      "crystal": 4,
+      "ms": 900000
+    },
+    {
+      "id": "poisonWard",
+      "magicLevel": 2,
+      "gold": 45,
+      "crystal": 6,
+      "ms": 1200000
+    },
+    {
+      "id": "steady",
+      "magicLevel": 2,
+      "gold": 45,
+      "crystal": 6,
+      "ms": 1200000
+    },
+    {
+      "id": "calm",
+      "magicLevel": 3,
+      "gold": 60,
+      "crystal": 8,
+      "ms": 1500000
+    }
+  ]
+}

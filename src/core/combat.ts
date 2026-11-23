@@ -1,5 +1,6 @@
-import { alchemyRules, classById, combatRules, lifeRules, monsterById, potionById } from './data'
+import { alchemyRules, classById, combatRules, lifeRules, magicRules, monsterById, potionById } from './data'
 import { heroGearMods } from './gear'
+import { heroTrinkets } from './magic'
 import type { Rng } from './rng'
 import type { LogEntry, MonsterDef, PartyMember, PotionId, ReplayUnit, Row, Supplies, Tactics, UnitReport } from './types'
 
@@ -60,6 +61,16 @@ export type BattleUnit = {
   poisonTaken: number
   stunned: number
   muted: number
+  // Traps and ambushes (Docs/depth.md 3b). Wards multiply status chances or poison.
+  ambush: boolean
+  ambushing: boolean
+  disarm: number
+  alert: boolean
+  poisonWard: number
+  steady: number
+  calm: number
+  trapTaken: number
+  ambushTaken: number
 }
 
 // Potions a party carries into a fight and what it has drunk.
@@ -81,6 +92,15 @@ const STATUS_FREE = {
   poisonTaken: 0,
   stunned: 0,
   muted: 0,
+  ambush: false,
+  ambushing: false,
+  disarm: 0,
+  alert: false,
+  poisonWard: 1,
+  steady: 1,
+  calm: 1,
+  trapTaken: 0,
+  ambushTaken: 0,
 }
 
 export type FloorOutcome = 'victory' | 'wipe' | 'retreat' | 'timeout'
@@ -109,6 +129,7 @@ export function createHeroUnit(member: PartyMember, index: number): BattleUnit {
   const injuryScale = 1 - injuryPenalty
   const bondScale = 1 + Math.max(0, member.bonus ?? 0)
   const maxHp = Math.max(1, Math.round(baseHp * injuryScale))
+  const trinkets = heroTrinkets(hero)
   return {
     id: hero.id,
     refId: hero.id,
@@ -150,6 +171,11 @@ export function createHeroUnit(member: PartyMember, index: number): BattleUnit {
     element,
     holy: hero.classId === 'cleric',
     ...STATUS_FREE,
+    disarm: Math.max(hero.classId === 'rogue' ? magicRules.disarm : 0, trinkets.has('trapSense') ? magicRules.senseDisarm : 0),
+    alert: trinkets.has('alert'),
+    poisonWard: trinkets.has('poisonWard') ? magicRules.ward : 1,
+    steady: trinkets.has('steady') ? magicRules.ward : 1,
+    calm: trinkets.has('calm') ? magicRules.ward : 1,
   }
 }
 
@@ -163,19 +189,34 @@ export function simulateFloor(
   floors?: ReplayUnit[][],
   monsterScale = 1,
   kit?: Kit,
-): { outcome: FloorOutcome; ticks: number } {
+  trapChance = 0,
+): { outcome: FloorOutcome; ticks: number; trap: TrapResult } {
   const enemies = monsterIds.map((id, index) => enemyUnit(monsterById(id), index, monsterScale))
   floors?.push([...heroes, ...enemies].map(replayUnit))
   push(log, 0, 'log.floor', { floor: floorNumber })
+  const trap = springTrap(heroes, trapChance, rng, log)
+  // Ambushers start ready to strike, unless a hero on watch spots them.
+  const ambushers = enemies.filter((enemy) => enemy.ambush)
+  if (ambushers.length) {
+    const watcher = living(heroes).find((hero) => hero.alert)
+    if (watcher) {
+      push(log, 0, 'log.alert', actorParams(watcher))
+    } else {
+      for (const enemy of ambushers) {
+        enemy.gauge = combatRules.gaugeThreshold
+        enemy.ambushing = true
+      }
+    }
+  }
   let tick = 0
   while (tick < combatRules.maxTicks) {
     if (!living(heroes).length) {
       push(log, tick, 'log.defeat')
-      return { outcome: 'wipe', ticks: tick }
+      return { outcome: 'wipe', ticks: tick, trap }
     }
     if (!living(enemies).length) {
       push(log, tick, 'log.floorClear', { floor: floorNumber })
-      return { outcome: 'victory', ticks: tick }
+      return { outcome: 'victory', ticks: tick, trap }
     }
     tick += 1
     for (const unit of [...heroes, ...enemies]) {
@@ -192,7 +233,7 @@ export function simulateFloor(
     }
     actor.gauge -= combatRules.gaugeThreshold
     if (actor.dot > 0) {
-      const dotDamage = Math.max(1, Math.round(actor.dot * (actor.ironWill ? combatRules.ironWillDot : 1)))
+      const dotDamage = Math.max(1, Math.round(actor.dot * (actor.ironWill ? combatRules.ironWillDot : 1) * actor.poisonWard))
       actor.poisonTaken += dotDamage
       hurt(actor, dotDamage, tick, log, 'log.dot')
       if (actor.hp <= 0) {
@@ -203,7 +244,7 @@ export function simulateFloor(
       const average = averageHpRatio(heroes)
       if (average * 100 < tactics.retreatBelow) {
         push(log, tick, 'log.retreat', { hp: Math.round(average * 100) })
-        return { outcome: 'retreat', ticks: tick }
+        return { outcome: 'retreat', ticks: tick, trap }
       }
       // A paralysed hero with a tonic drinks it instead of losing the turn
       // blankly: the turn still goes, but paralysis and slow wear off and
@@ -234,7 +275,36 @@ export function simulateFloor(
     endTurn(actor, false)
   }
   push(log, tick, 'log.defeat')
-  return { outcome: 'timeout', ticks: tick }
+  return { outcome: 'timeout', ticks: tick, trap }
+}
+
+export type TrapResult = 'none' | 'disarmed' | 'sprung'
+
+// A trap before the fight (Docs/depth.md 3b). The best disarmer tries first;
+// a sprung trap hurts everyone but never knocks anyone out, and costs the
+// party its head start. Rolls only happen where traps exist.
+export function springTrap(heroes: BattleUnit[], chance: number, rng: Rng, log: LogEntry[]): TrapResult {
+  if (!(chance > 0) || rng.next() >= chance) {
+    return 'none'
+  }
+  const alive = living(heroes)
+  const best = [...alive].sort((a, b) => b.disarm - a.disarm || a.index - b.index)[0]
+  if (best && best.disarm > 0 && rng.next() < best.disarm) {
+    push(log, 0, 'log.disarm', actorParams(best))
+    return 'disarmed'
+  }
+  push(log, 0, 'log.trap')
+  for (const hero of alive) {
+    const amount = Math.min(hero.hp - 1, Math.round(hero.maxHp * magicRules.trapDamage))
+    if (amount > 0) {
+      hero.hp -= amount
+      hero.taken += amount
+      hero.trapTaken += amount
+      push(log, 0, 'log.trapHit', { ...actorParams(hero), amount })
+    }
+    hero.gauge = 0
+  }
+  return 'sprung'
 }
 
 export function heroUnitsToReport(units: BattleUnit[]): UnitReport[] {
@@ -374,6 +444,17 @@ function enemyAct(actor: BattleUnit, heroes: BattleUnit[], rng: Rng, tick: numbe
   if (!pool.length) {
     return
   }
+  // An ambusher's first strike goes past the front row (Docs/depth.md 3b).
+  if (actor.ambushing) {
+    actor.ambushing = false
+    const back = living(heroes).filter((unit) => unit.row === 'back')
+    const victim = lowestHp(back.length ? back : living(heroes))
+    push(log, tick, 'log.ambush', { ...actorParams(actor), ...targetParams(victim) })
+    const before = victim.hp
+    strike(actor, victim, rng, tick, log, magicRules.ambushPower)
+    victim.ambushTaken += before - victim.hp
+    return
+  }
   // Some bosses sweep the whole party every few turns.
   if (actor.aoeEvery > 0 && (actor.actions + 1) % actor.aoeEvery === 0) {
     push(log, tick, 'log.sweep', actorParams(actor))
@@ -437,20 +518,20 @@ function strike(actor: BattleUnit, target: BattleUnit, rng: Rng, tick: number, l
     target.dot = Math.min(Math.max(combatRules.dotCap, actor.poisonCap), target.dot + actor.dotOnHit)
   }
   // Status chances roll only for units that have them, so older fights replay the same.
-  if (target.hp > 0 && actor.paralyzeOnHit > 0 && rng.next() < actor.paralyzeOnHit) {
+  if (target.hp > 0 && actor.paralyzeOnHit > 0 && rng.next() < actor.paralyzeOnHit * target.steady) {
     if (!target.paralyzed && !target.paralyzeGuard && target.immuneStun <= 0) {
       target.paralyzed = true
       push(log, tick, 'log.paralyze', targetParams(target))
     }
   }
-  if (target.hp > 0 && actor.slowOnHit > 0 && rng.next() < actor.slowOnHit && target.immuneStun <= 0) {
+  if (target.hp > 0 && actor.slowOnHit > 0 && rng.next() < actor.slowOnHit * target.steady && target.immuneStun <= 0) {
     if (target.slowed <= 0) {
       target.stunned += 1
       push(log, tick, 'log.slow', targetParams(target))
     }
     target.slowed = combatRules.slowActions
   }
-  if (target.hp > 0 && actor.silenceOnHit > 0 && rng.next() < actor.silenceOnHit) {
+  if (target.hp > 0 && actor.silenceOnHit > 0 && rng.next() < actor.silenceOnHit * target.calm) {
     if (target.silenced <= 0) {
       push(log, tick, 'log.silence', targetParams(target))
     }
@@ -536,6 +617,7 @@ function enemyUnit(monster: MonsterDef, index: number, scale: number): BattleUni
     silenceOnHit: monster.silence ?? 0,
     aoeEvery: monster.aoeEvery ?? 0,
     poisonCap: monster.poisonCap ?? 0,
+    ambush: monster.ambush ?? false,
   }
 }
 

@@ -23,5 +23,7 @@
   "immuneActions": 6,
   "poisonedShare": 0.3,
   "silencedTurns": 3,
-  "stunnedTurns": 4
+  "stunnedTurns": 4,
+  "trappedShare": 0.15,
+  "ambushedShare": 0.08
 }

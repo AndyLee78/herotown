@@ -1,4 +1,4 @@
-import { classById, combatRules, dungeonById, lifeRules, progression } from './data'
+import { classById, combatRules, dungeonById, lifeRules, magicRules, progression } from './data'
 import { createHeroUnit, heroUnitsToReport, simulateFloor, type BattleUnit, type Kit } from './combat'
 import { canDeploy, createHero } from './hero'
 import { createRng } from './rng'
@@ -37,14 +37,19 @@ export function runDungeon(party: PartyMember[], dungeonId: string, tactics: Tac
   let ticks = 0
   let floorsCleared = 0
   let outcome: 'victory' | 'wipe' | 'retreat' | 'timeout' = 'victory'
+  const hasTraps = dungeon.floors.some((entry) => (entry.trapChance ?? 0) > 0)
+  const traps = { sprung: 0, disarmed: 0 }
 
   for (let floor = 0; floor < dungeon.floors.length; floor += 1) {
     const floorDef = dungeon.floors[floor]
     if (!floorDef) {
       break
     }
-    const result = simulateFloor(heroes, floorDef.monsters, tactics, rng, log, floor + 1, floors, dungeon.monsterScale ?? 1, carried ? kit : undefined)
+    const result = simulateFloor(heroes, floorDef.monsters, tactics, rng, log, floor + 1, floors, dungeon.monsterScale ?? 1, carried ? kit : undefined, floorDef.trapChance ?? 0)
     ticks += result.ticks
+    if (result.trap !== 'none') {
+      traps[result.trap] += 1
+    }
     if (result.outcome !== 'victory') {
       outcome = result.outcome
       break
@@ -67,9 +72,12 @@ export function runDungeon(party: PartyMember[], dungeonId: string, tactics: Tac
   const treasure = party.some((member) => member.hero.traitIds.includes('treasure') && member.hero.condition !== 'dead')
   // A loss still brings home a little loot from the floors that were cleared,
   // so a struggling village always has some income.
-  const gold = victory
-    ? Math.round(dungeon.gold * (treasure ? 1.25 : 1))
-    : Math.round((dungeon.gold * progression.defeatGoldShare * floorsCleared) / dungeon.floors.length)
+  // A disarmed trap also gives up what it guarded (Docs/depth.md 3b).
+  const gold =
+    (victory
+      ? Math.round(dungeon.gold * (treasure ? 1.25 : 1))
+      : Math.round((dungeon.gold * progression.defeatGoldShare * floorsCleared) / dungeon.floors.length)) +
+    traps.disarmed * Math.round(dungeon.gold * magicRules.disarmGold)
   // A loss still teaches something: half the XP, for the share of floors cleared.
   const xp = victory ? dungeon.xp : Math.round((dungeon.xp * progression.defeatXpShare * floorsCleared) / dungeon.floors.length)
   if (victory) {
@@ -89,6 +97,7 @@ export function runDungeon(party: PartyMember[], dungeonId: string, tactics: Tac
     gold,
     xp,
     ...(carried ? { potionsUsed: kit.used } : {}),
+    ...(hasTraps ? { traps } : {}),
     units: heroUnitsToReport(heroes),
     log,
     conditions: heroes.map((hero) => ({
@@ -126,7 +135,7 @@ export function applyReport(hero: Hero, report: DungeonReport): Hero {
   }
 }
 
-export type StatusToll = { poisonShare: number; stunned: number; muted: number }
+export type StatusToll = { poisonShare: number; stunned: number; muted: number; trapShare?: number; ambushShare?: number }
 
 // How much the statuses cost the party: poison's share of the damage taken,
 // turns lost to paralysis or slow, and support turns lost to silence.
@@ -137,12 +146,14 @@ function statusToll(heroes: BattleUnit[]): StatusToll {
     poisonShare: taken > 0 ? poison / taken : 0,
     stunned: heroes.reduce((sum, hero) => sum + hero.stunned, 0),
     muted: heroes.reduce((sum, hero) => sum + hero.muted, 0),
+    trapShare: taken > 0 ? heroes.reduce((sum, hero) => sum + hero.trapTaken, 0) / taken : 0,
+    ambushShare: taken > 0 ? heroes.reduce((sum, hero) => sum + hero.ambushTaken, 0) / taken : 0,
   }
 }
 
 export function defeatReason(
   outcome: 'wipe' | 'retreat' | 'timeout' | 'victory',
-  tier: 1 | 2 | 3 | 4,
+  tier: 1 | 2 | 3 | 4 | 5,
   hadTank: boolean,
   hadHealer: boolean,
   averageLevel: number,
@@ -168,6 +179,13 @@ export function defeatReason(
   }
   if (toll.stunned >= combatRules.stunnedTurns) {
     return 'paralyzed'
+  }
+  // Then the fortress dangers, with the rogue or trinket that answers them.
+  if ((toll.trapShare ?? 0) >= combatRules.trappedShare) {
+    return 'trapped'
+  }
+  if ((toll.ambushShare ?? 0) >= combatRules.ambushedShare) {
+    return 'ambushed'
   }
   if ((outcome === 'wipe' || outcome === 'timeout') && averageLevel < recommendedLevel) {
     return 'tooWeak'

@@ -12,7 +12,7 @@ export function craftableRecipes(): SmithRecipe[] {
 }
 
 export function normalizeGear(item: Partial<Gear> | undefined, classId: ClassId): Gear {
-  const slot: GearSlot = item?.slot === 'armor' ? 'armor' : 'weapon'
+  const slot: GearSlot = item?.slot === 'armor' || item?.slot === 'trinket' ? item.slot : 'weapon'
   const grade: GearGrade = item?.grade === 'fine' || item?.grade === 'rare' ? item.grade : 'common'
   const element: GearElement | undefined = item?.element === 'flame' || item?.element === 'silver' ? item.element : undefined
   const option: GearOption | undefined = item?.option === 'power' || item?.option === 'guard' ? item.option : undefined

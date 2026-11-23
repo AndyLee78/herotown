@@ -3,6 +3,7 @@ import alchemyFile from '../data/alchemy.json'
 import ageBandsFile from '../data/ageBands.json'
 import classesFile from '../data/classes.json'
 import lifeFile from '../data/life.json'
+import magicFile from '../data/magic.json'
 import smithFile from '../data/smith.json'
 import combatFile from '../data/combat.json'
 import dungeonsFile from '../data/dungeons.json'
@@ -28,6 +29,7 @@ import type {
   TraitDef,
   TraitId,
   PotionId,
+  TrinketId,
 } from './types'
 
 const SKILL_KINDS = new Set<SkillKind>(['attack', 'taunt', 'heal', 'buff', 'debuff'])
@@ -122,7 +124,7 @@ export function validateGameData(data: GameData): void {
   if (data.dungeons.length < 2) {
     throw new Error('Need at least 2 dungeons')
   }
-  const needed = ['hall', 'inn', 'house', 'guild', 'smith', 'temple', 'fountain', 'alchemy']
+  const needed = ['hall', 'inn', 'house', 'guild', 'smith', 'temple', 'fountain', 'alchemy', 'magic']
   if (data.village.buildings.length !== needed.length || needed.some((id) => !data.village.buildings.some((building) => building.id === id))) {
     throw new Error(`The town needs exactly these buildings: ${needed.join(', ')}`)
   }
@@ -189,6 +191,25 @@ export function potionById(id: string) {
 
 if (alchemyRules.potions.some((potion) => potion.alchemyLevel < 1 || potion.ms <= 0 || potion.herb < 0)) {
   throw new Error('Every potion needs a workshop level and a brewing time')
+}
+export const magicRules = magicFile as {
+  trinketSlots: number
+  speedByLevel: number[]
+  disarm: number
+  senseDisarm: number
+  disarmGold: number
+  trapDamage: number
+  ambushPower: number
+  ward: number
+  trinkets: { id: TrinketId; magicLevel: number; gold: number; crystal: number; ms: number }[]
+}
+
+export function trinketById(id: string) {
+  return magicRules.trinkets.find((trinket) => trinket.id === id)
+}
+
+if (magicRules.trinkets.some((trinket) => trinket.magicLevel < 1 || trinket.ms <= 0 || trinket.crystal < 0)) {
+  throw new Error('Every trinket needs a workshop level and a making time')
 }
 export const fountainRules = fountainFile
 

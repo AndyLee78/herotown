@@ -1,7 +1,8 @@
 import { chargeFountain, freshFountain, makeWish, readFountain, upgradeFountain, type FountainState } from './fountain'
 import { claimGuide, guideSteps } from './guide'
+import { finishEnchant, readMagicJob, startEnchant, type MagicJob } from './magic'
 import { finishBrew, readAlchemyJob, readSupplies, returnSupplies, startBrew, takeSupplies, type AlchemyJob } from './alchemy'
-import { adRules, classById, classList, combatRules, dungeonById, dungeons, expeditionRules, lifeRules, progression, retirementRules, smithRules, timeRules, villageRules } from './data'
+import { adRules, magicRules, classById, classList, combatRules, dungeonById, dungeons, expeditionRules, lifeRules, progression, retirementRules, smithRules, timeRules, villageRules } from './data'
 import { forgeGear, normalizeGear, recipeById } from './gear'
 import { applyReport, DEFAULT_TACTICS, runDungeon } from './dungeon'
 import { canDeploy, generateHero, generateVisitors, normalizeHero, restHero, withAge } from './hero'
@@ -9,9 +10,9 @@ import { acceptProposal, bedsTaken, bondParty, declineProposal, deliverBirths, f
 import { createRng } from './rng'
 import type { Rng } from './rng'
 import type { Genes } from './genes'
-import type { Bond, ClassId, CombatError, DungeonReport, Gear, GearSlot, Gender, Hero, PartyMember, PotionId, Proposal, Role, Row, Supplies, Tactics } from './types'
+import type { Bond, ClassId, CombatError, DungeonReport, Gear, GearSlot, Gender, Hero, PartyMember, PotionId, Proposal, Role, Row, Supplies, Tactics, TrinketId } from './types'
 
-export const SAVE_VERSION = 11
+export const SAVE_VERSION = 12
 
 export type SeasonId = 'spring' | 'summer' | 'autumn' | 'winter'
 
@@ -50,8 +51,8 @@ export type SmithJob = {
   finishAt: number
 }
 
-export type BuildingId = 'hall' | 'inn' | 'house' | 'guild' | 'smith' | 'temple' | 'fountain' | 'alchemy'
-export type MaterialName = 'wood' | 'stone' | 'iron' | 'bone' | 'herb'
+export type BuildingId = 'hall' | 'inn' | 'house' | 'guild' | 'smith' | 'temple' | 'fountain' | 'alchemy' | 'magic'
+export type MaterialName = 'wood' | 'stone' | 'iron' | 'bone' | 'herb' | 'crystal'
 
 export type AutoPolicy = 'material' | 'safe' | 'fixed'
 
@@ -144,6 +145,8 @@ export type GameNotice =
   | 'smithBusy'
   | 'noAlchemy'
   | 'alchemyBusy'
+  | 'noMagic'
+  | 'magicBusy'
   | 'recipe'
   | 'enhanceFail'
   | 'autoLocked'
@@ -204,6 +207,7 @@ export type GameState = {
   fountain: FountainState
   alchemy: AlchemyJob | null
   potions: Supplies
+  magic: MagicJob | null
 }
 
 export type AdPlacement = 'absence' | 'construction' | 'temple'
@@ -224,7 +228,8 @@ export type GameAction =
   | { type: 'craft'; recipeId: string; now: number }
   | { type: 'enhance'; gearId: string; now: number }
   | { type: 'equip'; heroId: string; gearId: string }
-  | { type: 'unequip'; heroId: string; slot: GearSlot }
+  | { type: 'unequip'; heroId: string; slot: GearSlot; gearId?: string }
+  | { type: 'enchant'; trinketId: TrinketId; now: number }
   | { type: 'add'; id: string; presetId?: string }
   | { type: 'row'; id: string; row: Row; presetId?: string }
   | { type: 'remove'; id: string; presetId?: string }
@@ -259,7 +264,7 @@ export function freshState(seed: number, now: number): GameState {
   return {
     version: SAVE_VERSION,
     gold: progression.startGold,
-    materials: { ...villageRules.start, herb: 0 },
+    materials: { ...villageRules.start, herb: 0, crystal: 0 },
     fame: 0,
     buildings: startingBuildings(),
     construction: null,
@@ -299,6 +304,7 @@ export function freshState(seed: number, now: number): GameState {
     fountain: freshFountain(now),
     alchemy: null,
     potions: {},
+    magic: null,
   }
 }
 
@@ -414,7 +420,7 @@ function apply(state: GameState, action: GameAction): GameState {
     return equipGear(state, action.heroId, action.gearId)
   }
   if (action.type === 'unequip') {
-    return unequipGear(state, action.heroId, action.slot)
+    return unequipGear(state, action.heroId, action.slot, action.gearId)
   }
   if (action.type === 'build') {
     return startBuild(state, action.id, action.now)
@@ -525,6 +531,9 @@ function apply(state: GameState, action: GameAction): GameState {
   if (action.type === 'wish') {
     return makeWish(state, action.now)
   }
+  if (action.type === 'enchant') {
+    return startEnchant(state, action.trinketId, action.now)
+  }
   if (action.type === 'brew') {
     return startBrew(state, action.potionId, action.now)
   }
@@ -574,6 +583,7 @@ function advance(state: GameState, now: number): GameState {
     next = finishConstruction(next, until, completed)
     next = finishSmith(next, until, crafted)
     next = finishBrew(next, until, crafted)
+    next = finishEnchant(next, until, crafted)
     next = finishCare(next, until)
     next = recoverRoster(next, piece, until)
     next = updateVisitors(next, until, visitors)
@@ -947,6 +957,7 @@ function startBuild(state: GameState, id: BuildingId, now: number): GameState {
       iron: state.materials.iron - cost.iron,
       bone: state.materials.bone,
       herb: state.materials.herb,
+      crystal: state.materials.crystal,
     },
     construction: { id, finishAt: now + Math.round(cost.ms * (1 - retireeBonus(state, 'hall'))) },
   }
@@ -1041,7 +1052,7 @@ function grantVictoryRewards(state: GameState, report: DungeonReport, dungeonId:
   const material = drop.material as MaterialName
   const materials = { ...state.materials, [material]: state.materials[material] + gained }
   // Some dungeons also leave a little of a second material.
-  for (const extra of ['iron', 'herb'] as const) {
+  for (const extra of ['iron', 'herb', 'crystal'] as const) {
     const amount = (drop as Record<string, unknown>)[extra]
     if (typeof amount === 'number' && material !== extra) {
       materials[extra] += Math.max(1, Math.floor(amount * applied))
@@ -1423,7 +1434,7 @@ function settleExpedition(state: GameState, expedition: Expedition): GameState {
   )
   const next = dropFromPresets(grantVictoryRewards(home, report, dungeonId))
   const materials: Partial<Materials> = {}
-  for (const key of ['wood', 'stone', 'iron', 'bone', 'herb'] as const) {
+  for (const key of ['wood', 'stone', 'iron', 'bone', 'herb', 'crystal'] as const) {
     const diff = next.materials[key] - state.materials[key]
     if (diff > 0) {
       materials[key] = diff
@@ -1511,6 +1522,7 @@ function pay(state: GameState, cost: { gold: number; wood: number; stone: number
       iron: state.materials.iron - cost.iron,
       bone: state.materials.bone,
       herb: state.materials.herb,
+      crystal: state.materials.crystal,
     },
   }
 }
@@ -1597,24 +1609,26 @@ function equipGear(state: GameState, heroId: string, gearId: string): GameState 
   if (!item || !hero) {
     return { ...state, notice: 'missing' }
   }
-  const previous = hero.gear.find((gear) => gear.slot === item.slot)
   const stash = state.stash.filter((gear) => gear.id !== item.id)
-  if (previous) {
-    stash.push(previous)
-  }
+  // Weapons and armour swap one for one; trinkets fill two slots, and the
+  // oldest comes off when both are taken (Docs/depth.md 3b).
+  const same = hero.gear.filter((gear) => gear.slot === item.slot)
+  const room = item.slot === 'trinket' ? magicRules.trinketSlots : 1
+  const off = same.length >= room ? same.slice(0, same.length - room + 1) : []
+  stash.push(...off)
   return {
     ...state,
     notice: null,
     stash,
     roster: state.roster.map((entry) =>
-      entry.id === heroId ? { ...entry, gear: [...entry.gear.filter((gear) => gear.slot !== item.slot), item] } : entry,
+      entry.id === heroId ? { ...entry, gear: [...entry.gear.filter((gear) => !off.includes(gear)), item] } : entry,
     ),
   }
 }
 
-function unequipGear(state: GameState, heroId: string, slot: GearSlot): GameState {
+function unequipGear(state: GameState, heroId: string, slot: GearSlot, gearId?: string): GameState {
   const hero = state.roster.find((entry) => entry.id === heroId)
-  const item = hero?.gear.find((gear) => gear.slot === slot)
+  const item = hero?.gear.find((gear) => gear.slot === slot && (gearId === undefined || gear.id === gearId))
   if (!hero || !item) {
     return { ...state, notice: 'missing' }
   }
@@ -1623,7 +1637,7 @@ function unequipGear(state: GameState, heroId: string, slot: GearSlot): GameStat
     notice: null,
     stash: [...state.stash, item],
     roster: state.roster.map((entry) =>
-      entry.id === heroId ? { ...entry, gear: entry.gear.filter((gear) => gear.slot !== slot) } : entry,
+      entry.id === heroId ? { ...entry, gear: entry.gear.filter((gear) => gear !== item) } : entry,
     ),
   }
 }
@@ -1636,6 +1650,7 @@ function readMaterials(value: unknown, base: Materials): Materials {
     iron: numberOr(record.iron, base.iron),
     bone: numberOr(record.bone, 0),
     herb: numberOr(record.herb, 0),
+    crystal: numberOr(record.crystal, 0),
   }
 }
 
@@ -1719,6 +1734,7 @@ function normalize(record: Record<string, unknown>, now: number): GameState {
     fountain: readFountain(record.fountain, numberOr(record.lastTickAt, now)),
     alchemy: readAlchemyJob(record.alchemy),
     potions: readSupplies(record.potions),
+    magic: readMagicJob(record.magic),
     auto: isAuto(record.auto) ? record.auto : base.auto,
     notice: null,
   }

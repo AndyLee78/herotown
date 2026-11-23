@@ -57,6 +57,8 @@ const BUILDING_SCREEN: Record<BuildingId, Screen> = {
   temple: 'roster',
   fountain: 'town',
   alchemy: 'alchemy',
+  // The workshop screen comes with task 41; until then it opens the town.
+  magic: 'town',
 }
 
 const CONFIRM_NOTICES = new Set<GameNotice>(['seenDeath', 'wornParty'])

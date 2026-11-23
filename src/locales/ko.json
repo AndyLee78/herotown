@@ -111,7 +111,8 @@
     "smith": "대장간",
     "temple": "신전",
     "fountain": "행운의 분수",
-    "alchemy": "연금술 공방"
+    "alchemy": "연금술 공방",
+    "magic": "마법 공방"
   },
   "buildingHint": {
     "hall": "마을 레벨과 다음 목표를 보여 준다.",
@@ -121,7 +122,8 @@
     "smith": "무기와 방어구를 만들고 강화한다. 레벨이 오르면 더 높은 등급이 열린다.",
     "temple": "부상과 중상을 치료하고, 한 번 죽은 영웅을 되돌린다.",
     "fountain": "소원이 차면 눌러서 동전을 받는다. 아주 가끔 대박이 터진다.",
-    "alchemy": "물약을 만든다. 만든 물약은 마을 창고에 쌓이고, 출정할 때 가져간다."
+    "alchemy": "물약을 만든다. 만든 물약은 마을 창고에 쌓이고, 출정할 때 가져간다.",
+    "magic": "장신구를 만든다. 영웅마다 장신구 두 개를 낄 수 있다."
   },
   "resource": {
     "wood": "목재 {{amount}}",
@@ -129,7 +131,8 @@
     "iron": "철 {{amount}}",
     "fame": "명성 {{amount}}",
     "bone": "뼈 {{amount}}",
-    "herb": "약초 {{amount}}"
+    "herb": "약초 {{amount}}",
+    "crystal": "마력 수정 {{amount}}"
   },
   "town": {
     "level": "마을 레벨 {{level}}",
@@ -190,7 +193,9 @@
     "postTaken": "그 건물에는 이미 담당 은퇴자가 있습니다.",
     "noWish": "아직 소원이 차지 않았습니다.",
     "noAlchemy": "연금술 공방이 없습니다.",
-    "alchemyBusy": "연금술 공방이 이미 물약을 만들고 있습니다."
+    "alchemyBusy": "연금술 공방이 이미 물약을 만들고 있습니다.",
+    "noMagic": "마법 공방이 없습니다.",
+    "magicBusy": "마법 공방이 이미 장신구를 만들고 있습니다."
   },
   "defeat": {
     "noHealer": "치유사가 없어 피해를 버티지 못했다.",
@@ -201,7 +206,9 @@
     "tooWeak": "파티가 아직 약하다. 쉬운 던전에서 레벨을 올리자 (권장 Lv {{level}})",
     "poisoned": "중독이 쌓여 쓰러졌다. 해독 물약을 챙기자.",
     "paralyzed": "마비·둔화로 손을 못 썼다. 각성 물약을 챙기자.",
-    "silenced": "침묵으로 회복이 끊겼다. 명료 물약이나 회복 물약을 챙기자."
+    "silenced": "침묵으로 회복이 끊겼다. 명료 물약이나 회복 물약을 챙기자.",
+    "trapped": "함정에 크게 다쳤다. 도적을 데려가거나 함정 감지 반지를 끼자.",
+    "ambushed": "기습에 후열이 무너졌다. 경계의 부적을 끼자."
   },
   "dungeon": {
     "hill_cave": {
@@ -233,7 +240,11 @@
       "hint": "독과 마비, 침묵이 겹친다. 해독 물약이 길을 연다."
     },
     "cleared": "클리어",
-    "recommended": "권장 Lv {{level}}"
+    "recommended": "권장 Lv {{level}}",
+    "bandit_fort": {
+      "name": "도적 요새",
+      "hint": "함정과 기습이 기다린다. 도적이나 장신구로 대비하자."
+    }
   },
   "policy": {
     "safe": "부상자 출정 금지",
@@ -245,7 +256,8 @@
     "stone": "석재",
     "iron": "철",
     "bone": "뼈",
-    "herb": "약초"
+    "herb": "약초",
+    "crystal": "마력 수정"
   },
   "class": {
     "warrior": "전사",
@@ -488,6 +500,13 @@
     },
     "silver": {
       "edge": "은날"
+    },
+    "trinket": {
+      "alert": "경계의 부적",
+      "trapSense": "함정 감지 반지",
+      "poisonWard": "해독의 목걸이",
+      "steady": "굳건한 팔찌",
+      "calm": "고요의 귀걸이"
     }
   },
   "potion": {
@@ -545,7 +564,11 @@
     "bog_leech": "늪거머리",
     "moss_golem": "이끼골렘",
     "wisp": "도깨비불",
-    "bog_queen": "늪의 여왕"
+    "bog_queen": "늪의 여왕",
+    "bandit_thug": "도적 졸개",
+    "crossbowman": "석궁병",
+    "cutthroat": "암살자",
+    "bandit_chief": "도적 두목"
   },
   "battle": {
     "label": "전투 다시 보기",
@@ -628,7 +651,12 @@
     "slow": "{{target}}, 둔화",
     "silence": "{{target}}, 침묵",
     "sweep": "{{actor}}, 전체 공격",
-    "potion": "{{actor}}, {{potion}}을 마심"
+    "potion": "{{actor}}, {{potion}}을 마심",
+    "trap": "함정이 터졌다!",
+    "trapHit": "{{actor}}, 함정 피해 {{amount}}",
+    "disarm": "{{actor}}, 함정을 해제했다",
+    "alert": "{{actor}}, 기습을 알아챘다",
+    "ambush": "{{actor}}, {{target}}에게 기습"
   },
   "sound": {
     "title": "효과음",
@@ -737,7 +765,17 @@
       "smith": "강화 성공률 +{{value}}%p",
       "temple": "치료·부활 시간 −{{value}}%",
       "fountain": "분수 대박 확률 +{{value}}%p",
-      "alchemy": "물약 만드는 시간 −{{value}}%"
+      "alchemy": "물약 만드는 시간 −{{value}}%",
+      "magic": "장신구 만드는 시간 −{{value}}%"
+    }
+  },
+  "trinket": {
+    "hint": {
+      "alert": "파티가 기습을 당하지 않는다.",
+      "trapSense": "함정을 55% 확률로 해제한다.",
+      "poisonWard": "받는 중독 피해가 절반이 된다.",
+      "steady": "마비·둔화에 걸릴 확률이 절반이 된다.",
+      "calm": "침묵에 걸릴 확률이 절반이 된다."
     }
   }
 }

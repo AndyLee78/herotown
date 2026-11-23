@@ -20,6 +20,10 @@
     { "id": "bog_leech", "tier": 4, "boss": false, "row": "front", "reach": "melee", "hp": 150, "attack": 9, "defense": 4, "speed": 11, "dot": 8, "poisonCap": 40, "slow": 0.35 },
     { "id": "moss_golem", "tier": 4, "boss": false, "row": "front", "reach": "melee", "hp": 280, "attack": 15, "defense": 11, "speed": 6, "dot": 0, "paralyze": 0.3 },
     { "id": "wisp", "tier": 4, "boss": false, "row": "back", "reach": "ranged", "hp": 90, "attack": 11, "defense": 2, "speed": 14, "dot": 0, "silence": 0.15 },
-    { "id": "bog_queen", "tier": 4, "boss": true, "row": "back", "reach": "ranged", "hp": 800, "attack": 18, "defense": 8, "speed": 10, "dot": 14, "poisonCap": 48, "paralyze": 0.2, "silence": 0.15, "aoeEvery": 3 }
+    { "id": "bog_queen", "tier": 4, "boss": true, "row": "back", "reach": "ranged", "hp": 800, "attack": 18, "defense": 8, "speed": 10, "dot": 14, "poisonCap": 48, "paralyze": 0.2, "silence": 0.15, "aoeEvery": 3 },
+    { "id": "bandit_thug", "tier": 5, "boss": false, "row": "front", "reach": "melee", "hp": 150, "attack": 17, "defense": 9, "speed": 10, "dot": 0 },
+    { "id": "crossbowman", "tier": 5, "boss": false, "row": "back", "reach": "ranged", "hp": 100, "attack": 18, "defense": 5, "speed": 11, "dot": 0 },
+    { "id": "cutthroat", "tier": 5, "boss": false, "row": "front", "reach": "melee", "hp": 110, "attack": 19, "defense": 6, "speed": 15, "dot": 0, "ambush": true },
+    { "id": "bandit_chief", "tier": 5, "boss": true, "row": "front", "reach": "melee", "hp": 700, "attack": 22, "defense": 12, "speed": 10, "dot": 0, "aoeEvery": 4 }
   ]
 }
