@@ -15,6 +15,8 @@ export const SOUND_NAMES = [
   'notice',
   'depart',
   'return',
+  'wish',
+  'jackpot',
 ] as const
 
 export type SoundName = (typeof SOUND_NAMES)[number]
@@ -179,6 +181,18 @@ function voice(context: AudioContext, output: GainNode, name: SoundName, start: 
       blip(context, output, start, 494, 0.12, 'sine', 0.12)
       blip(context, output, start + 0.1, 392, 0.12, 'sine', 0.12)
       blip(context, output, start + 0.22, 523, 0.2, 'triangle', 0.14)
+      break
+    case 'wish':
+      blip(context, output, start, 988, 0.06, 'triangle', 0.16)
+      blip(context, output, start + 0.05, 1318, 0.08, 'triangle', 0.14)
+      blip(context, output, start + 0.1, 1568, 0.14, 'sine', 0.12)
+      break
+    case 'jackpot':
+      blip(context, output, start, 523, 0.1, 'triangle', 0.16)
+      blip(context, output, start + 0.08, 659, 0.1, 'triangle', 0.16)
+      blip(context, output, start + 0.16, 784, 0.1, 'triangle', 0.16)
+      blip(context, output, start + 0.24, 1046, 0.12, 'triangle', 0.18)
+      blip(context, output, start + 0.36, 1318, 0.28, 'triangle', 0.18)
       break
     default:
       break

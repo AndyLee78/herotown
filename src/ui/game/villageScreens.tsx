@@ -9,6 +9,10 @@ import {
   bedCount,
   dungeons,
   expeditionSlots,
+  fountainLevel,
+  fountainNextAt,
+  fountainRules,
+  fountainWishes,
   hallOfFame,
   population,
   smithRules,
@@ -105,6 +109,7 @@ export function Town({ save, onAction, busy, onWatch }: { save: GameState; onAct
                 <Chip tone={current > 0 ? 'good' : undefined}>{t('ui.level', { level: current })}</Chip>
               </div>
               <p className="muted">{t(`buildingHint.${id}`)}</p>
+              {id === 'fountain' ? <FountainFacts save={save} /> : null}
               {(() => {
                 const keeper = save.retirees.find((retiree) => retiree.building === id)
                 return keeper ? (
@@ -193,6 +198,60 @@ function Hall({ save, onClose }: { save: GameState; onClose: () => void }) {
         </section>
       ))}
     </Window>
+  )
+}
+
+function chancePercent(chance: number): number {
+  return Math.round(chance * 1000) / 10
+}
+
+function FountainFacts({ save }: { save: GameState }) {
+  const { t } = useTranslation()
+  const rule = fountainLevel(save.buildings.fountain)
+  const next = fountainRules.levels.find((entry) => entry.level === save.buildings.fountain + 1)
+  const jackpot = save.fountain.lastJackpot
+  return (
+    <>
+      <p className="muted">
+        {t('fountain.now', { seconds: rule.intervalMs / 1000, cap: rule.cap, gold: rule.gold, chance: chancePercent(rule.jackpotChance) })}
+      </p>
+      {next ? (
+        <p className="muted">
+          {t('fountain.next', { seconds: next.intervalMs / 1000, cap: next.cap, gold: next.gold, chance: chancePercent(next.jackpotChance) })}
+        </p>
+      ) : null}
+      {jackpot ? (
+        <p>{t('fountain.lastJackpot', { year: jackpot.year, season: t(`season.${jackpot.season}`), gold: jackpot.gold })}</p>
+      ) : (
+        <p className="muted">{t('fountain.noJackpot')}</p>
+      )}
+    </>
+  )
+}
+
+export function WishButton({ save, onWish, coins }: { save: GameState; onWish: () => void; coins: { id: number; amount: number; jackpot: boolean }[] }) {
+  const { t } = useTranslation()
+  const now = useNow(true)
+  const rule = fountainLevel(save.buildings.fountain)
+  const wishes = fountainWishes(save, now)
+  const nextAt = fountainNextAt(save, now)
+  const progress = nextAt == null ? 1 : 1 - Math.min(1, Math.max(0, (nextAt - now) / rule.intervalMs))
+  const radius = 16
+  const circumference = 2 * Math.PI * radius
+  return (
+    <button type="button" className="wish-button" onClick={onWish} aria-label={t('fountain.wish', { count: wishes })}>
+      <svg className="wish-ring" viewBox="0 0 40 40" aria-hidden="true">
+        <circle cx="20" cy="20" r={radius} />
+        <circle cx="20" cy="20" r={radius} strokeDasharray={circumference} strokeDashoffset={circumference * (1 - progress)} />
+      </svg>
+      <span className="wish-mark">✦</span>
+      {wishes > 0 ? <span className="badge">{wishes}</span> : null}
+      {coins.map((coin) => (
+        <span key={coin.id} className={coin.jackpot ? 'coin-fly jackpot' : 'coin-fly'}>
+          +{coin.amount}
+        </span>
+      ))}
+    </button>
   )
 }
 

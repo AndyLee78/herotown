@@ -250,6 +250,82 @@ button,
 
 /* ---------- dock ---------- */
 
+.wish-button {
+  position: absolute;
+  z-index: 6;
+  left: calc(50% + 230px);
+  bottom: calc(22px + var(--safe-bottom));
+  display: grid;
+  place-items: center;
+  width: 64px;
+  height: 64px;
+  padding: 0;
+  color: var(--wood-dark);
+  background: linear-gradient(#f6e6c8, #e7d3ab);
+  border: 3px solid var(--wood);
+  border-radius: 50%;
+  box-shadow: 0 4px 0 var(--wood-dark);
+  cursor: pointer;
+}
+
+.wish-ring {
+  position: absolute;
+  inset: 4px;
+  width: calc(100% - 8px);
+  height: calc(100% - 8px);
+  transform: rotate(-90deg);
+}
+
+.wish-ring circle {
+  fill: none;
+  stroke: #e7d3ab;
+  stroke-width: 3;
+}
+
+.wish-ring circle:last-child {
+  stroke: #3f8fbf;
+  stroke-linecap: round;
+}
+
+.wish-mark {
+  position: relative;
+  font-size: 22px;
+  color: #3f8fbf;
+}
+
+.wish-button .badge {
+  top: -4px;
+  right: -4px;
+}
+
+.coin-fly {
+  position: absolute;
+  z-index: 2;
+  left: 50%;
+  bottom: 70px;
+  font-size: 18px;
+  font-weight: 900;
+  color: var(--gold-dark);
+  pointer-events: none;
+  animation: coin-fly 0.85s ease-in forwards;
+}
+
+.coin-fly.jackpot {
+  font-size: 32px;
+  color: #c48a12;
+}
+
+@keyframes coin-fly {
+  from {
+    transform: translate(-50%, 0);
+    opacity: 1;
+  }
+  to {
+    transform: translate(-50%, -58vh);
+    opacity: 0;
+  }
+}
+
 .dock {
   position: absolute;
   z-index: 5;
@@ -1241,6 +1317,12 @@ input[type='range'] {
     transform: none;
     gap: 4px;
     padding: 6px;
+  }
+
+  .wish-button {
+    left: auto;
+    right: 10px;
+    bottom: calc(108px + var(--safe-bottom));
   }
 
   .dock button {

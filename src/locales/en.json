@@ -594,7 +594,17 @@
     "victory": "Victory",
     "defeat": "Defeat",
     "levelUp": "Level up",
-    "notice": "Notice"
+    "notice": "Notice",
+    "wish": "Coin toss",
+    "jackpot": "Jackpot"
+  },
+  "fountain": {
+    "wish": "Make a wish, {{count}} ready",
+    "now": "Now every {{seconds}}s · up to {{cap}} · {{gold}} gold · jackpot {{chance}}%",
+    "next": "Next level every {{seconds}}s · up to {{cap}} · {{gold}} gold · jackpot {{chance}}%",
+    "lastJackpot": "Last jackpot: year {{year}} {{season}}, {{gold}} gold",
+    "noJackpot": "No jackpot yet",
+    "jackpot": "Jackpot! {{gold}} gold from the fountain"
   },
   "debug": {
     "offset": "Time +{{days}}d {{hours}}h {{minutes}}m",

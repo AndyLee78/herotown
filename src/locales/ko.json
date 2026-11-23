@@ -594,7 +594,17 @@
     "victory": "승리",
     "defeat": "패배",
     "levelUp": "레벨업",
-    "notice": "알림"
+    "notice": "알림",
+    "wish": "동전",
+    "jackpot": "대박"
+  },
+  "fountain": {
+    "wish": "소원 빌기, 남은 소원 {{count}}",
+    "now": "지금 {{seconds}}초마다 · 최대 {{cap}} · 한 번 {{gold}}골드 · 대박 {{chance}}%",
+    "next": "다음 레벨 {{seconds}}초 · 최대 {{cap}} · {{gold}}골드 · 대박 {{chance}}%",
+    "lastJackpot": "최근 대박: {{year}}년 {{season}}, {{gold}}골드",
+    "noJackpot": "아직 대박이 없습니다",
+    "jackpot": "대박! 분수에서 {{gold}}골드"
   },
   "debug": {
     "offset": "시간 +{{days}}일 {{hours}}시간 {{minutes}}분",

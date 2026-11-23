@@ -28,7 +28,7 @@ import { BattleHub } from './game/battleScreens'
 import { Inn, Roster } from './game/heroScreens'
 import { UiIcon, TownLogo, type ResourceKind } from './game/icons'
 import { Bar, Portrait, Res, Window, needsWarning, useNow, waitLabel } from './game/kit'
-import { Absence, ConfirmDepart, Settings, Smith, Town } from './game/villageScreens'
+import { Absence, ConfirmDepart, Settings, Smith, Town, WishButton } from './game/villageScreens'
 import { loadGame, storeGame } from './storage'
 import { registerSW } from 'virtual:pwa-register'
 import { isSoundName, play, unlockSound } from './sound'
@@ -76,6 +76,8 @@ export function App() {
   const [proposalLater, setProposalLater] = useState<string[]>([])
   const [reportUnseen, setReportUnseen] = useState(false)
   const toastId = useRef(0)
+  const coinId = useRef(0)
+  const [coins, setCoins] = useState<{ id: number; amount: number; jackpot: boolean }[]>([])
   const pendingPreset = useRef('p1')
   const lastReturn = useRef<number | null>(null)
 
@@ -217,7 +219,7 @@ export function App() {
     const next = reduce(current, action)
     saveRef.current = next
     setSave(next)
-    if (action.type !== 'catchUp' && next.gold > current.gold) {
+    if (action.type !== 'catchUp' && action.type !== 'wish' && next.gold > current.gold) {
       play('coin')
     }
     if (action.type === 'hire' && next.roster.length > current.roster.length) {
@@ -243,6 +245,17 @@ export function App() {
       setScreen(null)
       play('depart')
       pushToast(t('battle.departed', { dungeon: t(`dungeon.${next.dungeonId}.name`) }))
+    }
+    if (action.type === 'wish' && next.gold > current.gold) {
+      const gained = next.gold - current.gold
+      const jackpot = next.fountain.last?.jackpot ?? false
+      play(jackpot ? 'jackpot' : 'wish')
+      const id = (coinId.current += 1)
+      setCoins((list) => [...list.slice(-2), { id, amount: gained, jackpot }])
+      window.setTimeout(() => setCoins((list) => list.filter((coin) => coin.id !== id)), 900)
+      if (jackpot) {
+        pushToast(t('fountain.jackpot', { gold: gained }))
+      }
     }
     if (action.type === 'acceptProposal') {
       const pair = residents(next)
@@ -408,6 +421,8 @@ export function App() {
           <ExpeditionPanel save={save} />
         </Suspense>
       ) : null}
+
+      <WishButton save={save} coins={coins} onWish={() => apply({ type: 'wish', now: gameNow() })} />
 
       <nav className="dock" aria-label={t('label.village')}>
         {DOCK.map((item) => {

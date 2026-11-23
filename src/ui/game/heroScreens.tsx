@@ -645,5 +645,8 @@ function Retirees({ save, onAction }: { save: GameState; onAction: Act }) {
 // Percent for multipliers, plain number for the inn's visitor potential.
 export function bonusValue(id: BuildingId): number {
   const value = retirementRules.bonus[id]
-  return id === 'inn' ? value : Math.round(value * 100)
+  if (id === 'inn') {
+    return value
+  }
+  return Math.round(value * 100)
 }
