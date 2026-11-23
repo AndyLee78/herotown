@@ -28,7 +28,7 @@ import { BattleHub } from './game/battleScreens'
 import { Inn, Roster } from './game/heroScreens'
 import { UiIcon, TownLogo, type ResourceKind } from './game/icons'
 import { Bar, Portrait, Res, Window, needsWarning, useNow, waitLabel } from './game/kit'
-import { Absence, Alchemy, ConfirmDepart, Magic, Settings, Smith, Town, WishButton } from './game/villageScreens'
+import { Absence, Alchemy, ComingOfAge, ConfirmDepart, Magic, Settings, Smith, Town, WishButton } from './game/villageScreens'
 import { loadGame, storeGame } from './storage'
 import { registerSW } from 'virtual:pwa-register'
 import { isSoundName, play, unlockSound } from './sound'
@@ -369,7 +369,9 @@ export function App() {
   }
 
   const buildingLabels = Object.fromEntries(villageRules.buildings.map((building) => [building.id, t(`building.${building.id}`)])) as Record<BuildingId, string>
-  const covered = screen != null || save.absence != null || confirm != null
+  // The coming-of-age welcome waits until the absence report is closed.
+  const welcoming = save.absence == null && confirm == null && (save.comingOfAge ?? []).length > 0
+  const covered = screen != null || save.absence != null || confirm != null || welcoming
   const away = new Set(save.expeditions.flatMap((expedition) => expedition.heroIds))
   const badges: Partial<Record<Screen, number | boolean>> = {
     inn: save.visitors.length,
@@ -448,7 +450,7 @@ export function App() {
           onClose={() => { play('close'); setScreen(null) }}
         >
           {screen === 'town' ? (
-            <Town save={save} onAction={apply} busy={adBusy} onWatch={() => watchAd('construction')} onAlchemy={() => open('alchemy')} onMagic={() => open('magic')} />
+            <Town save={save} onAction={apply} busy={adBusy} onWatch={() => watchAd('construction')} onAlchemy={() => open('alchemy')} onMagic={() => open('magic')} onSelectHero={(id) => { setSelectedId(id); open('roster') }} />
           ) : null}
           {screen === 'inn' ? <Inn save={save} onHire={(id) => apply({ type: 'hire', id, now: gameNow() })} /> : null}
           {screen === 'roster' ? (
@@ -484,6 +486,13 @@ export function App() {
       ) : null}
 
       {save.absence ? <Absence save={save} busy={adBusy} onWatch={() => watchAd('absence')} onClose={() => { play('close'); apply({ type: 'dismissAbsence' }) }} /> : null}
+      {welcoming ? (
+        <ComingOfAge
+          save={save}
+          onView={(id) => { apply({ type: 'seenAdults' }); setSelectedId(id); open('roster') }}
+          onClose={() => { play('close'); apply({ type: 'seenAdults' }) }}
+        />
+      ) : null}
       {confirm ? <ConfirmDepart notice={confirm} onCancel={() => { play('close'); setConfirm(null) }} onConfirm={() => apply({ type: 'depart', presetId: pendingPreset.current, confirm: true, now: gameNow() })} /> : null}
 
       <div className="toasts" aria-live="polite">

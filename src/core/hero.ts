@@ -1,4 +1,4 @@
-import { ageMultiplier, bandForAge, classById, classList, maxAge, names, progression, traits } from './data'
+import { ageBands, ageMultiplier, bandForAge, classById, classList, maxAge, names, progression, traits } from './data'
 import { normalizeGear } from './gear'
 import { isGenes, type Genes } from './genes'
 import { createRng, type Rng } from './rng'
@@ -112,6 +112,11 @@ function familyFields(draft: HeroDraft): Partial<Hero> {
 
 export function normalizeHero(hero: Hero): Hero {
   return createHero(hero)
+}
+
+// The first age that may go out on expeditions.
+export function deployAge(): number {
+  return ageBands.find((band) => band.canDeploy)?.min ?? 14
 }
 
 // Too young to fight: lists leave children out until they come of age.

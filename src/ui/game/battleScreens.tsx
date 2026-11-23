@@ -6,6 +6,7 @@ import {
   POTION_IDS,
   alchemyRules,
   canDeploy,
+  isChild,
   classById,
   combatRules,
   dungeonById,
@@ -502,7 +503,9 @@ function PartyEditor({ save, onAction, onBack }: { save: GameState; onAction: Ac
   const away = new Set(save.expeditions.flatMap((expedition) => expedition.heroIds))
   const inPreset = new Set(preset.slots.map((slot) => slot.id))
   const full = preset.slots.length >= combatRules.maxParty
+  // Children stay off this list until they come of age (Docs/tasks.md 50).
   const listed = save.roster
+    .filter((hero) => !isChild(hero))
     .filter((hero) => role === 'all' || classById(hero.classId).role === role)
     .map((hero) => ({ hero, power: heroPower(hero) }))
     .sort((a, b) => (sort === 'level' ? b.hero.level - a.hero.level : sort === 'fatigue' ? a.hero.fatigue - b.hero.fatigue : b.power - a.power))
@@ -552,7 +555,8 @@ function PartyEditor({ save, onAction, onBack }: { save: GameState; onAction: Ac
                     <Chip tone="info">{t(`class.${hero.classId}`)}</Chip>
                     <Chip>{t('ui.level', { level: hero.level })}</Chip>
                     {away.has(hero.id) ? <Chip tone="info">{t('battle.onTrip')}</Chip> : null}
-                    {needsWarning(hero) ? <Chip tone="bad">{t(`condition.${hero.condition}`)}</Chip> : null}
+                    {needsWarning(hero) || hero.condition === 'dead' ? <Chip tone="bad">{t(`condition.${hero.condition}`)}</Chip> : null}
+                    {hero.expecting ? <Chip tone="info">{t('battle.expecting')}</Chip> : null}
                   </span>
                   <span className="fatigue">
                     <Bar value={hero.fatigue} max={100} tone={fatigueTone(hero)} />

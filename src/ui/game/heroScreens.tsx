@@ -8,6 +8,8 @@ import {
   ancestorsOf,
   canDeploy,
   classById,
+  deployAge,
+  isChild,
   familyLegends,
   familyOf,
   legendBonus,
@@ -154,7 +156,7 @@ export function Roster({
       <div className="list-pane">
         {save.roster.length === 0 ? <p className="empty">{t('hint.emptyRoster')}</p> : null}
         <div className="hero-list">
-          {save.roster.map((hero) => (
+          {save.roster.filter((hero) => !isChild(hero)).map((hero) => (
             <button key={hero.id} type="button" className={hero.id === selectedId ? 'hero-row selected' : 'hero-row'} onClick={() => onSelect(hero.id)}>
               <Portrait hero={hero} />
               <span className="hero-row-body">
@@ -169,6 +171,7 @@ export function Roster({
             </button>
           ))}
         </div>
+        {save.roster.some(isChild) ? <p className="muted">{t('hero.childrenElsewhere', { count: save.roster.filter(isChild).length })}</p> : null}
         {save.retirees.length > 0 ? <Retirees save={save} onAction={onAction} /> : null}
         {save.graveyard.length > 0 ? (
           <>
@@ -410,7 +413,9 @@ function HeroDetail({
           </button>
         )}
       </div> : null}
-      {canDeploy(hero) ? null : <p className="muted">{t('result.dead')}</p>}
+      {canDeploy(hero) ? null : (
+        <p className="muted">{isChild(hero) ? t('hero.growsUp', { age: deployAge() }) : hero.expecting ? t('hero.afterBirth') : t('result.dead')}</p>
+      )}
     </article>
   )
 }

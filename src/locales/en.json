@@ -371,7 +371,16 @@
       "mature": "Mature",
       "veteran": "Veteran",
       "elder": "Elder"
-    }
+    },
+    "withChildren": "(incl. {{count}} children)",
+    "kids": "Children",
+    "kidAge": "Age {{age}}",
+    "kidYears": "{{years}} yr to go",
+    "kidParents": "Parents: {{names}}",
+    "comingOfAge": "Coming of age",
+    "grownUp": "{{name}} turned {{age}} and is now a hero!",
+    "viewHero": "View hero",
+    "welcomeOk": "Great!"
   },
   "target": {
     "lowestHp": "Lowest HP",
@@ -413,7 +422,10 @@
     "fatigue": "Fatigue {{fatigue}}",
     "fatigueEffect": "Fatigue {{fatigue}} · attack and speed −{{percent}}%",
     "recoverIn": "{{condition}} · recovers in {{hours}}h",
-    "warning": "Warning"
+    "warning": "Warning",
+    "childrenElsewhere": "{{count}} children are listed in the census window.",
+    "growsUp": "Can go out at age {{age}}.",
+    "afterBirth": "Can go out after the birth."
   },
   "skill": {
     "warrior": {
@@ -669,7 +681,8 @@
     "watch": "Watch",
     "departed": "Set out for {{dungeon}}!",
     "returnedWin": "Victory at {{dungeon}}! The party is home.",
-    "returnedLose": "The party is back from {{dungeon}} after a defeat."
+    "returnedLose": "The party is back from {{dungeon}} after a defeat.",
+    "expecting": "Expecting"
   },
   "log": {
     "floor": "Floor {{floor}}",

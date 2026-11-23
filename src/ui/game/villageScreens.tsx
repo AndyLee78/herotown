@@ -10,6 +10,9 @@ import {
   adsRemaining,
   ageBands,
   bedCount,
+  deployAge,
+  isChild,
+  nextAge,
   dungeons,
   enchantTime,
   expeditionSlots,
@@ -30,13 +33,15 @@ import {
   type GameAction,
   type GameState,
   type Grave,
+  type Hero,
 } from '../../core'
 import { gameNow, gameOffset, offsetParts, subscribeGameClock } from '../clock'
 import { loadSoundPrefs, saveSoundPrefs, SOUND_NAMES } from '../sound'
 import { canReplay } from '../voxel/replay'
 import { dungeonPreviewUrl } from '../voxel/portrait'
 import { GraveFace, bonusValue } from './heroScreens'
-import { Bar, Chip, CostList, Res, Window, affordable, formatEntry, itemLabel, useNow, waitLabel } from './kit'
+import { Bar, Chip, CostList, Portrait, Res, Window, affordable, formatEntry, itemLabel, useNow, waitLabel } from './kit'
+import { josa } from '../josa'
 
 const BattleView = lazy(() => import('../BattleView').then((mod) => ({ default: mod.BattleView })))
 
@@ -49,6 +54,7 @@ export function Town({
   onWatch,
   onAlchemy,
   onMagic,
+  onSelectHero,
 }: {
   save: GameState
   onAction: Act
@@ -56,12 +62,14 @@ export function Town({
   onWatch: () => void
   onAlchemy: () => void
   onMagic: () => void
+  onSelectHero: (id: string) => void
 }) {
   const { t } = useTranslation()
   const [census, setCensus] = useState(false)
   const [hall, setHall] = useState(false)
   const level = townLevel(save.fame)
   const people = population(save)
+  const kids = save.roster.filter(isChild).sort((a, b) => b.age - a.age)
   const next = villageRules.levels.find((entry) => entry.level === level.level + 1)
   const now = useNow(save.construction != null)
   const total = save.construction ? villageRules.buildings.find((b) => b.id === save.construction?.id)?.levels.find((l) => l.level === save.buildings[save.construction!.id] + 1)?.ms ?? 1 : 1
@@ -76,7 +84,10 @@ export function Town({
           </span>
         </div>
         <span className="chips">
-          <Chip>{t('town.beds', { used: save.roster.length, count: bedCount(save.buildings.house) })}</Chip>
+          <Chip>
+            {t('town.beds', { used: save.roster.length, count: bedCount(save.buildings.house) })}
+            {kids.length > 0 ? ` ${t('family.withChildren', { count: kids.length })}` : ''}
+          </Chip>
           <button type="button" className="chip" onClick={() => setCensus(true)}>
             {t('family.population')}
           </button>
@@ -186,12 +197,85 @@ export function Town({
           <span className="chips">
             <Chip>{t('family.marriedCount', { count: people.married })}</Chip>
             <Chip>{t('family.singleCount', { count: people.single })}</Chip>
-            <Chip>{t('family.beds', { used: people.beds.used, total: people.beds.total })}</Chip>
+            <Chip>
+              {t('family.beds', { used: people.beds.used, total: people.beds.total })}
+              {kids.length > 0 ? ` ${t('family.withChildren', { count: kids.length })}` : ''}
+            </Chip>
           </span>
+          {kids.length > 0 ? (
+            <>
+              <h3 className="section-title">{t('family.kids')}</h3>
+              <div className="hero-list">
+                {kids.map((kid) => (
+                  <button key={kid.id} type="button" className="hero-row" onClick={() => onSelectHero(kid.id)}>
+                    <Portrait hero={kid} />
+                    <span className="hero-row-body">
+                      <strong>{kid.name}</strong>
+                      <span className="chips">
+                        <Chip>{t('family.kidAge', { age: kid.age })}</Chip>
+                        <Chip tone="info">{t('family.kidYears', { years: yearsUntilGrown(kid.age) })}</Chip>
+                      </span>
+                      {parentNames(save, kid) ? <span className="muted">{t('family.kidParents', { names: parentNames(save, kid) })}</span> : null}
+                    </span>
+                  </button>
+                ))}
+              </div>
+            </>
+          ) : null}
         </Window>
       ) : null}
       {hall ? <Hall save={save} onClose={() => setHall(false)} /> : null}
     </>
+  )
+}
+
+// Game years until a child may go out (children age faster, Docs/generations.md).
+function yearsUntilGrown(age: number): number {
+  let years = 0
+  for (let next = age; next < deployAge() && years < 50; next = nextAge(next)) {
+    years += 1
+  }
+  return years
+}
+
+function parentNames(save: GameState, hero: Hero): string {
+  const everyone = [...save.roster, ...save.retirees.map((retiree) => retiree.hero), ...save.graveyard]
+  return (hero.parents ?? []).flatMap((id) => everyone.find((entry) => entry.id === id)?.name ?? []).join(', ')
+}
+
+// Children who just came of age join the hero lists with a welcome (Docs/tasks.md 50).
+export function ComingOfAge({ save, onView, onClose }: { save: GameState; onView: (id: string) => void; onClose: () => void }) {
+  const { t, i18n } = useTranslation()
+  const grown = save.comingOfAge.flatMap((id) => save.roster.find((hero) => hero.id === id) ?? [])
+  if (grown.length === 0) {
+    return null
+  }
+  const korean = i18n.language.startsWith('ko')
+  return (
+    <Window title={t('family.comingOfAge')} onClose={onClose} small>
+      <div className="hero-list">
+        {grown.map((hero) => (
+          <article key={hero.id} className="hero-row">
+            <Portrait hero={hero} />
+            <span className="hero-row-body">
+              <strong>{t('family.grownUp', { name: korean ? josa(hero.name, '이') : hero.name, age: hero.age })}</strong>
+              <span className="chips">
+                <Chip tone="info">{t(`class.${hero.classId}`)}</Chip>
+                <Chip>{t('ui.level', { level: hero.level })}</Chip>
+              </span>
+            </span>
+            <button type="button" className="btn small" onClick={() => onView(hero.id)}>
+              {t('family.viewHero')}
+            </button>
+          </article>
+        ))}
+      </div>
+      <div className="row">
+        <button type="button" className="btn primary" onClick={onClose}>
+          {t('family.welcomeOk')}
+        </button>
+      </div>
+    </Window>
   )
 }
 

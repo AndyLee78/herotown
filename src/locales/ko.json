@@ -371,7 +371,16 @@
       "mature": "장년",
       "veteran": "노련",
       "elder": "원로"
-    }
+    },
+    "withChildren": "(아이 {{count}}명 포함)",
+    "kids": "아이들",
+    "kidAge": "{{age}}살",
+    "kidYears": "출전까지 {{years}}년",
+    "kidParents": "부모: {{names}}",
+    "comingOfAge": "성인식",
+    "grownUp": "{{name}} {{age}}살이 되어 영웅이 되었다!",
+    "viewHero": "영웅 보기",
+    "welcomeOk": "좋아!"
   },
   "target": {
     "lowestHp": "체력 낮은 적",
@@ -413,7 +422,10 @@
     "fatigue": "피로 {{fatigue}}",
     "fatigueEffect": "피로 {{fatigue}} · 공격·속도 −{{percent}}%",
     "recoverIn": "{{condition}} · 회복까지 {{hours}}시간",
-    "warning": "경고"
+    "warning": "경고",
+    "childrenElsewhere": "아이 {{count}}명은 마을 인구 창에서 볼 수 있다.",
+    "growsUp": "{{age}}살이 되면 출전할 수 있다.",
+    "afterBirth": "아이를 낳은 뒤 출전할 수 있다."
   },
   "skill": {
     "warrior": {
@@ -669,7 +681,8 @@
     "watch": "다시 보기",
     "departed": "{{dungeon}}(으)로 출발했다!",
     "returnedWin": "{{dungeon}}에서 승리하고 돌아왔다!",
-    "returnedLose": "{{dungeon}}에서 패배하고 돌아왔다."
+    "returnedLose": "{{dungeon}}에서 패배하고 돌아왔다.",
+    "expecting": "출산 예정"
   },
   "log": {
     "floor": "{{floor}}층",
