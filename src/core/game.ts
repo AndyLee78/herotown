@@ -5,7 +5,7 @@ import { finishBrew, readAlchemyJob, readSupplies, returnSupplies, startBrew, ta
 import { adRules, magicRules, classById, classList, combatRules, dungeonById, dungeons, expeditionRules, lifeRules, progression, retirementRules, smithRules, timeRules, villageRules } from './data'
 import { forgeGear, normalizeGear, recipeById } from './gear'
 import { applyReport, DEFAULT_TACTICS, runDungeon } from './dungeon'
-import { canDeploy, generateHero, generateVisitors, normalizeHero, restHero, withAge } from './hero'
+import { canDeploy, generateHero, isChild, generateVisitors, normalizeHero, restHero, withAge } from './hero'
 import { acceptProposal, bedsTaken, bondParty, declineProposal, deliverBirths, femaleChance, graveFor, nextAge, partyBonus, passAway, readBonds, readProposals, tidyFamily, turnSeason, wageCount, type FamilyEvents } from './family'
 import { createRng } from './rng'
 import type { Rng } from './rng'
@@ -204,6 +204,8 @@ export type GameState = {
   bonds: Bond[]
   proposals: Proposal[]
   familyNonce: number
+  // Children who have just come of age, for the welcome notice (cleared by 'seenAdults').
+  comingOfAge: string[]
   fountain: FountainState
   alchemy: AlchemyJob | null
   potions: Supplies
@@ -255,6 +257,7 @@ export type GameAction =
   | { type: 'retire'; id: string }
   | { type: 'assignRetiree'; id: string; building: BuildingId | null }
   | { type: 'acceptProposal'; a: string; b: string; now?: number }
+  | { type: 'seenAdults' }
   | { type: 'declineProposal'; a: string; b: string; now?: number }
   | { type: 'wish'; now: number }
   | { type: 'brew'; potionId: PotionId; now: number }
@@ -301,6 +304,7 @@ export function freshState(seed: number, now: number): GameState {
     bonds: [],
     proposals: [],
     familyNonce: 0,
+    comingOfAge: [],
     fountain: freshFountain(now),
     alchemy: null,
     potions: {},
@@ -452,7 +456,8 @@ function apply(state: GameState, action: GameAction): GameState {
       if (preset.slots.some((slot) => slot.id === action.id) || preset.slots.length >= combatRules.maxParty) {
         return null
       }
-      if (!state.roster.some((hero) => hero.id === action.id)) {
+      const candidate = state.roster.find((hero) => hero.id === action.id)
+      if (!candidate || isChild(candidate)) {
         return null
       }
       // Melee fighters take the front row and everyone else the back, while there is room.
@@ -540,6 +545,9 @@ function apply(state: GameState, action: GameAction): GameState {
   if (action.type === 'supplies') {
     const count = Math.max(0, Math.floor(action.count))
     return editPreset(state, action.presetId, (preset) => ({ ...preset, supplies: { ...(preset.supplies ?? {}), [action.potionId]: count } }))
+  }
+  if (action.type === 'seenAdults') {
+    return { ...state, comingOfAge: [] }
   }
   if (action.type === 'acceptProposal') {
     return acceptProposal(state, action.a, action.b, action.now ?? state.lastTickAt)
@@ -837,9 +845,13 @@ function moveCalendar(state: GameState, elapsed: number, wages: { paid: number }
 }
 
 function growOlder(state: GameState, years: number, aged: { name: string; age: number }[]): GameState {
+  const roster = state.roster.map((hero) => older(hero, years, aged))
+  // A child who reaches deploy age joins the hero lists with a welcome.
+  const grownUp = roster.filter((hero, index) => isChild(state.roster[index]!) && !isChild(hero)).map((hero) => hero.id)
   return {
     ...state,
-    roster: state.roster.map((hero) => older(hero, years, aged)),
+    comingOfAge: [...(state.comingOfAge ?? []), ...grownUp],
+    roster,
     visitors: state.visitors.map((hero) => older(hero, years, aged)),
     retirees: state.retirees.map((retiree) => ({ ...retiree, hero: older(retiree.hero, years, aged) })),
   }
@@ -1743,6 +1755,7 @@ function normalize(record: Record<string, unknown>, now: number): GameState {
     bonds: readBonds(record.bonds),
     proposals: readProposals(record.proposals),
     familyNonce: numberOr(record.familyNonce, 0),
+    comingOfAge: Array.isArray(record.comingOfAge) ? (record.comingOfAge as unknown[]).filter((id): id is string => typeof id === 'string') : [],
     fountain: readFountain(record.fountain, numberOr(record.lastTickAt, now)),
     alchemy: readAlchemyJob(record.alchemy),
     potions: readSupplies(record.potions),

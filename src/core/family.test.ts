@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest'
 import { createHeroUnit } from './combat'
 import { familyRules, maxAge, progression, timeRules, villageRules } from './data'
 import { isLegend, ancestorsOf, bondOf, bondParty, bondStage, canCourt, familyLegends, familyOf, graveFor, hallOfFame, legendBonus, oldAgeChance, passAway, femaleChance, housingFree, makeChild, nextAge, partyBonus, population, topBonds } from './family'
-import { canDeploy, createHero, type HeroDraft } from './hero'
+import { canDeploy, createHero, isChild, type HeroDraft } from './hero'
 import { freshState, migrate, reduce, type GameState } from './game'
 import { createRng } from './rng'
 import type { Hero, Stats } from './types'
@@ -402,3 +402,28 @@ describe('review f7fdf88 fixes', () => {
     expect(isLegend(hero('m', 'male', { level: 1, clears: ['retired_dungeon', 'barrow'] }))).toBe(true)
   })
 })
+
+describe('children in the hero lists', () => {
+  const lateWinter = (state: GameState): GameState => ({ ...state, calendar: { year: 1, season: 'winter', intoSeasonMs: timeRules.seasonMs - 2000 } })
+
+  it('keeps a child out of parties and welcomes them once they come of age', () => {
+    const child = hero('kid', 'female', { age: familyRules.adultAge - 1 })
+    const grown = hero('adult', 'male', { age: 30 })
+    expect(isChild(child)).toBe(true)
+    expect(isChild(grown)).toBe(false)
+    const state = lateWinter(town([child, grown]))
+    expect(reduce(state, { type: 'add', id: 'kid' }).presets[0]?.slots.some((slot) => slot.id === 'kid')).toBe(false)
+    const next = reduce(state, { type: 'catchUp', now: now + 3000 })
+    expect(next.roster.find((entry) => entry.id === 'kid')?.age).toBe(familyRules.adultAge)
+    expect(next.comingOfAge).toEqual(['kid'])
+    expect(reduce(next, { type: 'add', id: 'kid' }).presets[0]?.slots.some((slot) => slot.id === 'kid')).toBe(true)
+    expect(reduce(next, { type: 'seenAdults' }).comingOfAge).toEqual([])
+  })
+
+  it('opens an older save with nobody waiting for a welcome', () => {
+    const old = { ...town([hero('a', 'male')]), version: 12 } as Record<string, unknown>
+    delete old.comingOfAge
+    expect(migrate(JSON.parse(JSON.stringify(old)), now).comingOfAge).toEqual([])
+  })
+})
+

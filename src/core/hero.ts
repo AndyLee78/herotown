@@ -114,6 +114,11 @@ export function normalizeHero(hero: Hero): Hero {
   return createHero(hero)
 }
 
+// Too young to fight: lists leave children out until they come of age.
+export function isChild(hero: Hero): boolean {
+  return !bandForAge(clampAge(hero.age)).canDeploy
+}
+
 export function canDeploy(hero: Hero | number): boolean {
   if (typeof hero === 'number') {
     return bandForAge(clampAge(hero)).canDeploy
