@@ -17,6 +17,7 @@
     "village": "Village",
     "save": "Save",
     "smith": "Smithy",
+    "alchemy": "Alchemy",
     "debug": "Debug",
     "settings": "Settings",
     "battle": "Battle"
@@ -51,6 +52,7 @@
     "auto": "Auto trips",
     "autoParty": "Lock party",
     "craft": "Craft",
+    "brew": "Brew",
     "enhance": "Enhance (iron {{iron}} · gold {{gold}})",
     "equip": "Equip {{name}}",
     "unequip": "Unequip {{name}}",
@@ -70,6 +72,7 @@
     "tactics": "Tactics",
     "target": "Target priority",
     "healBelow": "Heal under %",
+    "potionBelow": "Healing potion under HP %",
     "retreatBelow": "Retreat under %",
     "seed": "Seed",
     "seedLocked": "Lock seed",
@@ -125,7 +128,8 @@
     "stone": "Stone {{amount}}",
     "iron": "Iron {{amount}}",
     "fame": "Fame {{amount}}",
-    "bone": "Bone {{amount}}"
+    "bone": "Bone {{amount}}",
+    "herb": "Herb {{amount}}"
   },
   "town": {
     "level": "Village Lv {{level}}",
@@ -194,7 +198,10 @@
     "outmatched": "Time ran out.",
     "retreated": "The party turned back.",
     "wiped": "The party was wiped out.",
-    "tooWeak": "Train in an easier dungeon and try again (recommended Lv {{level}})."
+    "tooWeak": "Train in an easier dungeon and try again (recommended Lv {{level}}).",
+    "poisoned": "Poison brought the party down. Pack antidotes.",
+    "paralyzed": "Paralysis and slow cost them their turns. Pack tonics.",
+    "silenced": "Silence cut off the healing. Pack clarity or healing potions."
   },
   "dungeon": {
     "hill_cave": {
@@ -221,6 +228,10 @@
       "name": "Sunken Crypt",
       "hint": "Home to tougher undead than the barrow."
     },
+    "venom_marsh": {
+      "name": "Venom Marsh",
+      "hint": "Poison, paralysis and silence stack up. Antidotes open the way."
+    },
     "cleared": "Cleared",
     "recommended": "Rec. Lv {{level}}"
   },
@@ -233,7 +244,8 @@
     "wood": "Wood",
     "stone": "Stone",
     "iron": "Iron",
-    "bone": "Bone"
+    "bone": "Bone",
+    "herb": "Herb"
   },
   "class": {
     "warrior": "Warrior",
@@ -478,6 +490,29 @@
       "edge": "Silver edge"
     }
   },
+  "potion": {
+    "heal": "Healing potion",
+    "antidote": "Antidote",
+    "tonic": "Tonic",
+    "clarity": "Clarity draught",
+    "hint": {
+      "heal": "Restores some health.",
+      "antidote": "Clears poison and grants a short immunity.",
+      "tonic": "Clears paralysis and slow.",
+      "clarity": "Clears silence."
+    }
+  },
+  "alchemy": {
+    "open": "Open the workshop",
+    "level": "Workshop level {{level}}",
+    "unbuilt": "No workshop yet.",
+    "idle": "The cauldron is empty.",
+    "working": "Brewing {{name}} · {{time}}",
+    "brew": "Brew",
+    "batch": "{{count}} a batch · {{time}}",
+    "locked": "Opens at workshop level {{level}}.",
+    "stock": "Potion stock"
+  },
   "smith": {
     "level": "Smithy level {{level}}",
     "idle": "Ready to craft.",
@@ -505,7 +540,12 @@
     "wraith": "Wraith",
     "ghoul": "Ghoul",
     "barrow_lord": "Barrow lord",
-    "crypt_lord": "Crypt lord"
+    "crypt_lord": "Crypt lord",
+    "venom_toad": "Venom toad",
+    "bog_leech": "Bog leech",
+    "moss_golem": "Moss golem",
+    "wisp": "Wisp",
+    "bog_queen": "Bog queen"
   },
   "battle": {
     "label": "Battle replay",
@@ -539,6 +579,9 @@
     "editParty": "Edit party {{number}}",
     "supplies": "Supplies",
     "suppliesLater": "Potions and bombs arrive with the alchemy workshop.",
+    "carry": "This trip {{count}}/{{max}}",
+    "inStock": "Stock {{count}}",
+    "usedPotion": "{{potion}} ×{{count}}",
     "warn": {
       "noTank": "Without a tank, the back row falls.",
       "noHealer": "Without a healer, the party cannot last.",
@@ -579,7 +622,13 @@
     "down": "{{actor}} falls.",
     "retreat": "The party retreats at {{hp}}% health.",
     "victory": "The party clears the dungeon.",
-    "defeat": "The party is wiped out."
+    "defeat": "The party is wiped out.",
+    "paralyze": "{{target}} is paralyzed.",
+    "paralyzed": "{{actor}} loses a turn to paralysis.",
+    "slow": "{{target}} is slowed.",
+    "silence": "{{target}} is silenced.",
+    "sweep": "{{actor}} strikes everyone.",
+    "potion": "{{actor}} drinks a {{potion}}."
   },
   "sound": {
     "title": "Sound",

@@ -298,6 +298,17 @@ button,
   right: -4px;
 }
 
+.supply-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.supply-row strong {
+  min-width: 1.4rem;
+  text-align: center;
+}
+
 .coin-fly {
   position: absolute;
   z-index: 2;

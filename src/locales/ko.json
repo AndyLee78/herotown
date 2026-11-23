@@ -17,6 +17,7 @@
     "village": "마을",
     "save": "저장",
     "smith": "대장간",
+    "alchemy": "연금술 공방",
     "debug": "디버그",
     "settings": "설정",
     "battle": "전투"
@@ -51,6 +52,7 @@
     "auto": "자동 출정",
     "autoParty": "현재 편성 고정",
     "craft": "제작",
+    "brew": "만들기",
     "enhance": "강화 (철 {{iron}} · 골드 {{gold}})",
     "equip": "{{name}} 장착",
     "unequip": "{{name}} 해제",
@@ -70,6 +72,7 @@
     "tactics": "작전",
     "target": "우선 대상",
     "healBelow": "회복 기준 %",
+    "potionBelow": "체력 n% 미만이면 회복 물약",
     "retreatBelow": "후퇴 기준 %",
     "seed": "시드",
     "seedLocked": "시드 고정",
@@ -125,7 +128,8 @@
     "stone": "석재 {{amount}}",
     "iron": "철 {{amount}}",
     "fame": "명성 {{amount}}",
-    "bone": "뼈 {{amount}}"
+    "bone": "뼈 {{amount}}",
+    "herb": "약초 {{amount}}"
   },
   "town": {
     "level": "마을 레벨 {{level}}",
@@ -194,7 +198,10 @@
     "outmatched": "제한 시간 안에 끝내지 못했다.",
     "retreated": "던전을 클리어하기 전에 후퇴했다.",
     "wiped": "파티가 전멸했다.",
-    "tooWeak": "파티가 아직 약하다. 쉬운 던전에서 레벨을 올리자 (권장 Lv {{level}})"
+    "tooWeak": "파티가 아직 약하다. 쉬운 던전에서 레벨을 올리자 (권장 Lv {{level}})",
+    "poisoned": "중독이 쌓여 쓰러졌다. 해독 물약을 챙기자.",
+    "paralyzed": "마비·둔화로 손을 못 썼다. 각성 물약을 챙기자.",
+    "silenced": "침묵으로 회복이 끊겼다. 명료 물약이나 회복 물약을 챙기자."
   },
   "dungeon": {
     "hill_cave": {
@@ -221,6 +228,10 @@
       "name": "가라앉은 묘실",
       "hint": "묘지보다 단단한 언데드다."
     },
+    "venom_marsh": {
+      "name": "독늪 습지",
+      "hint": "독과 마비, 침묵이 겹친다. 해독 물약이 길을 연다."
+    },
     "cleared": "클리어",
     "recommended": "권장 Lv {{level}}"
   },
@@ -233,7 +244,8 @@
     "wood": "목재",
     "stone": "석재",
     "iron": "철",
-    "bone": "뼈"
+    "bone": "뼈",
+    "herb": "약초"
   },
   "class": {
     "warrior": "전사",
@@ -478,6 +490,29 @@
       "edge": "은날"
     }
   },
+  "potion": {
+    "heal": "회복 물약",
+    "antidote": "해독 물약",
+    "tonic": "각성 물약",
+    "clarity": "명료 물약",
+    "hint": {
+      "heal": "체력을 일부 회복한다.",
+      "antidote": "중독을 풀고 잠깐 면역이 된다.",
+      "tonic": "마비와 둔화를 푼다.",
+      "clarity": "침묵을 푼다."
+    }
+  },
+  "alchemy": {
+    "open": "공방 열기",
+    "level": "공방 레벨 {{level}}",
+    "unbuilt": "공방이 아직 없다.",
+    "idle": "솥이 비어 있다.",
+    "working": "{{name}} 만드는 중 · {{time}}",
+    "brew": "조제",
+    "batch": "한 번에 {{count}}개 · {{time}}",
+    "locked": "공방 레벨 {{level}}에 열린다.",
+    "stock": "물약 창고"
+  },
   "smith": {
     "level": "대장간 레벨 {{level}}",
     "idle": "작업대가 비어 있다.",
@@ -505,7 +540,12 @@
     "wraith": "망령",
     "ghoul": "구울",
     "barrow_lord": "묘지 군주",
-    "crypt_lord": "묘실 군주"
+    "crypt_lord": "묘실 군주",
+    "venom_toad": "독두꺼비",
+    "bog_leech": "늪거머리",
+    "moss_golem": "이끼골렘",
+    "wisp": "도깨비불",
+    "bog_queen": "늪의 여왕"
   },
   "battle": {
     "label": "전투 다시 보기",
@@ -539,6 +579,9 @@
     "editParty": "파티 {{number}} 구성하기",
     "supplies": "준비물",
     "suppliesLater": "연금술 공방이 생기면 물약과 폭탄을 챙길 수 있다.",
+    "carry": "이번 출정 {{count}}/{{max}}",
+    "inStock": "창고 {{count}}",
+    "usedPotion": "{{potion}} {{count}}개 사용",
     "warn": {
       "noTank": "탱커가 없으면 후열이 무너지기 쉬워요",
       "noHealer": "치유사가 없으면 피해를 버티기 어려워요",
@@ -579,7 +622,13 @@
     "down": "{{actor}}, 전투 불능",
     "retreat": "평균 체력 {{hp}}%에서 후퇴했다.",
     "victory": "파티가 던전을 클리어했다.",
-    "defeat": "파티가 전멸했다."
+    "defeat": "파티가 전멸했다.",
+    "paralyze": "{{target}}, 마비",
+    "paralyzed": "{{actor}}, 마비로 행동을 건너뜀",
+    "slow": "{{target}}, 둔화",
+    "silence": "{{target}}, 침묵",
+    "sweep": "{{actor}}, 전체 공격",
+    "potion": "{{actor}}, {{potion}}을 마심"
   },
   "sound": {
     "title": "효과음",

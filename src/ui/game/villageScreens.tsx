@@ -3,7 +3,10 @@ import { IconSheet, UiIcon } from './icons'
 import { lazy, Suspense, useEffect, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import {
+  POTION_IDS,
   adRules,
+  alchemyRules,
+  brewTime,
   adsRemaining,
   ageBands,
   bedCount,
@@ -37,7 +40,7 @@ const BattleView = lazy(() => import('../BattleView').then((mod) => ({ default: 
 
 type Act = (action: GameAction) => void
 
-export function Town({ save, onAction, busy, onWatch }: { save: GameState; onAction: Act; busy: boolean; onWatch: () => void }) {
+export function Town({ save, onAction, busy, onWatch, onAlchemy }: { save: GameState; onAction: Act; busy: boolean; onWatch: () => void; onAlchemy: () => void }) {
   const { t } = useTranslation()
   const [census, setCensus] = useState(false)
   const [hall, setHall] = useState(false)
@@ -130,6 +133,11 @@ export function Town({ save, onAction, busy, onWatch }: { save: GameState; onAct
               <button type="button" className="btn primary" disabled={disabled} onClick={() => onAction({ type: 'build', id, now: gameNow() })}>
                 {current === 0 ? t('action.construct') : t('action.upgrade')}
               </button>
+              {id === 'alchemy' && current > 0 ? (
+                <button type="button" className="btn" onClick={onAlchemy}>
+                  {t('alchemy.open')}
+                </button>
+              ) : null}
             </article>
           )
         })}
@@ -255,6 +263,66 @@ export function WishButton({ save, onWish, coins }: { save: GameState; onWish: (
   )
 }
 
+export function Alchemy({ save, onAction }: { save: GameState; onAction: Act }) {
+  const { t } = useTranslation()
+  const working = save.alchemy != null
+  const now = useNow(working)
+  const level = save.buildings.alchemy
+  const job = save.alchemy
+  const total = job ? Math.max(1, brewTime(save, job.potionId)) : 1
+  const left = job ? Math.max(0, job.finishAt - now) : 0
+  return (
+    <>
+      <p className="banner">
+        <UiIcon name="alchemy" size={18} />
+        {level < 1
+          ? t('alchemy.unbuilt')
+          : t('alchemy.level', { level })}
+        {' · '}
+        {job ? t('alchemy.working', { name: t(`potion.${job.potionId}`), time: waitLabel(left) }) : t('alchemy.idle')}
+      </p>
+      {job ? <Bar value={total - left} max={total} tone="info" /> : null}
+      <div className="split wide-right">
+        <div>
+          <h3 className="section-title">{t('alchemy.brew')}</h3>
+          <div className="grid">
+            {alchemyRules.potions.map((potion) => {
+              const locked = level < potion.alchemyLevel
+              return (
+                <article key={potion.id} className={locked ? 'card locked' : 'card'}>
+                  <strong className="name">{t(`potion.${potion.id}`)}</strong>
+                  <p className="muted">{t(`potion.hint.${potion.id}`)}</p>
+                  <p className="muted">{t('alchemy.batch', { count: alchemyRules.batch, time: waitLabel(brewTime(save, potion.id)) })}</p>
+                  <CostList cost={potion} save={save} />
+                  <button
+                    type="button"
+                    className="btn primary"
+                    disabled={locked || working || level < 1 || !affordable(potion, save)}
+                    onClick={() => onAction({ type: 'brew', potionId: potion.id, now: gameNow() })}
+                  >
+                    {locked ? t('alchemy.locked', { level: potion.alchemyLevel }) : t('action.brew')}
+                  </button>
+                </article>
+              )
+            })}
+          </div>
+        </div>
+        <div>
+          <h3 className="section-title">{t('alchemy.stock')}</h3>
+          <ul className="plain">
+            {POTION_IDS.map((id) => (
+              <li key={id} className="line">
+                <span>{t(`potion.${id}`)}</span>
+                <Chip>{save.potions[id] ?? 0}</Chip>
+              </li>
+            ))}
+          </ul>
+        </div>
+      </div>
+    </>
+  )
+}
+
 export function Smith({ save, onAction }: { save: GameState; onAction: Act }) {
   const { t } = useTranslation()
   const working = save.smith != null
@@ -337,6 +405,13 @@ export function Report({ report }: { report: DungeonReport | null }) {
         {report.dungeonId ? <span>{t(`dungeon.${report.dungeonId}.name`)}</span> : null}
         {report.defeatReason ? (
           <span>{report.defeatReason === 'tooWeak' ? t('defeat.tooWeak', { level: recommended }) : t(`defeat.${report.defeatReason}`)}</span>
+        ) : null}
+        {POTION_IDS.some((id) => (report.potionsUsed?.[id] ?? 0) > 0) ? (
+          <span className="chips">
+            {POTION_IDS.filter((id) => (report.potionsUsed?.[id] ?? 0) > 0).map((id) => (
+              <Chip key={id}>{t('battle.usedPotion', { potion: t(`potion.${id}`), count: report.potionsUsed?.[id] ?? 0 })}</Chip>
+            ))}
+          </span>
         ) : null}
         <span className="row">
           <Res kind="gold" amount={report.gold} light />

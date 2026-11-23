@@ -60,7 +60,7 @@ export function Res({ kind, amount, short = false, light = false }: { kind: Reso
   )
 }
 
-type Cost = { gold: number; wood?: number; stone?: number; iron?: number }
+type Cost = { gold: number; wood?: number; stone?: number; iron?: number; bone?: number; herb?: number }
 
 // Lists the non-zero parts of a cost, marking the ones the player lacks.
 export function CostList({ cost, save }: { cost: Cost; save: GameState }) {
@@ -69,6 +69,8 @@ export function CostList({ cost, save }: { cost: Cost; save: GameState }) {
     ['wood', cost.wood ?? 0, save.materials.wood],
     ['stone', cost.stone ?? 0, save.materials.stone],
     ['iron', cost.iron ?? 0, save.materials.iron],
+    ['bone', cost.bone ?? 0, save.materials.bone],
+    ['herb', cost.herb ?? 0, save.materials.herb],
   ]
   return (
     <span className="cost">
@@ -82,7 +84,14 @@ export function CostList({ cost, save }: { cost: Cost; save: GameState }) {
 }
 
 export function affordable(cost: Cost, save: GameState): boolean {
-  return save.gold >= cost.gold && save.materials.wood >= (cost.wood ?? 0) && save.materials.stone >= (cost.stone ?? 0) && save.materials.iron >= (cost.iron ?? 0)
+  return (
+    save.gold >= cost.gold &&
+    save.materials.wood >= (cost.wood ?? 0) &&
+    save.materials.stone >= (cost.stone ?? 0) &&
+    save.materials.iron >= (cost.iron ?? 0) &&
+    save.materials.bone >= (cost.bone ?? 0) &&
+    save.materials.herb >= (cost.herb ?? 0)
+  )
 }
 
 export function Bar({ value, max, tone = 'good' }: { value: number; max: number; tone?: 'good' | 'warn' | 'bad' | 'info' }) {
@@ -171,10 +180,12 @@ export function itemLabel(t: TFunction, item: Gear, fallback: Hero['classId']): 
 }
 
 export function formatEntry(t: TFunction, entry: LogEntry): string {
+  const potion = entry.params.potion
   return t(entry.key, {
     ...entry.params,
     actor: labelFrom(t, entry.params, 'actor'),
     target: labelFrom(t, entry.params, 'target'),
+    potion: typeof potion === 'string' ? t(`potion.${potion}`) : potion,
   })
 }
 

@@ -3,6 +3,8 @@ import { useMemo, useState } from 'react'
 import type { TFunction } from 'i18next'
 import { useTranslation } from 'react-i18next'
 import {
+  POTION_IDS,
+  alchemyRules,
   canDeploy,
   classById,
   combatRules,
@@ -18,6 +20,7 @@ import {
   type GameState,
   type Hero,
   type PartyPreset,
+  type PotionId,
   type TargetPriority,
 } from '../../core'
 import { gameNow } from '../clock'
@@ -385,14 +388,21 @@ function Prep({
             onChange={(event) => onAction({ type: 'tactics', presetId: preset.id, tactics: { ...preset.tactics, retreatBelow: clampPercent(event.target.value) } })}
           />
         </label>
+        <label className="field">
+          <span>{t('label.potionBelow')}</span>
+          <input
+            type="number"
+            min={0}
+            max={100}
+            value={preset.tactics.potionBelow ?? alchemyRules.potionBelow}
+            onChange={(event) => onAction({ type: 'tactics', presetId: preset.id, tactics: { ...preset.tactics, potionBelow: clampPercent(event.target.value) } })}
+          />
+        </label>
       </details>
 
       <AutoSettings save={save} onAction={onAction} />
 
-      <div className="card supplies">
-        <strong>{t('battle.supplies')}</strong>
-        <span className="muted">{t('battle.suppliesLater')}</span>
-      </div>
+      <SuppliesPicker save={save} preset={preset} onAction={onAction} />
 
       {blocked ? <p className="banner bad">{blocked}</p> : null}
       <div className={stamping ? 'stamp-stage stamping' : 'stamp-stage'}>
@@ -428,8 +438,8 @@ function AutoSettings({ save, onAction }: { save: GameState; onAction: Act }) {
       {save.auto.policy === 'material' ? (
         <label className="field">
           <span>{t('label.material')}</span>
-          <select value={save.auto.material} onChange={(event) => onAction({ type: 'autoMaterial', material: event.target.value as 'wood' | 'stone' | 'iron' | 'bone' })}>
-            {(['wood', 'stone', 'iron', 'bone'] as const).map((material) => (
+          <select value={save.auto.material} onChange={(event) => onAction({ type: 'autoMaterial', material: event.target.value as 'wood' | 'stone' | 'iron' | 'bone' | 'herb' })}>
+            {(['wood', 'stone', 'iron', 'bone', 'herb'] as const).map((material) => (
               <option key={material} value={material}>
                 {t(`material.${material}`)}
               </option>
@@ -583,6 +593,36 @@ function PartyEditor({ save, onAction, onBack }: { save: GameState; onAction: Ac
   )
 }
 
+function SuppliesPicker({ save, preset, onAction }: { save: GameState; preset: PartyPreset; onAction: Act }) {
+  const { t } = useTranslation()
+  const wanted = preset.supplies ?? {}
+  const carried = POTION_IDS.reduce((sum, id) => sum + (wanted[id] ?? 0), 0)
+  const setCount = (id: PotionId, next: number) => {
+    const others = carried - (wanted[id] ?? 0)
+    const count = Math.max(0, Math.min(next, save.potions[id] ?? 0, alchemyRules.potionsPerTrip - others))
+    onAction({ type: 'supplies', potionId: id, count, presetId: preset.id })
+  }
+  return (
+    <div className="card supplies">
+      <strong>{t('battle.supplies')}</strong>
+      <span className="muted">{t('battle.carry', { count: carried, max: alchemyRules.potionsPerTrip })}</span>
+      {POTION_IDS.map((id) => (
+        <span key={id} className="supply-row">
+          <span className="grow">{t(`potion.${id}`)}</span>
+          <span className="muted">{t('battle.inStock', { count: save.potions[id] ?? 0 })}</span>
+          <button type="button" className="btn tiny" onClick={() => setCount(id, (wanted[id] ?? 0) - 1)}>
+            −
+          </button>
+          <strong>{wanted[id] ?? 0}</strong>
+          <button type="button" className="btn tiny" onClick={() => setCount(id, (wanted[id] ?? 0) + 1)}>
+            +
+          </button>
+        </span>
+      ))}
+    </div>
+  )
+}
+
 function History({ save, onOpen }: { save: GameState; onOpen: (report: DungeonReport) => void }) {
   const { t } = useTranslation()
   if (save.history.length === 0) {
@@ -617,6 +657,9 @@ function History({ save, onOpen }: { save: GameState; onOpen: (report: DungeonRe
               ))}
               {report.gained?.fame ? <Res kind="fame" amount={`+${report.gained.fame}`} light /> : null}
               <Chip>{t('result.xp', { xp: report.xp })}</Chip>
+              {POTION_IDS.filter((id) => (report.potionsUsed?.[id] ?? 0) > 0).map((id) => (
+                <Chip key={id}>{t('battle.usedPotion', { potion: t(`potion.${id}`), count: report.potionsUsed?.[id] ?? 0 })}</Chip>
+              ))}
             </span>
             <button type="button" className="btn small" onClick={() => onOpen(report)}>
               {t('battle.watch')}

@@ -28,7 +28,7 @@ import { BattleHub } from './game/battleScreens'
 import { Inn, Roster } from './game/heroScreens'
 import { UiIcon, TownLogo, type ResourceKind } from './game/icons'
 import { Bar, Portrait, Res, Window, needsWarning, useNow, waitLabel } from './game/kit'
-import { Absence, ConfirmDepart, Settings, Smith, Town, WishButton } from './game/villageScreens'
+import { Absence, Alchemy, ConfirmDepart, Settings, Smith, Town, WishButton } from './game/villageScreens'
 import { loadGame, storeGame } from './storage'
 import { registerSW } from 'virtual:pwa-register'
 import { isSoundName, play, unlockSound } from './sound'
@@ -36,7 +36,7 @@ import { isSoundName, play, unlockSound } from './sound'
 const ExpeditionPanel = lazy(() => import('./ExpeditionPanel').then((mod) => ({ default: mod.ExpeditionPanel })))
 const VillageView = lazy(() => import('./VillageView').then((mod) => ({ default: mod.VillageView })))
 
-type Screen = 'town' | 'inn' | 'roster' | 'battle' | 'smith' | 'settings'
+type Screen = 'town' | 'inn' | 'roster' | 'battle' | 'smith' | 'alchemy' | 'settings'
 type Toast = { id: number; text: string }
 
 const DOCK: { screen: Screen; icon: ReactNode }[] = [
@@ -56,7 +56,7 @@ const BUILDING_SCREEN: Record<BuildingId, Screen> = {
   smith: 'smith',
   temple: 'roster',
   fountain: 'town',
-  alchemy: 'town',
+  alchemy: 'alchemy',
 }
 
 const CONFIRM_NOTICES = new Set<GameNotice>(['seenDeath', 'wornParty'])
@@ -439,14 +439,15 @@ export function App() {
       </nav>
 
       {screen ? (
-        <Window title={t(`screen.${screen}`)} icon={DOCK.find((item) => item.screen === screen)?.icon ?? <UiIcon name="settings" size={24} />} onClose={() => { play('close'); setScreen(null) }}>
-          {screen === 'town' ? <Town save={save} onAction={apply} busy={adBusy} onWatch={() => watchAd('construction')} /> : null}
+        <Window title={t(`screen.${screen}`)} icon={screen === 'alchemy' ? <UiIcon name="alchemy" size={24} /> : DOCK.find((item) => item.screen === screen)?.icon ?? <UiIcon name="settings" size={24} />} onClose={() => { play('close'); setScreen(null) }}>
+          {screen === 'town' ? <Town save={save} onAction={apply} busy={adBusy} onWatch={() => watchAd('construction')} onAlchemy={() => open('alchemy')} /> : null}
           {screen === 'inn' ? <Inn save={save} onHire={(id) => apply({ type: 'hire', id, now: gameNow() })} /> : null}
           {screen === 'roster' ? (
             <Roster save={save} selectedId={selectedId} onSelect={setSelectedId} onAction={apply} busy={adBusy} onWatch={() => watchAd('temple')} />
           ) : null}
           {screen === 'battle' ? <BattleHub save={save} onAction={apply} onDepart={depart} /> : null}
           {screen === 'smith' ? <Smith save={save} onAction={apply} /> : null}
+          {screen === 'alchemy' ? <Alchemy save={save} onAction={apply} /> : null}
           {screen === 'settings' ? (
             <Settings
               save={save}
@@ -518,6 +519,7 @@ function Hud({ save, onOpen }: { save: GameState; onOpen: (screen: Screen) => vo
         <Res kind="stone" amount={save.materials.stone} />
         <Res kind="iron" amount={save.materials.iron} />
         <Res kind="bone" amount={save.materials.bone} />
+        <Res kind="herb" amount={save.materials.herb} />
         {save.warning ? <span className="res alert">{t('ui.wagesShort')}</span> : null}
         {save.construction ? (
           <button type="button" className="res timer" onClick={() => onOpen('town')}>
