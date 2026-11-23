@@ -87,8 +87,8 @@ Claude Code, Cursor, GPT(Codex)가 함께 쓰는 작업 목록이다. 작업 하
 | 45 | 마량 성채 몬스터·던전 그림 | Cursor | `src/ui/voxel/enemies.ts`, `portrait.ts` | 완료 (1962d3a) |
 | 46 | 광역기 작전·리포트·로그 화면 | Cursor | `App.tsx`, `src/ui/game/*.tsx`, `styles.css`, `src/locales/*` | 완료 (082a21d) |
 | 47 | 예고·광역기·끊기·버티기·소환 연출 | Cursor | `BattleScene.ts`, `replay.ts` | 완료 (0115034) |
-| 48 | 3c core 코드 리뷰 (7eaca30) | GPT | `Docs/reviews/7eaca30.md` (새 파일만) | 대기 |
-| 49 | 마량 성채 밸런스 측정 | GPT | `tools/curve.ts`, `print-curve.ts`, `tune-curve.ts`, `first-hour.ts` | 대기 |
+| 48 | 3c core 코드 리뷰 (7eaca30) | GPT | `Docs/reviews/7eaca30.md` (새 파일만) | 완료 (6999c19) |
+| 49 | 마량 성채 밸런스 측정 | GPT | `tools/curve.ts`, `print-curve.ts`, `tune-curve.ts`, `first-hour.ts` | 완료 (0551f9f) |
 
 ---
 
@@ -1254,6 +1254,10 @@ src/ui/voxel/BattleScene.ts, src/ui/voxel/replay.ts만 고친다.
 볼 것: Docs/depth.md 3c와 수치·규칙 차이, 예고 뒤 광역기 시계(blastAt)와 보스 게이지·마비·침묵의 관계, 끊기의 사거리·침묵 조건, 버티기 중 힐러 예외와 버티기가 풀리는 시점(보스가 예고 중에 죽거나 층이 끝날 때 braced가 남는지), 페이즈 두 문턱 동시 통과·소환 유닛 id 충돌·소환 유닛과 replay 스냅숏, 패배 이유 순서, 기존 던전 결과가 바뀌지 않았는지(부모 커밋과 시드 전투 비교).
 ```
 
+메모:
+- 버티기 중 물약 사용, 소환 적 체력의 다시 보기 불일치, 빠른 보스의 조기 광역기, 초과 피해에 따른 패배 사유 누락을 기록했다.
+- 부모 커밋과 비교한 기존 여덟 던전 승률 40칸 및 시드 전투 리포트 32개가 모두 일치했다.
+
 ---
 
 ## 49. 마량 성채 밸런스 측정 (GPT)
@@ -1268,3 +1272,8 @@ tools/curve.ts, tools/print-curve.ts, tools/tune-curve.ts, tools/first-hour.ts�
 2. first-hour.ts를 9시간까지 돌릴 수 있게 하고, 흉내 플레이어가 성채에 갈 때 끊을 영웅이 없으면 버티기 작전을 고르게 한다. 성채 첫 클리어 시각을 출력한다.
 3. Docs/depth.md 3c "밸런스 기준"과 1차 측정표(Claude)와 비교해 메모에 적는다. 기준을 벗어나면 고칠 수치(blastPower, braceFactor, chargeTicks, 배수)를 제안한다.
 ```
+
+메모:
+- 40파티×10전 Lv16 중앙값/P25. 전사만 끊을 수 있는 편성은 끊기·버티기 모두 0/0%, 추가 차단자 1명은 100/0%·100/50%, 추가 2명은 100/60%·100/90%. 끊기 성공률은 26/36/65%. 1차 측정(전사만 버티기 100/80%, 도적·궁수 있음 100/100%)보다 낮았다. 전사만 조건은 차단자 0명이 아니다.
+- 배수 4.5→3.65와 예고 2→3틱을 함께 적용한 실험에서 전사만 끊기 50/0%, 전사만 버티기 100/70%, 추가 1명 끊기 100/70%였다. 목표에 더 가까워 재검증 후보로 남겼다.
+- 시드 1–20의 9시간 실행에서 성채 13/20 클리어, 성공 시드 첫 클리어 중앙값 285.3분. 프로젝트·도구 타입 검사, 테스트 189개, 빌드 통과.
