@@ -18,9 +18,10 @@ type Props = {
   buildingLabels: Record<BuildingId, string>
   expeditions: number
   active: boolean
+  graves: { legend?: boolean }[]
 }
 
-export function VillageView({ roster, visitors, awayIds, retirees, partyIds, selectedId, onSelect, onPickBuilding, villageLabel, buildings, constructing, buildingLabels, expeditions, active }: Props) {
+export function VillageView({ roster, visitors, awayIds, retirees, partyIds, selectedId, onSelect, onPickBuilding, villageLabel, buildings, constructing, buildingLabels, expeditions, active, graves }: Props) {
   const canvasRef = useRef<HTMLCanvasElement>(null)
   const sceneRef = useRef<VillageScene | null>(null)
   const onSelectRef = useRef(onSelect)
@@ -75,6 +76,7 @@ export function VillageView({ roster, visitors, awayIds, retirees, partyIds, sel
       expeditions,
       weddings,
       births,
+      graves,
     })
   })
 

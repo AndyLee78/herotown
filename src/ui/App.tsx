@@ -379,6 +379,7 @@ export function App() {
           constructing={save.construction?.id ?? null}
           buildingLabels={buildingLabels}
           expeditions={save.expeditions.length}
+          graves={save.graveyard}
           active={!covered}
         />
       </Suspense>

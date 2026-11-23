@@ -258,11 +258,7 @@ function drawBuilding(b: Builder, id: BuildingId, lot: Lot, level: number): numb
     return top
   }
   if (id === 'house') {
-    const top = house(b, { w, d, h: 1.3 + grow * 0.25, wall: '#efe3c4', roof: '#9a98e2' })
-    if (level >= 2) {
-      house(b, { w: 1.6, d: 1.6, h: 1.0, wall: '#efe3c4', roof: '#9a98e2', steps: 3 })
-    }
-    return top
+    return drawHome(b, w, d, level)
   }
   if (id === 'guild') {
     const top = house(b, { w, d, h: 1.6 + grow * 0.3, wall: '#e2dccb', roof: '#4f7fb5', timber: true })
@@ -277,6 +273,72 @@ function drawBuilding(b: Builder, id: BuildingId, lot: Lot, level: number): numb
     b.box(0.3, 0.3, 0.06, '#ff9d4d', -w * 0.3, 0.45, d / 2 + 0.04, { glow: true })
     return top + 1
   }
+  return drawTemple(b, w, d, grow)
+}
+
+const HOME_WALL = '#efe3c4'
+const HOME_ROOF = '#9a98e2'
+
+// Level 1 is one storey. 2 adds a floor, 3 a side wing, 4 a yard and fence.
+function drawHome(b: Builder, w: number, d: number, level: number): number {
+  const top = house(b, { w, d, h: 1.3, wall: HOME_WALL, roof: HOME_ROOF })
+  let peak = top
+  if (level >= 2) {
+    const story = 0.85
+    b.box(w * 0.7, story, d * 0.68, HOME_WALL, 0, top + story / 2, 0)
+    b.box(w * 0.82, 0.16, d * 0.8, HOME_ROOF, 0, top + story + 0.08, 0)
+    b.box(0.32, 0.28, 0.06, '#5aa0a0', 0, top + story * 0.45, d * 0.34)
+    peak = top + story + 0.16
+  }
+  if (level >= 3) {
+    const wingX = w / 2 + 0.62
+    b.box(1.15, 1.05, d * 0.72, HOME_WALL, wingX, 0.72, 0.05)
+    b.box(1.4, 0.16, d * 0.88, HOME_ROOF, wingX, 1.32, 0.05)
+    b.box(0.32, 0.55, 0.06, WOOD, wingX, 0.48, d * 0.36)
+    b.box(0.22, 0.22, 0.05, '#5aa0a0', wingX + 0.28, 0.85, d * 0.36)
+  }
+  if (level >= 4) {
+    const fx = w / 2 + 0.75
+    const fz = d / 2 + 0.55
+    b.box(fx * 2, 0.05, fz * 2, '#d3c4a2', 0, 0.05, 0.1)
+    const post = '#8d6a45'
+    const rail = '#efe6d4'
+    for (const px of [-fx, fx]) {
+      for (const pz of [-fz, fz]) {
+        b.box(0.08, 0.42, 0.08, post, px, 0.26, pz + 0.1)
+      }
+    }
+    b.box(fx * 2, 0.06, 0.05, rail, 0, 0.34, -fz + 0.1)
+    b.box(0.05, 0.06, fz * 2, rail, -fx, 0.34, 0.1)
+    b.box(0.05, 0.06, fz * 2, rail, fx, 0.34, 0.1)
+    b.box(fx * 0.62, 0.06, 0.05, rail, -fx * 0.58, 0.34, fz + 0.1)
+    b.box(fx * 0.62, 0.06, 0.05, rail, fx * 0.58, 0.34, fz + 0.1)
+  }
+  return peak
+}
+
+// Newest graves, up to 12. Older ones are left off the plot.
+export function buildCemetery(graves: { legend?: boolean }[]): THREE.Group {
+  const shown = graves.slice(-12)
+  const b = new Builder()
+  b.box(3.4, 0.08, 2.6, '#6f8f58', 0, 0.06, 0)
+  shown.forEach((grave, index) => {
+    const col = index % 4
+    const row = Math.floor(index / 4)
+    const x = (col - 1.5) * 0.72
+    const z = (row - 1) * 0.72
+    const stone = grave.legend ? '#e2b340' : '#e7e1d6'
+    const trim = grave.legend ? '#c48a12' : '#b7b1a6'
+    b.box(0.36, 0.08, 0.18, trim, x, 0.12, z)
+    b.box(0.26, 0.5, 0.08, stone, x, 0.4, z)
+    b.box(0.12, 0.08, 0.1, trim, x, 0.62, z)
+  })
+  const group = b.build()
+  group.position.set(-5.2, 0, 9.2)
+  return group
+}
+
+function drawTemple(b: Builder, w: number, d: number, grow: number): number {
   const top = house(b, { w, d, h: 1.6 + grow * 0.3, wall: '#f1efe8', roof: '#7fa6d8', steps: 3, stone: '#c9c5bb' })
   b.box(0.9, 1.0, 0.9, '#f1efe8', 0, top + 0.4, 0).box(1.1, 0.2, 1.1, '#7fa6d8', 0, top + 1.0, 0)
   b.box(0.25, 0.25, 0.25, '#e8c95a', 0, top + 0.55, 0.46, { glow: true })

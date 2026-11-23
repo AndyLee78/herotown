@@ -4,7 +4,7 @@ import { familyRules, type BuildingId, type Hero } from '../../core'
 import { buildCharacter, idlePose, walkPose, type Rig } from './character'
 import { Builder, disposeTree, makeLabel } from './kit'
 import { hashString, lookFor, lookKey, seeded } from './look'
-import { GATE, GATHER, INN_YARD, LOTS, PLAZA, buildLot, buildTerrain } from './world'
+import { GATE, GATHER, INN_YARD, LOTS, PLAZA, buildCemetery, buildLot, buildTerrain } from './world'
 
 export type VillageSceneProps = {
   roster: Hero[]
@@ -21,6 +21,7 @@ export type VillageSceneProps = {
   expeditions: number
   weddings: [string, string][]
   births: string[]
+  graves: { legend?: boolean }[]
 }
 
 type Area = { minX: number; maxX: number; minZ: number; maxZ: number }
@@ -72,6 +73,8 @@ export class VillageScene {
   private frame = 0
   private gateLabel: THREE.Sprite | null = null
   private gateCount = -1
+  private cemeteryKey = ''
+  private cemetery: THREE.Group | null = null
   private active = true
   private readonly spouseOf = new Map<string, string>()
   private readonly parentOf = new Map<string, string>()
@@ -129,6 +132,7 @@ export class VillageScene {
 
   update(props: VillageSceneProps) {
     this.syncLots(props)
+    this.syncCemetery(props.graves)
     const living = props.roster.filter((hero) => hero.condition !== 'dead')
     this.syncWalkers([
       ...living.map((hero) => ({ hero, kind: 'roster' as const })),
@@ -286,6 +290,25 @@ export class VillageScene {
         this.bursts.splice(index, 1)
       }
     }
+  }
+
+  private syncCemetery(graves: { legend?: boolean }[]) {
+    const shown = graves.slice(-12)
+    const key = `${graves.length}:${shown.map((grave) => (grave.legend ? '1' : '0')).join('')}`
+    if (key === this.cemeteryKey) {
+      return
+    }
+    this.cemeteryKey = key
+    if (this.cemetery) {
+      this.scene.remove(this.cemetery)
+      disposeTree(this.cemetery)
+      this.cemetery = null
+    }
+    if (shown.length === 0) {
+      return
+    }
+    this.cemetery = buildCemetery(graves)
+    this.scene.add(this.cemetery)
   }
 
   private syncLots(props: VillageSceneProps) {
