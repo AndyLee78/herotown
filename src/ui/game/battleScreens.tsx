@@ -399,6 +399,22 @@ function Prep({
             onChange={(event) => onAction({ type: 'tactics', presetId: preset.id, tactics: { ...preset.tactics, potionBelow: clampPercent(event.target.value) } })}
           />
         </label>
+        <div className="field">
+          <span>{t('label.blast')}</span>
+          <span className="blast-pick">
+            {(['interrupt', 'brace'] as const).map((mode) => (
+              <button
+                key={mode}
+                type="button"
+                className={(preset.tactics.blast ?? 'interrupt') === mode ? 'btn small primary' : 'btn small'}
+                onClick={() => onAction({ type: 'tactics', presetId: preset.id, tactics: { ...preset.tactics, blast: mode } })}
+              >
+                {t(`blast.${mode}`)}
+              </button>
+            ))}
+          </span>
+          <p className="muted">{t(`blast.hint.${preset.tactics.blast ?? 'interrupt'}`)}</p>
+        </div>
       </details>
 
       <AutoSettings save={save} onAction={onAction} />
@@ -406,6 +422,7 @@ function Prep({
       <SuppliesPicker save={save} preset={preset} onAction={onAction} />
 
       <FortReady dungeonId={dungeon.id} heroes={heroes} />
+      <CitadelReady dungeonId={dungeon.id} heroes={heroes} blast={preset.tactics.blast ?? 'interrupt'} />
 
       {blocked ? <p className="banner bad">{blocked}</p> : null}
       <div className={stamping ? 'stamp-stage stamping' : 'stamp-stage'}>
@@ -651,6 +668,37 @@ function FortReady({ dungeonId, heroes }: { dungeonId: string; heroes: Hero[] })
   )
 }
 
+function CitadelReady({ dungeonId, heroes, blast }: { dungeonId: string; heroes: Hero[]; blast: 'interrupt' | 'brace' }) {
+  const { t } = useTranslation()
+  if (dungeonId !== 'haunted_citadel') {
+    return null
+  }
+  const ready = heroes.filter((hero) => classById(hero.classId).interrupt)
+  const names = ready.map((hero) => hero.name).join(', ')
+  const warn = blast === 'interrupt' && ready.length === 0
+  return (
+    <p className={warn ? 'banner bad' : 'banner'}>
+      {t('battle.interrupters', { count: ready.length, names: names || t('battle.interruptersNone') })}
+      {' · '}
+      {t('battle.blastTactic', { tactic: t(`blast.${blast}`) })}
+    </p>
+  )
+}
+
+function blastChips(report: DungeonReport, t: TFunction) {
+  const interrupted = report.log.filter((entry) => entry.key === 'log.interrupt').length
+  const blasted = report.log.filter((entry) => entry.key === 'log.blast').length
+  if (interrupted === 0 && blasted === 0) {
+    return null
+  }
+  return (
+    <>
+      {interrupted > 0 ? <Chip tone="good">{t('battle.interrupted', { count: interrupted })}</Chip> : null}
+      {blasted > 0 ? <Chip tone="warn">{t('battle.blasted', { count: blasted })}</Chip> : null}
+    </>
+  )
+}
+
 function History({ save, onOpen }: { save: GameState; onOpen: (report: DungeonReport) => void }) {
   const { t } = useTranslation()
   if (save.history.length === 0) {
@@ -690,6 +738,7 @@ function History({ save, onOpen }: { save: GameState; onOpen: (report: DungeonRe
               ))}
               {report.traps?.disarmed ? <Chip tone="good">{t('battle.trapsDisarmed', { count: report.traps.disarmed })}</Chip> : null}
               {report.traps?.sprung ? <Chip tone="warn">{t('battle.trapsSprung', { count: report.traps.sprung })}</Chip> : null}
+              {blastChips(report, t)}
             </span>
             <button type="button" className="btn small" onClick={() => onOpen(report)}>
               {t('battle.watch')}

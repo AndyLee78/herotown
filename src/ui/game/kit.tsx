@@ -184,11 +184,20 @@ export function itemLabel(t: TFunction, item: Gear, fallback: Hero['classId']): 
 
 export function formatEntry(t: TFunction, entry: LogEntry): string {
   const potion = entry.params.potion
+  const refs = entry.params.refs
+  const summoned =
+    typeof refs === 'string' && refs.length > 0
+      ? refs
+          .split(',')
+          .map((id) => t(`enemy.${id.trim()}`))
+          .join(', ')
+      : ''
   return t(entry.key, {
     ...entry.params,
     actor: labelFrom(t, entry.params, 'actor'),
     target: labelFrom(t, entry.params, 'target'),
     potion: typeof potion === 'string' ? t(`potion.${potion}`) : potion,
+    summoned,
   })
 }
 

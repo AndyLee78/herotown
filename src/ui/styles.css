@@ -298,6 +298,12 @@ button,
   right: -4px;
 }
 
+.blast-pick {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
 .trinket-line {
   align-items: flex-start;
 }

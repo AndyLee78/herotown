@@ -638,6 +638,11 @@
     "ambushNone": "없음",
     "trapsDisarmed": "함정 해제 {{count}}",
     "trapsSprung": "함정 발동 {{count}}",
+    "interrupters": "끊을 수 있는 영웅: {{count}}명({{names}})",
+    "interruptersNone": "없음",
+    "blastTactic": "광역기 작전 {{tactic}}",
+    "interrupted": "광역기 끊기 {{count}}",
+    "blasted": "광역기 피격 {{count}}",
     "warn": {
       "noTank": "탱커가 없으면 후열이 무너지기 쉬워요",
       "noHealer": "치유사가 없으면 피해를 버티기 어려워요",
@@ -695,7 +700,7 @@
     "interrupt": "{{actor}}, {{target}}의 광역기를 끊었다",
     "brace": "{{actor}}, 방어 자세",
     "phase": "{{actor}}, {{phase}}단계로 바뀐다",
-    "summon": "{{actor}}, 부하를 불렀다"
+    "summon": "{{actor}}, {{summoned}} 소환"
   },
   "sound": {
     "title": "효과음",

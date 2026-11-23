@@ -638,6 +638,11 @@
     "ambushNone": "none",
     "trapsDisarmed": "Disarmed {{count}}",
     "trapsSprung": "Sprung {{count}}",
+    "interrupters": "Can break: {{count}} ({{names}})",
+    "interruptersNone": "none",
+    "blastTactic": "Blast tactic: {{tactic}}",
+    "interrupted": "Broke {{count}}",
+    "blasted": "Blasts hit {{count}}",
     "warn": {
       "noTank": "Without a tank, the back row falls.",
       "noHealer": "Without a healer, the party cannot last.",
@@ -695,7 +700,7 @@
     "interrupt": "{{actor}} breaks {{target}}'s blast",
     "brace": "{{actor}} braces",
     "phase": "{{actor}} enters phase {{phase}}",
-    "summon": "{{actor}} calls for help"
+    "summon": "{{actor}} calls {{summoned}}"
   },
   "sound": {
     "title": "Sound",

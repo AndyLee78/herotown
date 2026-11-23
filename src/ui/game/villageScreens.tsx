@@ -485,6 +485,19 @@ export function Report({ report }: { report: DungeonReport | null }) {
             {report.traps.sprung > 0 ? <Chip tone="warn">{t('battle.trapsSprung', { count: report.traps.sprung })}</Chip> : null}
           </span>
         ) : null}
+        {(() => {
+          const interrupted = report.log.filter((entry) => entry.key === 'log.interrupt').length
+          const blasted = report.log.filter((entry) => entry.key === 'log.blast').length
+          if (interrupted === 0 && blasted === 0) {
+            return null
+          }
+          return (
+            <span className="chips">
+              {interrupted > 0 ? <Chip tone="good">{t('battle.interrupted', { count: interrupted })}</Chip> : null}
+              {blasted > 0 ? <Chip tone="warn">{t('battle.blasted', { count: blasted })}</Chip> : null}
+            </span>
+          )
+        })()}
         <span className="row">
           <Res kind="gold" amount={report.gold} light />
           <Chip>{t('result.xp', { xp: report.xp })}</Chip>
