@@ -22,6 +22,12 @@ export type ReplayStep =
   | (Base & { type: 'disarm'; actorId: string })
   | (Base & { type: 'alert'; actorId: string })
   | (Base & { type: 'ambush'; actorId: string; targetId: string; amount: number })
+  | (Base & { type: 'charge'; actorId: string })
+  | (Base & { type: 'blast'; actorId: string; hits: Hit[] })
+  | (Base & { type: 'interrupt'; actorId: string; targetId: string })
+  | (Base & { type: 'brace'; actorId: string })
+  | (Base & { type: 'phase'; actorId: string; phase: number })
+  | (Base & { type: 'summon'; actorId: string; units: string[]; refs: string[] })
   | (Base & { type: 'clear'; floor: number })
   | (Base & { type: 'retreat' })
   | (Base & { type: 'end'; victory: boolean })
@@ -49,6 +55,12 @@ export function buildSteps(report: DungeonReport): ReplayStep[] {
         // An ambush logs first, then the strike; fold the damage into that step.
         if (previous?.type === 'ambush' && previous.actorId === actorId && previous.targetId === targetId && entry.tick === lastTick) {
           previous.amount = amount
+          previous.log = index
+          break
+        }
+        // A blast logs first, then one attack per hero on the same tick.
+        if (previous?.type === 'blast' && previous.actorId === actorId && entry.tick === lastTick) {
+          previous.hits.push({ targetId, amount })
           previous.log = index
           break
         }
@@ -101,6 +113,33 @@ export function buildSteps(report: DungeonReport): ReplayStep[] {
       case 'log.ambush':
         steps.push({ type: 'ambush', actorId, targetId, amount: 0, log: index, downs: [] })
         break
+      case 'log.charge':
+        steps.push({ type: 'charge', actorId, log: index, downs: [] })
+        break
+      case 'log.blast':
+        steps.push({ type: 'blast', actorId, hits: [], log: index, downs: [] })
+        break
+      case 'log.interrupt':
+        steps.push({ type: 'interrupt', actorId, targetId, log: index, downs: [] })
+        break
+      case 'log.brace':
+        steps.push({ type: 'brace', actorId, log: index, downs: [] })
+        break
+      case 'log.phase':
+        steps.push({ type: 'phase', actorId, phase: number(entry, 'phase'), log: index, downs: [] })
+        break
+      case 'log.summon': {
+        const units = text(entry, 'units')
+          .split(',')
+          .map((id) => id.trim())
+          .filter(Boolean)
+        const refs = text(entry, 'refs')
+          .split(',')
+          .map((id) => id.trim())
+          .filter(Boolean)
+        steps.push({ type: 'summon', actorId, units, refs, log: index, downs: [] })
+        break
+      }
       case 'log.down':
         if (previous) {
           previous.downs.push(actorId)

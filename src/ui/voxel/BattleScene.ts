@@ -1,5 +1,5 @@
 import * as THREE from 'three'
-import type { DungeonReport, ReplayUnit } from '../../core'
+import { monsterById, type DungeonReport, type ReplayUnit } from '../../core'
 import { buildCharacter, walkPose } from './character'
 import { buildEnemy, idleActor, type Actor } from './enemies'
 import { Builder, disposeTree } from './kit'
@@ -9,7 +9,7 @@ import type { Hit, ReplayStep, StatusMark } from './replay'
 // Plays a dungeon report back as a 3D auto battle. The outcome is already
 // decided by the core; this only shows the steps in order.
 
-type AnimType = 'melee' | 'cast' | 'hit' | 'shout' | 'spawn' | 'die' | 'flee' | 'cheer' | 'drink' | 'disarm' | 'ambush'
+type AnimType = 'melee' | 'cast' | 'hit' | 'shout' | 'spawn' | 'die' | 'flee' | 'cheer' | 'drink' | 'disarm' | 'ambush' | 'brace' | 'charge'
 
 type Anim = {
   type: AnimType
@@ -74,6 +74,12 @@ const DURATION: Record<ReplayStep['type'], number> = {
   disarm: 0.75,
   alert: 0.45,
   ambush: 0.95,
+  charge: 0.85,
+  blast: 0.9,
+  interrupt: 0.8,
+  brace: 0.45,
+  phase: 0.7,
+  summon: 0.9,
   clear: 0.8,
   retreat: 1.4,
   end: 0,
@@ -458,6 +464,103 @@ export class BattleScene {
         }
         break
       }
+      case 'charge': {
+        const boss = this.fighters.get(step.actorId)
+        if (!boss) {
+          break
+        }
+        this.number('!', '#ff4b3a', boss)
+        if (!instant) {
+          boss.anim = { type: 'charge', t: 0, dur: DURATION.charge }
+          this.burst(this.chest(boss), '#c79bff', 14)
+          this.burst(boss.root.position.clone().setY(0.2), '#7fe3ff', 10)
+        }
+        break
+      }
+      case 'blast': {
+        const boss = this.fighters.get(step.actorId)
+        for (const fighter of this.fighters.values()) {
+          if (fighter.anim?.type === 'brace' || fighter.anim?.type === 'charge') {
+            fighter.anim = null
+          }
+        }
+        if (boss && !instant) {
+          boss.anim = { type: 'shout', t: 0, dur: 0.55 }
+        }
+        const origin = boss ? this.chest(boss) : new THREE.Vector3(1.5, 0.8, 0.4)
+        if (!instant) {
+          this.burst(origin, '#ff7a5a', 18)
+          this.burst(new THREE.Vector3(-1.2, 0.5, 0.4), '#ffe27a', 12)
+        }
+        for (const hit of step.hits) {
+          const target = this.fighters.get(hit.targetId)
+          if (target) {
+            this.damage(target, hit.amount, '#ff7a5a', instant)
+          }
+        }
+        break
+      }
+      case 'interrupt': {
+        const breaker = this.fighters.get(step.actorId)
+        const boss = this.fighters.get(step.targetId)
+        if (!breaker) {
+          break
+        }
+        if (boss?.anim?.type === 'charge') {
+          boss.anim = null
+        }
+        if (instant) {
+          this.burst(boss ? this.chest(boss) : this.chest(breaker), '#ffe27a', 10)
+          break
+        }
+        if (breaker.ranged || breaker.caster) {
+          this.act(step.actorId, 'cast', false, () => {
+            if (boss) {
+              this.burst(this.chest(boss), '#ffe27a', 16)
+            }
+          })
+        } else {
+          const to = boss ? boss.root.position.clone() : breaker.home.clone().add(new THREE.Vector3(1.2, 0, 0))
+          to.x -= 0.7
+          breaker.anim = {
+            type: 'melee',
+            t: 0,
+            dur: DURATION.interrupt,
+            to,
+            impactAt: 0.35,
+            onImpact: () => {
+              if (boss) {
+                this.burst(this.chest(boss), '#ffe27a', 16)
+              }
+            },
+          }
+        }
+        break
+      }
+      case 'brace': {
+        const hero = this.fighters.get(step.actorId)
+        if (hero && !instant) {
+          hero.anim = { type: 'brace', t: 0, dur: 8 }
+        }
+        break
+      }
+      case 'phase': {
+        const boss = this.fighters.get(step.actorId)
+        if (!boss) {
+          break
+        }
+        if (!instant) {
+          boss.anim = { type: 'shout', t: 0, dur: DURATION.phase }
+          this.burst(this.chest(boss), '#e05a4a', 16)
+          const base = boss.actor.group.scale.x
+          boss.actor.group.scale.setScalar(base * 1.12)
+        }
+        this.number(String(step.phase), '#ff7a5a', boss)
+        break
+      }
+      case 'summon':
+        this.summonAdds(step.units, step.refs, instant)
+        break
       case 'clear':
         for (const fighter of this.fighters.values()) {
           if (fighter.side === 'hero' && fighter.alive && !instant) {
@@ -601,6 +704,39 @@ export class BattleScene {
     for (const status of ['poison', 'paralyze', 'slow', 'silence'] as const) {
       this.setStatus(fighter, status, false)
     }
+  }
+
+  private summonAdds(ids: string[], refs: string[], instant: boolean) {
+    const existing = [...this.fighters.values()].filter((fighter) => fighter.side === 'enemy' && fighter.alive)
+    ids.forEach((id, index) => {
+      if (this.fighters.has(id)) {
+        return
+      }
+      const refId = refs[index] ?? refs[0] ?? 'skeleton'
+      const def = monsterById(refId)
+      const unit: ReplayUnit = {
+        id,
+        refId,
+        side: 'enemy',
+        row: def?.row ?? 'front',
+        reach: def?.reach ?? 'melee',
+        hp: def?.hp ?? 80,
+        maxHp: def?.hp ?? 80,
+        boss: def?.boss ?? false,
+      }
+      const fighter = this.addFighter(unit)
+      const order = existing.length + index
+      const row = unit.row
+      const depth = row === 'front' ? 1.5 : 3.2
+      const spacing = row === 'front' ? 2 : 1.9
+      fighter.home.set(depth, 0, (order % 4 - 1.5) * spacing + 0.4)
+      fighter.root.position.copy(fighter.home)
+      if (instant) {
+        return
+      }
+      this.burst(fighter.home.clone().setY(0.5), '#6a6a6a', 10)
+      fighter.anim = { type: 'spawn', t: 0, dur: 0.65 + index * 0.08 }
+    })
   }
 
   private springTraps(instant: boolean) {
@@ -884,6 +1020,28 @@ export class BattleScene {
         humanoid.legR.rotation.x = 0.9
       } else {
         actor.group.position.y = -0.15
+      }
+    } else if (anim.type === 'brace') {
+      root.position.copy(fighter.home)
+      if (humanoid) {
+        humanoid.armL.rotation.x = -1.4
+        humanoid.armR.rotation.x = -1.4
+        humanoid.armL.rotation.z = 0.55
+        humanoid.armR.rotation.z = -0.55
+        humanoid.legL.rotation.x = 0.35
+        humanoid.legR.rotation.x = 0.45
+        humanoid.torso.rotation.x = 0.25
+      } else {
+        actor.group.position.y = -0.08
+        actor.group.scale.set(1.05, 0.9, 1.05)
+      }
+    } else if (anim.type === 'charge') {
+      const pulse = 1 + Math.sin(p * Math.PI * 4) * 0.08
+      actor.group.scale.setScalar(pulse)
+      actor.group.position.y = Math.sin(p * Math.PI) * 0.2
+      if (humanoid) {
+        humanoid.armL.rotation.x = -2.4
+        humanoid.armR.rotation.x = -2.4
       }
     } else if (anim.type === 'ambush' && anim.to) {
       const k = p < 0.35 ? easeOut(p / 0.35) : p < 0.55 ? 1 : 1 - easeIn((p - 0.55) / 0.45)
