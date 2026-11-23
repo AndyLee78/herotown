@@ -77,8 +77,8 @@ Claude Code, Cursor, GPT(Codex)가 함께 쓰는 작업 목록이다. 작업 하
 | 35 | 독늪 몬스터·던전 그림 | Cursor | `src/ui/voxel/enemies.ts`, `portrait.ts` | 완료 (ad6c4c7) |
 | 36 | 상태이상·물약 화면과 연금술 공방 | Cursor | `App.tsx`, `src/ui/game/*.tsx`, `styles.css`, `src/locales/*` | 완료 (c8299cb) |
 | 37 | 상태 표시·물약 동작·공방 건물 3D | Cursor | `BattleScene.ts`, `replay.ts`, `world.ts`, `VillageScene.ts` | 완료 (4d4ded2) |
-| 38 | 3a core 코드 리뷰 (1918eda) | GPT | `Docs/reviews/1918eda.md` (새 파일만) | 대기 (지금 시작 가능) |
-| 39 | 독늪 밸런스 측정 | GPT | `tools/curve.ts`, `print-curve.ts`, `tune-curve.ts`, `first-hour.ts` | 대기 (지금 시작 가능) |
+| 38 | 3a core 코드 리뷰 (1918eda) | GPT | `Docs/reviews/1918eda.md` (새 파일만) | 완료 (03d9e42) |
+| 39 | 독늪 밸런스 측정 | GPT | `tools/curve.ts`, `print-curve.ts`, `tune-curve.ts`, `first-hour.ts` | 완료 (c6e24d9) |
 
 ---
 
@@ -1033,6 +1033,8 @@ src/ui/voxel/BattleScene.ts, src/ui/voxel/replay.ts, src/ui/voxel/world.ts, src/
 ```
 
 메모:
+- 각성 물약의 마비 해제 불가, 침묵 표적 우선순위, 공방 레벨에 따른 제작 시간 감소 누락, 해독 면역의 즉시 차감을 재현해 Docs/reviews/1918eda.md에 기록했다.
+- 부모 커밋과 비교한 기존 던전 승률 24칸 및 시드 전투 24개의 결과·로그가 모두 일치했다. 창고 차감·반납, 약초, 해금 조건, 세이브 11도 검토했다.
 
 ---
 
@@ -1050,3 +1052,6 @@ tools/curve.ts, tools/print-curve.ts, tools/tune-curve.ts, tools/first-hour.ts�
 ```
 
 메모:
+- 40파티×10전 Lv11 중앙값/P25(무물약/해독2/회복2+해독2/힐러 제외/해독4)는 40/0, 75/10, 75/0, 0/0, 100/40%였다. 해독4는 24×6에서 P25 67%로 설계 기준을 재현했으나 큰 표본에서는 60% 미달이었다. 배수 1.85의 P25 70%를 재검증 후보로 기록했다.
+- 해독4 제조비는 12/44골드(27%). 회복2+해독2는 14/44(32%), 힐러를 뺀 회복4+해독1은 22/44(50%, 배치 구매 기준)이고 Lv8–14 전체에서 승리가 없었다. 힐러 자리는 비운 조건이다.
+- 시드 1–20의 6시간 실행에서 공방 20/20, 독늪 67출정, 클리어 8/20(성공 시드 중앙값 297.3분). 프로젝트·도구 타입 검사, 테스트 162개, 프로덕션 빌드 통과.
