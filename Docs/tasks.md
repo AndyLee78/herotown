@@ -86,7 +86,7 @@ Claude Code, Cursor, GPT(Codex)가 함께 쓰는 작업 목록이다. 작업 하
 | 44 | 도적 요새 밸런스 측정 | GPT | `tools/curve.ts`, `print-curve.ts`, `tune-curve.ts`, `first-hour.ts` | 완료 (6d9ffd1) |
 | 45 | 마량 성채 몬스터·던전 그림 | Cursor | `src/ui/voxel/enemies.ts`, `portrait.ts` | 완료 (1962d3a) |
 | 46 | 광역기 작전·리포트·로그 화면 | Cursor | `App.tsx`, `src/ui/game/*.tsx`, `styles.css`, `src/locales/*` | 완료 (082a21d) |
-| 47 | 예고·광역기·끊기·버티기·소환 연출 | Cursor | `BattleScene.ts`, `replay.ts` | 대기 (46 뒤) |
+| 47 | 예고·광역기·끊기·버티기·소환 연출 | Cursor | `BattleScene.ts`, `replay.ts` | 완료 (0115034) |
 | 48 | 3c core 코드 리뷰 (7eaca30) | GPT | `Docs/reviews/7eaca30.md` (새 파일만) | 대기 |
 | 49 | 마량 성채 밸런스 측정 | GPT | `tools/curve.ts`, `print-curve.ts`, `tune-curve.ts`, `first-hour.ts` | 대기 |
 
@@ -1238,6 +1238,8 @@ src/ui/voxel/BattleScene.ts, src/ui/voxel/replay.ts만 고친다.
 3. log.phase: 보스가 붉게 번쩍이고 몸이 조금 커진다. log.summon: params.units의 id(params.refs의 몬스터 종류)로 새 적을 연기와 함께 적 진영 빈자리에 세운다. 이 적들은 층 시작 스냅숏(floors)에 없으므로 replay가 로그에서 추가해야 체력 막대와 공격 대상이 맞는다.
 확인: 스크린샷을 메모에.
 ```
+
+메모: 예고는 보스 주위 빛과 느낌표, 버티기는 방패를 든 자세, 광역기는 충격파와 피해 숫자, 끊기는 달려들거나 쏘아 빛이 깨진다. 페이즈는 붉게 번쩍이며 몸이 조금 커지고, 소환은 로그의 units/refs로 적 진영에 새로 세운다. 페이즈·소환·예고·버티기·광역·끊기 순으로 다시 보기를 돌려 확인했다.
 
 ---
 
