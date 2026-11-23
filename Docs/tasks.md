@@ -71,7 +71,7 @@ Claude Code, Cursor, GPT(Codex)가 함께 쓰는 작업 목록이다. 작업 하
 | 29 | 2b core 코드 리뷰 (f7fdf88) | GPT | `Docs/reviews/f7fdf88.md` (새 파일만) | 완료 (이 커밋) |
 | 30 | 세대 시뮬레이터 60년 | GPT | `tools/generations.ts` | 완료 (이 커밋) |
 | 31 | 행운의 분수 3D | Cursor | `src/ui/voxel/VillageScene.ts`, `world.ts`, `src/ui/VillageView.tsx` | 완료 (e7427eb) |
-| 32 | 행운의 분수 화면·소리 | Cursor | `App.tsx`, `villageScreens.tsx`, `heroScreens.tsx`, `sound.ts`, `styles.css`, `src/locales/*` | 대기 (31 뒤) |
+| 32 | 행운의 분수 화면·소리 | Cursor | `App.tsx`, `villageScreens.tsx`, `heroScreens.tsx`, `sound.ts`, `styles.css`, `src/locales/*` | 완료 (6c7e357) |
 | 33 | 분수 core 코드 리뷰 (5322f86) | GPT | `Docs/reviews/5322f86.md` (새 파일만) | 대기 (지금 시작 가능) |
 | 34 | 분수가 초반 골드에 주는 몫 측정 | GPT | `tools/first-hour.ts` | 대기 (지금 시작 가능) |
 
@@ -910,7 +910,7 @@ Docs/fountain.md를 읽고 분수의 화면 요소를 만든다. src/ui/App.tsx,
 확인: npm run dev, 375px 폭도. 확인 못 한 부분은 메모에.
 ```
 
-메모:
+메모: 독 오른쪽 위에 분수 버튼이 있고, 배지와 원형 시간이 소원을 따라간다. 누르면 "+2"가 버튼에서 떠오르고, 소원이 없으면 "아직 소원이 차지 않았습니다"가 뜬다. 마을 운영 카드에 간격·최대·골드·대박 확률과 최근 대박(1년 가을, 30골드)이 보인다. 은퇴자가 없어 배치 칩은 화면에서 못 봤고, 보너스는 0.01을 1%p로 보여 준다. 대박 토스트와 팡파르 소리는 이번 확인에서 터지지 않았다. 길잡이 문구는 이미 있었다. 효과음 개수 테스트만 16으로 고쳤다.
 
 ---
 
