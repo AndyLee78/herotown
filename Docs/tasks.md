@@ -85,7 +85,7 @@ Claude Code, Cursor, GPT(Codex)가 함께 쓰는 작업 목록이다. 작업 하
 | 43 | 3b core 코드 리뷰 (1f690a1) | GPT | `Docs/reviews/1f690a1.md` (새 파일만) | 완료 (1c5c70e) |
 | 44 | 도적 요새 밸런스 측정 | GPT | `tools/curve.ts`, `print-curve.ts`, `tune-curve.ts`, `first-hour.ts` | 완료 (6d9ffd1) |
 | 45 | 마량 성채 몬스터·던전 그림 | Cursor | `src/ui/voxel/enemies.ts`, `portrait.ts` | 완료 (1962d3a) |
-| 46 | 광역기 작전·리포트·로그 화면 | Cursor | `App.tsx`, `src/ui/game/*.tsx`, `styles.css`, `src/locales/*` | 대기 |
+| 46 | 광역기 작전·리포트·로그 화면 | Cursor | `App.tsx`, `src/ui/game/*.tsx`, `styles.css`, `src/locales/*` | 완료 (082a21d) |
 | 47 | 예고·광역기·끊기·버티기·소환 연출 | Cursor | `BattleScene.ts`, `replay.ts` | 대기 (46 뒤) |
 | 48 | 3c core 코드 리뷰 (7eaca30) | GPT | `Docs/reviews/7eaca30.md` (새 파일만) | 대기 |
 | 49 | 마량 성채 밸런스 측정 | GPT | `tools/curve.ts`, `print-curve.ts`, `tune-curve.ts`, `first-hour.ts` | 대기 |
@@ -1220,6 +1220,8 @@ core에 이미 있는 것:
 
 확인: npm run dev에서 디버그로 요새까지 클리어한 세이브를 만들어 성채에 끊기·버티기로 한 번씩 나가 본다. 확인 못 한 부분은 메모에.
 ```
+
+메모: 작전에 끊기/버티기 버튼과 설명을 넣었고, 마량 성채 준비 줄에 끊을 영웅 수와 작전을 보여 준다(0명이면 경고). 리포트·기록에 끊기·광역 횟수 칩이 나온다. 로그는 예고·광역·버티기·소환(refs 이름)을 확인했다. App.tsx는 새 화면이 없어 건드리지 않았다. 실제 세이브로 요새까지 클리어해 나가 보지는 않았다.
 
 ---
 
