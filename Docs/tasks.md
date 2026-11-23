@@ -81,7 +81,7 @@ Claude Code, Cursor, GPT(Codex)가 함께 쓰는 작업 목록이다. 작업 하
 | 39 | 독늪 밸런스 측정 | GPT | `tools/curve.ts`, `print-curve.ts`, `tune-curve.ts`, `first-hour.ts` | 완료 (c6e24d9) |
 | 40 | 도적 요새 몬스터·던전 그림 | Cursor | `src/ui/voxel/enemies.ts`, `portrait.ts` | 완료 (c7b4d76) |
 | 41 | 마법 공방 화면·장신구 장착·함정/기습 문구 | Cursor | `App.tsx`, `src/ui/game/*.tsx`, `styles.css`, `src/locales/*` | 완료 (8eed6e7) |
-| 42 | 함정·기습 연출과 마법 공방 건물 3D | Cursor | `BattleScene.ts`, `replay.ts`, `world.ts`, `VillageScene.ts` | 대기 (41 뒤) |
+| 42 | 함정·기습 연출과 마법 공방 건물 3D | Cursor | `BattleScene.ts`, `replay.ts`, `world.ts`, `VillageScene.ts` | 완료 (7893f0c) |
 | 43 | 3b core 코드 리뷰 (1f690a1) | GPT | `Docs/reviews/1f690a1.md` (새 파일만) | 대기 |
 | 44 | 도적 요새 밸런스 측정 | GPT | `tools/curve.ts`, `print-curve.ts`, `tune-curve.ts`, `first-hour.ts` | 대기 |
 
@@ -1127,6 +1127,8 @@ src/ui/voxel/BattleScene.ts, src/ui/voxel/replay.ts, src/ui/voxel/world.ts, src/
 2. 마을에 마법 공방 건물(레벨 1–3, 보라 지붕, 떠다니는 수정). world.ts LOTS의 magic 자리는 임시이므로 어울리게 옮겨도 된다.
 확인: 스크린샷을 메모에.
 ```
+
+메모: 함정이 터지면 가시가 솟고 trapHit가 체력 막대에 반영된다. 해제는 쭈그려 앉아 톱니 아이콘, 경계는 느낌표, 기습은 연기와 함께 후열 옆에 나타났다가 돌아간다. 마법 공방은 신전 동쪽(5.2, -10.2)에 보라 지붕·떠다니는 수정이고, 2레벨은 선반 수정, 3레벨은 금 간판이다. 1·3레벨 모델과 전투 연출을 따로 그려 확인했다.
 
 ---
 
