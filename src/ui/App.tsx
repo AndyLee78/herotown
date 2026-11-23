@@ -185,8 +185,9 @@ export function App() {
       const report = saveRef.current?.history[0]
       setReportUnseen(true)
       if (report?.dungeonId) {
-        pushToast(t(report.victory ? 'battle.returnedWin' : 'battle.returnedLose', { dungeon: t(`dungeon.${report.dungeonId}.name`) }))
+        play('return')
         play(report.victory ? 'victory' : 'defeat')
+        pushToast(t(report.victory ? 'battle.returnedWin' : 'battle.returnedLose', { dungeon: t(`dungeon.${report.dungeonId}.name`) }))
       }
     }
     lastReturn.current = latest
@@ -233,6 +234,7 @@ export function App() {
     if (action.type === 'depart' && next.expeditions.length > current.expeditions.length) {
       setConfirm(null)
       setScreen(null)
+      play('depart')
       pushToast(t('battle.departed', { dungeon: t(`dungeon.${next.dungeonId}.name`) }))
     }
   }
@@ -321,6 +323,7 @@ export function App() {
           buildings={save.buildings}
           constructing={save.construction?.id ?? null}
           buildingLabels={buildingLabels}
+          expeditions={save.expeditions.length}
           active={!covered}
         />
       </Suspense>

@@ -1415,6 +1415,77 @@ input[type='range'] {
   width: 100%;
 }
 
+.monster-face {
+  display: block;
+  width: 32px;
+  height: 32px;
+  object-fit: contain;
+}
+
+.monster-face.boss {
+  width: 52px;
+  height: 52px;
+}
+
+.dungeon-preview {
+  position: relative;
+  overflow: hidden;
+  height: 148px;
+  margin: -4px -4px 12px;
+  border-radius: 12px;
+  background: #2a2622;
+}
+
+.dungeon-preview img {
+  display: block;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.dungeon-preview.locked img {
+  filter: brightness(0.28) saturate(0.4);
+}
+
+.dungeon-preview.locked span {
+  position: absolute;
+  inset: 0;
+  display: grid;
+  place-items: center;
+  color: #fff8ec;
+  font-family: 'Jua', system-ui, sans-serif;
+  font-size: 64px;
+  text-shadow: 0 3px 0 #3b2a1e;
+}
+
+.stamp-stage {
+  position: relative;
+}
+
+.depart-stamp {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  z-index: 2;
+  padding: 4px 14px;
+  color: #c0392b;
+  font-family: 'Jua', system-ui, sans-serif;
+  font-size: 28px;
+  letter-spacing: 0.08em;
+  border: 4px solid #c0392b;
+  border-radius: 8px;
+  background: rgba(255, 248, 236, 0.82);
+  pointer-events: none;
+  animation: stamp 0.4s ease-out both;
+}
+
+@keyframes stamp {
+  0% { transform: translate(-50%, -70%) scale(1.7) rotate(-14deg); opacity: 0; }
+  55% { transform: translate(-50%, -50%) scale(1) rotate(-8deg); opacity: 1; }
+  70% { transform: translate(calc(-50% - 3px), -50%) rotate(-6deg); }
+  100% { transform: translate(-50%, -50%) rotate(-8deg); opacity: 1; }
+}
+
 .reward-row {
   display: flex;
   flex-direction: column;

@@ -77,6 +77,10 @@ const THEMES = {
   3: { sky: '#1e1f2a', floor: ['#4e5266', '#565a70', '#4a4d60', '#525670'], wall: ['#3b3e4f', '#34374a', '#40435a'], light: '#c79bff', crystal: '#b48cff' },
 } as const
 
+export function battleTheme(tier: number) {
+  return THEMES[(Math.min(3, Math.max(1, tier)) as 1 | 2 | 3)]
+}
+
 export class BattleScene {
   private readonly renderer: THREE.WebGLRenderer
   private readonly scene = new THREE.Scene()

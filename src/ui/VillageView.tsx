@@ -15,10 +15,11 @@ type Props = {
   buildings: Record<BuildingId, number>
   constructing: BuildingId | null
   buildingLabels: Record<BuildingId, string>
+  expeditions: number
   active: boolean
 }
 
-export function VillageView({ roster, visitors, awayIds, partyIds, selectedId, onSelect, onPickBuilding, villageLabel, buildings, constructing, buildingLabels, active }: Props) {
+export function VillageView({ roster, visitors, awayIds, partyIds, selectedId, onSelect, onPickBuilding, villageLabel, buildings, constructing, buildingLabels, expeditions, active }: Props) {
   const canvasRef = useRef<HTMLCanvasElement>(null)
   const sceneRef = useRef<VillageScene | null>(null)
   const onSelectRef = useRef(onSelect)
@@ -44,7 +45,7 @@ export function VillageView({ roster, visitors, awayIds, partyIds, selectedId, o
   }, [])
 
   useEffect(() => {
-    sceneRef.current?.update({ roster, visitors, awayIds, partyIds, selectedId, buildings, constructing, labels: buildingLabels })
+    sceneRef.current?.update({ roster, visitors, awayIds, partyIds, selectedId, buildings, constructing, labels: buildingLabels, expeditions })
   })
 
   useEffect(() => {

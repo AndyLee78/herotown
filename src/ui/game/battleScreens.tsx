@@ -1,5 +1,5 @@
 import { ChevronLeft, Clock, Lock } from 'lucide-react'
-import { useState } from 'react'
+import { useMemo, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import {
   canDeploy,
@@ -23,6 +23,7 @@ import { gameNow } from '../clock'
 import { ResourceIcon, type ResourceKind } from './icons'
 import { Bar, Chip, Portrait, Res, clampPercent, fatigueTone, needsWarning, useNow, waitLabel } from './kit'
 import { Report } from './villageScreens'
+import { dungeonPreviewUrl, monsterPortraitUrl } from '../voxel/portrait'
 
 type Act = (action: GameAction) => void
 type Tab = 'dungeons' | 'prep' | 'editor' | 'history'
@@ -109,6 +110,7 @@ function DungeonBoard({ save, onAction, onPrepare }: { save: GameState; onAction
       </div>
 
       <div className="card board-detail">
+        <DungeonStill dungeonId={dungeon.id} tier={dungeon.tier} bossId={bosses[0] ?? regulars[0] ?? 'wolf'} locked={!open} />
         {open ? (
           <>
             <div className="card-top">
@@ -126,6 +128,7 @@ function DungeonBoard({ save, onAction, onPrepare }: { save: GameState; onAction
             <span className="chips">
               {bosses.map((id) => (
                 <Chip key={id} tone="bad">
+                  <MonsterFace refId={id} large />
                   {t(`enemy.${id}`)}
                 </Chip>
               ))}
@@ -133,7 +136,10 @@ function DungeonBoard({ save, onAction, onPrepare }: { save: GameState; onAction
             <h3 className="section-title">{t('battle.monsters')}</h3>
             <span className="chips">
               {regulars.map((id) => (
-                <Chip key={id}>{t(`enemy.${id}`)}</Chip>
+                <Chip key={id}>
+                  <MonsterFace refId={id} />
+                  {t(`enemy.${id}`)}
+                </Chip>
               ))}
             </span>
           </>
@@ -161,6 +167,22 @@ function DungeonBoard({ save, onAction, onPrepare }: { save: GameState; onAction
       </div>
     </div>
   )
+}
+
+function DungeonStill({ dungeonId, tier, bossId, locked }: { dungeonId: string; tier: number; bossId: string; locked: boolean }) {
+  const src = useMemo(() => dungeonPreviewUrl(dungeonId, tier, bossId), [dungeonId, tier, bossId])
+  return (
+    <div className={locked ? 'dungeon-preview locked' : 'dungeon-preview'}>
+      <img src={src} alt="" />
+      {locked ? <span>?</span> : null}
+    </div>
+  )
+}
+
+function MonsterFace({ refId, large = false }: { refId: string; large?: boolean }) {
+  const src = useMemo(() => monsterPortraitUrl(refId), [refId])
+  const size = large ? 52 : 32
+  return <img className={large ? 'monster-face boss' : 'monster-face'} src={src} alt="" width={size} height={size} />
 }
 
 function RewardRow({ label, gold, material, amount, fame }: { label: string; gold: number; material: ResourceKind; amount: number; fame?: number }) {
@@ -208,7 +230,18 @@ function Prep({
   const heroes = presetHeroes(save, preset)
   const busy = heroes.some((hero) => away.has(hero.id))
   const full = save.expeditions.length >= slots
+  const [stamping, setStamping] = useState(false)
   const blocked = heroes.length === 0 ? t('battle.emptyPreset') : busy ? t('result.busyHero') : full ? t('result.slotsFull') : !dungeonUnlocked(save, dungeon.id) ? t('result.lockedDungeon') : null
+  const depart = () => {
+    if (stamping || blocked) {
+      return
+    }
+    setStamping(true)
+    window.setTimeout(() => {
+      onDepart(preset.id)
+      setStamping(false)
+    }, 400)
+  }
   return (
     <div className="column">
       <div className="card prep-head">
@@ -305,9 +338,12 @@ function Prep({
       </div>
 
       {blocked ? <p className="banner bad">{blocked}</p> : null}
-      <button type="button" className="btn primary big depart" disabled={blocked != null} onClick={() => onDepart(preset.id)} data-sound="open">
-        {t('action.fight')}
-      </button>
+      <div className={stamping ? 'stamp-stage stamping' : 'stamp-stage'}>
+        <button type="button" className="btn primary big depart" disabled={blocked != null || stamping} onClick={depart}>
+          {t('action.fight')}
+        </button>
+        {stamping ? <span className="depart-stamp">{t('action.fight')}</span> : null}
+      </div>
     </div>
   )
 }

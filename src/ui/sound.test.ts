@@ -2,8 +2,8 @@ import { describe, expect, it } from 'vitest'
 import { play, soundBlocked, SOUND_NAMES } from './sound'
 
 describe('sound', () => {
-  it('names twelve effects and blocks a second hit inside the gap', () => {
-    expect(SOUND_NAMES).toHaveLength(12)
+  it('names fourteen effects and blocks a second hit inside the gap', () => {
+    expect(SOUND_NAMES).toHaveLength(14)
     expect(soundBlocked('hit', 100, 20)).toBe(true)
     expect(soundBlocked('hit', 120, 20)).toBe(false)
     expect(soundBlocked('tap', 30, 20)).toBe(true)

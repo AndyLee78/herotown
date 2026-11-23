@@ -13,6 +13,8 @@ export const SOUND_NAMES = [
   'defeat',
   'levelUp',
   'notice',
+  'depart',
+  'return',
 ] as const
 
 export type SoundName = (typeof SOUND_NAMES)[number]
@@ -70,7 +72,7 @@ export function unlockSound() {
   }
 }
 
-export function play(name: SoundName) {
+export function play(name: SoundName, scale = 1) {
   const prefs = loadSoundPrefs()
   if (prefs.muted || prefs.volume <= 0) {
     return
@@ -88,7 +90,10 @@ export function play(name: SoundName) {
     void context.resume()
   }
   const start = context.currentTime
-  voice(context, master, name, start)
+  const bus = context.createGain()
+  bus.gain.setValueAtTime(Math.max(0, scale), start)
+  bus.connect(master)
+  voice(context, bus, name, start)
 }
 
 function ensure(): AudioContext | null {
@@ -164,6 +169,16 @@ function voice(context: AudioContext, output: GainNode, name: SoundName, start: 
     case 'notice':
       blip(context, output, start, 740, 0.08, 'sine', 0.12)
       blip(context, output, start + 0.09, 880, 0.12, 'sine', 0.1)
+      break
+    case 'depart':
+      blip(context, output, start, 392, 0.12, 'sawtooth', 0.08)
+      blip(context, output, start, 523, 0.18, 'triangle', 0.16)
+      blip(context, output, start + 0.16, 659, 0.28, 'triangle', 0.16)
+      break
+    case 'return':
+      blip(context, output, start, 494, 0.12, 'sine', 0.12)
+      blip(context, output, start + 0.1, 392, 0.12, 'sine', 0.12)
+      blip(context, output, start + 0.22, 523, 0.2, 'triangle', 0.14)
       break
     default:
       break

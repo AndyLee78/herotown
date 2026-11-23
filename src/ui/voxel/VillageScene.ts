@@ -16,6 +16,7 @@ export type VillageSceneProps = {
   buildings: Record<BuildingId, number>
   constructing: BuildingId | null
   labels: Record<BuildingId, string>
+  expeditions: number
 }
 
 type Area = { minX: number; maxX: number; minZ: number; maxZ: number }
@@ -63,6 +64,8 @@ export class VillageScene {
   private selectedId: string | null = null
   private paces = new Map<string, number>()
   private frame = 0
+  private gateLabel: THREE.Sprite | null = null
+  private gateCount = -1
   private active = true
   private downAt: [number, number] | null = null
   private readonly raycaster = new THREE.Raycaster()
@@ -124,6 +127,7 @@ export class VillageScene {
     ])
     this.paces = new Map(living.map((hero) => [hero.id, PACE[hero.condition]]))
     this.syncAway(new Set(props.awayIds))
+    this.syncGate(props.expeditions)
     const party = new Set(props.partyIds)
     for (const walker of this.walkers.values()) {
       this.setMarker(walker, walker.kind === 'roster' && party.has(walker.id))
@@ -144,6 +148,25 @@ export class VillageScene {
     this.controls.dispose()
     disposeTree(this.scene)
     this.renderer.dispose()
+  }
+
+  private syncGate(count: number) {
+    if (count === this.gateCount) {
+      return
+    }
+    this.gateCount = count
+    if (this.gateLabel) {
+      this.scene.remove(this.gateLabel)
+      disposeTree(this.gateLabel)
+      this.gateLabel = null
+    }
+    if (count <= 0) {
+      return
+    }
+    const label = makeLabel(String(count), 0.42)
+    label.position.set(GATE.x + 2.45, 1.35, GATE.z + 0.55)
+    this.scene.add(label)
+    this.gateLabel = label
   }
 
   private syncLots(props: VillageSceneProps) {

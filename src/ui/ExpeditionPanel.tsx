@@ -24,10 +24,14 @@ export function ExpeditionPanel({ save }: { save: GameState }) {
   const [chosen, setChosen] = useState<string | null>(null)
   const [collapsed, setCollapsed] = useState(() => {
     try {
-      return localStorage.getItem(COLLAPSE_KEY) === '1'
+      const stored = localStorage.getItem(COLLAPSE_KEY)
+      if (stored === '1' || stored === '0') {
+        return stored === '1'
+      }
     } catch {
-      return false
+      // Ignore a blocked store and use the screen size.
     }
+    return window.innerHeight < 700
   })
   const trip = save.expeditions.find((entry) => entry.id === chosen) ?? save.expeditions[0]
   if (!trip) {
@@ -122,7 +126,9 @@ function LiveFight({ trip, phase }: { trip: Expedition; phase: Phase }) {
       onStep: setLogIndex,
       onDone: () => undefined,
       onSound: (name) => {
-        if (name === 'victory' || name === 'defeat') {
+        if (name === 'hit') {
+          play('hit', 0.3)
+        } else if (name === 'victory' || name === 'defeat') {
           play(name)
         }
       },
