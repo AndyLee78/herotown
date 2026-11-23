@@ -70,7 +70,7 @@ Claude Code, Cursor, GPT(Codex)가 함께 쓰는 작업 목록이다. 작업 하
 | 28 | 집 레벨별 모습·묘지 비석 3D | Cursor | `src/ui/voxel/VillageScene.ts`, `src/ui/voxel/world.ts` | 완료 (9d35253) |
 | 29 | 2b core 코드 리뷰 (f7fdf88) | GPT | `Docs/reviews/f7fdf88.md` (새 파일만) | 완료 (이 커밋) |
 | 30 | 세대 시뮬레이터 60년 | GPT | `tools/generations.ts` | 완료 (이 커밋) |
-| 31 | 행운의 분수 3D | Cursor | `src/ui/voxel/VillageScene.ts`, `world.ts`, `src/ui/VillageView.tsx` | 대기 (지금 시작 가능) |
+| 31 | 행운의 분수 3D | Cursor | `src/ui/voxel/VillageScene.ts`, `world.ts`, `src/ui/VillageView.tsx` | 완료 (e7427eb) |
 | 32 | 행운의 분수 화면·소리 | Cursor | `App.tsx`, `villageScreens.tsx`, `heroScreens.tsx`, `sound.ts`, `styles.css`, `src/locales/*` | 대기 (31 뒤) |
 | 33 | 분수 core 코드 리뷰 (5322f86) | GPT | `Docs/reviews/5322f86.md` (새 파일만) | 대기 (지금 시작 가능) |
 | 34 | 분수가 초반 골드에 주는 몫 측정 | GPT | `tools/first-hour.ts` | 대기 (지금 시작 가능) |
@@ -886,7 +886,7 @@ Docs/fountain.md를 읽고 마을 광장 한가운데에 행운의 분수를 3D�
 확인: npm run dev에서 눌러 보고, 대박은 디버그로(fountain.json의 1레벨 jackpotChance를 잠시 1로 바꿔 보고 되돌림) 확인. 스크린샷을 메모에.
 ```
 
-메모:
+메모: 레벨마다 대야가 커지고, 2레벨은 2단, 3레벨은 조각상, 4레벨은 금테다. 물은 가운데가 열린 테두리 위의 반투명 파랑이고 물줄기는 위아래로 움직인다. 소원이 있으면 물 위에 반짝임, 가득 차면 동전이 뜬다. 분수를 누르면 건물 창 대신 소원을 쓰고, 골드는 196에서 198로 올랐다. 대박 확률을 잠깐 1로 두고 금빛 물줄기와 골드 30(198→228)을 본 뒤 확률은 0.02로 되돌렸다. 장면이 소원 수를 받도록 App에서 넘기는 줄을 더했다.
 
 ---
 
