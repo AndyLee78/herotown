@@ -1,0 +1,37 @@
+{
+  "levels": [
+    {
+      "level": 1,
+      "intervalMs": 60000,
+      "cap": 5,
+      "gold": 2,
+      "jackpotChance": 0.02,
+      "jackpotMultiplier": 15
+    },
+    {
+      "level": 2,
+      "intervalMs": 50000,
+      "cap": 6,
+      "gold": 3,
+      "jackpotChance": 0.025,
+      "jackpotMultiplier": 15
+    },
+    {
+      "level": 3,
+      "intervalMs": 40000,
+      "cap": 8,
+      "gold": 3,
+      "jackpotChance": 0.03,
+      "jackpotMultiplier": 20
+    },
+    {
+      "level": 4,
+      "intervalMs": 35000,
+      "cap": 10,
+      "gold": 4,
+      "jackpotChance": 0.03,
+      "jackpotMultiplier": 20
+    }
+  ],
+  "startWishes": 1
+}

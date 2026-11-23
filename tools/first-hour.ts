@@ -106,6 +106,8 @@ function simulate(minutes: number, seed: number) {
         if (!revived.notice) { state = revived; note('revive ' + hero.classId) }
       }
     }
+    // The guide asks for one fountain wish; a player taps it once (task 34 adds regular tapping).
+    if (guideStatus(state).step?.id === 'wish' && state.fountain.made === 0) state = reduce(state, { type: 'wish', now })
     // Claim guide rewards.
     while (guideStatus(state).done) {
       note(`guide: ${guideStatus(state).step?.id}`)

@@ -106,7 +106,8 @@
     "house": "House",
     "guild": "Guild",
     "smith": "Smithy",
-    "temple": "Temple"
+    "temple": "Temple",
+    "fountain": "Lucky Fountain"
   },
   "buildingHint": {
     "hall": "See your village level and next goal.",
@@ -114,7 +115,8 @@
     "house": "More beds mean more heroes and better rest.",
     "guild": "Send more parties at once and take on the cave wood request.",
     "smith": "Craft and enhance gear. Upgrade to unlock better gear.",
-    "temple": "Treat wounds or revive a hero after their first death."
+    "temple": "Treat wounds or revive a hero after their first death.",
+    "fountain": "Tap it when a wish is ready for a few coins. Now and then, a jackpot."
   },
   "resource": {
     "wood": "Wood {{amount}}",
@@ -179,7 +181,8 @@
     "slotsFull": "All expedition slots are full. Upgrade the guild for more.",
     "lockedDungeon": "This dungeon is still locked.",
     "tooYoung": "This hero is too young to retire.",
-    "postTaken": "Another retiree already runs that building."
+    "postTaken": "Another retiree already runs that building.",
+    "noWish": "No wish is ready yet."
   },
   "defeat": {
     "noHealer": "Bring a healer to keep the party going.",
@@ -632,7 +635,8 @@
       "build": "Build something from the Village screen",
       "auto": "Turn on auto trips in Party",
       "guild": "Build the guild at village level 2",
-      "mine": "Bring a tank and a healer to Abandoned Mine"
+      "mine": "Bring a tank and a healer to Abandoned Mine",
+      "wish": "Tap the lucky fountain in the square and make a wish"
     }
   },
   "expedition": {
@@ -668,7 +672,8 @@
       "house": "Fatigue recovery +{{value}}%",
       "guild": "Auto trip rewards +{{value}}%",
       "smith": "Enhance odds +{{value}} pts",
-      "temple": "Care time −{{value}}%"
+      "temple": "Care time −{{value}}%",
+      "fountain": "Fountain jackpot chance +{{value}}%p"
     }
   }
 }

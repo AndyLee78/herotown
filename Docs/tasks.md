@@ -70,6 +70,10 @@ Claude Code, Cursor, GPT(Codex)가 함께 쓰는 작업 목록이다. 작업 하
 | 28 | 집 레벨별 모습·묘지 비석 3D | Cursor | `src/ui/voxel/VillageScene.ts`, `src/ui/voxel/world.ts` | 완료 (9d35253) |
 | 29 | 2b core 코드 리뷰 (f7fdf88) | GPT | `Docs/reviews/f7fdf88.md` (새 파일만) | 완료 (이 커밋) |
 | 30 | 세대 시뮬레이터 60년 | GPT | `tools/generations.ts` | 완료 (이 커밋) |
+| 31 | 행운의 분수 3D | Cursor | `src/ui/voxel/VillageScene.ts`, `world.ts`, `src/ui/VillageView.tsx` | 대기 (분수 core 뒤) |
+| 32 | 행운의 분수 화면·소리 | Cursor | `App.tsx`, `villageScreens.tsx`, `heroScreens.tsx`, `sound.ts`, `styles.css`, `src/locales/*` | 대기 (31 뒤) |
+| 33 | 분수 core 코드 리뷰 | GPT | `Docs/reviews/<해시>.md` (새 파일만) | 대기 (분수 core 뒤) |
+| 34 | 분수가 초반 골드에 주는 몫 측정 | GPT | `tools/first-hour.ts` | 대기 (분수 core 뒤) |
 
 ---
 
@@ -862,3 +866,81 @@ tools/generations.ts만 고친다. 기본 기간을 60년으로 늘리고(인자
 - 60년 시드 11/1/2/3/4/5 순: 누적 출생 18/35/21/19/34/12명, 3세대 첫 출생 57/54/57/124/56/64일, 가문 보너스를 받은 아이 6/8/0/0/12/3명.
 - 최종 침대 사용은 9/20, 20/20, 13/20, 19/20, 19/20, 9/15였고 정원 초과는 0명이었다. 시드 3의 첫 결혼은 69일(다른 시드 1일), 시드 1은 60년 말에도 만실이었다. 시드 2·3에서는 전설이 생겨도 보너스를 받은 출생이 없었다.
 - 프로젝트·도구 타입 검사, 테스트 131개, 프로덕션 빌드를 통과했다.
+
+---
+
+## 31. 행운의 분수 3D (Cursor)
+
+설계: `Docs/fountain.md`. **분수 core 커밋 뒤에 시작한다.** 조회 함수 이름은 core 커밋 메시지에 있다.
+
+**전달할 내용**
+
+```
+Docs/fountain.md를 읽고 마을 광장 한가운데에 행운의 분수를 3D로 만든다. src/ui/voxel/VillageScene.ts, src/ui/voxel/world.ts, src/ui/VillageView.tsx만 고친다. core는 고치지 않는다.
+
+1. 분수 모델: 레벨(state.buildings.fountain, 1–4)마다 모습이 커진다. 1 돌 대야, 2 2단, 3 조각상, 4 금장식. 물은 반투명 파란 복셀, 물줄기는 가볍게 위아래로 움직인다. 기존 merged geometry Builder 방식을 따른다. 광장에 있던 것과 겹치면 옮긴다.
+2. 소원이 하나 이상이면(fountainWishes(state, now) > 0) 물 위에 반짝임, 꽉 차면 물 위에 동전 몇 개.
+3. 분수를 탭하면 VillageView가 onWish 콜백을 부른다(App이 { type: 'wish', now }를 보냄). 다른 건물 탭(onPickBuilding)과 겹치지 않게 판정한다.
+4. 연출: state.fountain.last가 바뀌면(at이 새 값) 동전 3–5개가 분수에서 튀어 오른다. last.jackpot이면 금빛 물줄기와 동전 비(2–3초). 파티클은 끝나면 지오메트리를 해제한다.
+
+확인: npm run dev에서 눌러 보고, 대박은 디버그로(fountain.json의 1레벨 jackpotChance를 잠시 1로 바꿔 보고 되돌림) 확인. 스크린샷을 메모에.
+```
+
+메모:
+
+---
+
+## 32. 행운의 분수 화면·소리 (Cursor)
+
+**작업 31 뒤에 시작한다.**
+
+**전달할 내용**
+
+```
+Docs/fountain.md를 읽고 분수의 화면 요소를 만든다. src/ui/App.tsx, src/ui/game/villageScreens.tsx, src/ui/game/heroScreens.tsx, src/ui/sound.ts, src/ui/styles.css, src/locales/*만 고친다.
+
+1. 하단 독 옆 작은 분수 버튼: 남은 소원 수 배지, 다음 소원까지 남은 시간 원형 표시(fountainNextAt). 누르면 { type: 'wish', now }.
+2. 소원을 쓰면 "+n" 골드 글자가 떠올라 HUD 골드 칸으로 날아간다. 대박이면 큰 금빛 "+n"과 토스트("대박! 분수에서 n골드").
+3. 마을 운영 건설 목록에 분수(레벨·다음 레벨에서 바뀌는 점: 간격·최대 소원·한 번 골드·대박 확률). 최근 대박 기록(state.fountain.lastJackpot).
+4. 은퇴자 자리 목록에 분수(보너스: 대박 확률 +1%p). heroScreens의 bonusValue 표시도 맞춘다.
+5. 소리: 동전 짤랑, 대박 팡파르(기존 코드 합성 방식).
+6. 길잡이 단계 'wish' 문구.
+7. 문구 ko/en 같은 키.
+
+확인: npm run dev, 375px 폭도. 확인 못 한 부분은 메모에.
+```
+
+메모:
+
+---
+
+## 33. 분수 core 코드 리뷰 (GPT)
+
+**분수 core 커밋 뒤에 시작한다.** 해시는 표의 33번 행.
+
+**전달할 내용**
+
+```
+분수 core 커밋을 리뷰한다. 코드는 고치지 않고 Docs/reviews/<해시>.md 새 파일 하나에만 쓴다(Docs/reviews/README.md 형식).
+볼 것: Docs/fountain.md와 수치·규칙 차이, 충전 계산(최대치, 남은 진행, 레벨이 바뀔 때, 오프라인 12시간 상한, 시계가 뒤로 갈 때), 대박 rng와 nonce, 은퇴자 보너스, 길잡이 단계 삽입과 예전 세이브의 guideStep 밀기, 세이브 10 변환.
+```
+
+메모:
+
+---
+
+## 34. 분수가 초반 골드에 주는 몫 측정 (GPT)
+
+**분수 core 커밋 뒤에 시작한다.**
+
+**전달할 내용**
+
+```
+tools/first-hour.ts만 고친다. 흉내 플레이어에 "분수 누르기" 옵션을 추가한다: 끔 / 소원이 있으면 바로 누름 / 5분마다 확인. 분수 업그레이드도 다른 건물처럼 살 수 있게 한다.
+
+출력: 세 경우마다 시드 1–20 중앙값으로 첫 1시간·3시간 총 골드 수입, 그중 분수 몫(%), 대박 횟수, 던전 첫 클리어 시간. 
+
+완료 기준: 공통 기준 통과. 결과를 커밋 메시지와 메모에. 목표(Docs/fountain.md 1절: 1레벨 분수가 초반 원정 수입의 25–35%)에서 벗어나면 fountain.json 조정 제안을 메모에 적는다(값은 바꾸지 않는다).
+```
+
+메모:

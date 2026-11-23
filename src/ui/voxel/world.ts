@@ -15,6 +15,8 @@ export const LOTS: Record<BuildingId, Lot> = {
   guild: { x: 9.5, z: 4, w: 3.4, d: 2.8 },
   smith: { x: 5.5, z: 9.5, w: 3, d: 2.6 },
   temple: { x: -1.5, z: -10.5, w: 4, d: 3.2 },
+  // The lucky fountain stands in the middle of the square (Docs/fountain.md).
+  fountain: { x: 0, z: 0, w: 2.2, d: 2.2 },
 }
 
 export const PLAZA = { min: -5.3, max: 5.3 }
@@ -259,6 +261,11 @@ function drawBuilding(b: Builder, id: BuildingId, lot: Lot, level: number): numb
   }
   if (id === 'house') {
     return drawHome(b, w, d, level)
+  }
+  if (id === 'fountain') {
+    // Placeholder basin; task 31 gives each level its own shape.
+    b.box(w, 0.4, d, '#b9bec4', 0, 0.2, 0).box(w - 0.4, 0.06, d - 0.4, '#6fb7e6', 0, 0.4, 0).box(0.3, 0.9, 0.3, '#c9cdd2', 0, 0.85, 0)
+    return 1.4
   }
   if (id === 'guild') {
     const top = house(b, { w, d, h: 1.6 + grow * 0.3, wall: '#e2dccb', roof: '#4f7fb5', timber: true })

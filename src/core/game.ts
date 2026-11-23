@@ -1,4 +1,5 @@
-import { claimGuide } from './guide'
+import { chargeFountain, freshFountain, makeWish, readFountain, type FountainState } from './fountain'
+import { claimGuide, guideSteps } from './guide'
 import { adRules, classById, classList, combatRules, dungeonById, dungeons, expeditionRules, lifeRules, progression, retirementRules, smithRules, timeRules, villageRules } from './data'
 import { forgeGear, normalizeGear, recipeById } from './gear'
 import { applyReport, DEFAULT_TACTICS, runDungeon } from './dungeon'
@@ -9,7 +10,7 @@ import type { Rng } from './rng'
 import type { Genes } from './genes'
 import type { Bond, ClassId, CombatError, DungeonReport, Gear, GearSlot, Gender, Hero, PartyMember, Proposal, Role, Row, Tactics } from './types'
 
-export const SAVE_VERSION = 9
+export const SAVE_VERSION = 10
 
 export type SeasonId = 'spring' | 'summer' | 'autumn' | 'winter'
 
@@ -48,7 +49,7 @@ export type SmithJob = {
   finishAt: number
 }
 
-export type BuildingId = 'hall' | 'inn' | 'house' | 'guild' | 'smith' | 'temple'
+export type BuildingId = 'hall' | 'inn' | 'house' | 'guild' | 'smith' | 'temple' | 'fountain'
 export type MaterialName = 'wood' | 'stone' | 'iron' | 'bone'
 
 export type AutoPolicy = 'material' | 'safe' | 'fixed'
@@ -147,6 +148,7 @@ export type GameNotice =
   | 'tooYoung'
   | 'postTaken'
   | 'wornParty'
+  | 'noWish'
   | 'noHouse'
   | CombatError
   | 'checksum'
@@ -192,6 +194,7 @@ export type GameState = {
   bonds: Bond[]
   proposals: Proposal[]
   familyNonce: number
+  fountain: FountainState
 }
 
 export type AdPlacement = 'absence' | 'construction' | 'temple'
@@ -239,6 +242,7 @@ export type GameAction =
   | { type: 'assignRetiree'; id: string; building: BuildingId | null }
   | { type: 'acceptProposal'; a: string; b: string; now?: number }
   | { type: 'declineProposal'; a: string; b: string; now?: number }
+  | { type: 'wish'; now: number }
 
 export function freshState(seed: number, now: number): GameState {
   return {
@@ -281,6 +285,7 @@ export function freshState(seed: number, now: number): GameState {
     bonds: [],
     proposals: [],
     familyNonce: 0,
+    fountain: freshFountain(now),
   }
 }
 
@@ -504,6 +509,9 @@ function apply(state: GameState, action: GameAction): GameState {
   if (action.type === 'claimGuide') {
     return claimGuide(state)
   }
+  if (action.type === 'wish') {
+    return makeWish(state, action.now)
+  }
   if (action.type === 'acceptProposal') {
     return acceptProposal(state, action.a, action.b, action.now ?? state.lastTickAt)
   }
@@ -561,6 +569,8 @@ function advance(state: GameState, now: number): GameState {
     }
     // Widow and unbond at the moment someone left, not when the catch-up ends.
     next = tidyFamily({ ...next, lastTickAt: until }, until)
+    // The fountain fills offline too, up to its cap, at the level it had.
+    next = { ...next, fountain: chargeFountain(next.fountain, next.buildings.fountain, until) }
   }
   const autoTally = { runs: 0, gold: 0 }
   next = runAuto(next, elapsed, autoTally)
@@ -1654,7 +1664,7 @@ function normalize(record: Record<string, unknown>, now: number): GameState {
         }
       : null,
     ads: readAds(record.ads, now),
-    guideStep: numberOr(record.guideStep, 0),
+    guideStep: shiftGuide(record),
     // Buildings that now start built (the temple) are raised on older saves too.
     buildings: raiseToStart(record.buildings, base.buildings),
     retirees: Array.isArray(record.retirees) ? (record.retirees as Retiree[]).map((retiree) => ({ ...retiree, hero: normalizeHero(retiree.hero) })) : [],
@@ -1662,9 +1672,19 @@ function normalize(record: Record<string, unknown>, now: number): GameState {
     bonds: readBonds(record.bonds),
     proposals: readProposals(record.proposals),
     familyNonce: numberOr(record.familyNonce, 0),
+    fountain: readFountain(record.fountain, numberOr(record.lastTickAt, now)),
     auto: isAuto(record.auto) ? record.auto : base.auto,
     notice: null,
   }
+}
+
+// Saves from before the fountain step was added to the guide: a player past
+// the first step moves one further so they keep their place (Docs/fountain.md 4).
+function shiftGuide(record: Record<string, unknown>): number {
+  const step = numberOr(record.guideStep, 0)
+  const wishAt = guideSteps.findIndex((entry) => entry.id === 'wish')
+  const before = typeof record.version === 'number' && record.version < 10
+  return before && wishAt >= 0 && step >= wishAt ? Math.min(guideSteps.length, step + 1) : step
 }
 
 function isCalendar(value: unknown): value is Calendar {

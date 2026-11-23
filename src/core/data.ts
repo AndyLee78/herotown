@@ -7,6 +7,7 @@ import combatFile from '../data/combat.json'
 import dungeonsFile from '../data/dungeons.json'
 import expeditionFile from '../data/expedition.json'
 import familyFile from '../data/family.json'
+import fountainFile from '../data/fountain.json'
 import retirementFile from '../data/retirement.json'
 import monstersFile from '../data/monsters.json'
 import namesFile from '../data/names.json'
@@ -119,8 +120,9 @@ export function validateGameData(data: GameData): void {
   if (data.dungeons.length < 2) {
     throw new Error('Need at least 2 dungeons')
   }
-  if (data.village.buildings.length !== 6) {
-    throw new Error('The town needs 6 buildings')
+  const needed = ['hall', 'inn', 'house', 'guild', 'smith', 'temple', 'fountain']
+  if (data.village.buildings.length !== needed.length || needed.some((id) => !data.village.buildings.some((building) => building.id === id))) {
+    throw new Error(`The town needs exactly these buildings: ${needed.join(', ')}`)
   }
   const buildingIds = new Set(data.village.buildings.map((building) => building.id))
   if (buildingIds.size !== data.village.buildings.length) {
@@ -170,6 +172,13 @@ export const adRules = adsFile
 export const expeditionRules = expeditionFile
 export const retirementRules = retirementFile
 export const familyRules = familyFile
+export const fountainRules = fountainFile
+
+fountainRules.levels.forEach((level, index) => {
+  if (level.level !== index + 1 || level.intervalMs <= 0 || level.cap < 1 || level.gold < 1 || level.jackpotChance < 0 || level.jackpotChance > 1 || level.jackpotMultiplier < 1) {
+    throw new Error(`Fountain level ${index + 1} has bad numbers`)
+  }
+})
 
 if (familyRules.friendAt >= familyRules.loverAt || familyRules.loverAt > familyRules.proposeAt || familyRules.proposeAt > 100) {
   throw new Error('Family thresholds must rise: friend < lover <= propose <= 100')

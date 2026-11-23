@@ -53,6 +53,7 @@ const BUILDING_SCREEN: Record<BuildingId, Screen> = {
   guild: 'battle',
   smith: 'smith',
   temple: 'roster',
+  fountain: 'town',
 }
 
 const CONFIRM_NOTICES = new Set<GameNotice>(['seenDeath', 'wornParty'])

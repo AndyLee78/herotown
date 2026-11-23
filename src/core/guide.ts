@@ -12,6 +12,7 @@ export type GuideGoal =
   | { type: 'build' }
   | { type: 'auto' }
   | { type: 'building'; building: BuildingId; target: number }
+  | { type: 'wish' }
 
 export type GuideReward = Partial<Record<'gold' | MaterialName, number>>
 
@@ -65,6 +66,8 @@ function progress(state: GameState, goal: GuideGoal): { current: number; target:
       return { current: state.auto.enabled ? 1 : 0, target: 1 }
     case 'building':
       return { current: Math.min(state.buildings[goal.building], goal.target), target: goal.target }
+    case 'wish':
+      return { current: Math.min(1, state.fountain?.made ?? 0), target: 1 }
   }
 }
 
