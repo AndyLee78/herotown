@@ -82,8 +82,8 @@ Claude Code, Cursor, GPT(Codex)가 함께 쓰는 작업 목록이다. 작업 하
 | 40 | 도적 요새 몬스터·던전 그림 | Cursor | `src/ui/voxel/enemies.ts`, `portrait.ts` | 완료 (c7b4d76) |
 | 41 | 마법 공방 화면·장신구 장착·함정/기습 문구 | Cursor | `App.tsx`, `src/ui/game/*.tsx`, `styles.css`, `src/locales/*` | 완료 (8eed6e7) |
 | 42 | 함정·기습 연출과 마법 공방 건물 3D | Cursor | `BattleScene.ts`, `replay.ts`, `world.ts`, `VillageScene.ts` | 완료 (7893f0c) |
-| 43 | 3b core 코드 리뷰 (1f690a1) | GPT | `Docs/reviews/1f690a1.md` (새 파일만) | 대기 |
-| 44 | 도적 요새 밸런스 측정 | GPT | `tools/curve.ts`, `print-curve.ts`, `tune-curve.ts`, `first-hour.ts` | 대기 |
+| 43 | 3b core 코드 리뷰 (1f690a1) | GPT | `Docs/reviews/1f690a1.md` (새 파일만) | 완료 (1c5c70e) |
+| 44 | 도적 요새 밸런스 측정 | GPT | `tools/curve.ts`, `print-curve.ts`, `tune-curve.ts`, `first-hour.ts` | 완료 (6d9ffd1) |
 
 ---
 
@@ -1143,6 +1143,10 @@ src/ui/voxel/BattleScene.ts, src/ui/voxel/replay.ts, src/ui/voxel/world.ts, src/
 볼 것: Docs/depth.md 3b와 수치·규칙 차이, 함정의 판정 순서(누가 해제를 시도하나, 체력 1 하한, 게이지 초기화), 기습이 경계 영웅이 쓰러진 뒤 다음 층에서 어떻게 되는지, 장신구 두 칸 장착·해제(같은 장신구 두 개, 영웅 사망 때 장비 분실과의 관계), 마법 공방 작업의 오프라인 진행, 세이브 11 → 12, 기존 던전 결과가 바뀌지 않았는지(부모 커밋과 시드 전투 비교).
 ```
 
+메모:
+- 원정 도중 장신구를 해제하면 전투 효과는 남고 분실 대상에서는 빠지는 경로와, 장신구가 대장간 강화에 들어가는 경로를 재현했다.
+- 기존 일곱 던전의 승률 28칸과 시드 전투 리포트 28개가 부모 커밋과 일치했다. 경계 착용자 사망 뒤 다음 층 기습도 확인했다.
+
 ---
 
 ## 44. 도적 요새 밸런스 측정 (GPT)
@@ -1157,3 +1161,8 @@ tools/curve.ts, tools/print-curve.ts, tools/tune-curve.ts, tools/first-hour.ts�
 2. 독늪에서 해독의 목걸이(poisonWard) 1–2개가 해독 물약 몇 개 값인지 비교한다.
 3. Docs/depth.md 3b "밸런스 기준"과 1차 측정표(Claude)와 비교해 메모에 적는다. 기준을 벗어나면 고칠 수치를 제안한다.
 ```
+
+메모:
+- 40파티×10전 Lv14 중앙값/P25. 도적 없음에서 미착용/경계/경계+감지는 40/20, 100/70, 100/90%. 도적 있음은 90/70, 100/100, 100/100%. 1차 측정의 무도적 미착용 50/10%보다 중앙값이 낮고, 미대비 패배 238회 중 기습은 153회였다.
+- 대비 조건의 P25 목표 60%를 충족했다. 미대비 중앙값은 목표 약 60%보다 낮다. 기습 피해 배수 1.4→1.25 실험에서 미대비 50/20%, 도적만 90/80%, 경계+감지 100/90%여서 재측정 후보로 남긴다.
+- 독늪 Lv12 P25는 목걸이 1/2개(전사/서로 다른 영웅) 30/50%, 해독 2/3개 20/60%로, 이 수준에서는 목걸이 1–2개가 해독 2–3개 사이였다. Lv11은 P25가 모두 0%. 프로젝트·도구 타입 검사, 테스트 180개, 빌드 통과.
