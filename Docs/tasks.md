@@ -75,7 +75,7 @@ Claude Code, Cursor, GPT(Codex)가 함께 쓰는 작업 목록이다. 작업 하
 | 33 | 분수 core 코드 리뷰 (5322f86) | GPT | `Docs/reviews/5322f86.md` (새 파일만) | 완료 (a666f56) |
 | 34 | 분수가 초반 골드에 주는 몫 측정 | GPT | `tools/first-hour.ts` | 완료 (a47f68a) |
 | 35 | 독늪 몬스터·던전 그림 | Cursor | `src/ui/voxel/enemies.ts`, `portrait.ts` | 완료 (ad6c4c7) |
-| 36 | 상태이상·물약 화면과 연금술 공방 | Cursor | `App.tsx`, `src/ui/game/*.tsx`, `styles.css`, `src/locales/*` | 대기 (지금 시작 가능) |
+| 36 | 상태이상·물약 화면과 연금술 공방 | Cursor | `App.tsx`, `src/ui/game/*.tsx`, `styles.css`, `src/locales/*` | 완료 (c8299cb) |
 | 37 | 상태 표시·물약 동작·공방 건물 3D | Cursor | `BattleScene.ts`, `replay.ts`, `world.ts`, `VillageScene.ts` | 대기 (36 뒤) |
 | 38 | 3a core 코드 리뷰 (1918eda) | GPT | `Docs/reviews/1918eda.md` (새 파일만) | 대기 (지금 시작 가능) |
 | 39 | 독늪 밸런스 측정 | GPT | `tools/curve.ts`, `print-curve.ts`, `tune-curve.ts`, `first-hour.ts` | 대기 (지금 시작 가능) |
@@ -999,7 +999,7 @@ Docs/depth.md 3a를 읽고 화면을 만든다. src/ui/App.tsx, src/ui/game/*.ts
 확인: npm run dev에서 독늪까지 가는 세이브를 만들어(디버그 골드·시간 가속) 물약을 만들고 들고 가 본다. 확인 못 한 부분은 메모에.
 ```
 
-메모:
+메모: 공방에서 해독 물약을 만들기 시작했고, 창고와 10분 막대가 보였다. 출발 준비에서 해독 1개를 챙기고 독늪에 나가 승리했다. 던전 카드에 늪의 여왕·독두꺼비·늪거머리·도깨비불·이끼골렘이 나온다. HUD에 약초가 있다. 375px에서 가로 스크롤은 없었다. 그 파티는 피해가 없어 물약 로그가 안 나왔고, 약한 파티 기록에서는 "침묵", "독 피해", "해독 물약을 마심"이 나왔다. 패배 추천 문구는 그 판이 승이라 화면에는 안 떴다.
 
 ---
 
