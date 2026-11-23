@@ -646,7 +646,7 @@ function applyAdReward(state: GameState, placement: AdPlacement, now: number): G
   return {
     ...state,
     notice: null,
-    roster: state.roster.map((entry) => (entry.id === hero.id ? stepCondition({ ...entry, treatAt: undefined }, now) : entry)),
+    roster: state.roster.map((entry) => (entry.id === hero.id ? completeTreatment(entry) : entry)),
   }
 }
 
@@ -950,12 +950,16 @@ function finishCare(state: GameState, now: number): GameState {
       next = { ...next, resurrectAt: undefined, condition: 'injured', recoverAt: now + lifeRules.injury.recoverMs }
     }
     if (next.treatAt != null && next.treatAt <= now) {
-      // A temple treatment sends a hero home fit to fight again, only tired.
-      next = next.condition === 'injured' || next.condition === 'critical' ? { ...next, treatAt: undefined, condition: 'fatigued', recoverAt: undefined } : { ...next, treatAt: undefined }
+      next = completeTreatment(next)
     }
     return next
   })
   return { ...state, roster }
+}
+
+function completeTreatment(hero: Hero): Hero {
+  const condition = hero.condition === 'injured' || hero.condition === 'critical' ? 'fatigued' : hero.condition
+  return { ...hero, condition, treatAt: undefined, recoverAt: undefined }
 }
 
 function needsWarning(hero: Hero): boolean {
@@ -972,27 +976,46 @@ function stepCondition(hero: Hero, now: number): Hero {
   return { ...hero, recoverAt: undefined }
 }
 
-function recoverRoster(state: GameState, elapsed: number, now: number): GameState {
-  const hours = elapsed / 3_600_000
-  const rate =
+function fatigueRecoveryRate(state: GameState): number {
+  return (
     (lifeRules.fatigue.recoverPerHour + lifeRules.fatigue.recoverPerHouseLevel * Math.max(0, state.buildings.house - 1)) *
     (1 + retireeBonus(state, 'house'))
+  )
+}
+
+function recoverRoster(state: GameState, elapsed: number, now: number): GameState {
+  const hours = elapsed / 3_600_000
+  const rate = fatigueRecoveryRate(state)
+  const awayUntil = new Map(state.expeditions.flatMap((trip) => trip.heroIds.map((id) => [id, Math.min(now, trip.returnAt)] as const)))
   return {
     ...state,
-    roster: state.roster.map((hero) => recoverHero(hero, hours, rate, now)),
+    roster: state.roster.map((hero) => {
+      const until = awayUntil.get(hero.id)
+      if (until == null) {
+        return recoverHero(hero, hours, rate, now)
+      }
+      // Pause an existing wound's recovery clock for the part of this tick spent away.
+      return hero.recoverAt == null ? hero : { ...hero, recoverAt: hero.recoverAt + Math.max(0, until - state.lastTickAt) }
+    }),
   }
 }
 
 function recoverHero(hero: Hero, hours: number, rate: number, now: number): Hero {
   let next = hero
-  if ((next.condition === 'critical' || next.condition === 'injured') && next.recoverAt != null && next.recoverAt <= now) {
-    next = stepCondition(next, now)
+  let fatigueWhenTired = hero.fatigue
+  while ((next.condition === 'critical' || next.condition === 'injured') && next.recoverAt != null && next.recoverAt <= now) {
+    const deadline = next.recoverAt
+    next = stepCondition(next, deadline)
+    if (next.condition === 'fatigued') {
+      const hoursUntilTired = Math.max(0, hours - (now - deadline) / 3_600_000)
+      fatigueWhenTired = hero.fatigue - rate * hoursUntilTired
+    }
   }
   if (next.condition === 'dead') {
     return next
   }
   const fatigue = Math.max(0, next.fatigue - rate * hours)
-  if (next.condition === 'fatigued' && next.fatigue > 0 && fatigue === 0) {
+  if (next.condition === 'fatigued' && fatigueWhenTired > 0 && fatigue === 0) {
     return { ...next, fatigue, condition: 'healthy', recoverAt: undefined }
   }
   return { ...next, fatigue }
@@ -1221,6 +1244,13 @@ function returnExpeditions(state: GameState, now: number, returned: AbsenceRepor
   for (const expedition of [...state.expeditions].sort((a, b) => a.returnAt - b.returnAt)) {
     if (expedition.returnAt <= now) {
       next = settleExpedition(next, expedition)
+      const hoursAtHome = Math.max(0, now - Math.max(expedition.returnAt, state.lastTickAt)) / 3_600_000
+      const rate = fatigueRecoveryRate(next)
+      const returning = new Set(expedition.heroIds)
+      next = {
+        ...next,
+        roster: next.roster.map((hero) => (returning.has(hero.id) ? recoverHero(hero, hoursAtHome, rate, now) : hero)),
+      }
       returned.push({ dungeonId: expedition.dungeonId, victory: expedition.report.victory })
     }
   }

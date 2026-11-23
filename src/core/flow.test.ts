@@ -31,6 +31,16 @@ describe('early game flow', () => {
     expect(done.roster[0]?.condition).toBe('fatigued')
   })
 
+  it('finishes the full treatment when an ad is used on a critically injured hero', () => {
+    const state = hireAll(3)
+    const hero = state.roster[0]!
+    const hurt = { ...state, roster: [{ ...hero, condition: 'critical' as const, recoverAt: now + lifeRules.injury.recoverMs }] }
+    const treating = reduce(hurt, { type: 'treat', id: hero.id, now })
+    expect(treating.roster[0]?.treatAt).toBe(now + lifeRules.treatMs)
+    const done = reduce(treating, { type: 'adReward', placement: 'temple', now })
+    expect(done.roster[0]).toMatchObject({ condition: 'fatigued', treatAt: undefined, recoverAt: undefined })
+  })
+
   it('leaves without a fallen hero instead of refusing to depart', () => {
     const state = hireAll(3)
     const fallen = state.roster[0]!
@@ -48,6 +58,35 @@ describe('early game flow', () => {
     const back = reduce(out, { type: 'catchUp', now: lethal.returnAt })
     expect(back.graveyard).toHaveLength(0)
     expect(back.roster.every((hero) => hero.condition === 'critical')).toBe(true)
+  })
+
+  it('recovers only time spent at home and makes returned heroes available to auto runs', () => {
+    const state = hireAll(3)
+    const staying = state.roster[0]!
+    const ready = reduce({
+      ...state,
+      roster: state.roster.map((hero) => ({ ...hero, fatigue: 100 })),
+      cleared: ['hill_cave'],
+    }, { type: 'remove', id: staying.id })
+    const sent = reduce(ready, { type: 'depart', now, confirm: true })
+    const trip = sent.expeditions[0]!
+    const lethal = {
+      ...trip,
+      report: { ...trip.report, conditions: trip.report.conditions.map((entry) => ({ ...entry, condition: 'dead' as const, fatigue: 0 })) },
+    }
+    const out = { ...sent, expeditions: [lethal] }
+    const action = { type: 'catchUp' as const, now: trip.returnAt + 2 * lifeRules.injury.recoverMs }
+    const back = reduce(out, action)
+    const rate = lifeRules.fatigue.recoverPerHour / 3_600_000
+    expect(trip.heroIds).not.toContain(staying.id)
+    expect(back.roster.find((hero) => hero.id === staying.id)?.fatigue).toBeCloseTo(100 - (action.now - now) * rate)
+    for (const id of trip.heroIds) {
+      const hero = back.roster.find((entry) => entry.id === id)
+      expect(hero).toMatchObject({ condition: 'fatigued', recoverAt: undefined })
+      expect(hero?.fatigue).toBeCloseTo(100 - (action.now - trip.returnAt) * rate)
+    }
+    const auto = reduce({ ...out, auto: { ...out.auto, enabled: true } }, action)
+    expect(auto.absence?.autoRuns).toBeGreaterThan(0)
   })
 
   it('puts melee heroes in the front row and others in the back', () => {
