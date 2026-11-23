@@ -125,6 +125,37 @@ const HUMANOIDS: Record<string, Omit<BodySpec, 'head' | 'stoop' | 'style' | 'bea
     beard: true,
     scale: 1.45,
   },
+  grave_knight: {
+    outfit: { body: '#5a6a62', trim: '#3a4a42', pants: '#4a544c', weapon: 'rusty', pads: true, hat: 'helmet' },
+    skin: '#c8c4b4',
+    eye: '#7dff9a',
+    eyeGlow: true,
+    eyeSize: 1.3,
+    hair: null,
+    shoe: '#3a4440',
+    scale: 1.12,
+  },
+  bone_archer: {
+    outfit: { body: BONE, trim: '#8aa39a', pants: BONE, weapon: 'bow', quiver: true },
+    skin: BONE,
+    eye: '#7fe3ff',
+    eyeGlow: true,
+    eyeSize: 1.4,
+    hair: null,
+    ribs: true,
+    shoe: '#cfc8b4',
+    scale: 1,
+  },
+  citadel_lord: {
+    outfit: { body: '#2a2438', trim: '#7a5ab8', pants: '#1e1a28', weapon: 'sword', pads: true, robe: true, hat: 'helmet' },
+    skin: '#9aa3b0',
+    eye: '#c79bff',
+    eyeGlow: true,
+    eyeSize: 1.5,
+    hair: null,
+    shoe: '#1a1620',
+    scale: 1.55,
+  },
 }
 
 export function buildEnemy(refId: string): Actor {
@@ -133,6 +164,12 @@ export function buildEnemy(refId: string): Actor {
     const rig = buildBody({ head: 1, stoop: 0, style: 'short', beard: false, ...humanoid })
     if (refId === 'cutthroat') {
       addOffhandDagger(rig)
+    }
+    if (refId === 'grave_knight') {
+      addShield(rig)
+    }
+    if (refId === 'citadel_lord') {
+      addHorns(rig)
     }
     return rig
   }
@@ -163,6 +200,8 @@ export function buildEnemy(refId: string): Actor {
       return wisp()
     case 'bog_queen':
       return bogQueen()
+    case 'specter':
+      return specter()
     default:
       return blob('#c96b6b', '#d98f8f', 1)
   }
@@ -174,6 +213,24 @@ function addOffhandDagger(rig: Rig) {
     .box(0.13, 0.035, 0.05, '#8a3434', 0, -0.21, 0.03)
     .box(0.05, 0.22, 0.03, '#cfd5dc', 0, -0.09, 0.03)
   rig.armL.add(dagger.build({ castShadow: false }))
+}
+
+function addShield(rig: Rig) {
+  const shield = new Builder()
+    .box(0.08, 0.42, 0.32, '#5a6a62', -0.18, -0.12, 0.05)
+    .box(0.05, 0.34, 0.24, '#3a4a42', -0.22, -0.12, 0.05)
+    .box(0.04, 0.1, 0.1, '#7dff9a', -0.24, -0.08, 0.05, { glow: true })
+  rig.armL.add(shield.build({ castShadow: false }))
+}
+
+function addHorns(rig: Rig) {
+  const horns = new Builder()
+    .box(0.1, 0.28, 0.1, '#1a1620', -0.18, 0.62, -0.05, { rz: 0.35 })
+    .box(0.1, 0.28, 0.1, '#1a1620', 0.18, 0.62, -0.05, { rz: -0.35 })
+    .box(0.08, 0.12, 0.08, '#7a5ab8', -0.22, 0.78, -0.08, { rz: 0.45 })
+    .box(0.08, 0.12, 0.08, '#7a5ab8', 0.22, 0.78, -0.08, { rz: -0.45 })
+    .box(0.5, 0.08, 0.28, '#1a1620', 0, 0.12, -0.18)
+  rig.head.add(horns.build({ castShadow: false }))
 }
 
 function creature(kind: Creature['kind'], height: number, hover = 0): Creature {
@@ -429,6 +486,28 @@ function wraith(): Creature {
       .box(0.07, 0.05, 0.02, '#b48cff', 0.07, 0.97, 0.225, { glow: true })
       .box(0.12, 0.3, 0.14, '#3a2e52', -0.3, 0.6, 0.06, { rz: 0.3 })
       .box(0.12, 0.3, 0.14, '#3a2e52', 0.3, 0.6, 0.06, { rz: -0.3 })
+      .build(),
+  )
+  c.body.position.y = c.hover
+  return c
+}
+
+// A cyan, more wispy spirit than the purple crypt wraith.
+function specter(): Creature {
+  const c = creature('ghost', 1.35, 0.35)
+  c.body.add(
+    new Builder()
+      .box(0.38, 0.55, 0.34, '#5a8a9a', 0, 0.55, 0)
+      .box(0.28, 0.4, 0.24, '#7fe3ff', 0, 0.35, 0.02, { glow: true })
+      .box(0.22, 0.28, 0.18, '#3a6070', 0, 0.12, -0.04)
+      .box(0.14, 0.2, 0.12, '#2a4858', -0.08, -0.05, -0.06)
+      .box(0.14, 0.18, 0.12, '#2a4858', 0.1, -0.08, -0.04)
+      .box(0.4, 0.38, 0.38, '#6aa0b0', 0, 1.05, 0)
+      .box(0.08, 0.08, 0.02, '#9fe8ff', -0.08, 1.05, 0.2, { glow: true })
+      .box(0.08, 0.08, 0.02, '#9fe8ff', 0.08, 1.05, 0.2, { glow: true })
+      .box(0.1, 0.4, 0.12, '#4a7888', -0.28, 0.55, 0.04, { rz: 0.45 })
+      .box(0.1, 0.4, 0.12, '#4a7888', 0.28, 0.55, 0.04, { rz: -0.45 })
+      .box(0.16, 0.16, 0.16, '#b48cff', 0, 1.28, -0.05, { glow: true })
       .build(),
   )
   c.body.position.y = c.hover

@@ -283,6 +283,19 @@ const ENTRANCE: Record<string, Entrance> = {
     ground: ['#6a5a48', '#5a4a3c'],
     draw: banditFort,
   },
+  haunted_citadel: {
+    skyTop: '#4a3a70',
+    skyBottom: '#0e1020',
+    hemiSky: '#9aa0d0',
+    hemiGround: '#2a3048',
+    sun: '#7fe3ff',
+    sunLevel: 0.75,
+    hemiLevel: 0.85,
+    sunX: 1.5,
+    ridge: '#2a3040',
+    ground: ['#3a4250', '#2e3644'],
+    draw: hauntedCitadel,
+  },
 }
 
 function hillCave(land: Builder, locked: boolean) {
@@ -419,6 +432,33 @@ function torch(land: Builder, locked: boolean, x: number, y: number, z: number) 
   land.box(0.08, 0.4, 0.08, tone('#5a3a28', locked), x, y, z)
   land.box(0.16, 0.18, 0.16, tone('#ff8a3a', locked), x, y + 0.28, z, { glow: true })
   land.box(0.1, 0.12, 0.1, tone('#ffe08a', locked), x, y + 0.4, z, { glow: true })
+}
+
+function hauntedCitadel(land: Builder, locked: boolean) {
+  const stone = '#5a6474'
+  const dark = '#2a303c'
+  land.box(1.1, 2.4, 1.1, tone(stone, locked), -2.6, 1.2, -0.2)
+  land.box(1.3, 0.28, 1.3, tone(dark, locked), -2.6, 2.45, -0.2)
+  land.box(0.85, 0.9, 0.85, tone('#4a5464', locked), -2.6, 3.0, -0.2)
+  for (const [dx, dz] of [[-0.35, -0.35], [0.35, -0.35], [-0.35, 0.35], [0.35, 0.35]] as const) {
+    land.box(0.22, 0.4, 0.22, tone(stone, locked), -2.6 + dx, 3.55, -0.2 + dz)
+  }
+  land.box(0.9, 1.7, 0.9, tone('#4a5464', locked), 2.5, 0.85, 0.15)
+  land.box(0.55, 0.7, 0.55, tone(dark, locked), 2.5, 1.95, 0.15)
+  land.box(0.35, 0.9, 0.35, tone('#3a4454', locked), 2.5, 2.5, 0.15)
+  land.box(0.75, 1.9, 0.75, tone(stone, locked), -1.15, 0.95, -0.95)
+  land.box(0.75, 1.9, 0.75, tone(stone, locked), 1.15, 0.95, -0.95)
+  land.box(3.1, 0.55, 0.75, tone('#6a7484', locked), 0, 2.05, -0.95)
+  land.box(1.35, 1.45, 0.35, tone('#0e1018', locked), 0, 0.85, -0.75)
+  land.box(0.45, 0.7, 0.12, tone('#3a2a58', locked), 0.4, 1.0, -0.55)
+  for (const [x, y, z] of [[-1.5, 1.55, -0.35], [1.5, 1.55, -0.35], [-2.6, 3.2, 0.35], [2.5, 2.2, 0.5]] as const) {
+    land.box(0.18, 0.28, 0.18, tone('#7fe3ff', locked), x, y, z, { glow: true })
+    land.box(0.1, 0.14, 0.1, tone('#c9e8ff', locked), x, y + 0.2, z, { glow: true })
+  }
+  land.box(0.7, 0.45, 0.5, tone('#4a5464', locked), -2.0, 0.3, 1.5)
+  land.box(0.5, 0.35, 0.4, tone(dark, locked), -1.6, 0.25, 1.2)
+  land.box(0.55, 0.8, 0.45, tone('#3a4454', locked), 2.1, 0.4, 1.4)
+  land.box(0.9, 0.2, 0.55, tone('#2a303c', locked), 0.8, 0.18, 1.7)
 }
 
 function deadTree(land: Builder, locked: boolean, x: number, z: number, height: number) {
