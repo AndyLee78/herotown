@@ -18,6 +18,9 @@ export const LOTS: Record<BuildingId, Lot> = {
 }
 
 export const PLAZA = { min: -5.3, max: 5.3 }
+// Parties gather here, then leave and come back through the south gate.
+export const GATHER = { x: 0, z: 4.2 }
+export const GATE = { x: 0, z: 12.2 }
 export const INN_YARD = { minX: 6.9, maxX: 10.1, minZ: -6.5, maxZ: -5.5 }
 
 const HALF = 15
@@ -98,6 +101,20 @@ export function buildTerrain(): THREE.Group {
       .box(0.1, 0.55, 0.1, '#5d4433', 0.55, 0.28, 0)
       .box(1.4, 0.08, 0.3, '#7a5a40', 0, 0.35, 0.65)
       .box(1.4, 0.08, 0.3, '#7a5a40', 0, 0.35, -0.65)
+  })
+
+  // The village gate on the south road.
+  b.within(GATE.x, 0, GATE.z, 0, 0, 0, () => {
+    for (const side of [-1, 1]) {
+      b.box(0.5, 0.3, 0.5, '#8f8b83', side * 1.35, 0.15, 0)
+        .box(0.36, 2.1, 0.36, '#6b4a33', side * 1.35, 1.35, 0)
+        .box(0.46, 0.14, 0.46, '#5a3d28', side * 1.35, 2.45, 0)
+    }
+    b.box(3.3, 0.3, 0.44, '#7a5236', 0, 2.25, 0)
+      .box(3.6, 0.16, 0.6, '#c0392b', 0, 2.48, 0)
+      .box(1.3, 0.5, 0.06, '#f3ead6', 0, 1.85, 0.25)
+      .box(0.2, 0.2, 0.2, '#ffd36b', -1.35, 2.7, 0, { glow: true })
+      .box(0.2, 0.2, 0.2, '#ffd36b', 1.35, 2.7, 0, { glow: true })
   })
 
   // Stepping stones to each door.

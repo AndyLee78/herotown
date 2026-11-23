@@ -4,11 +4,13 @@ import type { BuildingId, Hero } from '../../core'
 import { buildCharacter, idlePose, walkPose, type Rig } from './character'
 import { Builder, disposeTree, makeLabel } from './kit'
 import { hashString, lookFor, lookKey, seeded } from './look'
-import { INN_YARD, LOTS, PLAZA, buildLot, buildTerrain } from './world'
+import { GATE, GATHER, INN_YARD, LOTS, PLAZA, buildLot, buildTerrain } from './world'
 
 export type VillageSceneProps = {
   roster: Hero[]
   visitors: Hero[]
+  // Heroes out on an expedition: they walk out of town and back in.
+  awayIds: string[]
   partyIds: string[]
   selectedId: string | null
   buildings: Record<BuildingId, number>
@@ -24,7 +26,10 @@ type Walker = {
   root: THREE.Group
   rig: Rig
   key: string
-  state: 'idle' | 'walk'
+  // gather → pack → leave → gone when a party sets out; arrive when it comes home.
+  state: 'idle' | 'walk' | 'gather' | 'pack' | 'leave' | 'gone' | 'arrive'
+  away: boolean
+  fresh: boolean
   timer: number
   target: THREE.Vector3
   speed: number
@@ -118,6 +123,7 @@ export class VillageScene {
       ...props.visitors.map((hero) => ({ hero, kind: 'visitor' as const })),
     ])
     this.paces = new Map(living.map((hero) => [hero.id, PACE[hero.condition]]))
+    this.syncAway(new Set(props.awayIds))
     const party = new Set(props.partyIds)
     for (const walker of this.walkers.values()) {
       this.setMarker(walker, walker.kind === 'roster' && party.has(walker.id))
@@ -203,6 +209,8 @@ export class VillageScene {
         rig: buildCharacter(look),
         key,
         state: 'idle',
+        away: false,
+        fresh: true,
         timer: random() * 3,
         target: new THREE.Vector3(),
         speed: 0.9 + random() * 0.3,
@@ -227,6 +235,36 @@ export class VillageScene {
         disposeTree(walker.root)
         this.walkers.delete(id)
       }
+    }
+  }
+
+  // Starts the walk out for heroes who just left, and the walk in for those
+  // who just came back. Heroes already away when the page opens stay hidden.
+  private syncAway(away: Set<string>) {
+    let order = 0
+    for (const walker of this.walkers.values()) {
+      if (walker.kind !== 'roster') {
+        continue
+      }
+      const isAway = away.has(walker.id)
+      if (isAway && !walker.away) {
+        walker.away = true
+        if (walker.fresh) {
+          walker.state = 'gone'
+          walker.root.visible = false
+        } else {
+          walker.state = 'gather'
+          walker.target.set(GATHER.x + ((order % 3) - 1) * 0.75, 0, GATHER.z + Math.floor(order / 3) * 0.75)
+          order += 1
+        }
+      } else if (!isAway && walker.away) {
+        walker.away = false
+        walker.root.visible = true
+        walker.root.position.set(GATE.x + (walker.random() - 0.5) * 1.2, 0, GATE.z)
+        walker.state = 'arrive'
+        walker.target.set(PLAZA.min + walker.random() * (PLAZA.max - PLAZA.min), 0, walker.random() * PLAZA.max)
+      }
+      walker.fresh = false
     }
   }
 
@@ -317,6 +355,20 @@ export class VillageScene {
       walker.marker.position.y = walker.rig.height + 0.2 + Math.sin(time * 3 + walker.phase) * 0.04
     }
     const pace = walker.kind === 'roster' ? (this.paces.get(walker.id) ?? 1) : 0.8
+    if (walker.state === 'gone') {
+      return
+    }
+    if (walker.state === 'pack') {
+      // A little hop while packing supplies, then off to the gate.
+      idlePose(walker.rig, time, walker.phase)
+      walker.rig.group.position.y = Math.abs(Math.sin(time * 9 + walker.phase)) * 0.07
+      walker.timer -= delta
+      if (walker.timer <= 0) {
+        walker.state = 'leave'
+        walker.target.set(GATE.x + (walker.random() - 0.5) * 0.8, 0, GATE.z + 0.6)
+      }
+      return
+    }
     if (walker.state === 'idle') {
       idlePose(walker.rig, time, walker.phase)
       walker.timer -= delta
@@ -336,11 +388,20 @@ export class VillageScene {
     const dz = walker.target.z - position.z
     const distance = Math.hypot(dx, dz)
     if (distance < 0.05) {
-      walker.state = 'idle'
-      walker.timer = 1.5 + walker.random() * 4
+      if (walker.state === 'gather') {
+        walker.state = 'pack'
+        walker.timer = 1.2 + walker.random() * 0.6
+      } else if (walker.state === 'leave') {
+        walker.state = 'gone'
+        walker.root.visible = false
+      } else {
+        walker.state = 'idle'
+        walker.timer = 1.5 + walker.random() * 4
+      }
       return
     }
-    const stepLength = Math.min(distance, walker.speed * pace * delta)
+    const hurry = walker.state === 'gather' || walker.state === 'leave' ? 1.4 : 1
+    const stepLength = Math.min(distance, walker.speed * pace * hurry * delta)
     position.x += (dx / distance) * stepLength
     position.z += (dz / distance) * stepLength
     walker.root.rotation.y = turnToward(walker.root.rotation.y, Math.atan2(dx, dz), delta * 8)
@@ -375,7 +436,7 @@ export class VillageScene {
     let best: Walker | null = null
     let bestDistance = PICK_RADIUS
     for (const walker of this.walkers.values()) {
-      if (walker.kind !== 'roster') {
+      if (walker.kind !== 'roster' || !walker.root.visible) {
         continue
       }
       point.copy(walker.root.position).setY(walker.rig.height * 0.5).project(this.camera)

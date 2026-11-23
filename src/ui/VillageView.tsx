@@ -6,6 +6,7 @@ import { VillageScene } from './voxel/VillageScene'
 type Props = {
   roster: Hero[]
   visitors: Hero[]
+  awayIds: string[]
   partyIds: string[]
   selectedId: string | null
   onSelect: (id: string) => void
@@ -17,7 +18,7 @@ type Props = {
   active: boolean
 }
 
-export function VillageView({ roster, visitors, partyIds, selectedId, onSelect, onPickBuilding, villageLabel, buildings, constructing, buildingLabels, active }: Props) {
+export function VillageView({ roster, visitors, awayIds, partyIds, selectedId, onSelect, onPickBuilding, villageLabel, buildings, constructing, buildingLabels, active }: Props) {
   const canvasRef = useRef<HTMLCanvasElement>(null)
   const sceneRef = useRef<VillageScene | null>(null)
   const onSelectRef = useRef(onSelect)
@@ -43,7 +44,7 @@ export function VillageView({ roster, visitors, partyIds, selectedId, onSelect, 
   }, [])
 
   useEffect(() => {
-    sceneRef.current?.update({ roster, visitors, partyIds, selectedId, buildings, constructing, labels: buildingLabels })
+    sceneRef.current?.update({ roster, visitors, awayIds, partyIds, selectedId, buildings, constructing, labels: buildingLabels })
   })
 
   useEffect(() => {

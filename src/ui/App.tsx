@@ -307,7 +307,8 @@ export function App() {
     <div className="game">
       <Suspense fallback={<div className="village-canvas" />}>
         <VillageView
-          roster={save.roster.filter((hero) => !away.has(hero.id))}
+          roster={save.roster}
+          awayIds={[...away]}
           visitors={save.visitors}
           partyIds={(save.presets.find((preset) => preset.id === save.presetId)?.slots ?? []).map((slot) => slot.id)}
           selectedId={selectedId}

@@ -40,6 +40,7 @@ Cursor 작업 9–11은 서로 겹치지 않아 순서 상관없다. 11번은 co
 | 10 | 효과음 (코드 합성) + 음량 설정 | 중간 | 완료 (c657c25) |
 | 11 | 해가 바뀌면 나이 먹기 | 작음 | 완료 (551fb7e) |
 | 12 | GitHub Pages 배포 | 작음 | 대기 (사용자가 저장소를 먼저 올려야 함) |
+| 13 | 원정 화면 그림·소리 다듬기 | 중간 | 대기 |
 
 ---
 
@@ -402,6 +403,42 @@ GitHub Pages(프로젝트 사이트, 주소 https://<계정>.github.io/<저장�
 
 완료 기준: 로컬에서 BASE_PATH=/<저장소 이름>/ npm run build 후 npx vite preview --base /<저장소 이름>/ 로 열어 마을·3D·폰트·아이콘이 모두 보인다.
 사용자가 push한 뒤 Actions가 초록색으로 끝나고 Pages 주소에서 게임이 열린다.
+```
+
+메모:
+
+---
+
+## 13. 원정 화면 그림·소리 다듬기
+
+Claude Code가 원정 흐름(Docs/expedition.md A–D단계)을 끝냈다: 시간이 걸리는 원정, 전투 창(던전·출발 준비·파티 편성·원정 기록), 메인 화면 진행 패널, 마을 문으로 나가고 들어오는 영웅. 동작과 구조는 끝났고, 그림과 소리를 다듬는 작업이다.
+
+**전달할 내용**
+
+```
+Docs/expedition.md의 E·F단계. 원정 화면의 그림과 소리를 다듬는다. 게임 규칙(src/core)과 화면 흐름은 바꾸지 않는다.
+
+관련 파일:
+- src/ui/game/battleScreens.tsx: 전투 창. DungeonBoard(던전 탭), Prep(출발 준비), PartyEditor, History
+- src/ui/ExpeditionPanel.tsx: 메인 화면 진행 패널
+- src/ui/voxel/world.ts: buildTerrain의 "The village gate on the south road" (지금은 기둥 두 개 + 들보의 임시 문)
+- src/ui/voxel/enemies.ts: 몬스터 3D 모델 (buildEnemy)
+- src/ui/voxel/portrait.ts: 영웅 초상 렌더러
+
+할 일:
+1. 몬스터 초상: portrait.ts처럼 몬스터 3D 모델을 찍어 이미지로 캐시하는 monsterPortraitUrl(refId)을 만든다(같은 공유 렌더러 사용).
+   던전 탭의 "보스"·"일반 몬스터" 칩 옆에 초상을 넣는다. 보스는 더 크게.
+2. 던전 미리보기: 던전 탭 가운데 카드 위쪽에 던전 분위기 그림을 넣는다. BattleScene의 티어 테마(바닥·벽·횃불·수정)와 보스 모델로
+   작은 3D 장면을 한 번 렌더해 이미지로 캐시한다(던전마다 1장). 잠긴 던전은 어둡게 + 물음표.
+3. 마을 문: 임시 문을 복셀 그림체로 다시 만든다(돌 기둥, 나무 아치, 깃발, 등불). 위치(GATE)와 크기는 그대로(영웅이 지나간다).
+   원정 중인 파티 수를 문 옆 표지판에 3D 이름표(makeLabel)로 띄운다. VillageScene에 숫자를 넘기는 최소한의 prop 추가는 허용.
+4. 출정 도장: 출발 준비의 출정 버튼을 누르면 도장 찍는 짧은 연출(빨간 도장이 쿵 찍히고 흔들림, 0.4초) 뒤에 창이 닫히게 한다. CSS 애니메이션으로.
+   연출 중에는 버튼을 다시 누를 수 없게 한다.
+5. 소리(sound.ts에 추가): 출발 나팔(depart), 귀환(return). App.tsx에서 출발 토스트와 귀환 토스트에 맞춰 낸다(귀환은 지금 victory/defeat를 내고 있으니 그 앞에 return을 짧게).
+   진행 패널의 3D 전투는 지금 victory/defeat만 낸다. 패널이 펼쳐져 있을 때만 hit 소리를 아주 작게(설정 음량의 30%) 낸다.
+6. 진행 패널이 폰 세로 화면에서 마을을 너무 가리지 않는지 보고, 필요하면 접힌 상태를 기본으로 하는 조건을 정한다(예: 높이 700px 미만).
+
+완료 기준: npx tsc --noEmit, npm test, npm run build 통과. 개발 서버에서 출정 → 문으로 나감 → 패널 → 귀환까지 한 번 보고, 375px 폰 화면도 확인한다.
 ```
 
 메모:
