@@ -60,7 +60,7 @@ Claude Code, Cursor, GPT(Codex)가 함께 쓰는 작업 목록이다. 작업 하
 | 18 | 밸런스 도구 리뷰 지적 수정 | GPT | `tools/first-hour.ts`, `tools/tune-curve.ts`, `Docs/dungeons.md` | 완료 (97d091e) |
 | 19 | 세대 화면 (가족·관계·청혼·인구·가계도) | Cursor | `src/ui/game/heroScreens.tsx`, `villageScreens.tsx`, `App.tsx`, `styles.css`, `src/locales/*` | 완료 (14395ae) |
 | 20 | 세대 3D 연출 (부부·아이·광장) | Cursor | `src/ui/voxel/VillageScene.ts`, `src/ui/VillageView.tsx` | 완료 (dc01bce) |
-| 21 | 세대 core 코드 리뷰 (443bde5) | GPT | `Docs/reviews/443bde5.md` (새 파일만) | 대기 (지금 시작 가능) |
+| 21 | 세대 core 코드 리뷰 (443bde5) | GPT | `Docs/reviews/443bde5.md` (새 파일만) | 완료 (이 커밋) |
 | 22 | 세대 시뮬레이터 | GPT | `tools/generations.ts` (새 파일), `package.json` 스크립트 한 줄 | 대기 (지금 시작 가능) |
 | 23 | 첫 3시간 시뮬레이터를 여러 시드로 | GPT | `tools/first-hour.ts` | 대기 (22와 따로, 파일 안 겹침) |
 
@@ -656,6 +656,8 @@ Docs/generations.md를 읽고 마을 3D에서 가족이 보이게 한다. src/ui
 ```
 
 메모:
+- 가족 간 청혼, 출산 침대 예약 누락, 계절 경계 처리 순서, 사망 영웅의 청혼 승낙, 중복 특성 유전 확률을 리뷰에 기록했다.
+- 가족 간 구애, 사망 후 승낙, 출산 뒤 6/5 침대 사용을 재현했다. 기존 외형 회귀 테스트와 세이브 8 변환도 확인했다.
 
 ---
 
