@@ -27,7 +27,7 @@ export type ReplayStep =
   | (Base & { type: 'interrupt'; actorId: string; targetId: string })
   | (Base & { type: 'brace'; actorId: string })
   | (Base & { type: 'phase'; actorId: string; phase: number })
-  | (Base & { type: 'summon'; actorId: string; units: string[]; refs: string[] })
+  | (Base & { type: 'summon'; actorId: string; units: string[]; refs: string[]; hps: number[] })
   | (Base & { type: 'clear'; floor: number })
   | (Base & { type: 'retreat' })
   | (Base & { type: 'end'; victory: boolean })
@@ -137,7 +137,12 @@ export function buildSteps(report: DungeonReport): ReplayStep[] {
           .split(',')
           .map((id) => id.trim())
           .filter(Boolean)
-        steps.push({ type: 'summon', actorId, units, refs, log: index, downs: [] })
+        // Real health of each summoned unit; missing on reports made before 3c fixes.
+        const hps = text(entry, 'hps')
+          .split(',')
+          .map((value) => Number(value))
+          .filter((value) => Number.isFinite(value) && value > 0)
+        steps.push({ type: 'summon', actorId, units, refs, hps, log: index, downs: [] })
         break
       }
       case 'log.down':

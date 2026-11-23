@@ -216,6 +216,9 @@ export function simulateFloor(
   const enemies = monsterIds.map((id, index) => enemyUnit(monsterById(id), index, monsterScale))
   floors?.push([...heroes, ...enemies].map(replayUnit))
   push(log, 0, 'log.floor', { floor: floorNumber })
+  for (const hero of heroes) {
+    hero.braced = false
+  }
   const trap = springTrap(heroes, trapChance, rng, log)
   // Ambushers start ready to strike, unless a hero on watch spots them.
   const ambushers = enemies.filter((enemy) => enemy.ambush)
@@ -297,7 +300,8 @@ export function simulateFloor(
         endTurn(actor, true)
         continue
       }
-      if (!(kit && drinkPotion(actor, kit, tactics, tick, log))) {
+      // A bracing hero holds still: no potions until the blast lands (review 7eaca30).
+      if (!(kit && !actor.braced && drinkPotion(actor, kit, tactics, tick, log))) {
         heroAct(actor, heroes, enemies, tactics, rng, tick, log)
       }
     } else {
@@ -504,14 +508,18 @@ function enemyAct(actor: BattleUnit, heroes: BattleUnit[], rng: Rng, tick: numbe
   }
   // Boss pattern: every few actions it charges, and the next one blasts everyone.
   if (actor.blastEvery > 0) {
+    // While charging, the boss waits for its blast clock (review 7eaca30).
+    if (actor.charging && tick < actor.blastAt) {
+      return
+    }
     if (actor.charging) {
       actor.charging = false
       actor.sinceBlast = 0
       push(log, tick, 'log.blast', actorParams(actor))
       for (const target of living(heroes)) {
-        const before = target.hp
+        const before = target.taken
         strike(actor, target, rng, tick, log, actor.blastPower * (target.braced ? combatRules.braceFactor : 1))
-        target.blastTaken += before - target.hp
+        target.blastTaken += target.taken - before
       }
       for (const hero of heroes) {
         hero.braced = false
@@ -533,9 +541,9 @@ function enemyAct(actor: BattleUnit, heroes: BattleUnit[], rng: Rng, tick: numbe
     const back = living(heroes).filter((unit) => unit.row === 'back')
     const victim = lowestHp(back.length ? back : living(heroes))
     push(log, tick, 'log.ambush', { ...actorParams(actor), ...targetParams(victim) })
-    const before = victim.hp
+    const before = victim.taken
     strike(actor, victim, rng, tick, log, magicRules.ambushPower)
-    victim.ambushTaken += before - victim.hp
+    victim.ambushTaken += victim.taken - before
     return
   }
   // Some bosses sweep the whole party every few turns.
@@ -728,7 +736,7 @@ function advancePhases(enemies: BattleUnit[], scale: number, tick: number, log: 
           unit.id = `${unit.refId}-${unit.index + 1}`
           enemies.push(unit)
         }
-        push(log, tick, 'log.summon', { ...actorParams(boss), units: called.map((unit) => unit.id).join(','), refs: called.map((unit) => unit.refId).join(',') })
+        push(log, tick, 'log.summon', { ...actorParams(boss), units: called.map((unit) => unit.id).join(','), refs: called.map((unit) => unit.refId).join(','), hps: called.map((unit) => unit.maxHp).join(',') })
       }
     }
   }

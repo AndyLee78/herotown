@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import { createHeroUnit, simulateFloor } from './combat'
-import { dungeonById, dungeons, progression } from './data'
+import { dungeonById, dungeons, monsterById, progression } from './data'
 import { DEFAULT_TACTICS, defeatReason, runDungeon } from './dungeon'
 import { createHero } from './hero'
 import { winRate } from '../../tools/curve'
@@ -109,7 +109,11 @@ describe('dungeon battles', () => {
     }
     for (const dungeon of dungeons) {
       expect(winRate(dungeon.id, dungeon.recommendedLevel, 12), dungeon.id).toBeGreaterThanOrEqual(0.5)
-      if (dungeon.recommendedLevel >= 4) {
+      // Boss-pattern dungeons turn on who can break the blast more than on level
+      // (Docs/depth.md 3c): the fixed lineup has three breakers, so the lower
+      // bound is checked in citadel.test.ts with a party that has none.
+      const patterned = dungeon.floors.some((floor) => floor.monsters.some((id) => (monsterById(id).blastEvery ?? 0) > 0))
+      if (dungeon.recommendedLevel >= 4 && !patterned) {
         expect(winRate(dungeon.id, dungeon.recommendedLevel - 3, 12), dungeon.id).toBeLessThan(0.5)
       }
     }

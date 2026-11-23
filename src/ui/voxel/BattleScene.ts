@@ -559,7 +559,7 @@ export class BattleScene {
         break
       }
       case 'summon':
-        this.summonAdds(step.units, step.refs, instant)
+        this.summonAdds(step.units, step.refs, step.hps, instant)
         break
       case 'clear':
         for (const fighter of this.fighters.values()) {
@@ -706,7 +706,7 @@ export class BattleScene {
     }
   }
 
-  private summonAdds(ids: string[], refs: string[], instant: boolean) {
+  private summonAdds(ids: string[], refs: string[], hps: number[], instant: boolean) {
     const existing = [...this.fighters.values()].filter((fighter) => fighter.side === 'enemy' && fighter.alive)
     ids.forEach((id, index) => {
       if (this.fighters.has(id)) {
@@ -720,8 +720,8 @@ export class BattleScene {
         side: 'enemy',
         row: def?.row ?? 'front',
         reach: def?.reach ?? 'melee',
-        hp: def?.hp ?? 80,
-        maxHp: def?.hp ?? 80,
+        hp: hps[index] ?? def?.hp ?? 80,
+        maxHp: hps[index] ?? def?.hp ?? 80,
         boss: def?.boss ?? false,
       }
       const fighter = this.addFighter(unit)
