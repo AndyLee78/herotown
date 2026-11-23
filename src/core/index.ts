@@ -2,6 +2,8 @@ export { adRules, ageBands, classById, classList, combatRules, dungeonById, dung
 export { SAVE_VERSION, adsRemaining, bedCount, catchUp, expeditionSlots, exportSave, freshState, importSave, localDateKey, migrate, reduce, restBonus, townLevel, visitorCap, visitorStay } from './game'
 export { DEFAULT_TACTICS, applyReport, runDungeon } from './dungeon'
 export { ageUp, canDeploy, createHero, deriveStats, generateVisitors, grantXp, hireCost, potentialBand, restHero, statRange, train, withAge } from './hero'
+export { guideStatus, guideSteps } from './guide'
+export type { GuideStatus, GuideStep } from './guide'
 export { createRng } from './rng'
 export { STAT_KEYS } from './types'
 export type {

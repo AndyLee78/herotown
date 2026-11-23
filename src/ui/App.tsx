@@ -2,6 +2,7 @@ import { Clock } from 'lucide-react'
 import { lazy, Suspense, useEffect, useRef, useState, type ReactNode } from 'react'
 import { useTranslation } from 'react-i18next'
 import {
+  guideStatus,
   exportSave,
   importSave,
   reduce,
@@ -19,7 +20,7 @@ import {
 import { rewardedAds } from './ads'
 import { addGameOffset, gameNow, offsetSteps, resetGameOffset } from './clock'
 import { Inn, Party, Roster } from './game/heroScreens'
-import { UiIcon, TownLogo } from './game/icons'
+import { UiIcon, TownLogo, type ResourceKind } from './game/icons'
 import { Bar, Res, Window, needsWarning, useNow, waitLabel } from './game/kit'
 import { Absence, ConfirmDepart, Report, Settings, Smith, Town } from './game/villageScreens'
 import { loadGame, storeGame } from './storage'
@@ -134,6 +135,9 @@ export function App() {
     } else if (next.notice) {
       pushToast(t(`result.${next.notice}`))
     }
+    if (action.type === 'claimGuide' && next !== current && !guideStatus(next).step) {
+      pushToast(t('guide.done'))
+    }
     if (action.type === 'depart' && !next.notice) {
       setConfirm(null)
       setReportUnseen(false)
@@ -221,6 +225,7 @@ export function App() {
       </Suspense>
 
       <Hud save={save} onOpen={open} />
+      <GuideCard save={save} onOpen={open} onClaim={() => apply({ type: 'claimGuide' })} />
 
       <nav className="dock" aria-label={t('label.village')}>
         {DOCK.map((item) => {
@@ -330,4 +335,40 @@ function downloadSave(contents: string) {
   link.download = 'herotown-save.json'
   link.click()
   URL.revokeObjectURL(url)
+}
+
+// The first-play guide: current goal, progress and reward under the HUD.
+// Tapping it opens the screen where the goal is done.
+function GuideCard({ save, onOpen, onClaim }: { save: GameState; onOpen: (screen: Screen) => void; onClaim: () => void }) {
+  const { t } = useTranslation()
+  const status = guideStatus(save)
+  const step = status.step
+  if (!step) {
+    return null
+  }
+  const rewards = Object.entries(step.reward) as [ResourceKind, number][]
+  return (
+    <aside className={status.done ? 'guide done' : 'guide'} aria-live="polite">
+      <button type="button" className="guide-body" onClick={() => onOpen(step.screen)}>
+        <span className="guide-tag">{t('guide.title', { index: status.index + 1, total: status.total })}</span>
+        <strong>{t(`guide.step.${step.id}`)}</strong>
+        <span className="guide-progress">
+          <Bar value={status.current} max={status.target} tone={status.done ? 'good' : 'info'} />
+          <span>
+            {status.current}/{status.target}
+          </span>
+        </span>
+      </button>
+      <span className="guide-reward">
+        {rewards.map(([kind, amount]) => (
+          <Res key={kind} kind={kind} amount={`+${amount}`} light />
+        ))}
+        {status.done ? (
+          <button type="button" className="btn gold small" onClick={onClaim}>
+            {t('guide.claim')}
+          </button>
+        ) : null}
+      </span>
+    </aside>
+  )
 }

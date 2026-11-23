@@ -479,5 +479,19 @@
     "noReport": "No expedition yet.",
     "cancel": "Cancel",
     "wagesShort": "Wages short"
+  },
+  "guide": {
+    "title": "Guide {{index}}/{{total}}",
+    "claim": "Claim",
+    "done": "Guide complete! Grow your village as you like.",
+    "step": {
+      "hire": "Hire a hero at the inn",
+      "team": "Gather three heroes",
+      "cave": "Form a party and clear the Hill Cave",
+      "build": "Build something from Village",
+      "auto": "Turn on auto expeditions in Party",
+      "guild": "Build the guild once the village reaches level 2",
+      "mine": "Bring a tank and a healer to clear the Abandoned Mine"
+    }
   }
 }

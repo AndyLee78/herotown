@@ -1,3 +1,4 @@
+import { claimGuide } from './guide'
 import { adRules, classById, combatRules, dungeonById, lifeRules, progression, smithRules, timeRules, villageRules } from './data'
 import { forgeGear, normalizeGear, recipeById } from './gear'
 import { applyReport, DEFAULT_TACTICS, runDungeon } from './dungeon'
@@ -6,7 +7,7 @@ import { createRng } from './rng'
 import type { Rng } from './rng'
 import type { ClassId, CombatError, DungeonReport, Gear, GearSlot, Hero, Row, Tactics } from './types'
 
-export const SAVE_VERSION = 4
+export const SAVE_VERSION = 5
 
 export type SeasonId = 'spring' | 'summer' | 'autumn' | 'winter'
 
@@ -130,6 +131,7 @@ export type GameState = {
   notice: GameNotice
   auto: AutoPlan
   ads: AdUses
+  guideStep: number
 }
 
 export type AdPlacement = 'absence' | 'construction' | 'temple'
@@ -171,6 +173,7 @@ export type GameAction =
   | { type: 'setSeed'; seed: number }
   | { type: 'reset'; now: number }
   | { type: 'adReward'; placement: AdPlacement; now: number }
+  | { type: 'claimGuide' }
 
 export function freshState(seed: number, now: number): GameState {
   return {
@@ -205,6 +208,7 @@ export function freshState(seed: number, now: number): GameState {
     notice: null,
     auto: { enabled: false, dungeonId: 'hill_cave', policy: 'safe', material: 'wood', party: [] },
     ads: emptyAds(now),
+    guideStep: 0,
   }
 }
 
@@ -431,6 +435,9 @@ function apply(state: GameState, action: GameAction): GameState {
   }
   if (action.type === 'setSeed') {
     return { ...state, notice: null, seed: action.seed }
+  }
+  if (action.type === 'claimGuide') {
+    return claimGuide(state)
   }
   if (action.type === 'adReward') {
     return grantAdReward(state, action.placement, action.now)
@@ -1246,6 +1253,7 @@ function normalize(record: Record<string, unknown>, now: number): GameState {
         }
       : null,
     ads: readAds(record.ads, now),
+    guideStep: numberOr(record.guideStep, 0),
     materials: readMaterials(record.materials, base.materials),
     auto: isAuto(record.auto) ? record.auto : base.auto,
     notice: null,

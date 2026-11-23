@@ -1,0 +1,11 @@
+{
+  "steps": [
+    { "id": "hire", "goal": { "type": "roster", "target": 1 }, "screen": "inn", "reward": { "gold": 20 } },
+    { "id": "team", "goal": { "type": "roster", "target": 3 }, "screen": "inn", "reward": { "wood": 10 } },
+    { "id": "cave", "goal": { "type": "cleared", "dungeon": "hill_cave" }, "screen": "party", "reward": { "gold": 30 } },
+    { "id": "build", "goal": { "type": "build" }, "screen": "town", "reward": { "stone": 10 } },
+    { "id": "auto", "goal": { "type": "auto" }, "screen": "party", "reward": { "gold": 20 } },
+    { "id": "guild", "goal": { "type": "building", "building": "guild", "target": 1 }, "screen": "town", "reward": { "iron": 5 } },
+    { "id": "mine", "goal": { "type": "cleared", "dungeon": "abandoned_mine" }, "screen": "party", "reward": { "gold": 50 } }
+  ]
+}
