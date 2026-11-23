@@ -1,6 +1,6 @@
 import * as THREE from 'three'
 import { MapControls } from 'three/examples/jsm/controls/MapControls.js'
-import type { BuildingId, Hero } from '../../core'
+import { familyRules, type BuildingId, type Hero } from '../../core'
 import { buildCharacter, idlePose, walkPose, type Rig } from './character'
 import { Builder, disposeTree, makeLabel } from './kit'
 import { hashString, lookFor, lookKey, seeded } from './look'
@@ -19,6 +19,8 @@ export type VillageSceneProps = {
   constructing: BuildingId | null
   labels: Record<BuildingId, string>
   expeditions: number
+  weddings: [string, string][]
+  births: string[]
 }
 
 type Area = { minX: number; maxX: number; minZ: number; maxZ: number }
@@ -30,7 +32,7 @@ type Walker = {
   rig: Rig
   key: string
   // gather → pack → leave → gone when a party sets out; arrive when it comes home.
-  state: 'idle' | 'walk' | 'gather' | 'pack' | 'leave' | 'gone' | 'arrive'
+  state: 'idle' | 'walk' | 'gather' | 'pack' | 'leave' | 'gone' | 'arrive' | 'vow'
   away: boolean
   fresh: boolean
   timer: number
@@ -39,6 +41,8 @@ type Walker = {
   phase: number
   random: () => number
   marker: THREE.Object3D | null
+  // Seconds left of running off alone. Children do this between following a parent.
+  solo: number
 }
 
 type LotView = { key: string; group: THREE.Group; label: THREE.Sprite | null; labelText: string; top: number }
@@ -69,6 +73,9 @@ export class VillageScene {
   private gateLabel: THREE.Sprite | null = null
   private gateCount = -1
   private active = true
+  private readonly spouseOf = new Map<string, string>()
+  private readonly parentOf = new Map<string, string>()
+  private readonly bursts: { group: THREE.Group; life: number }[] = []
   private downAt: [number, number] | null = null
   private readonly raycaster = new THREE.Raycaster()
 
@@ -131,6 +138,13 @@ export class VillageScene {
     this.paces = new Map(living.map((hero) => [hero.id, PACE[hero.condition]]))
     this.syncAway(new Set(props.awayIds))
     this.syncGate(props.expeditions)
+    this.syncFamily(living, new Set(props.awayIds))
+    for (const [first, second] of props.weddings) {
+      this.playWedding(first, second)
+    }
+    for (const id of props.births) {
+      this.playBirth(id)
+    }
     const party = new Set(props.partyIds)
     for (const walker of this.walkers.values()) {
       this.setMarker(walker, walker.kind === 'roster' && party.has(walker.id))
@@ -170,6 +184,108 @@ export class VillageScene {
     label.position.set(GATE.x + 2.45, 1.35, GATE.z + 0.55)
     this.scene.add(label)
     this.gateLabel = label
+  }
+
+  // Couples share a walk. Children under 14 stick to one parent who is home.
+  private syncFamily(roster: Hero[], away: Set<string>) {
+    this.spouseOf.clear()
+    this.parentOf.clear()
+    const home = new Set(roster.filter((hero) => !away.has(hero.id)).map((hero) => hero.id))
+    for (const hero of roster) {
+      if (hero.spouseId && hero.id < hero.spouseId && home.has(hero.id) && home.has(hero.spouseId)) {
+        this.spouseOf.set(hero.id, hero.spouseId)
+      }
+      if (hero.age < familyRules.adultAge) {
+        const parent = hero.parents?.find((id) => home.has(id))
+        if (parent) {
+          this.parentOf.set(hero.id, parent)
+        }
+      }
+    }
+  }
+
+  private playWedding(firstId: string, secondId: string) {
+    const first = this.walkers.get(firstId)
+    const second = this.walkers.get(secondId)
+    if (first && second) {
+      first.state = 'vow'
+      second.state = 'vow'
+      first.root.visible = true
+      second.root.visible = true
+      first.root.position.set(PLAZA.min * 0.15, 0, 0.2)
+      second.root.position.set(PLAZA.max * 0.15, 0, 0.2)
+      first.root.rotation.y = Math.atan2(second.root.position.x - first.root.position.x, second.root.position.z - first.root.position.z)
+      second.root.rotation.y = Math.atan2(first.root.position.x - second.root.position.x, first.root.position.z - second.root.position.z)
+      first.timer = 2.6
+      second.timer = 2.6
+    }
+    this.burst(0, 1.3, 0.2, 'wedding')
+  }
+
+  private playBirth(id: string) {
+    const house = LOTS.house
+    this.burst(house.x, 3.3, house.z, 'star')
+    const child = this.walkers.get(id)
+    if (child) {
+      child.root.position.set(house.x + 1.2, 0, house.z + 1.4)
+    }
+  }
+
+  private burst(x: number, y: number, z: number, kind: 'wedding' | 'star') {
+    const group = new THREE.Group()
+    group.position.set(x, y, z)
+    const colors = kind === 'star' ? ['#ffe08a', '#fff6c8', '#ffd84d'] : ['#e0584f', '#ff8fa3', '#f4b4c4', '#fff4ea']
+    const count = kind === 'star' ? 8 : 16
+    for (let index = 0; index < count; index += 1) {
+      const size = kind === 'star' ? 0.22 : 0.16 + (index % 3) * 0.04
+      const mesh = new THREE.Mesh(
+        new THREE.BoxGeometry(size, kind === 'star' ? size : size * 0.45, size * 0.7),
+        new THREE.MeshBasicMaterial({ color: colors[index % colors.length] }),
+      )
+      const angle = (index / count) * Math.PI * 2
+      const speed = kind === 'star' ? 0.35 : 0.7
+      mesh.userData.velocity = new THREE.Vector3(Math.cos(angle) * speed * 0.55, 0.8 + (index % 4) * 0.15, Math.sin(angle) * speed * 0.55)
+      group.add(mesh)
+    }
+    this.scene.add(group)
+    this.bursts.push({ group, life: 2.6 })
+  }
+
+  private stepBursts(delta: number) {
+    for (let index = this.bursts.length - 1; index >= 0; index -= 1) {
+      const burst = this.bursts[index]
+      if (!burst) {
+        continue
+      }
+      burst.life -= delta
+      for (const child of burst.group.children) {
+        if (!(child instanceof THREE.Mesh)) {
+          continue
+        }
+        const velocity = child.userData.velocity as THREE.Vector3
+        child.position.addScaledVector(velocity, delta)
+        velocity.y -= delta * 0.28
+        child.rotation.x += delta * 2
+        child.rotation.y += delta * 3
+      }
+      if (burst.life <= 0) {
+        this.scene.remove(burst.group)
+        burst.group.traverse((object) => {
+          if (object instanceof THREE.Mesh) {
+            object.geometry.dispose()
+            const material = object.material
+            if (Array.isArray(material)) {
+              for (const entry of material) {
+                entry.dispose()
+              }
+            } else {
+              material.dispose()
+            }
+          }
+        })
+        this.bursts.splice(index, 1)
+      }
+    }
   }
 
   private syncLots(props: VillageSceneProps) {
@@ -243,6 +359,7 @@ export class VillageScene {
         phase: random() * 10,
         random,
         marker: null,
+        solo: 0,
       }
       walker.root.add(walker.rig.group)
       this.placeIn(walker, kind === 'visitor' ? YARD_AREA : PLAZA_AREA)
@@ -360,6 +477,49 @@ export class VillageScene {
     this.camera.updateProjectionMatrix()
   }
 
+  private followsSomeone(walker: Walker): boolean {
+    if ([...this.spouseOf.values()].includes(walker.id)) {
+      return true
+    }
+    return this.parentOf.has(walker.id)
+  }
+
+  private canStroll(walker: Walker | undefined): walker is Walker {
+    return walker != null && (walker.state === 'idle' || walker.state === 'walk')
+  }
+
+  // The lower id of a couple picks the path. The other, and young children, keep a side slot.
+  private steerFamilies() {
+    for (const [leaderId, followerId] of this.spouseOf) {
+      const leader = this.walkers.get(leaderId)
+      const follower = this.walkers.get(followerId)
+      if (!this.canStroll(leader) || !this.canStroll(follower)) {
+        continue
+      }
+      this.parkBeside(follower, leader, 0.62)
+    }
+    for (const [childId, parentId] of this.parentOf) {
+      const child = this.walkers.get(childId)
+      const parent = this.walkers.get(parentId)
+      if (!this.canStroll(child) || !this.canStroll(parent) || child.solo > 0) {
+        continue
+      }
+      this.parkBeside(child, parent, -0.48)
+    }
+  }
+
+  private parkBeside(follower: Walker, leader: Walker, side: number) {
+    const yaw = leader.root.rotation.y
+    follower.target.set(leader.root.position.x + Math.cos(yaw) * side, 0, leader.root.position.z - Math.sin(yaw) * side)
+    const distance = Math.hypot(follower.target.x - follower.root.position.x, follower.target.z - follower.root.position.z)
+    if (distance > 0.18) {
+      follower.state = 'walk'
+    } else if (follower.state === 'walk') {
+      follower.state = 'idle'
+      follower.timer = 0.45
+    }
+  }
+
   private readonly tick = () => {
     this.frame = requestAnimationFrame(this.tick)
     const delta = Math.min(this.clock.getDelta(), 0.05)
@@ -367,9 +527,11 @@ export class VillageScene {
       return
     }
     const time = this.clock.elapsedTime
+    this.steerFamilies()
     for (const walker of this.walkers.values()) {
       this.step(walker, delta, time)
     }
+    this.stepBursts(delta)
     this.controls.update()
     this.clampPan()
     this.renderer.render(this.scene, this.camera)
@@ -381,7 +543,19 @@ export class VillageScene {
       walker.marker.position.y = walker.rig.height + 0.2 + Math.sin(time * 3 + walker.phase) * 0.04
     }
     const pace = walker.kind === 'roster' ? (this.paces.get(walker.id) ?? 1) : walker.kind === 'retiree' ? 0.55 : 0.8
+    if (walker.solo > 0) {
+      walker.solo = Math.max(0, walker.solo - delta)
+    }
     if (walker.state === 'gone') {
+      return
+    }
+    if (walker.state === 'vow') {
+      idlePose(walker.rig, time, walker.phase)
+      walker.timer -= delta
+      if (walker.timer <= 0) {
+        walker.state = 'idle'
+        walker.timer = 1.2
+      }
       return
     }
     if (walker.state === 'pack') {
@@ -399,6 +573,13 @@ export class VillageScene {
       idlePose(walker.rig, time, walker.phase)
       walker.timer -= delta
       if (walker.timer <= 0) {
+        if (this.parentOf.has(walker.id) && walker.solo <= 0 && walker.random() < 0.28) {
+          walker.solo = 3 + walker.random() * 2
+        }
+        if (this.followsSomeone(walker) && walker.solo <= 0) {
+          walker.timer = 0.6
+          return
+        }
         const area = walker.kind === 'visitor' ? YARD_AREA : PLAZA_AREA
         walker.target.set(
           area.minX + walker.random() * (area.maxX - area.minX),
@@ -426,7 +607,7 @@ export class VillageScene {
       }
       return
     }
-    const hurry = walker.state === 'gather' || walker.state === 'leave' ? 1.4 : 1
+    const hurry = walker.state === 'gather' || walker.state === 'leave' ? 1.4 : walker.solo > 0 ? 1.65 : 1
     const stepLength = Math.min(distance, walker.speed * pace * hurry * delta)
     position.x += (dx / distance) * stepLength
     position.z += (dz / distance) * stepLength

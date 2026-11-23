@@ -27,6 +27,7 @@ export function VillageView({ roster, visitors, awayIds, retirees, partyIds, sel
   onSelectRef.current = onSelect
   const onPickBuildingRef = useRef(onPickBuilding)
   onPickBuildingRef.current = onPickBuilding
+  const seenRoster = useRef<Map<string, string | null> | null>(null)
 
   useEffect(() => {
     const canvas = canvasRef.current
@@ -46,7 +47,35 @@ export function VillageView({ roster, visitors, awayIds, retirees, partyIds, sel
   }, [])
 
   useEffect(() => {
-    sceneRef.current?.update({ roster, visitors, awayIds, retirees, partyIds, selectedId, buildings, constructing, labels: buildingLabels, expeditions })
+    const weddings: [string, string][] = []
+    const births: string[] = []
+    const previous = seenRoster.current
+    if (previous) {
+      for (const hero of roster) {
+        const before = previous.get(hero.id)
+        if (before === undefined && hero.parents && hero.age === 0) {
+          births.push(hero.id)
+        }
+        if (before !== undefined && hero.spouseId && before !== hero.spouseId && hero.id < hero.spouseId) {
+          weddings.push([hero.id, hero.spouseId])
+        }
+      }
+    }
+    seenRoster.current = new Map(roster.map((hero) => [hero.id, hero.spouseId ?? null]))
+    sceneRef.current?.update({
+      roster,
+      visitors,
+      awayIds,
+      retirees,
+      partyIds,
+      selectedId,
+      buildings,
+      constructing,
+      labels: buildingLabels,
+      expeditions,
+      weddings,
+      births,
+    })
   })
 
   useEffect(() => {
