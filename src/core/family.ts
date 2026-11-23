@@ -1,4 +1,4 @@
-import { bandForAge, ageBands, classById, dungeonById, familyRules, maxAge, names, timeRules, traits, villageRules } from './data'
+import { bandForAge, ageBands, classById, dungeons, familyRules, maxAge, names, timeRules, traits, villageRules } from './data'
 import { genesFor, inheritGenes } from './genes'
 import { createHero } from './hero'
 import { createRng, type Rng } from './rng'
@@ -437,7 +437,8 @@ export function tidyFamily(state: GameState, now: number): GameState {
 
 // Whether a hero who leaves for the graveyard is remembered as a legend.
 export function isLegend(hero: Hero): boolean {
-  return hero.level >= familyRules.legendLevel || hero.clears.some((id) => dungeonById(id).tier >= familyRules.legendTier)
+  // Clears of dungeons no longer in the data are kept on the grave but do not count.
+  return hero.level >= familyRules.legendLevel || hero.clears.some((id) => (dungeons.find((dungeon) => dungeon.id === id)?.tier ?? 0) >= familyRules.legendTier)
 }
 
 export function graveFor(hero: Hero, cause: 'battle' | 'oldAge', year?: number): Grave {
@@ -475,7 +476,8 @@ export function passAway(state: GameState, events: FamilyEvents): GameState {
   const graves: Grave[] = []
   const dies = (hero: Hero) => {
     const chance = oldAgeChance(hero.age)
-    if (chance <= 0 || away.has(hero.id) || rng.next() >= chance) {
+    // A hero already fallen in battle waits for revival; old age does not take them.
+    if (chance <= 0 || hero.condition === 'dead' || away.has(hero.id) || rng.next() >= chance) {
       return false
     }
     graves.push(graveFor(hero, 'oldAge', state.calendar.year))

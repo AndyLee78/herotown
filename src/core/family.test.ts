@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest'
 import { createHeroUnit } from './combat'
 import { familyRules, maxAge, progression, timeRules, villageRules } from './data'
-import { ancestorsOf, bondOf, bondParty, bondStage, canCourt, familyLegends, familyOf, graveFor, hallOfFame, legendBonus, oldAgeChance, passAway, femaleChance, housingFree, makeChild, nextAge, partyBonus, population, topBonds } from './family'
+import { isLegend, ancestorsOf, bondOf, bondParty, bondStage, canCourt, familyLegends, familyOf, graveFor, hallOfFame, legendBonus, oldAgeChance, passAway, femaleChance, housingFree, makeChild, nextAge, partyBonus, population, topBonds } from './family'
 import { canDeploy, createHero, type HeroDraft } from './hero'
 import { freshState, migrate, reduce, type GameState } from './game'
 import { createRng } from './rng'
@@ -361,5 +361,44 @@ describe('stage 2b: old age, graves and legends', () => {
     const loaded = migrate(JSON.parse(JSON.stringify(saved)), now)
     expect(loaded.graveyard[0]).toMatchObject({ id: 'old', level: 3 })
     expect(hallOfFame(loaded)).toEqual([])
+  })
+})
+
+describe('review f7fdf88 fixes', () => {
+  // Winter, two seconds before the year turns.
+  const lateWinter = (state: GameState): GameState => ({ ...state, calendar: { year: 1, season: 'winter', intoSeasonMs: timeRules.seasonMs - 2000 } })
+  const yearTurn = now + 2000
+
+  it('buries a hero who died on an expedition home before new year with that year and age, however time is caught up', () => {
+    const fallen = hero('m', 'male', { age: 50, deaths: 1 })
+    const report = { victory: false, defeatReason: 'wiped' as const, ticks: 1, floorsCleared: 0, gold: 0, xp: 0, units: [], log: [], conditions: [{ id: 'm', condition: 'dead' as const, fatigue: 0 }] }
+    const expedition = { id: 'e1', presetId: 'p1', dungeonId: 'abandoned_mine', heroIds: ['m'], seed: 1, report, departAt: now - 9000, battleAt: now - 5000, battleEndAt: now - 3000, returnAt: yearTurn - 1000 }
+    const start = lateWinter(town([fallen, hero('f', 'female')], { expeditions: [expedition] }))
+    const once = reduce(start, { type: 'catchUp', now: now + 60_000 })
+    const split = reduce(reduce(start, { type: 'catchUp', now: yearTurn - 500 }), { type: 'catchUp', now: now + 60_000 })
+    for (const state of [once, split]) {
+      expect(state.graveyard.find((grave) => grave.id === 'm')).toMatchObject({ cause: 'battle', year: 1, age: 50 })
+    }
+  })
+
+  it('starts mourning when the spouse passed away, even when the catch-up hits the offline cap', () => {
+    const elder = hero('m', 'male', { age: maxAge - 1, spouseId: 'f' })
+    const wife = hero('f', 'female', { age: 50, spouseId: 'm' })
+    const start = lateWinter(town([elder, wife]))
+    const after = reduce(start, { type: 'catchUp', now: now + 24 * 60 * 60 * 1000 })
+    expect(after.graveyard.some((grave) => grave.id === 'm' && grave.cause === 'oldAge')).toBe(true)
+    expect(after.roster.find((entry) => entry.id === 'f')?.widowedAt).toBe(yearTurn)
+  })
+
+  it('leaves a hero fallen in battle to be revived rather than taken by old age', () => {
+    const fallen = hero('m', 'male', { age: maxAge - 1, condition: 'dead', deaths: 1 })
+    const after = reduce(lateWinter(town([fallen])), { type: 'catchUp', now: now + 60_000 })
+    expect(after.roster.map((entry) => entry.id)).toEqual(['m'])
+    expect(after.graveyard).toEqual([])
+  })
+
+  it('ignores clears of dungeons that are no longer in the data when judging legends', () => {
+    expect(isLegend(hero('m', 'male', { level: 1, clears: ['retired_dungeon'] }))).toBe(false)
+    expect(isLegend(hero('m', 'male', { level: 1, clears: ['retired_dungeon', 'barrow'] }))).toBe(true)
   })
 })

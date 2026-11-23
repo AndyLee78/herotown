@@ -541,13 +541,16 @@ function advance(state: GameState, now: number): GameState {
     const until = Math.min(Math.max(turnAt, next.lastTickAt + 1), effectiveNow)
     const piece = until - next.lastTickAt
     const before = next.calendar
-    next = moveCalendar(next, piece, wages, aged)
+    // Everything due within the piece settles first, in the old year, so a
+    // party home just before a year turns is buried with that year's age.
     next = finishConstruction(next, until, completed)
     next = finishSmith(next, until, crafted)
     next = finishCare(next, until)
     next = recoverRoster(next, piece, until)
     next = updateVisitors(next, until, visitors)
     next = returnExpeditions(next, until, returned)
+    // Then the season (and maybe the year) turns at the end of the piece.
+    next = moveCalendar(next, piece, wages, aged)
     next = deliverBirths(next, until, family)
     for (let turned = seasonsBetween(before, next.calendar); turned > 0; turned -= 1) {
       next = turnSeason(next, until, family)
@@ -556,7 +559,8 @@ function advance(state: GameState, now: number): GameState {
     for (let years = next.calendar.year - before.year; years > 0; years -= 1) {
       next = passAway(next, family)
     }
-    next = { ...next, lastTickAt: until }
+    // Widow and unbond at the moment someone left, not when the catch-up ends.
+    next = tidyFamily({ ...next, lastTickAt: until }, until)
   }
   const autoTally = { runs: 0, gold: 0 }
   next = runAuto(next, elapsed, autoTally)
