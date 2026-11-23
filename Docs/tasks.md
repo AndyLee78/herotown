@@ -67,7 +67,7 @@ Claude Code, Cursor, GPT(Codex)가 함께 쓰는 작업 목록이다. 작업 하
 | 25 | 권장 레벨을 여러 파티 구성으로 재기 | GPT | `tools/curve.ts`, `tools/print-curve.ts`, `tools/tune-curve.ts` | 완료 (이 커밋) |
 | 26 | 출발 준비의 파티 구성 안내 | Cursor | `src/ui/game/battleScreens.tsx`, `src/locales/*` | 완료 (6bc08f1) |
 | 27 | 명예의 전당·묘지·조상 화면 | Cursor | `src/ui/game/heroScreens.tsx`, `villageScreens.tsx`, `App.tsx`, `styles.css`, `src/locales/*` | 완료 (75b80bd) |
-| 28 | 집 레벨별 모습·묘지 비석 3D | Cursor | `src/ui/voxel/VillageScene.ts`, `src/ui/voxel/world.ts` | 대기 (27 뒤) |
+| 28 | 집 레벨별 모습·묘지 비석 3D | Cursor | `src/ui/voxel/VillageScene.ts`, `src/ui/voxel/world.ts` | 완료 (9d35253) |
 | 29 | 2b core 코드 리뷰 (f7fdf88) | GPT | `Docs/reviews/f7fdf88.md` (새 파일만) | 대기 (지금 시작 가능) |
 | 30 | 세대 시뮬레이터 60년 | GPT | `tools/generations.ts` | 대기 (지금 시작 가능) |
 
@@ -822,7 +822,7 @@ src/ui/voxel/VillageScene.ts와 src/ui/voxel/world.ts만 고친다.
 확인: 스크린샷을 메모에.
 ```
 
-메모:
+메모: 2레벨은 2층, 3레벨은 광장 쪽 옆채, 4레벨은 마당과 울타리다. 비석은 문 옆 풀밭에 최대 12개, 최근 무덤만, 전설은 금색이다. 합쳐 그린 뒤 보이는 무덤이 바뀔 때만 다시 만든다. 장면은 화면이 넘겨 주는 목록만 알 수 있어서 VillageView와 App에 무덤 목록을 넘기는 두 줄을 더했다. 4레벨 집과 흰 비석·금 비석이 마을에 보이는 것을 확인했다.
 
 ---
 
