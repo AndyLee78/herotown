@@ -107,7 +107,8 @@
     "guild": "Guild",
     "smith": "Smithy",
     "temple": "Temple",
-    "fountain": "Lucky Fountain"
+    "fountain": "Lucky Fountain",
+    "alchemy": "Alchemy Workshop"
   },
   "buildingHint": {
     "hall": "See your village level and next goal.",
@@ -116,7 +117,8 @@
     "guild": "Send more parties at once and take on the cave wood request.",
     "smith": "Craft and enhance gear. Upgrade to unlock better gear.",
     "temple": "Treat wounds or revive a hero after their first death.",
-    "fountain": "Tap it when a wish is ready for a few coins. Now and then, a jackpot."
+    "fountain": "Tap it when a wish is ready for a few coins. Now and then, a jackpot.",
+    "alchemy": "Brews potions. They go into the village stock, and parties carry them out."
   },
   "resource": {
     "wood": "Wood {{amount}}",
@@ -182,7 +184,9 @@
     "lockedDungeon": "This dungeon is still locked.",
     "tooYoung": "This hero is too young to retire.",
     "postTaken": "Another retiree already runs that building.",
-    "noWish": "No wish is ready yet."
+    "noWish": "No wish is ready yet.",
+    "noAlchemy": "There is no alchemy workshop yet.",
+    "alchemyBusy": "The workshop is already brewing."
   },
   "defeat": {
     "noHealer": "Bring a healer to keep the party going.",
@@ -683,7 +687,8 @@
       "guild": "Auto trip rewards +{{value}}%",
       "smith": "Enhance odds +{{value}} pts",
       "temple": "Care time −{{value}}%",
-      "fountain": "Fountain jackpot chance +{{value}}%p"
+      "fountain": "Fountain jackpot chance +{{value}}%p",
+      "alchemy": "Brewing time −{{value}}%"
     }
   }
 }

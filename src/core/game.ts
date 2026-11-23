@@ -1,5 +1,6 @@
 import { chargeFountain, freshFountain, makeWish, readFountain, upgradeFountain, type FountainState } from './fountain'
 import { claimGuide, guideSteps } from './guide'
+import { finishBrew, readAlchemyJob, readSupplies, returnSupplies, startBrew, takeSupplies, type AlchemyJob } from './alchemy'
 import { adRules, classById, classList, combatRules, dungeonById, dungeons, expeditionRules, lifeRules, progression, retirementRules, smithRules, timeRules, villageRules } from './data'
 import { forgeGear, normalizeGear, recipeById } from './gear'
 import { applyReport, DEFAULT_TACTICS, runDungeon } from './dungeon'
@@ -8,9 +9,9 @@ import { acceptProposal, bedsTaken, bondParty, declineProposal, deliverBirths, f
 import { createRng } from './rng'
 import type { Rng } from './rng'
 import type { Genes } from './genes'
-import type { Bond, ClassId, CombatError, DungeonReport, Gear, GearSlot, Gender, Hero, PartyMember, Proposal, Role, Row, Tactics } from './types'
+import type { Bond, ClassId, CombatError, DungeonReport, Gear, GearSlot, Gender, Hero, PartyMember, PotionId, Proposal, Role, Row, Supplies, Tactics } from './types'
 
-export const SAVE_VERSION = 10
+export const SAVE_VERSION = 11
 
 export type SeasonId = 'spring' | 'summer' | 'autumn' | 'winter'
 
@@ -49,8 +50,8 @@ export type SmithJob = {
   finishAt: number
 }
 
-export type BuildingId = 'hall' | 'inn' | 'house' | 'guild' | 'smith' | 'temple' | 'fountain'
-export type MaterialName = 'wood' | 'stone' | 'iron' | 'bone'
+export type BuildingId = 'hall' | 'inn' | 'house' | 'guild' | 'smith' | 'temple' | 'fountain' | 'alchemy'
+export type MaterialName = 'wood' | 'stone' | 'iron' | 'bone' | 'herb'
 
 export type AutoPolicy = 'material' | 'safe' | 'fixed'
 
@@ -78,6 +79,8 @@ export type PartyPreset = {
   id: string
   slots: PartySlot[]
   tactics: Tactics
+  // Potions this party asks to carry (Docs/depth.md 3a).
+  supplies?: Supplies
 }
 
 // A party out of town. The fight is decided when it leaves; rewards and
@@ -93,6 +96,8 @@ export type Expedition = {
   battleAt: number
   battleEndAt: number
   returnAt: number
+  // Potions taken from the stock; what is left comes back.
+  supplies?: Supplies
 }
 
 // A hero who has hung up their sword. They stay in town, cost no wages,
@@ -137,6 +142,8 @@ export type GameNotice =
   | 'treat'
   | 'noSmith'
   | 'smithBusy'
+  | 'noAlchemy'
+  | 'alchemyBusy'
   | 'recipe'
   | 'enhanceFail'
   | 'autoLocked'
@@ -195,6 +202,8 @@ export type GameState = {
   proposals: Proposal[]
   familyNonce: number
   fountain: FountainState
+  alchemy: AlchemyJob | null
+  potions: Supplies
 }
 
 export type AdPlacement = 'absence' | 'construction' | 'temple'
@@ -243,12 +252,14 @@ export type GameAction =
   | { type: 'acceptProposal'; a: string; b: string; now?: number }
   | { type: 'declineProposal'; a: string; b: string; now?: number }
   | { type: 'wish'; now: number }
+  | { type: 'brew'; potionId: PotionId; now: number }
+  | { type: 'supplies'; potionId: PotionId; count: number; presetId?: string }
 
 export function freshState(seed: number, now: number): GameState {
   return {
     version: SAVE_VERSION,
     gold: progression.startGold,
-    materials: { ...villageRules.start },
+    materials: { ...villageRules.start, herb: 0 },
     fame: 0,
     buildings: startingBuildings(),
     construction: null,
@@ -286,6 +297,8 @@ export function freshState(seed: number, now: number): GameState {
     proposals: [],
     familyNonce: 0,
     fountain: freshFountain(now),
+    alchemy: null,
+    potions: {},
   }
 }
 
@@ -512,6 +525,13 @@ function apply(state: GameState, action: GameAction): GameState {
   if (action.type === 'wish') {
     return makeWish(state, action.now)
   }
+  if (action.type === 'brew') {
+    return startBrew(state, action.potionId, action.now)
+  }
+  if (action.type === 'supplies') {
+    const count = Math.max(0, Math.floor(action.count))
+    return editPreset(state, action.presetId, (preset) => ({ ...preset, supplies: { ...(preset.supplies ?? {}), [action.potionId]: count } }))
+  }
   if (action.type === 'acceptProposal') {
     return acceptProposal(state, action.a, action.b, action.now ?? state.lastTickAt)
   }
@@ -553,6 +573,7 @@ function advance(state: GameState, now: number): GameState {
     // party home just before a year turns is buried with that year's age.
     next = finishConstruction(next, until, completed)
     next = finishSmith(next, until, crafted)
+    next = finishBrew(next, until, crafted)
     next = finishCare(next, until)
     next = recoverRoster(next, piece, until)
     next = updateVisitors(next, until, visitors)
@@ -925,6 +946,7 @@ function startBuild(state: GameState, id: BuildingId, now: number): GameState {
       stone: state.materials.stone - cost.stone,
       iron: state.materials.iron - cost.iron,
       bone: state.materials.bone,
+      herb: state.materials.herb,
     },
     construction: { id, finishAt: now + Math.round(cost.ms * (1 - retireeBonus(state, 'hall'))) },
   }
@@ -976,7 +998,12 @@ function runAuto(state: GameState, elapsed: number, tally: { runs: number; gold:
       break
     }
     const battleSeed = next.seed + 9000 + tally.runs + next.day
-    const result = runDungeon(members, dungeonId, presetById(next, next.presetId)?.tactics ?? DEFAULT_TACTICS, battleSeed)
+    // Auto runs carry the selected preset's potions too, and bring back the rest.
+    const carry = takeSupplies(next.potions, presetById(next, next.presetId)?.supplies)
+    const result = runDungeon(members, dungeonId, presetById(next, next.presetId)?.tactics ?? DEFAULT_TACTICS, battleSeed, carry.taken)
+    if (result.ok) {
+      next = { ...next, potions: returnSupplies(carry.stock, carry.taken, result.report.potionsUsed) }
+    }
     // Auto runs only repeat cleared dungeons, so they earn a share of the
     // repeat reward and always less than sending the party by hand.
     const scale = villageRules.repeatReward * villageRules.auto.rewardScale * (1 + retireeBonus(next, 'guild'))
@@ -1013,8 +1040,12 @@ function grantVictoryRewards(state: GameState, report: DungeonReport, dungeonId:
   const gained = Math.max(1, Math.floor(drop.amount * applied))
   const material = drop.material as MaterialName
   const materials = { ...state.materials, [material]: state.materials[material] + gained }
-  if ('iron' in drop && typeof drop.iron === 'number' && material !== 'iron') {
-    materials.iron += Math.max(1, Math.floor(drop.iron * applied))
+  // Some dungeons also leave a little of a second material.
+  for (const extra of ['iron', 'herb'] as const) {
+    const amount = (drop as Record<string, unknown>)[extra]
+    if (typeof amount === 'number' && material !== extra) {
+      materials[extra] += Math.max(1, Math.floor(amount * applied))
+    }
   }
   let fame = state.fame
   const cleared = state.cleared.includes(dungeonId) ? state.cleared : [...state.cleared, dungeonId]
@@ -1267,7 +1298,12 @@ export function dungeonUnlocked(state: GameState, id: string): boolean {
   if (dungeon.tier <= 1) {
     return true
   }
-  return dungeons.some((entry) => entry.tier === dungeon.tier - 1 && state.cleared.includes(entry.id))
+  const previous = dungeons.filter((entry) => entry.tier === dungeon.tier - 1)
+  // From tier 4 on, every dungeon of the tier before must be cleared (Docs/depth.md).
+  if (dungeon.tier >= 4) {
+    return previous.every((entry) => state.cleared.includes(entry.id))
+  }
+  return previous.some((entry) => state.cleared.includes(entry.id))
 }
 
 function editPreset(state: GameState, id: string | undefined, change: (preset: PartyPreset) => PartyPreset | null): GameState {
@@ -1322,7 +1358,8 @@ function startExpedition(state: GameState, presetId: string, confirm: boolean, n
   }
   // The first expedition of a day keeps the old seed so earlier results replay.
   const battleSeed = state.seedLocked ? state.seed : state.seed + state.day + state.expeditionNonce * 7919
-  const result = runDungeon(party, state.dungeonId, preset.tactics, battleSeed)
+  const carry = takeSupplies(state.potions, preset.supplies)
+  const result = runDungeon(party, state.dungeonId, preset.tactics, battleSeed, carry.taken)
   if (!result.ok) {
     return { ...state, notice: result.error }
   }
@@ -1339,8 +1376,9 @@ function startExpedition(state: GameState, presetId: string, confirm: boolean, n
     battleAt,
     battleEndAt,
     returnAt: battleEndAt + expeditionRules.travelMs,
+    ...(Object.keys(carry.taken).length > 0 ? { supplies: carry.taken } : {}),
   }
-  return { ...state, notice: null, expeditionNonce: state.expeditionNonce + 1, expeditions: [...state.expeditions, expedition] }
+  return { ...state, notice: null, potions: carry.stock, expeditionNonce: state.expeditionNonce + 1, expeditions: [...state.expeditions, expedition] }
 }
 
 function returnExpeditions(state: GameState, now: number, returned: AbsenceReport['returned']): GameState {
@@ -1378,13 +1416,14 @@ function settleExpedition(state: GameState, expedition: Expedition): GameState {
       ...settled,
       gold: state.gold + goldGain,
       expeditions: state.expeditions.filter((entry) => entry.id !== expedition.id),
+      potions: returnSupplies(state.potions, expedition.supplies, report.potionsUsed),
     },
     expedition.heroIds,
     report.victory,
   )
   const next = dropFromPresets(grantVictoryRewards(home, report, dungeonId))
   const materials: Partial<Materials> = {}
-  for (const key of ['wood', 'stone', 'iron', 'bone'] as const) {
+  for (const key of ['wood', 'stone', 'iron', 'bone', 'herb'] as const) {
     const diff = next.materials[key] - state.materials[key]
     if (diff > 0) {
       materials[key] = diff
@@ -1471,6 +1510,7 @@ function pay(state: GameState, cost: { gold: number; wood: number; stone: number
       stone: state.materials.stone - cost.stone,
       iron: state.materials.iron - cost.iron,
       bone: state.materials.bone,
+      herb: state.materials.herb,
     },
   }
 }
@@ -1595,6 +1635,7 @@ function readMaterials(value: unknown, base: Materials): Materials {
     stone: numberOr(record.stone, base.stone),
     iron: numberOr(record.iron, base.iron),
     bone: numberOr(record.bone, 0),
+    herb: numberOr(record.herb, 0),
   }
 }
 
@@ -1676,6 +1717,8 @@ function normalize(record: Record<string, unknown>, now: number): GameState {
     proposals: readProposals(record.proposals),
     familyNonce: numberOr(record.familyNonce, 0),
     fountain: readFountain(record.fountain, numberOr(record.lastTickAt, now)),
+    alchemy: readAlchemyJob(record.alchemy),
+    potions: readSupplies(record.potions),
     auto: isAuto(record.auto) ? record.auto : base.auto,
     notice: null,
   }

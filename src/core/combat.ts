@@ -1,7 +1,7 @@
-import { classById, combatRules, lifeRules, monsterById } from './data'
+import { alchemyRules, classById, combatRules, lifeRules, monsterById, potionById } from './data'
 import { heroGearMods } from './gear'
 import type { Rng } from './rng'
-import type { LogEntry, MonsterDef, PartyMember, ReplayUnit, Row, Tactics, UnitReport } from './types'
+import type { LogEntry, MonsterDef, PartyMember, PotionId, ReplayUnit, Row, Supplies, Tactics, UnitReport } from './types'
 
 export type BattleUnit = {
   id: string
@@ -43,6 +43,44 @@ export type BattleUnit = {
   weakFlame: boolean
   element?: 'flame' | 'silver'
   holy: boolean
+  // Status effects (Docs/depth.md 3a). Chances are what this unit inflicts.
+  paralyzeOnHit: number
+  slowOnHit: number
+  silenceOnHit: number
+  aoeEvery: number
+  poisonCap: number
+  actions: number
+  paralyzed: boolean
+  paralyzeGuard: boolean
+  slowed: number
+  silenced: number
+  immunePoison: number
+  immuneStun: number
+  // For the defeat report.
+  poisonTaken: number
+  stunned: number
+  muted: number
+}
+
+// Potions a party carries into a fight and what it has drunk.
+export type Kit = { stock: Supplies; used: Supplies }
+
+const STATUS_FREE = {
+  paralyzeOnHit: 0,
+  slowOnHit: 0,
+  silenceOnHit: 0,
+  aoeEvery: 0,
+  poisonCap: 0,
+  actions: 0,
+  paralyzed: false,
+  paralyzeGuard: false,
+  slowed: 0,
+  silenced: 0,
+  immunePoison: 0,
+  immuneStun: 0,
+  poisonTaken: 0,
+  stunned: 0,
+  muted: 0,
 }
 
 export type FloorOutcome = 'victory' | 'wipe' | 'retreat' | 'timeout'
@@ -111,6 +149,7 @@ export function createHeroUnit(member: PartyMember, index: number): BattleUnit {
     weakFlame: false,
     element,
     holy: hero.classId === 'cleric',
+    ...STATUS_FREE,
   }
 }
 
@@ -123,6 +162,7 @@ export function simulateFloor(
   floorNumber: number,
   floors?: ReplayUnit[][],
   monsterScale = 1,
+  kit?: Kit,
 ): { outcome: FloorOutcome; ticks: number } {
   const enemies = monsterIds.map((id, index) => enemyUnit(monsterById(id), index, monsterScale))
   floors?.push([...heroes, ...enemies].map(replayUnit))
@@ -140,7 +180,7 @@ export function simulateFloor(
     tick += 1
     for (const unit of [...heroes, ...enemies]) {
       if (unit.hp > 0) {
-        unit.gauge += unit.speed
+        unit.gauge += unit.slowed > 0 ? unit.speed * combatRules.slowFactor : unit.speed
       }
     }
     const ready = [...heroes, ...enemies]
@@ -153,6 +193,7 @@ export function simulateFloor(
     actor.gauge -= combatRules.gaugeThreshold
     if (actor.dot > 0) {
       const dotDamage = Math.max(1, Math.round(actor.dot * (actor.ironWill ? combatRules.ironWillDot : 1)))
+      actor.poisonTaken += dotDamage
       hurt(actor, dotDamage, tick, log, 'log.dot')
       if (actor.hp <= 0) {
         continue
@@ -164,10 +205,22 @@ export function simulateFloor(
         push(log, tick, 'log.retreat', { hp: Math.round(average * 100) })
         return { outcome: 'retreat', ticks: tick }
       }
-      heroAct(actor, heroes, enemies, tactics, rng, tick, log)
+      // Paralysis takes this turn; the next one cannot be paralysed again.
+      if (actor.paralyzed) {
+        actor.paralyzed = false
+        actor.paralyzeGuard = true
+        actor.stunned += 1
+        push(log, tick, 'log.paralyzed', actorParams(actor))
+        endTurn(actor, true)
+        continue
+      }
+      if (!(kit && drinkPotion(actor, kit, tactics, tick, log))) {
+        heroAct(actor, heroes, enemies, tactics, rng, tick, log)
+      }
     } else {
       enemyAct(actor, heroes, rng, tick, log)
     }
+    endTurn(actor, false)
   }
   push(log, tick, 'log.defeat')
   return { outcome: 'timeout', ticks: tick }
@@ -196,6 +249,14 @@ function heroAct(
   tick: number,
   log: LogEntry[],
 ) {
+  // Silence leaves only plain attacks: no taunt, healing, buffs or debuffs.
+  if (actor.silenced > 0) {
+    if (actor.role === 'healer' || actor.role === 'support' || (actor.role === 'tank' && !actor.opened)) {
+      actor.muted += 1
+    }
+    attack(actor, enemies, tactics, rng, tick, log)
+    return
+  }
   if (actor.role === 'tank' && !actor.opened) {
     actor.opened = true
     actor.threat += combatRules.tauntThreat
@@ -224,6 +285,10 @@ function heroAct(
     push(log, tick, 'log.debuff', actorParams(actor))
     return
   }
+  attack(actor, enemies, tactics, rng, tick, log)
+}
+
+function attack(actor: BattleUnit, enemies: BattleUnit[], tactics: Tactics, rng: Rng, tick: number, log: LogEntry[]) {
   const pool = actor.reach === 'melee' ? frontOrAll(enemies) : living(enemies)
   if (!pool.length) {
     return
@@ -237,9 +302,66 @@ function heroAct(
   strike(actor, chooseTarget(pool, tactics), rng, tick, log, 1)
 }
 
+// A hero drinks at most one potion instead of acting: cures first, then healing.
+function drinkPotion(actor: BattleUnit, kit: Kit, tactics: Tactics, tick: number, log: LogEntry[]): boolean {
+  const has = (id: PotionId) => (kit.stock[id] ?? 0) > 0
+  const drink = (id: PotionId) => {
+    kit.stock[id] = (kit.stock[id] ?? 0) - 1
+    kit.used[id] = (kit.used[id] ?? 0) + 1
+    push(log, tick, 'log.potion', { ...actorParams(actor), potion: id })
+  }
+  if (actor.dot >= alchemyRules.antidoteAt && has('antidote')) {
+    drink('antidote')
+    actor.dot = 0
+    actor.immunePoison = combatRules.immuneActions
+    return true
+  }
+  if (actor.slowed > 0 && has('tonic')) {
+    drink('tonic')
+    actor.slowed = 0
+    actor.immuneStun = combatRules.immuneActions
+    return true
+  }
+  if (actor.silenced > 0 && (actor.role === 'healer' || actor.role === 'support') && has('clarity')) {
+    drink('clarity')
+    actor.silenced = 0
+    return true
+  }
+  const below = tactics.potionBelow ?? alchemyRules.potionBelow
+  if (actor.hp / actor.maxHp < below / 100 && has('heal')) {
+    drink('heal')
+    const amount = Math.round(actor.maxHp * (potionById('heal')?.heal ?? 0))
+    const healed = Math.min(actor.maxHp - actor.hp, amount)
+    actor.hp += healed
+    push(log, tick, 'log.heal', { ...actorParams(actor), ...targetParams(actor), amount: healed })
+    return true
+  }
+  return false
+}
+
+// Counts down timed effects after each of the unit's turns.
+function endTurn(actor: BattleUnit, skipped: boolean) {
+  actor.actions += 1
+  if (!skipped) {
+    actor.paralyzeGuard = false
+  }
+  actor.slowed = Math.max(0, actor.slowed - 1)
+  actor.silenced = Math.max(0, actor.silenced - 1)
+  actor.immunePoison = Math.max(0, actor.immunePoison - 1)
+  actor.immuneStun = Math.max(0, actor.immuneStun - 1)
+}
+
 function enemyAct(actor: BattleUnit, heroes: BattleUnit[], rng: Rng, tick: number, log: LogEntry[]) {
   const pool = actor.reach === 'melee' ? frontOrAll(heroes) : living(heroes)
   if (!pool.length) {
+    return
+  }
+  // Some bosses sweep the whole party every few turns.
+  if (actor.aoeEvery > 0 && (actor.actions + 1) % actor.aoeEvery === 0) {
+    push(log, tick, 'log.sweep', actorParams(actor))
+    for (const target of living(heroes)) {
+      strike(actor, target, rng, tick, log, combatRules.aoeMultiplier)
+    }
     return
   }
   const target = [...pool].sort((a, b) => b.threat - a.threat || a.hp - b.hp || a.index - b.index)[0]
@@ -290,8 +412,28 @@ function strike(actor: BattleUnit, target: BattleUnit, rng: Rng, tick: number, l
   const amount = Math.max(combatRules.minDamage, Math.round(vary(rng, attack - target.defense)))
   actor.dealt += amount
   hurt(target, amount, tick, log, 'log.attack', actor)
-  if (target.hp > 0 && actor.dotOnHit > 0) {
-    target.dot = Math.min(combatRules.dotCap, target.dot + actor.dotOnHit)
+  if (target.hp > 0 && actor.dotOnHit > 0 && target.immunePoison <= 0) {
+    target.dot = Math.min(Math.max(combatRules.dotCap, actor.poisonCap), target.dot + actor.dotOnHit)
+  }
+  // Status chances roll only for units that have them, so older fights replay the same.
+  if (target.hp > 0 && actor.paralyzeOnHit > 0 && rng.next() < actor.paralyzeOnHit) {
+    if (!target.paralyzed && !target.paralyzeGuard && target.immuneStun <= 0) {
+      target.paralyzed = true
+      push(log, tick, 'log.paralyze', targetParams(target))
+    }
+  }
+  if (target.hp > 0 && actor.slowOnHit > 0 && rng.next() < actor.slowOnHit && target.immuneStun <= 0) {
+    if (target.slowed <= 0) {
+      target.stunned += 1
+      push(log, tick, 'log.slow', targetParams(target))
+    }
+    target.slowed = combatRules.slowActions
+  }
+  if (target.hp > 0 && actor.silenceOnHit > 0 && rng.next() < actor.silenceOnHit) {
+    if (target.silenced <= 0) {
+      push(log, tick, 'log.silence', targetParams(target))
+    }
+    target.silenced = combatRules.silenceActions
   }
 }
 
@@ -367,6 +509,12 @@ function enemyUnit(monster: MonsterDef, index: number, scale: number): BattleUni
     weakSilver: monster.weakSilver ?? false,
     weakFlame: monster.weakFlame ?? false,
     holy: false,
+    ...STATUS_FREE,
+    paralyzeOnHit: monster.paralyze ?? 0,
+    slowOnHit: monster.slow ?? 0,
+    silenceOnHit: monster.silence ?? 0,
+    aoeEvery: monster.aoeEvery ?? 0,
+    poisonCap: monster.poisonCap ?? 0,
   }
 }
 

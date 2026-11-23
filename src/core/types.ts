@@ -13,7 +13,10 @@ export type SkillKind = 'attack' | 'taunt' | 'heal' | 'buff' | 'debuff'
 export type TraitId = 'tough' | 'coward' | 'nocturnal' | 'treasure' | 'ironWill' | 'frail'
 export type Condition = 'healthy' | 'fatigued' | 'injured' | 'critical' | 'dead'
 export type TargetPriority = 'lowestHp' | 'backRow' | 'boss'
-export type DefeatReason = 'noTank' | 'noHealer' | 'retreated' | 'wiped' | 'outmatched' | 'tooWeak'
+export type DefeatReason = 'noTank' | 'noHealer' | 'retreated' | 'wiped' | 'outmatched' | 'tooWeak' | 'poisoned' | 'paralyzed' | 'silenced'
+export type PotionId = 'heal' | 'antidote' | 'tonic' | 'clarity'
+// Potions by kind: the village stock, what a party carries, or what it used.
+export type Supplies = Partial<Record<PotionId, number>>
 export type CombatError = 'emptyParty' | 'partyTooLarge' | 'underage' | 'badFormation' | 'dead'
 
 export type AgeBand = {
@@ -53,7 +56,7 @@ export type TraitDef = {
 
 export type MonsterDef = {
   id: string
-  tier: 1 | 2 | 3
+  tier: 1 | 2 | 3 | 4
   boss: boolean
   row: Row
   reach: Reach
@@ -66,6 +69,14 @@ export type MonsterDef = {
   weakHoly?: boolean
   weakSilver?: boolean
   weakFlame?: boolean
+  // Status chances on a hit (Docs/depth.md 3a). Poison is `dot`.
+  paralyze?: number
+  slow?: number
+  silence?: number
+  // Every n-th action hits the whole party.
+  aoeEvery?: number
+  // Poison this monster can stack up to (default combatRules.dotCap).
+  poisonCap?: number
 }
 
 export type DungeonFloor = {
@@ -74,7 +85,7 @@ export type DungeonFloor = {
 
 export type DungeonDef = {
   id: string
-  tier: 1 | 2 | 3
+  tier: 1 | 2 | 3 | 4
   recommendedLevel: number
   // Multiplies monster health and attack in this dungeon (1 = as listed).
   monsterScale?: number
@@ -154,6 +165,8 @@ export type Tactics = {
   target: TargetPriority
   healBelow: number
   retreatBelow: number
+  // Drink a healing potion below this HP %. Missing on older presets.
+  potionBelow?: number
 }
 
 export type PartyMember = {
@@ -209,7 +222,8 @@ export type DungeonReport = {
   // Filled in when an expedition comes home.
   presetId?: string
   finishedAt?: number
-  gained?: { gold: number; fame: number; materials: Partial<Record<'wood' | 'stone' | 'iron' | 'bone', number>> }
+  gained?: { gold: number; fame: number; materials: Partial<Record<'wood' | 'stone' | 'iron' | 'bone' | 'herb', number>> }
+  potionsUsed?: Supplies
   victory: boolean
   defeatReason: DefeatReason | null
   ticks: number

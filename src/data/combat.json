@@ -16,5 +16,12 @@
   "nocturnalSpeed": 3,
   "ironWillDot": 0.45,
   "aoeMultiplier": 0.72,
-  "dotCap": 18
+  "dotCap": 18,
+  "slowFactor": 0.7,
+  "slowActions": 3,
+  "silenceActions": 3,
+  "immuneActions": 6,
+  "poisonedShare": 0.3,
+  "silencedTurns": 3,
+  "stunnedTurns": 4
 }

@@ -17,6 +17,8 @@ export const LOTS: Record<BuildingId, Lot> = {
   temple: { x: -1.5, z: -10.5, w: 4, d: 3.2 },
   // The lucky fountain stands in the middle of the square (Docs/fountain.md).
   fountain: { x: 0, z: 0, w: 2.2, d: 2.2 },
+  // Placeholder spot for the alchemy workshop; task 37 gives it a model.
+  alchemy: { x: -10.5, z: -1.5, w: 3, d: 2.6 },
 }
 
 export const PLAZA = { min: -5.3, max: 5.3 }

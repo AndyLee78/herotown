@@ -99,6 +99,7 @@ export function claimGuide(state: GameState): GameState {
       stone: state.materials.stone + (reward.stone ?? 0),
       iron: state.materials.iron + (reward.iron ?? 0),
       bone: state.materials.bone + (reward.bone ?? 0),
+      herb: state.materials.herb,
     },
   }
 }

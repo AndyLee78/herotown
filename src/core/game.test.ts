@@ -233,7 +233,7 @@ describe('game state', () => {
       ...start,
       buildings: { ...start.buildings, smith: 3 },
       gold: 500,
-      materials: { wood: 40, stone: 40, iron: 40, bone: 0 },
+      materials: { wood: 40, stone: 40, iron: 40, bone: 0, herb: 0 },
     }
     const job = reduce(ready, { type: 'craft', recipeId: 'flame.blade', now })
     const done = reduce(job, { type: 'catchUp', now: now + 7_200_000 })
@@ -486,7 +486,7 @@ describe('economy fixes', () => {
     const day = new Date(2026, 10, 22, 15).getTime()
     // A long build (smith level 3) so 30 percent is more than 30 minutes.
     const base = freshState(1, day)
-    const ready = { ...base, fame: 36, buildings: { ...base.buildings, smith: 2 }, materials: { wood: 40, stone: 40, iron: 40, bone: 0 } }
+    const ready = { ...base, fame: 36, buildings: { ...base.buildings, smith: 2 }, materials: { wood: 40, stone: 40, iron: 40, bone: 0, herb: 0 } }
     const started = reduce(ready, { type: 'build', id: 'smith', now: day })
     const finishAt = started.construction?.finishAt ?? day
     const remaining = finishAt - day

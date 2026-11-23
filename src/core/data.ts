@@ -1,4 +1,5 @@
 import adsFile from '../data/ads.json'
+import alchemyFile from '../data/alchemy.json'
 import ageBandsFile from '../data/ageBands.json'
 import classesFile from '../data/classes.json'
 import lifeFile from '../data/life.json'
@@ -26,6 +27,7 @@ import type {
   Stats,
   TraitDef,
   TraitId,
+  PotionId,
 } from './types'
 
 const SKILL_KINDS = new Set<SkillKind>(['attack', 'taunt', 'heal', 'buff', 'debuff'])
@@ -120,7 +122,7 @@ export function validateGameData(data: GameData): void {
   if (data.dungeons.length < 2) {
     throw new Error('Need at least 2 dungeons')
   }
-  const needed = ['hall', 'inn', 'house', 'guild', 'smith', 'temple', 'fountain']
+  const needed = ['hall', 'inn', 'house', 'guild', 'smith', 'temple', 'fountain', 'alchemy']
   if (data.village.buildings.length !== needed.length || needed.some((id) => !data.village.buildings.some((building) => building.id === id))) {
     throw new Error(`The town needs exactly these buildings: ${needed.join(', ')}`)
   }
@@ -172,6 +174,21 @@ export const adRules = adsFile
 export const expeditionRules = expeditionFile
 export const retirementRules = retirementFile
 export const familyRules = familyFile
+export const alchemyRules = alchemyFile as {
+  potionsPerTrip: number
+  batch: number
+  potionBelow: number
+  antidoteAt: number
+  potions: { id: PotionId; alchemyLevel: number; gold: number; herb: number; bone: number; ms: number; heal?: number }[]
+}
+
+export function potionById(id: string) {
+  return alchemyRules.potions.find((potion) => potion.id === id)
+}
+
+if (alchemyRules.potions.some((potion) => potion.alchemyLevel < 1 || potion.ms <= 0 || potion.herb < 0)) {
+  throw new Error('Every potion needs a workshop level and a brewing time')
+}
 export const fountainRules = fountainFile
 
 fountainRules.levels.forEach((level, index) => {

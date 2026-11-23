@@ -29,6 +29,12 @@
       "fame": 36,
       "visitorPotential": 20,
       "maxBuildingLevel": 4
+    },
+    {
+      "level": 4,
+      "fame": 90,
+      "visitorPotential": 25,
+      "maxBuildingLevel": 4
     }
   ],
   "inn": {
@@ -68,7 +74,8 @@
     "moss_path": {
       "material": "stone",
       "amount": 10,
-      "fame": 8
+      "fame": 8,
+      "herb": 3
     },
     "deep_shaft": {
       "material": "stone",
@@ -84,6 +91,11 @@
       "material": "bone",
       "amount": 12,
       "fame": 30
+    },
+    "venom_marsh": {
+      "material": "herb",
+      "amount": 10,
+      "fame": 36
     }
   },
   "buildings": [
@@ -285,6 +297,37 @@
           "stone": 60,
           "iron": 10,
           "ms": 1200000
+        }
+      ]
+    },
+    {
+      "id": "alchemy",
+      "unlockLevel": 4,
+      "startLevel": 0,
+      "levels": [
+        {
+          "level": 1,
+          "gold": 120,
+          "wood": 30,
+          "stone": 30,
+          "iron": 5,
+          "ms": 900000
+        },
+        {
+          "level": 2,
+          "gold": 180,
+          "wood": 30,
+          "stone": 40,
+          "iron": 10,
+          "ms": 1800000
+        },
+        {
+          "level": 3,
+          "gold": 260,
+          "wood": 40,
+          "stone": 60,
+          "iron": 15,
+          "ms": 2700000
         }
       ]
     }

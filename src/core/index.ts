@@ -1,9 +1,11 @@
-export { adRules, expeditionRules, familyRules, fountainRules, retirementRules, ageBands, classById, classList, combatRules, dungeonById, dungeons, lifeRules, maxAge, monsterById, monsters, progression, smithRules, timeRules, traits, validateGameData, villageRules } from './data'
+export { adRules, alchemyRules, potionById, expeditionRules, familyRules, fountainRules, retirementRules, ageBands, classById, classList, combatRules, dungeonById, dungeons, lifeRules, maxAge, monsterById, monsters, progression, smithRules, timeRules, traits, validateGameData, villageRules } from './data'
 export { SAVE_VERSION, adsRemaining, bedCount, busyHeroIds, retireeBonus, retirementAdvised, dungeonUnlocked, presetById, catchUp, expeditionSlots, exportSave, freshState, importSave, localDateKey, migrate, reduce, restBonus, townLevel, visitorCap, visitorStay } from './game'
 export { DEFAULT_TACTICS, applyReport, heroPower, runDungeon } from './dungeon'
 export { ageUp, canDeploy, createHero, deriveStats, generateVisitors, grantXp, hireCost, potentialBand, restHero, statRange, train, withAge } from './hero'
 export { guideStatus, guideSteps } from './guide'
 export { fountainLevel, fountainNextAt, fountainWishes, jackpotChance } from './fountain'
+export { POTION_IDS, brewTime } from './alchemy'
+export type { AlchemyJob } from './alchemy'
 export type { FountainLevel, FountainState } from './fountain'
 export { ancestorsOf, bondOf, bondStage, canCourt, coupleCount, familyLegends, familyOf, hallOfFame, housingFree, isLegend, isSingle, legendBonus, oldAgeChance, partyBonus, population, residents, topBonds } from './family'
 export type { Ancestor, FamilyView, Population } from './family'
@@ -26,6 +28,8 @@ export type {
   SeasonId,
 } from './game'
 export type {
+  PotionId,
+  Supplies,
   Bond,
   BondStage,
   Proposal,

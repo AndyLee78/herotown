@@ -170,6 +170,39 @@
         }
       ],
       "monsterScale": 3.6
+    },
+    {
+      "id": "venom_marsh",
+      "tier": 4,
+      "recommendedLevel": 11,
+      "monsterScale": 1.9,
+      "betweenHeal": 0.25,
+      "gold": 110,
+      "xp": 110,
+      "floors": [
+        {
+          "monsters": [
+            "venom_toad",
+            "bog_leech",
+            "wisp"
+          ]
+        },
+        {
+          "monsters": [
+            "moss_golem",
+            "venom_toad",
+            "wisp",
+            "bog_leech"
+          ]
+        },
+        {
+          "monsters": [
+            "moss_golem",
+            "bog_queen",
+            "wisp"
+          ]
+        }
+      ]
     }
   ]
 }

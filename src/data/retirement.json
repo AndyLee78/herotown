@@ -8,6 +8,7 @@
     "guild": 0.15,
     "smith": 0.1,
     "temple": 0.3,
-    "fountain": 0.01
+    "fountain": 0.01,
+    "alchemy": 0.2
   }
 }

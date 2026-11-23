@@ -1,0 +1,41 @@
+{
+  "potionsPerTrip": 6,
+  "batch": 2,
+  "potionBelow": 40,
+  "potions": [
+    {
+      "id": "heal",
+      "alchemyLevel": 1,
+      "gold": 8,
+      "herb": 2,
+      "bone": 0,
+      "ms": 600000,
+      "heal": 0.35
+    },
+    {
+      "id": "antidote",
+      "alchemyLevel": 1,
+      "gold": 6,
+      "herb": 2,
+      "bone": 0,
+      "ms": 600000
+    },
+    {
+      "id": "tonic",
+      "alchemyLevel": 2,
+      "gold": 10,
+      "herb": 3,
+      "bone": 1,
+      "ms": 900000
+    },
+    {
+      "id": "clarity",
+      "alchemyLevel": 3,
+      "gold": 12,
+      "herb": 3,
+      "bone": 2,
+      "ms": 900000
+    }
+  ],
+  "antidoteAt": 8
+}

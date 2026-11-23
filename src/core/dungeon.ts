@@ -1,16 +1,17 @@
 import { classById, combatRules, dungeonById, lifeRules, progression } from './data'
-import { createHeroUnit, heroUnitsToReport, simulateFloor, type BattleUnit } from './combat'
+import { createHeroUnit, heroUnitsToReport, simulateFloor, type BattleUnit, type Kit } from './combat'
 import { canDeploy, createHero } from './hero'
 import { createRng } from './rng'
-import type { Condition, DungeonReport, DungeonResult, Hero, PartyMember, Tactics } from './types'
+import type { Condition, DungeonReport, DungeonResult, Hero, PartyMember, Supplies, Tactics } from './types'
 
 export const DEFAULT_TACTICS: Tactics = {
   target: 'lowestHp',
   healBelow: 70,
   retreatBelow: 0,
+  potionBelow: 40,
 }
 
-export function runDungeon(party: PartyMember[], dungeonId: string, tactics: Tactics, seed: number): DungeonResult {
+export function runDungeon(party: PartyMember[], dungeonId: string, tactics: Tactics, seed: number, supplies: Supplies = {}): DungeonResult {
   if (party.length === 0) {
     return { ok: false, error: 'emptyParty' }
   }
@@ -29,6 +30,8 @@ export function runDungeon(party: PartyMember[], dungeonId: string, tactics: Tac
   const dungeon = dungeonById(dungeonId)
   const rng = createRng(seed)
   const heroes = party.map((member, index) => createHeroUnit(member, index))
+  const kit: Kit = { stock: { ...supplies }, used: {} }
+  const carried = Object.values(supplies).some((count) => (count ?? 0) > 0)
   const log: DungeonReport['log'] = []
   const floors: NonNullable<DungeonReport['floors']> = []
   let ticks = 0
@@ -40,7 +43,7 @@ export function runDungeon(party: PartyMember[], dungeonId: string, tactics: Tac
     if (!floorDef) {
       break
     }
-    const result = simulateFloor(heroes, floorDef.monsters, tactics, rng, log, floor + 1, floors, dungeon.monsterScale ?? 1)
+    const result = simulateFloor(heroes, floorDef.monsters, tactics, rng, log, floor + 1, floors, dungeon.monsterScale ?? 1, carried ? kit : undefined)
     ticks += result.ticks
     if (result.outcome !== 'victory') {
       outcome = result.outcome
@@ -59,7 +62,8 @@ export function runDungeon(party: PartyMember[], dungeonId: string, tactics: Tac
 
   const victory = outcome === 'victory' && floorsCleared === dungeon.floors.length
   const hadTank = party.some((member) => classById(member.hero.classId).role === 'tank')
-  const hadHealer = party.some((member) => classById(member.hero.classId).role === 'healer')
+  // Healing potions stand in for a healer (Docs/depth.md 3a).
+  const hadHealer = party.some((member) => classById(member.hero.classId).role === 'healer') || (supplies.heal ?? 0) > 0
   const treasure = party.some((member) => member.hero.traitIds.includes('treasure') && member.hero.condition !== 'dead')
   // A loss still brings home a little loot from the floors that were cleared,
   // so a struggling village always has some income.
@@ -79,11 +83,12 @@ export function runDungeon(party: PartyMember[], dungeonId: string, tactics: Tac
     victory,
     defeatReason: victory
       ? null
-      : defeatReason(outcome, dungeon.tier, hadTank, hadHealer, averageLevel(party), dungeon.recommendedLevel),
+      : defeatReason(outcome, dungeon.tier, hadTank, hadHealer, averageLevel(party), dungeon.recommendedLevel, statusToll(heroes)),
     ticks,
     floorsCleared,
     gold,
     xp,
+    ...(carried ? { potionsUsed: kit.used } : {}),
     units: heroUnitsToReport(heroes),
     log,
     conditions: heroes.map((hero) => ({
@@ -121,13 +126,28 @@ export function applyReport(hero: Hero, report: DungeonReport): Hero {
   }
 }
 
+export type StatusToll = { poisonShare: number; stunned: number; muted: number }
+
+// How much the statuses cost the party: poison's share of the damage taken,
+// turns lost to paralysis or slow, and support turns lost to silence.
+function statusToll(heroes: BattleUnit[]): StatusToll {
+  const taken = heroes.reduce((sum, hero) => sum + hero.taken, 0)
+  const poison = heroes.reduce((sum, hero) => sum + hero.poisonTaken, 0)
+  return {
+    poisonShare: taken > 0 ? poison / taken : 0,
+    stunned: heroes.reduce((sum, hero) => sum + hero.stunned, 0),
+    muted: heroes.reduce((sum, hero) => sum + hero.muted, 0),
+  }
+}
+
 export function defeatReason(
   outcome: 'wipe' | 'retreat' | 'timeout' | 'victory',
-  tier: 1 | 2 | 3,
+  tier: 1 | 2 | 3 | 4,
   hadTank: boolean,
   hadHealer: boolean,
   averageLevel: number,
   recommendedLevel: number,
+  toll: StatusToll = { poisonShare: 0, stunned: 0, muted: 0 },
 ): DungeonReport['defeatReason'] {
   if (outcome === 'retreat') {
     return 'retreated'
@@ -138,6 +158,16 @@ export function defeatReason(
   }
   if (!hadHealer && tier >= 1) {
     return 'noHealer'
+  }
+  // Then the status that hurt most, with the potion that answers it.
+  if (toll.poisonShare >= combatRules.poisonedShare) {
+    return 'poisoned'
+  }
+  if (toll.muted >= combatRules.silencedTurns) {
+    return 'silenced'
+  }
+  if (toll.stunned >= combatRules.stunnedTurns) {
+    return 'paralyzed'
   }
   if ((outcome === 'wipe' || outcome === 'timeout') && averageLevel < recommendedLevel) {
     return 'tooWeak'
