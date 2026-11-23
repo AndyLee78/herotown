@@ -59,7 +59,7 @@ Claude Code, Cursor, GPT(Codex)가 함께 쓰는 작업 목록이다. 작업 하
 | 17 | 리뷰 a1dd951의 버그 두 개 수정 | GPT | `src/core/game.ts`, `src/core/flow.test.ts` | 완료 (6d79ef3) |
 | 18 | 밸런스 도구 리뷰 지적 수정 | GPT | `tools/first-hour.ts`, `tools/tune-curve.ts`, `Docs/dungeons.md` | 완료 (97d091e) |
 | 19 | 세대 화면 (가족·관계·청혼·인구·가계도) | Cursor | `src/ui/game/heroScreens.tsx`, `villageScreens.tsx`, `App.tsx`, `styles.css`, `src/locales/*` | 완료 (14395ae) |
-| 20 | 세대 3D 연출 (부부·아이·광장) | Cursor | `src/ui/voxel/VillageScene.ts`, `src/ui/VillageView.tsx` | 대기 (19 뒤) |
+| 20 | 세대 3D 연출 (부부·아이·광장) | Cursor | `src/ui/voxel/VillageScene.ts`, `src/ui/VillageView.tsx` | 완료 (dc01bce) |
 | 21 | 세대 core 코드 리뷰 (443bde5) | GPT | `Docs/reviews/443bde5.md` (새 파일만) | 대기 (지금 시작 가능) |
 | 22 | 세대 시뮬레이터 | GPT | `tools/generations.ts` (새 파일), `package.json` 스크립트 한 줄 | 대기 (지금 시작 가능) |
 | 23 | 첫 3시간 시뮬레이터를 여러 시드로 | GPT | `tools/first-hour.ts` | 대기 (22와 따로, 파일 안 겹침) |
@@ -635,7 +635,7 @@ Docs/generations.md를 읽고 마을 3D에서 가족이 보이게 한다. src/ui
 확인: npm run dev에서 결혼·출생을 만들어 보고 스크린샷을 메모에 남긴다.
 ```
 
-메모:
+메모: 부부 중 id가 앞선 쪽이 길을 고르고 다른 쪽은 옆 자리를 따라간다. 14세 미만은 집에 있는 부모 옆을 따르다가 가끔 혼자 뛴다. 결혼하면 광장에서 마주 보고 하트·꽃잎이 2.6초 오르고, 출생하면 집 위에 별이 같은 시간 반짝인 뒤 지오메트리를 지운다. 화면에서 광장의 하트·꽃잎과 나란히 걷는 부부, 그보다 작은 아이를 봤다. 별은 같은 파티클이라 출생 직후 집 위에서 사라지기 전에 화면을 남기지는 못했다.
 
 ---
 
