@@ -37,5 +37,10 @@
       "ms": 900000
     }
   ],
-  "antidoteAt": 8
+  "antidoteAt": 8,
+  "speedByLevel": [
+    1,
+    0.8,
+    0.65
+  ]
 }

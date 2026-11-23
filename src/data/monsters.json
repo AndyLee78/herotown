@@ -16,10 +16,10 @@
     { "id": "ghoul", "tier": 3, "boss": false, "row": "front", "reach": "melee", "hp": 96, "attack": 16, "defense": 4, "speed": 11, "dot": 3, "resist": 0.35, "weakHoly": true, "weakSilver": true, "weakFlame": true },
     { "id": "barrow_lord", "tier": 3, "boss": true, "row": "front", "reach": "melee", "hp": 280, "attack": 20, "defense": 6, "speed": 9, "dot": 6, "resist": 0.35, "weakHoly": true, "weakSilver": true, "weakFlame": true },
     { "id": "crypt_lord", "tier": 3, "boss": true, "row": "front", "reach": "ranged", "hp": 340, "attack": 22, "defense": 7, "speed": 8, "dot": 8, "resist": 0.35, "weakHoly": true, "weakSilver": true, "weakFlame": true },
-    { "id": "venom_toad", "tier": 4, "boss": false, "row": "front", "reach": "melee", "hp": 120, "attack": 15, "defense": 6, "speed": 9, "dot": 12, "poisonCap": 40 },
-    { "id": "bog_leech", "tier": 4, "boss": false, "row": "front", "reach": "melee", "hp": 90, "attack": 12, "defense": 4, "speed": 11, "dot": 8, "poisonCap": 40, "slow": 0.35 },
-    { "id": "moss_golem", "tier": 4, "boss": false, "row": "front", "reach": "melee", "hp": 190, "attack": 20, "defense": 11, "speed": 6, "dot": 0, "paralyze": 0.3 },
-    { "id": "wisp", "tier": 4, "boss": false, "row": "back", "reach": "ranged", "hp": 60, "attack": 15, "defense": 2, "speed": 14, "dot": 0, "silence": 0.4 },
-    { "id": "bog_queen", "tier": 4, "boss": true, "row": "back", "reach": "ranged", "hp": 520, "attack": 24, "defense": 8, "speed": 10, "dot": 14, "poisonCap": 48, "paralyze": 0.2, "silence": 0.25, "aoeEvery": 3 }
+    { "id": "venom_toad", "tier": 4, "boss": false, "row": "front", "reach": "melee", "hp": 190, "attack": 11, "defense": 6, "speed": 9, "dot": 12, "poisonCap": 40 },
+    { "id": "bog_leech", "tier": 4, "boss": false, "row": "front", "reach": "melee", "hp": 150, "attack": 9, "defense": 4, "speed": 11, "dot": 8, "poisonCap": 40, "slow": 0.35 },
+    { "id": "moss_golem", "tier": 4, "boss": false, "row": "front", "reach": "melee", "hp": 280, "attack": 15, "defense": 11, "speed": 6, "dot": 0, "paralyze": 0.3 },
+    { "id": "wisp", "tier": 4, "boss": false, "row": "back", "reach": "ranged", "hp": 90, "attack": 11, "defense": 2, "speed": 14, "dot": 0, "silence": 0.15 },
+    { "id": "bog_queen", "tier": 4, "boss": true, "row": "back", "reach": "ranged", "hp": 800, "attack": 18, "defense": 8, "speed": 10, "dot": 14, "poisonCap": 48, "paralyze": 0.2, "silence": 0.15, "aoeEvery": 3 }
   ]
 }

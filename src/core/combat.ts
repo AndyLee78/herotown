@@ -205,6 +205,17 @@ export function simulateFloor(
         push(log, tick, 'log.retreat', { hp: Math.round(average * 100) })
         return { outcome: 'retreat', ticks: tick }
       }
+      // A paralysed hero with a tonic drinks it instead of losing the turn
+      // blankly: the turn still goes, but paralysis and slow wear off and
+      // the hero is guarded for a while (Docs/depth.md 3a).
+      if (actor.paralyzed && kit && (kit.stock.tonic ?? 0) > 0) {
+        actor.paralyzed = false
+        actor.paralyzeGuard = true
+        actor.stunned += 1
+        drinkTonic(actor, kit, tick, log)
+        endTurn(actor, true)
+        continue
+      }
       // Paralysis takes this turn; the next one cannot be paralysed again.
       if (actor.paralyzed) {
         actor.paralyzed = false
@@ -310,16 +321,15 @@ function drinkPotion(actor: BattleUnit, kit: Kit, tactics: Tactics, tick: number
     kit.used[id] = (kit.used[id] ?? 0) + 1
     push(log, tick, 'log.potion', { ...actorParams(actor), potion: id })
   }
+  // Immunity counts the turns after drinking, so it starts one higher.
   if (actor.dot >= alchemyRules.antidoteAt && has('antidote')) {
     drink('antidote')
     actor.dot = 0
-    actor.immunePoison = combatRules.immuneActions
+    actor.immunePoison = combatRules.immuneActions + 1
     return true
   }
   if (actor.slowed > 0 && has('tonic')) {
-    drink('tonic')
-    actor.slowed = 0
-    actor.immuneStun = combatRules.immuneActions
+    drinkTonic(actor, kit, tick, log)
     return true
   }
   if (actor.silenced > 0 && (actor.role === 'healer' || actor.role === 'support') && has('clarity')) {
@@ -337,6 +347,14 @@ function drinkPotion(actor: BattleUnit, kit: Kit, tactics: Tactics, tick: number
     return true
   }
   return false
+}
+
+function drinkTonic(actor: BattleUnit, kit: Kit, tick: number, log: LogEntry[]) {
+  kit.stock.tonic = (kit.stock.tonic ?? 0) - 1
+  kit.used.tonic = (kit.used.tonic ?? 0) + 1
+  push(log, tick, 'log.potion', { ...actorParams(actor), potion: 'tonic' })
+  actor.slowed = 0
+  actor.immuneStun = combatRules.immuneActions + 1
 }
 
 // Counts down timed effects after each of the unit's turns.
@@ -364,7 +382,10 @@ function enemyAct(actor: BattleUnit, heroes: BattleUnit[], rng: Rng, tick: numbe
     }
     return
   }
-  const target = [...pool].sort((a, b) => b.threat - a.threat || a.hp - b.hp || a.index - b.index)[0]
+  // Silencers go for the healers and supporters they can reach first.
+  const casters = actor.silenceOnHit > 0 ? pool.filter((unit) => unit.role === 'healer' || unit.role === 'support') : []
+  const targets = casters.length ? casters : pool
+  const target = [...targets].sort((a, b) => b.threat - a.threat || a.hp - b.hp || a.index - b.index)[0]
   if (!target) {
     return
   }

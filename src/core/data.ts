@@ -179,6 +179,7 @@ export const alchemyRules = alchemyFile as {
   batch: number
   potionBelow: number
   antidoteAt: number
+  speedByLevel: number[]
   potions: { id: PotionId; alchemyLevel: number; gold: number; herb: number; bone: number; ms: number; heal?: number }[]
 }
 

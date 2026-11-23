@@ -16,7 +16,9 @@ export const POTION_IDS: PotionId[] = ['heal', 'antidote', 'tonic', 'clarity']
 export function brewTime(state: GameState, potionId: PotionId): number {
   const potion = potionById(potionId)
   const kept = (state.retirees ?? []).some((retiree) => retiree.building === 'alchemy')
-  return Math.round((potion?.ms ?? 0) * (1 - (kept ? retirementRules.bonus.alchemy : 0)))
+  // A bigger workshop brews faster (Docs/depth.md 3a), and a retiree keeper faster still.
+  const speed = alchemyRules.speedByLevel[Math.max(0, Math.min(alchemyRules.speedByLevel.length, state.buildings.alchemy) - 1)] ?? 1
+  return Math.round((potion?.ms ?? 0) * speed * (1 - (kept ? retirementRules.bonus.alchemy : 0)))
 }
 
 export function startBrew(state: GameState, potionId: PotionId, now: number): GameState {

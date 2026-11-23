@@ -174,8 +174,8 @@
     {
       "id": "venom_marsh",
       "tier": 4,
-      "recommendedLevel": 11,
-      "monsterScale": 1.9,
+      "recommendedLevel": 12,
+      "monsterScale": 1.65,
       "betweenHeal": 0.25,
       "gold": 110,
       "xp": 110,

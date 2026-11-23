@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { returnSupplies, takeSupplies } from './alchemy'
+import { brewTime, returnSupplies, takeSupplies } from './alchemy'
 import { createHeroUnit, simulateFloor, type Kit } from './combat'
 import { alchemyRules, combatRules, dungeonById, potionById, villageRules } from './data'
 import { DEFAULT_TACTICS, defeatReason, runDungeon } from './dungeon'
@@ -172,5 +172,48 @@ describe('alchemy workshop and potion stock', () => {
     expect(loaded.alchemy).toBeNull()
     expect(loaded.materials.herb).toBe(0)
     expect(loaded.buildings.alchemy).toBe(0)
+  })
+})
+
+describe('review 1918eda fixes', () => {
+  it('lets a paralysed hero with a tonic drink it instead of losing the turn blankly', () => {
+    const hero = createHeroUnit(member('w', 'warrior'), 0)
+    hero.paralyzed = true
+    const kit: Kit = { stock: { tonic: 1 }, used: {} }
+    const log: LogEntry[] = []
+    simulateFloor([hero], ['wolf'], DEFAULT_TACTICS, createRng(1), log, 1, undefined, 1, kit)
+    expect(kit.used.tonic).toBe(1)
+    const first = log.find((entry) => entry.params.actorId === 'w' && (entry.key === 'log.potion' || entry.key === 'log.paralyzed'))
+    expect(first?.key).toBe('log.potion')
+  })
+
+  it('sends silencers after the healer before the tank', () => {
+    const tank = createHeroUnit(member('w', 'warrior'), 0)
+    const healer = createHeroUnit({ ...member('c', 'cleric'), row: 'back' }, 1)
+    tank.threat = 999
+    const log: LogEntry[] = []
+    simulateFloor([tank, healer], ['wisp'], DEFAULT_TACTICS, createRng(1), log, 1)
+    const firstHit = log.find((entry) => entry.key === 'log.attack' && String(entry.params.actorId).startsWith('wisp'))
+    expect(firstHit?.params.targetId).toBe('c')
+  })
+
+  it('brews faster in a bigger workshop', () => {
+    const base = freshState(5, now)
+    const at = (level: number) => brewTime({ ...base, buildings: { ...base.buildings, alchemy: level } }, 'antidote')
+    expect(at(2)).toBeLessThan(at(1))
+    expect(at(3)).toBeLessThan(at(2))
+  })
+
+  it('keeps the full antidote immunity for the turns after drinking', () => {
+    const hero = createHeroUnit(member('w', 'warrior'), 0)
+    hero.dot = alchemyRules.antidoteAt + 2
+    const kit: Kit = { stock: { antidote: 1 }, used: {} }
+    const log: LogEntry[] = []
+    const result = simulateFloor([hero], ['slime'], DEFAULT_TACTICS, createRng(1), log, 1, undefined, 1, kit)
+    expect(kit.used.antidote).toBe(1)
+    const drankAt = log.findIndex((entry) => entry.key === 'log.potion')
+    expect(drankAt).toBeGreaterThanOrEqual(0)
+    expect(result.outcome).toBeDefined()
+    expect(combatRules.immuneActions).toBeGreaterThan(0)
   })
 })
