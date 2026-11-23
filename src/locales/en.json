@@ -4,7 +4,9 @@
     "tagline": "Stage 1",
     "gold": "Gold {{gold}}",
     "day": "Day {{day}}",
-    "calendar": "Year {{year}} · {{season}}"
+    "calendar": "Year {{year}} · {{season}}",
+    "update": "A new version is ready",
+    "reload": "Reload"
   },
   "screen": {
     "town": "Town",

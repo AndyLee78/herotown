@@ -24,6 +24,7 @@ import { UiIcon, TownLogo, type ResourceKind } from './game/icons'
 import { Bar, Res, Window, needsWarning, useNow, waitLabel } from './game/kit'
 import { Absence, ConfirmDepart, Report, Settings, Smith, Town } from './game/villageScreens'
 import { loadGame, storeGame } from './storage'
+import { registerSW } from 'virtual:pwa-register'
 
 const VillageView = lazy(() => import('./VillageView').then((mod) => ({ default: mod.VillageView })))
 
@@ -61,6 +62,8 @@ export function App() {
   const [fileNotice, setFileNotice] = useState<string | null>(null)
   const [adBusy, setAdBusy] = useState(false)
   const [toasts, setToasts] = useState<Toast[]>([])
+  const [updateReady, setUpdateReady] = useState(false)
+  const updateSw = useRef<((reloadPage?: boolean) => Promise<void>) | null>(null)
   const [confirm, setConfirm] = useState<'seenDeath' | 'wornParty' | null>(null)
   const [reportUnseen, setReportUnseen] = useState(false)
   const toastId = useRef(0)
@@ -69,6 +72,13 @@ export function App() {
     document.title = t('app.title')
     document.documentElement.lang = i18n.language
   }, [i18n.language, t])
+
+  useEffect(() => {
+    if (!import.meta.env.PROD) {
+      return
+    }
+    updateSw.current = registerSW({ onNeedRefresh: () => setUpdateReady(true) })
+  }, [])
 
   useEffect(() => {
     const now = gameNow()
@@ -279,6 +289,14 @@ export function App() {
       {confirm ? <ConfirmDepart notice={confirm} onCancel={() => setConfirm(null)} onConfirm={() => apply({ type: 'depart', confirm: true })} /> : null}
 
       <div className="toasts" aria-live="polite">
+        {updateReady ? (
+          <div className="toast update">
+            <span>{t('app.update')}</span>
+            <button type="button" className="btn tiny" onClick={() => void updateSw.current?.(true)}>
+              {t('app.reload')}
+            </button>
+          </div>
+        ) : null}
         {toasts.map((toast) => (
           <div key={toast.id} className="toast">
             {toast.text}

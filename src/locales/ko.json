@@ -4,7 +4,9 @@
     "tagline": "단계 1",
     "gold": "골드 {{gold}}",
     "day": "{{day}}일",
-    "calendar": "{{year}}년 · {{season}}"
+    "calendar": "{{year}}년 · {{season}}",
+    "update": "새 버전이 있어요",
+    "reload": "새로고침"
   },
   "screen": {
     "town": "마을 운영",

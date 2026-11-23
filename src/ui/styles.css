@@ -1181,6 +1181,13 @@ button,
   animation: pop 0.16s ease-out;
 }
 
+.toast.update {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  pointer-events: auto;
+}
+
 /* ---------- phones ---------- */
 
 @media (max-width: 760px) {
