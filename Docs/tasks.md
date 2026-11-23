@@ -74,6 +74,11 @@ Claude Code, Cursor, GPT(Codex)가 함께 쓰는 작업 목록이다. 작업 하
 | 32 | 행운의 분수 화면·소리 | Cursor | `App.tsx`, `villageScreens.tsx`, `heroScreens.tsx`, `sound.ts`, `styles.css`, `src/locales/*` | 완료 (6c7e357) |
 | 33 | 분수 core 코드 리뷰 (5322f86) | GPT | `Docs/reviews/5322f86.md` (새 파일만) | 완료 (a666f56) |
 | 34 | 분수가 초반 골드에 주는 몫 측정 | GPT | `tools/first-hour.ts` | 완료 (a47f68a) |
+| 35 | 독늪 몬스터·던전 그림 | Cursor | `src/ui/voxel/enemies.ts`, `portrait.ts` | 대기 (지금 시작 가능) |
+| 36 | 상태이상·물약 화면과 연금술 공방 | Cursor | `App.tsx`, `src/ui/game/*.tsx`, `styles.css`, `src/locales/*` | 대기 (3a core 뒤) |
+| 37 | 상태 표시·물약 동작·공방 건물 3D | Cursor | `BattleScene.ts`, `replay.ts`, `world.ts`, `VillageScene.ts` | 대기 (36 뒤) |
+| 38 | 3a core 코드 리뷰 | GPT | `Docs/reviews/<해시>.md` (새 파일만) | 대기 (3a core 뒤) |
+| 39 | 독늪 밸런스 측정 | GPT | `tools/curve.ts`, `print-curve.ts`, `tune-curve.ts`, `first-hour.ts` | 대기 (3a core 뒤) |
 
 ---
 
@@ -949,3 +954,99 @@ tools/first-hour.ts만 고친다. 지금은 길잡이 단계 때문에 분수를
 - 시드 1–20, 끔/즉시/5분의 1시간 총수입 중앙값은 323.5/678/645.5, 3시간은 812/2056.5/2018골드. 분수 몫은 0/46.8/47.1%와 0/55.3/55.2%, 대박은 0/2/2회와 0/9/8.5회였다.
 - 첫 동굴 클리어는 세 정책 모두 1.1분이었다. 3시간 안에 묘실을 클리어한 시드는 11/13/12개였다. 끔은 분수 증축을 건너뛰며 길잡이가 소원 단계에서 멈춘다.
 - Lv1 고정 즉시 사용은 첫 1시간 148골드(분당 2.47), 원정 대비 52.6%였다. 25–35% 비율을 우선하면 Lv1 간격 100–105초를 후보로 재측정하되, 분당 2–3골드 목표와는 현재 원정 수입 기준으로 함께 맞추기 어렵다.
+
+---
+
+## 35. 독늪 몬스터·던전 그림 (Cursor)
+
+**지금 시작할 수 있다.** 설계: `Docs/depth.md` 3a. core는 아직 이 id들을 모르지만, 그림은 id만 있으면 된다.
+
+**전달할 내용**
+
+```
+Docs/depth.md의 3a를 읽고 독늪 습지의 3D 그림을 만든다. src/ui/voxel/enemies.ts, src/ui/voxel/portrait.ts만 고친다. core와 data는 고치지 않는다.
+
+몬스터 id(곧 monsters.json에 들어간다): venom_toad(독두꺼비), bog_leech(늪거머리), moss_golem(이끼골렘, 크고 단단함), wisp(도깨비불, 떠다니는 작은 불빛, 후열), bog_queen(보스 늪의 여왕, 덩굴 왕관을 쓴 큰 두꺼비 또는 늪 마녀).
+던전 id: venom_marsh(독늪 습지, 티어 4).
+
+1. buildEnemy에 다섯 몬스터. 기존 creature 종류(beast/flyer/blob/spider/ghost)를 재사용하거나 필요하면 'golem'·'wisp' 종류를 추가한다. 늪 색(탁한 초록·보라·갈색).
+2. dungeonPreviewUrl이 tier 4·venom_marsh를 늪 입구 풍경(물웅덩이, 죽은 나무, 안개)으로 그린다.
+3. monsterPortraitUrl이 다섯 몬스터를 그린다.
+
+확인: 개발 화면에 아직 이 던전이 없으므로, 임시로 브라우저 콘솔이나 작은 테스트 페이지 없이 portrait 함수를 직접 불러 그림을 확인하고(예: 기존 portrait 테스트 방식) 스크린샷을 메모에. 임시 코드는 커밋하지 않는다.
+```
+
+메모:
+
+---
+
+## 36. 상태이상·물약 화면과 연금술 공방 (Cursor)
+
+**3a core 커밋 뒤에 시작한다.** 조회 함수와 필드 이름은 core 커밋 메시지에 있다.
+
+**전달할 내용**
+
+```
+Docs/depth.md 3a를 읽고 화면을 만든다. src/ui/App.tsx, src/ui/game/*.tsx, src/ui/styles.css, src/locales/*만 고친다. core는 고치지 않는다.
+
+1. 연금술 공방 창: 만들 수 있는 물약(레벨별), 재료·시간, 진행 막대, 창고 재고. 대장간 창 구조를 따른다.
+2. 출발 준비(Prep): 이번 출정에 가져갈 물약 수(종류별, 파티당 상한)와 창고 재고. 물약 작전 줄("체력 n% 미만이면 회복 물약").
+3. 원정 기록·리포트: 물약을 몇 개 썼는지, 새 패배 이유 4가지 문구와 추천 물약.
+4. 진행 패널·전투 로그: 상태이상 로그 키 문구.
+5. 새 재료 약초를 HUD·비용 목록에 표시.
+6. 문구 ko/en 같은 키.
+
+확인: npm run dev에서 독늪까지 가는 세이브를 만들어(디버그 골드·시간 가속) 물약을 만들고 들고 가 본다. 확인 못 한 부분은 메모에.
+```
+
+메모:
+
+---
+
+## 37. 상태 표시·물약 동작·연금술 공방 건물 3D (Cursor)
+
+**작업 36 뒤에 시작한다.**
+
+**전달할 내용**
+
+```
+src/ui/voxel/BattleScene.ts, src/ui/voxel/replay.ts, src/ui/voxel/world.ts, src/ui/voxel/VillageScene.ts만 고친다.
+1. 전투 다시 보기에서 상태 표시: 중독 초록 방울, 마비 노란 번개, 둔화 달팽이 껍데기 아이콘, 침묵 X 말풍선. replay 로그의 상태 키를 따라 켜고 끈다.
+2. 물약을 마시는 동작(병을 들고 기울임)과 회복·해제 반짝임.
+3. 마을에 연금술 공방 건물(레벨 1–3, 솥과 굴뚝 연기). LOTS에 자리를 잡는다.
+확인: 스크린샷을 메모에.
+```
+
+메모:
+
+---
+
+## 38. 3a core 코드 리뷰 (GPT)
+
+**3a core 커밋 뒤에 시작한다.** 해시는 표의 38번 행.
+
+**전달할 내용**
+
+```
+3a core 커밋을 리뷰한다. 코드는 고치지 않고 Docs/reviews/<해시>.md 새 파일 하나에만 쓴다(Docs/reviews/README.md 형식).
+볼 것: Docs/depth.md 3a와 수치·규칙 차이, 상태이상 4가지의 판정 순서와 상한, 기존 dot를 중독으로 옮길 때 기존 던전 결과가 바뀌지 않았는지(tests/balance.test.ts와 곡선 비교), 물약 창고(출정 때 빼고 귀환 때 돌려줌, 원정 중 창고, 자동 원정), 물약 작전, 연금술 공방 제작, 약초 드롭, 마을 Lv4, 패배 이유 순서, 세이브 11 변환, rng.
+```
+
+메모:
+
+---
+
+## 39. 독늪 밸런스 측정 (GPT)
+
+**3a core 커밋 뒤에 시작한다.**
+
+**전달할 내용**
+
+```
+tools/curve.ts, tools/print-curve.ts, tools/tune-curve.ts, tools/first-hour.ts만 고친다. 게임 코드와 data는 고치지 않는다(제안만).
+1. 곡선 도구에 "물약 지참" 조건(없음 / 해독 2 / 회복 2 + 해독 2 / 힐러 빼고 회복 4 + 해독 1)을 추가하고 독늪 Lv8–14 승률(중앙값/하위 25%)을 출력한다.
+2. first-hour.ts를 6시간까지 돌릴 수 있게 하고, 흉내 플레이어가 연금술 공방을 짓고 독늪 전에 물약을 만들어 들고 가게 한다.
+3. Docs/depth.md 3a "밸런스 기준"(물약 없이 하위 25% 약 30%, 해독 2개면 60% 이상; 물약 값은 반복 보상의 20–30%)과 비교해 메모에 적는다.
+```
+
+메모:
