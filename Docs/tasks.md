@@ -74,7 +74,7 @@ Claude Code, Cursor, GPT(Codex)가 함께 쓰는 작업 목록이다. 작업 하
 | 32 | 행운의 분수 화면·소리 | Cursor | `App.tsx`, `villageScreens.tsx`, `heroScreens.tsx`, `sound.ts`, `styles.css`, `src/locales/*` | 완료 (6c7e357) |
 | 33 | 분수 core 코드 리뷰 (5322f86) | GPT | `Docs/reviews/5322f86.md` (새 파일만) | 완료 (a666f56) |
 | 34 | 분수가 초반 골드에 주는 몫 측정 | GPT | `tools/first-hour.ts` | 완료 (a47f68a) |
-| 35 | 독늪 몬스터·던전 그림 | Cursor | `src/ui/voxel/enemies.ts`, `portrait.ts` | 대기 (지금 시작 가능) |
+| 35 | 독늪 몬스터·던전 그림 | Cursor | `src/ui/voxel/enemies.ts`, `portrait.ts` | 완료 (ad6c4c7) |
 | 36 | 상태이상·물약 화면과 연금술 공방 | Cursor | `App.tsx`, `src/ui/game/*.tsx`, `styles.css`, `src/locales/*` | 대기 (지금 시작 가능) |
 | 37 | 상태 표시·물약 동작·공방 건물 3D | Cursor | `BattleScene.ts`, `replay.ts`, `world.ts`, `VillageScene.ts` | 대기 (36 뒤) |
 | 38 | 3a core 코드 리뷰 (1918eda) | GPT | `Docs/reviews/1918eda.md` (새 파일만) | 대기 (지금 시작 가능) |
@@ -976,7 +976,7 @@ Docs/depth.md의 3a를 읽고 독늪 습지의 3D 그림을 만든다. src/ui/vo
 확인: 개발 화면에 아직 이 던전이 없으므로, 임시로 브라우저 콘솔이나 작은 테스트 페이지 없이 portrait 함수를 직접 불러 그림을 확인하고(예: 기존 portrait 테스트 방식) 스크린샷을 메모에. 임시 코드는 커밋하지 않는다.
 ```
 
-메모:
+메모: 독두꺼비·늪거머리·이끼골렘·도깨비불·늪의 여왕을 탁한 초록과 보라로 그렸다. 여왕은 덩굴 왕관을 쓴 큰 두꺼비다. 던전 입구는 죽은 나무, 물웅덩이, 안개, 어두운 아치다. portrait 함수로 다섯 초상과 입구를 화면에 올려 확인했고, 임시 화면은 커밋하지 않았다.
 
 ---
 
