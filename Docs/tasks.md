@@ -70,10 +70,10 @@ Claude Code, Cursor, GPT(Codex)가 함께 쓰는 작업 목록이다. 작업 하
 | 28 | 집 레벨별 모습·묘지 비석 3D | Cursor | `src/ui/voxel/VillageScene.ts`, `src/ui/voxel/world.ts` | 완료 (9d35253) |
 | 29 | 2b core 코드 리뷰 (f7fdf88) | GPT | `Docs/reviews/f7fdf88.md` (새 파일만) | 완료 (이 커밋) |
 | 30 | 세대 시뮬레이터 60년 | GPT | `tools/generations.ts` | 완료 (이 커밋) |
-| 31 | 행운의 분수 3D | Cursor | `src/ui/voxel/VillageScene.ts`, `world.ts`, `src/ui/VillageView.tsx` | 대기 (분수 core 뒤) |
+| 31 | 행운의 분수 3D | Cursor | `src/ui/voxel/VillageScene.ts`, `world.ts`, `src/ui/VillageView.tsx` | 대기 (지금 시작 가능) |
 | 32 | 행운의 분수 화면·소리 | Cursor | `App.tsx`, `villageScreens.tsx`, `heroScreens.tsx`, `sound.ts`, `styles.css`, `src/locales/*` | 대기 (31 뒤) |
-| 33 | 분수 core 코드 리뷰 | GPT | `Docs/reviews/<해시>.md` (새 파일만) | 대기 (분수 core 뒤) |
-| 34 | 분수가 초반 골드에 주는 몫 측정 | GPT | `tools/first-hour.ts` | 대기 (분수 core 뒤) |
+| 33 | 분수 core 코드 리뷰 (5322f86) | GPT | `Docs/reviews/5322f86.md` (새 파일만) | 대기 (지금 시작 가능) |
+| 34 | 분수가 초반 골드에 주는 몫 측정 | GPT | `tools/first-hour.ts` | 대기 (지금 시작 가능) |
 
 ---
 
@@ -871,7 +871,7 @@ tools/generations.ts만 고친다. 기본 기간을 60년으로 늘리고(인자
 
 ## 31. 행운의 분수 3D (Cursor)
 
-설계: `Docs/fountain.md`. **분수 core 커밋 뒤에 시작한다.** 조회 함수 이름은 core 커밋 메시지에 있다.
+설계: `Docs/fountain.md`. 분수 core는 5322f86에 들어갔다. 광장 한가운데 임시 대야(world.ts의 fountain 자리)를 진짜 모델로 바꾼다. 조회 함수 이름은 core 커밋 메시지에 있다.
 
 **전달할 내용**
 
@@ -916,7 +916,7 @@ Docs/fountain.md를 읽고 분수의 화면 요소를 만든다. src/ui/App.tsx,
 
 ## 33. 분수 core 코드 리뷰 (GPT)
 
-**분수 core 커밋 뒤에 시작한다.** 해시는 표의 33번 행.
+분수 core 커밋은 **5322f86**다.
 
 **전달할 내용**
 
@@ -936,7 +936,7 @@ Docs/fountain.md를 읽고 분수의 화면 요소를 만든다. src/ui/App.tsx,
 **전달할 내용**
 
 ```
-tools/first-hour.ts만 고친다. 흉내 플레이어에 "분수 누르기" 옵션을 추가한다: 끔 / 소원이 있으면 바로 누름 / 5분마다 확인. 분수 업그레이드도 다른 건물처럼 살 수 있게 한다.
+tools/first-hour.ts만 고친다. 지금은 길잡이 단계 때문에 분수를 한 번만 누르고, 분수 업그레이드는 누르지도 않으면서 사서 골드를 낭비한다(시드 20개 중 고용비 미만 30분 초과가 2→5). 흉내 플레이어에 "분수 누르기" 옵션을 추가한다: 끔 / 소원이 있으면 바로 누름 / 5분마다 확인. 분수 업그레이드도 다른 건물처럼 살 수 있게 한다.
 
 출력: 세 경우마다 시드 1–20 중앙값으로 첫 1시간·3시간 총 골드 수입, 그중 분수 몫(%), 대박 횟수, 던전 첫 클리어 시간. 
 
