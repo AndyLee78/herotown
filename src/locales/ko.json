@@ -455,6 +455,25 @@
     "victory": "파티가 던전을 클리어했다.",
     "defeat": "파티가 전멸했다."
   },
+  "sound": {
+    "title": "효과음",
+    "volume": "음량",
+    "mute": "음소거",
+    "unmute": "소리 켜기",
+    "samples": "소리 견본",
+    "tap": "버튼",
+    "open": "열기",
+    "close": "닫기",
+    "coin": "골드",
+    "build": "건설",
+    "complete": "완료",
+    "hit": "피격",
+    "heal": "회복",
+    "victory": "승리",
+    "defeat": "패배",
+    "levelUp": "레벨업",
+    "notice": "알림"
+  },
   "debug": {
     "offset": "시간 +{{days}}일 {{hours}}시간 {{minutes}}분",
     "skip10": "+10분",

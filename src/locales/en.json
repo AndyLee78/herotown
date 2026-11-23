@@ -455,6 +455,25 @@
     "victory": "The party clears the dungeon.",
     "defeat": "The party is wiped out."
   },
+  "sound": {
+    "title": "Sound",
+    "volume": "Volume",
+    "mute": "Mute",
+    "unmute": "Unmute",
+    "samples": "Sound samples",
+    "tap": "Tap",
+    "open": "Open",
+    "close": "Close",
+    "coin": "Coin",
+    "build": "Build",
+    "complete": "Complete",
+    "hit": "Hit",
+    "heal": "Heal",
+    "victory": "Victory",
+    "defeat": "Defeat",
+    "levelUp": "Level up",
+    "notice": "Notice"
+  },
   "debug": {
     "offset": "Time +{{days}}d {{hours}}h {{minutes}}m",
     "skip10": "+10 min",

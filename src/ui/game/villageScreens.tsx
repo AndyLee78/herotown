@@ -19,6 +19,7 @@ import {
   type GameState,
 } from '../../core'
 import { gameNow, gameOffset, offsetParts, subscribeGameClock } from '../clock'
+import { loadSoundPrefs, saveSoundPrefs, SOUND_NAMES } from '../sound'
 import { canReplay } from '../voxel/replay'
 import { Bar, Chip, CostList, Res, Window, affordable, formatEntry, itemLabel, useNow, waitLabel } from './kit'
 
@@ -254,6 +255,7 @@ export function Settings({
 }) {
   const { t, i18n } = useTranslation()
   const [revision, setRevision] = useState(0)
+  const [sound, setSound] = useState(loadSoundPrefs)
   useEffect(() => subscribeGameClock(() => setRevision((value) => value + 1)), [])
   return (
     <>
@@ -264,6 +266,35 @@ export function Settings({
         </button>
         <button type="button" className={i18n.language === 'en' ? 'btn gold' : 'btn'} onClick={() => onLanguage('en')}>
           {t('action.en')}
+        </button>
+      </div>
+      <h3 className="section-title">{t('sound.title')}</h3>
+      <div className="row">
+        <label className="field">
+          <span>{t('sound.volume')} {sound.volume}</span>
+          <input
+            type="range"
+            min={0}
+            max={100}
+            value={sound.volume}
+            onChange={(event) => {
+              const volume = Number(event.target.value)
+              const next = { ...sound, volume }
+              setSound(next)
+              saveSoundPrefs(next)
+            }}
+          />
+        </label>
+        <button
+          type="button"
+          className={sound.muted ? 'btn small gold' : 'btn small'}
+          onClick={() => {
+            const next = { ...sound, muted: !sound.muted }
+            setSound(next)
+            saveSoundPrefs(next)
+          }}
+        >
+          {sound.muted ? t('sound.unmute') : t('sound.mute')}
         </button>
       </div>
       <h3 className="section-title">{t('label.save')}</h3>
@@ -329,6 +360,14 @@ export function Settings({
             <button type="button" className={save.seedLocked ? 'btn small gold' : 'btn small'} onClick={() => onAction({ type: 'lockSeed', locked: !save.seedLocked })}>
               {t('label.seedLocked')}
             </button>
+          </div>
+          <h3 className="section-title">{t('sound.samples')}</h3>
+          <div className="row">
+            {SOUND_NAMES.map((name) => (
+              <button key={name} type="button" className="btn small" data-sound={name}>
+                {t(`sound.${name}`)}
+              </button>
+            ))}
           </div>
           <h3 className="section-title">{t('debug.icons')}</h3>
           <IconSheet />

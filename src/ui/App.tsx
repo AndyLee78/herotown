@@ -25,6 +25,7 @@ import { Bar, Res, Window, needsWarning, useNow, waitLabel } from './game/kit'
 import { Absence, ConfirmDepart, Report, Settings, Smith, Town } from './game/villageScreens'
 import { loadGame, storeGame } from './storage'
 import { registerSW } from 'virtual:pwa-register'
+import { isSoundName, play, unlockSound } from './sound'
 
 const VillageView = lazy(() => import('./VillageView').then((mod) => ({ default: mod.VillageView })))
 
@@ -81,6 +82,40 @@ export function App() {
   }, [])
 
   useEffect(() => {
+    const onPointer = () => unlockSound()
+    const onClick = (event: MouseEvent) => {
+      const target = event.target
+      if (!(target instanceof Element)) {
+        return
+      }
+      const button = target.closest('button')
+      if (!(button instanceof HTMLButtonElement) || !button.classList.contains('btn')) {
+        return
+      }
+      const named = button.dataset.sound
+      play(named && isSoundName(named) ? named : 'tap')
+    }
+    window.addEventListener('pointerdown', onPointer, true)
+    window.addEventListener('click', onClick)
+    return () => {
+      window.removeEventListener('pointerdown', onPointer, true)
+      window.removeEventListener('click', onClick)
+    }
+  }, [])
+
+  const heardAbsence = useRef(save?.absence ?? null)
+  useEffect(() => {
+    const report = save?.absence ?? null
+    if (report && report !== heardAbsence.current) {
+      play('open')
+      if (report.completed.length > 0 || (report.crafted?.length ?? 0) > 0) {
+        play('complete')
+      }
+    }
+    heardAbsence.current = report
+  }, [save])
+
+  useEffect(() => {
     const now = gameNow()
     let cancel = false
     void loadGame(now).then((loaded) => {
@@ -127,6 +162,7 @@ export function App() {
   }, [save])
 
   const pushToast = (text: string) => {
+    play('notice')
     const id = (toastId.current += 1)
     setToasts((list) => [...list.slice(-2), { id, text }])
     window.setTimeout(() => setToasts((list) => list.filter((toast) => toast.id !== id)), 3500)
@@ -137,11 +173,25 @@ export function App() {
     if (!current) {
       return
     }
+    const beforeLevel = townLevel(current.fame).level
     const next = reduce(current, action)
     saveRef.current = next
     setSave(next)
+    if (action.type !== 'catchUp' && next.gold > current.gold) {
+      play('coin')
+    }
+    if (action.type === 'hire' && next.roster.length > current.roster.length) {
+      play('coin')
+    }
+    if (action.type === 'build' && next.construction && !current.construction) {
+      play('build')
+    }
+    if (townLevel(next.fame).level > beforeLevel) {
+      play('levelUp')
+    }
     if (next.notice && CONFIRM_NOTICES.has(next.notice)) {
       setConfirm(next.notice as 'seenDeath' | 'wornParty')
+      play('open')
     } else if (next.notice) {
       pushToast(t(`result.${next.notice}`))
     }
@@ -152,6 +202,7 @@ export function App() {
       setConfirm(null)
       setReportUnseen(false)
       setScreen('result')
+      play('open')
     }
   }
 
@@ -192,6 +243,7 @@ export function App() {
 
   const open = (next: Screen) => {
     setScreen(next)
+    play('open')
     if (next === 'result') {
       setReportUnseen(false)
     }
@@ -241,7 +293,7 @@ export function App() {
         {DOCK.map((item) => {
           const badge = badges[item.screen]
           return (
-            <button key={item.screen} type="button" aria-pressed={screen === item.screen} onClick={() => open(item.screen)}>
+            <button key={item.screen} type="button" aria-pressed={screen === item.screen} onClick={() => { play('tap'); open(item.screen) }}>
               {item.icon}
               <span>{t(`screen.${item.screen}`)}</span>
               {typeof badge === 'number' && badge > 0 ? <span className="badge">{badge}</span> : badge === true ? <span className="badge dot" /> : null}
@@ -251,7 +303,7 @@ export function App() {
       </nav>
 
       {screen ? (
-        <Window title={t(`screen.${screen}`)} icon={DOCK.find((item) => item.screen === screen)?.icon ?? <UiIcon name="settings" size={24} />} onClose={() => setScreen(null)}>
+        <Window title={t(`screen.${screen}`)} icon={DOCK.find((item) => item.screen === screen)?.icon ?? <UiIcon name="settings" size={24} />} onClose={() => { play('close'); setScreen(null) }}>
           {screen === 'town' ? <Town save={save} onAction={apply} busy={adBusy} onWatch={() => watchAd('construction')} /> : null}
           {screen === 'inn' ? <Inn save={save} onHire={(id) => apply({ type: 'hire', id, now: gameNow() })} /> : null}
           {screen === 'roster' ? (
@@ -285,8 +337,8 @@ export function App() {
         </Window>
       ) : null}
 
-      {save.absence ? <Absence save={save} busy={adBusy} onWatch={() => watchAd('absence')} onClose={() => apply({ type: 'dismissAbsence' })} /> : null}
-      {confirm ? <ConfirmDepart notice={confirm} onCancel={() => setConfirm(null)} onConfirm={() => apply({ type: 'depart', confirm: true })} /> : null}
+      {save.absence ? <Absence save={save} busy={adBusy} onWatch={() => watchAd('absence')} onClose={() => { play('close'); apply({ type: 'dismissAbsence' }) }} /> : null}
+      {confirm ? <ConfirmDepart notice={confirm} onCancel={() => { play('close'); setConfirm(null) }} onConfirm={() => apply({ type: 'depart', confirm: true })} /> : null}
 
       <div className="toasts" aria-live="polite">
         {updateReady ? (

@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { dungeonById, type DungeonReport } from '../core'
+import { play } from './sound'
 import { BattleScene } from './voxel/BattleScene'
 import { buildSteps } from './voxel/replay'
 
@@ -30,6 +31,7 @@ export function BattleView({ report, describe }: { report: DungeonReport; descri
         setDone(true)
         setPlaying(false)
       },
+      onSound: play,
     })
     sceneRef.current = scene
     setDone(false)

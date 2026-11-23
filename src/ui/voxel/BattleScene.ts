@@ -44,9 +44,12 @@ type Projectile = { mesh: THREE.Object3D; from: THREE.Vector3; to: THREE.Vector3
 type Particle = { mesh: THREE.Mesh; velocity: THREE.Vector3; life: number }
 type Floater = { sprite: THREE.Sprite; t: number }
 
+export type BattleSound = 'hit' | 'heal' | 'victory' | 'defeat'
+
 export type BattleCallbacks = {
   onStep: (logIndex: number) => void
   onDone: () => void
+  onSound?: (name: BattleSound) => void
 }
 
 const VIEW_WIDTH = 11.5
@@ -280,6 +283,9 @@ export class BattleScene {
             target.hp = Math.min(target.max, target.hp + step.amount)
             this.number(`+${step.amount}`, '#5fe07a', target)
             this.burst(this.chest(target), '#8ef08a', 10)
+            if (!instant) {
+              this.callbacks.onSound?.('heal')
+            }
           }
         })
         break
@@ -333,6 +339,9 @@ export class BattleScene {
         }
         break
       case 'end':
+        if (!instant) {
+          this.callbacks.onSound?.(step.victory ? 'victory' : 'defeat')
+        }
         if (step.victory) {
           for (const fighter of this.fighters.values()) {
             if (fighter.side === 'hero' && fighter.alive && !instant) {
@@ -505,6 +514,7 @@ export class BattleScene {
     }
     this.number(String(amount), color, target)
     this.burst(this.chest(target), color === '#ffffff' ? '#ffffff' : color, 6)
+    this.callbacks.onSound?.('hit')
     if (target.alive) {
       const source = target.side === 'hero' ? 1 : -1
       target.anim = { type: 'hit', t: 0, dur: 0.3, dir: new THREE.Vector3(-source, 0, 0) }
