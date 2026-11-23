@@ -7,6 +7,7 @@ type Props = {
   roster: Hero[]
   visitors: Hero[]
   awayIds: string[]
+  retirees: Hero[]
   partyIds: string[]
   selectedId: string | null
   onSelect: (id: string) => void
@@ -19,7 +20,7 @@ type Props = {
   active: boolean
 }
 
-export function VillageView({ roster, visitors, awayIds, partyIds, selectedId, onSelect, onPickBuilding, villageLabel, buildings, constructing, buildingLabels, expeditions, active }: Props) {
+export function VillageView({ roster, visitors, awayIds, retirees, partyIds, selectedId, onSelect, onPickBuilding, villageLabel, buildings, constructing, buildingLabels, expeditions, active }: Props) {
   const canvasRef = useRef<HTMLCanvasElement>(null)
   const sceneRef = useRef<VillageScene | null>(null)
   const onSelectRef = useRef(onSelect)
@@ -45,7 +46,7 @@ export function VillageView({ roster, visitors, awayIds, partyIds, selectedId, o
   }, [])
 
   useEffect(() => {
-    sceneRef.current?.update({ roster, visitors, awayIds, partyIds, selectedId, buildings, constructing, labels: buildingLabels, expeditions })
+    sceneRef.current?.update({ roster, visitors, awayIds, retirees, partyIds, selectedId, buildings, constructing, labels: buildingLabels, expeditions })
   })
 
   useEffect(() => {

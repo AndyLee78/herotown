@@ -311,6 +311,7 @@ export function App() {
         <VillageView
           roster={save.roster}
           awayIds={[...away]}
+          retirees={save.retirees.map((retiree) => retiree.hero)}
           visitors={save.visitors}
           partyIds={(save.presets.find((preset) => preset.id === save.presetId)?.slots ?? []).map((slot) => slot.id)}
           selectedId={selectedId}

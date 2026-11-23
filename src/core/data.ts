@@ -6,6 +6,7 @@ import smithFile from '../data/smith.json'
 import combatFile from '../data/combat.json'
 import dungeonsFile from '../data/dungeons.json'
 import expeditionFile from '../data/expedition.json'
+import retirementFile from '../data/retirement.json'
 import monstersFile from '../data/monsters.json'
 import namesFile from '../data/names.json'
 import progressionFile from '../data/progression.json'
@@ -166,6 +167,11 @@ export const lifeRules = lifeFile
 export const smithRules = smithFile
 export const adRules = adsFile
 export const expeditionRules = expeditionFile
+export const retirementRules = retirementFile
+
+if (retirementRules.minAge > retirementRules.adviseAge) {
+  throw new Error('Retirement must be allowed before it is advised')
+}
 
 for (const key of ['travelMs', 'msPerTick', 'presets', 'history'] as const) {
   if (!Number.isInteger(expeditionRules[key]) || expeditionRules[key] < 1) {

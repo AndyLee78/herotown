@@ -1,5 +1,5 @@
 import { claimGuide } from './guide'
-import { adRules, classById, combatRules, dungeonById, dungeons, expeditionRules, lifeRules, progression, smithRules, timeRules, villageRules } from './data'
+import { adRules, classById, combatRules, dungeonById, dungeons, expeditionRules, lifeRules, progression, retirementRules, smithRules, timeRules, villageRules } from './data'
 import { forgeGear, normalizeGear, recipeById } from './gear'
 import { applyReport, DEFAULT_TACTICS, runDungeon } from './dungeon'
 import { canDeploy, ageUp, generateHero, generateVisitors, normalizeHero, restHero } from './hero'
@@ -7,7 +7,7 @@ import { createRng } from './rng'
 import type { Rng } from './rng'
 import type { ClassId, CombatError, DungeonReport, Gear, GearSlot, Hero, Row, Tactics } from './types'
 
-export const SAVE_VERSION = 6
+export const SAVE_VERSION = 7
 
 export type SeasonId = 'spring' | 'summer' | 'autumn' | 'winter'
 
@@ -89,6 +89,14 @@ export type Expedition = {
   returnAt: number
 }
 
+// A hero who has hung up their sword. They stay in town, cost no wages,
+// keep ageing, and can run one building for a bonus (GDD 3.3, 5.2).
+export type Retiree = {
+  hero: Hero
+  retiredYear: number
+  building: BuildingId | null
+}
+
 export type Grave = {
   id: string
   name: string
@@ -120,6 +128,8 @@ export type GameNotice =
   | 'busyHero'
   | 'slotsFull'
   | 'lockedDungeon'
+  | 'tooYoung'
+  | 'postTaken'
   | 'wornParty'
   | CombatError
   | 'checksum'
@@ -161,6 +171,7 @@ export type GameState = {
   auto: AutoPlan
   ads: AdUses
   guideStep: number
+  retirees: Retiree[]
 }
 
 export type AdPlacement = 'absence' | 'construction' | 'temple'
@@ -204,6 +215,8 @@ export type GameAction =
   | { type: 'reset'; now: number }
   | { type: 'adReward'; placement: AdPlacement; now: number }
   | { type: 'claimGuide' }
+  | { type: 'retire'; id: string }
+  | { type: 'assignRetiree'; id: string; building: BuildingId | null }
 
 export function freshState(seed: number, now: number): GameState {
   return {
@@ -241,6 +254,7 @@ export function freshState(seed: number, now: number): GameState {
     auto: { enabled: false, dungeonId: 'hill_cave', policy: 'safe', material: 'wood', party: [] },
     ads: emptyAds(now),
     guideStep: 0,
+    retirees: [],
   }
 }
 
@@ -431,7 +445,7 @@ function apply(state: GameState, action: GameAction): GameState {
     const visitors = generateVisitors(
       state.seed + visitorNonce * progression.visitorNonceStride,
       visitorCap(state.buildings.inn),
-      townLevel(state.fame).visitorPotential,
+      townLevel(state.fame).visitorPotential + retireeBonus(state, 'inn'),
     ).map((hero) => ({ ...hero, arrivedAt: now }))
     return {
       ...state,
@@ -446,6 +460,12 @@ function apply(state: GameState, action: GameAction): GameState {
   }
   if (action.type === 'setSeed') {
     return { ...state, notice: null, seed: action.seed }
+  }
+  if (action.type === 'retire') {
+    return retireHero(state, action.id)
+  }
+  if (action.type === 'assignRetiree') {
+    return assignRetiree(state, action.id, action.building)
   }
   if (action.type === 'claimGuide') {
     return claimGuide(state)
@@ -707,6 +727,7 @@ function growOlder(state: GameState, years: number, aged: { name: string; age: n
     ...state,
     roster: state.roster.map((hero) => older(hero, years, aged)),
     visitors: state.visitors.map((hero) => older(hero, years, aged)),
+    retirees: state.retirees.map((retiree) => ({ ...retiree, hero: older(retiree.hero, years, aged) })),
   }
 }
 
@@ -747,7 +768,7 @@ function updateVisitors(state: GameState, now: number, arrived: string[]): GameS
   let nextVisitorAt = state.nextVisitorAt
   let nonce = state.visitorNonce
   const cap = visitorCap(state.buildings.inn)
-  const bonus = townLevel(state.fame).visitorPotential
+  const bonus = townLevel(state.fame).visitorPotential + retireeBonus(state, 'inn')
   if (visitors.length < state.visitors.length && visitors.length < cap) {
     nextVisitorAt = Math.min(nextVisitorAt, now)
   }
@@ -804,7 +825,7 @@ function startBuild(state: GameState, id: BuildingId, now: number): GameState {
       iron: state.materials.iron - cost.iron,
       bone: state.materials.bone,
     },
-    construction: { id, finishAt: now + cost.ms },
+    construction: { id, finishAt: now + Math.round(cost.ms * (1 - retireeBonus(state, 'hall'))) },
   }
 }
 
@@ -851,7 +872,7 @@ function runAuto(state: GameState, elapsed: number, tally: { runs: number; gold:
     const result = runDungeon(members, dungeonId, presetById(next, next.presetId)?.tactics ?? DEFAULT_TACTICS, battleSeed)
     // Auto runs only repeat cleared dungeons, so they earn a share of the
     // repeat reward and always less than sending the party by hand.
-    const scale = villageRules.repeatReward * villageRules.auto.rewardScale
+    const scale = villageRules.repeatReward * villageRules.auto.rewardScale * (1 + retireeBonus(next, 'guild'))
     if (!result.ok) {
       break
     }
@@ -949,7 +970,8 @@ function stepCondition(hero: Hero, now: number): Hero {
 function recoverRoster(state: GameState, elapsed: number, now: number): GameState {
   const hours = elapsed / 3_600_000
   const rate =
-    lifeRules.fatigue.recoverPerHour + lifeRules.fatigue.recoverPerHouseLevel * Math.max(0, state.buildings.house - 1)
+    (lifeRules.fatigue.recoverPerHour + lifeRules.fatigue.recoverPerHouseLevel * Math.max(0, state.buildings.house - 1)) *
+    (1 + retireeBonus(state, 'house'))
   return {
     ...state,
     roster: state.roster.map((hero) => recoverHero(hero, hours, rate, now)),
@@ -1036,6 +1058,59 @@ function settleParty(
     }
   }
   return { roster, graveyard }
+}
+
+// ---------- retirement ----------
+
+// The bonus a building gets from the retiree running it, or 0.
+export function retireeBonus(state: GameState, building: BuildingId): number {
+  if (!state.retirees.some((retiree) => retiree.building === building)) {
+    return 0
+  }
+  return retirementRules.bonus[building]
+}
+
+export function retirementAdvised(hero: Hero): boolean {
+  return hero.age >= retirementRules.adviseAge
+}
+
+function retireHero(state: GameState, id: string): GameState {
+  const hero = state.roster.find((entry) => entry.id === id)
+  if (!hero) {
+    return { ...state, notice: 'missing' }
+  }
+  if (busyHeroIds(state).has(id)) {
+    return { ...state, notice: 'busyHero' }
+  }
+  if (hero.age < retirementRules.minAge) {
+    return { ...state, notice: 'tooYoung' }
+  }
+  const retiree: Retiree = {
+    hero: { ...hero, treatAt: undefined, resurrectAt: undefined },
+    retiredYear: state.calendar.year,
+    building: null,
+  }
+  return dropFromPresets({
+    ...state,
+    notice: null,
+    roster: state.roster.filter((entry) => entry.id !== id),
+    retirees: [...state.retirees, retiree],
+  })
+}
+
+// One retiree per building; null takes them off their post.
+function assignRetiree(state: GameState, id: string, building: BuildingId | null): GameState {
+  if (!state.retirees.some((retiree) => retiree.hero.id === id)) {
+    return { ...state, notice: 'missing' }
+  }
+  if (building && state.retirees.some((retiree) => retiree.building === building && retiree.hero.id !== id)) {
+    return { ...state, notice: 'postTaken' }
+  }
+  return {
+    ...state,
+    notice: null,
+    retirees: state.retirees.map((retiree) => (retiree.hero.id === id ? { ...retiree, building } : retiree)),
+  }
 }
 
 // ---------- party presets and expeditions ----------
@@ -1205,7 +1280,7 @@ function startTreat(state: GameState, id: string, now: number): GameState {
   return {
     ...state,
     notice: null,
-    roster: state.roster.map((entry) => (entry.id === id ? { ...entry, treatAt: now + lifeRules.treatMs } : entry)),
+    roster: state.roster.map((entry) => (entry.id === id ? { ...entry, treatAt: now + Math.round(lifeRules.treatMs * (1 - retireeBonus(state, 'temple'))) } : entry)),
   }
 }
 
@@ -1224,7 +1299,7 @@ function startRevive(state: GameState, id: string, now: number): GameState {
     ...state,
     notice: null,
     gold: state.gold - lifeRules.reviveCost,
-    roster: state.roster.map((entry) => (entry.id === id ? { ...entry, resurrectAt: now + lifeRules.reviveMs } : entry)),
+    roster: state.roster.map((entry) => (entry.id === id ? { ...entry, resurrectAt: now + Math.round(lifeRules.reviveMs * (1 - retireeBonus(state, 'temple'))) } : entry)),
   }
 }
 
@@ -1315,7 +1390,7 @@ function finishSmith(state: GameState, now: number, crafted: string[]): GameStat
   if (!job.gear) {
     return { ...state, smith: null, craftNonce }
   }
-  const chance = smithRules.successByLevel[state.buildings.smith] ?? 0
+  const chance = Math.min(1, (smithRules.successByLevel[state.buildings.smith] ?? 0) + retireeBonus(state, 'smith'))
   const success = rng.next() < chance
   const gear = success ? { ...job.gear, enhance: job.gear.enhance + 1 } : job.gear
   return {
@@ -1441,6 +1516,7 @@ function normalize(record: Record<string, unknown>, now: number): GameState {
       : null,
     ads: readAds(record.ads, now),
     guideStep: numberOr(record.guideStep, 0),
+    retirees: Array.isArray(record.retirees) ? (record.retirees as Retiree[]).map((retiree) => ({ ...retiree, hero: normalizeHero(retiree.hero) })) : [],
     materials: readMaterials(record.materials, base.materials),
     auto: isAuto(record.auto) ? record.auto : base.auto,
     notice: null,

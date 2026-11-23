@@ -21,6 +21,7 @@ import {
 import { gameNow, gameOffset, offsetParts, subscribeGameClock } from '../clock'
 import { loadSoundPrefs, saveSoundPrefs, SOUND_NAMES } from '../sound'
 import { canReplay } from '../voxel/replay'
+import { bonusValue } from './heroScreens'
 import { Bar, Chip, CostList, Res, Window, affordable, formatEntry, itemLabel, useNow, waitLabel } from './kit'
 
 const BattleView = lazy(() => import('../BattleView').then((mod) => ({ default: mod.BattleView })))
@@ -90,6 +91,14 @@ export function Town({ save, onAction, busy, onWatch }: { save: GameState; onAct
                 <Chip tone={current > 0 ? 'good' : undefined}>{t('ui.level', { level: current })}</Chip>
               </div>
               <p className="muted">{t(`buildingHint.${id}`)}</p>
+              {(() => {
+                const keeper = save.retirees.find((retiree) => retiree.building === id)
+                return keeper ? (
+                  <Chip tone="good">
+                    {t('retire.keeper', { name: keeper.hero.name })} · {t(`retire.bonus.${id}`, { value: bonusValue(id) })}
+                  </Chip>
+                ) : null
+              })()}
               {locked ? (
                 <p className="locked-note">
                   <Lock size={14} /> {t('town.locked', { level: building.unlockLevel })}

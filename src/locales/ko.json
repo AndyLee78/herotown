@@ -176,7 +176,9 @@
     "healed": "회복량 {{amount}}",
     "busyHero": "원정 중인 영웅이 있습니다.",
     "slotsFull": "동시 출정 자리가 없습니다. 길드를 올리면 늘어납니다.",
-    "lockedDungeon": "아직 열리지 않은 던전입니다."
+    "lockedDungeon": "아직 열리지 않은 던전입니다.",
+    "tooYoung": "아직 은퇴할 나이가 아닙니다.",
+    "postTaken": "그 건물에는 이미 담당 은퇴자가 있습니다."
   },
   "defeat": {
     "noHealer": "치유사가 없어 피해를 버티지 못했다.",
@@ -583,5 +585,24 @@
     "homeLose": "패배. 다친 몸으로 돌아오는 중이다.",
     "damage": "피해량",
     "healing": "치유량"
+  },
+  "retire": {
+    "advised": "은퇴 권유",
+    "action": "은퇴시키기",
+    "confirm": "{{name}}을(를) 정말 은퇴시킨다",
+    "title": "은퇴한 영웅",
+    "hint": "은퇴한 영웅은 주급 없이 마을에 머물며, 건물 하나를 맡아 도울 수 있다.",
+    "since": "{{year}}년 은퇴",
+    "post": "맡은 건물",
+    "noPost": "맡은 일 없음",
+    "keeper": "담당 {{name}}",
+    "bonus": {
+      "hall": "건설 시간 −{{value}}%",
+      "inn": "방문자 잠재력 +{{value}}",
+      "house": "피로 회복 +{{value}}%",
+      "guild": "자동 출정 보상 +{{value}}%",
+      "smith": "강화 성공률 +{{value}}%p",
+      "temple": "치료·부활 시간 −{{value}}%"
+    }
   }
 }

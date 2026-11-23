@@ -16,6 +16,10 @@ import {
   type GameAction,
   type GameState,
   type Hero,
+  retirementAdvised,
+  retirementRules,
+  villageRules,
+  type BuildingId,
 } from '../../core'
 import { gameNow } from '../clock'
 import { josa } from '../josa'
@@ -48,6 +52,7 @@ function HeroChips({ hero }: { hero: Hero }) {
       <Chip>{t('hero.age', { age: hero.age })}</Chip>
       <Chip tone={conditionTone(hero)}>{t(`condition.${hero.condition}`)}</Chip>
       {hero.deaths > 0 ? <Chip tone="bad">{t('hero.seenDeath')}</Chip> : null}
+      {retirementAdvised(hero) ? <Chip tone="warn">{t('retire.advised')}</Chip> : null}
     </span>
   )
 }
@@ -151,6 +156,7 @@ export function Roster({
             </button>
           ))}
         </div>
+        {save.retirees.length > 0 ? <Retirees save={save} onAction={onAction} /> : null}
         {save.graveyard.length > 0 ? (
           <>
             <h3 className="section-title">{t('label.graveyard')}</h3>
@@ -192,6 +198,7 @@ function HeroDetail({
 }) {
   const { t } = useTranslation()
   const [confirmDismiss, setConfirmDismiss] = useState(false)
+  const [confirmRetire, setConfirmRetire] = useState(false)
   const waiting = hero.treatAt != null || hero.resurrectAt != null || hero.recoverAt != null
   const now = useNow(waiting)
   const skills = classById(hero.classId).skills
@@ -289,6 +296,17 @@ function HeroDetail({
             {t('ui.revive')} <Res kind="gold" amount={lifeRules.reviveCost} light />
           </button>
         ) : null}
+        {hero.age >= retirementRules.minAge && hero.condition !== 'dead' ? (
+          confirmRetire ? (
+            <button type="button" className="btn gold" onClick={() => onAction({ type: 'retire', id: hero.id })}>
+              {t('retire.confirm', { name: hero.name })}
+            </button>
+          ) : (
+            <button type="button" className={retirementAdvised(hero) ? 'btn gold' : 'btn'} onClick={() => setConfirmRetire(true)}>
+              {t('retire.action')}
+            </button>
+          )
+        ) : null}
         {confirmDismiss ? (
           <button type="button" className="btn danger" onClick={() => onAction({ type: 'dismiss', id: hero.id })}>
             {t('action.confirmDismiss')}
@@ -302,4 +320,61 @@ function HeroDetail({
       {canDeploy(hero) ? null : <p className="muted">{t('result.dead')}</p>}
     </article>
   )
+}
+
+// Retired heroes: who they were, and the building each one runs.
+function Retirees({ save, onAction }: { save: GameState; onAction: Act }) {
+  const { t } = useTranslation()
+  return (
+    <>
+      <h3 className="section-title">{t('retire.title')}</h3>
+      <p className="muted">{t('retire.hint')}</p>
+      <div className="hero-list">
+        {save.retirees.map((retiree) => {
+          const hero = retiree.hero
+          return (
+            <div key={hero.id} className="hero-row retiree">
+              <Portrait hero={hero} />
+              <span className="hero-row-body">
+                <strong>{hero.name}</strong>
+                <span className="chips">
+                  <Chip tone="info">{t(`class.${hero.classId}`)}</Chip>
+                  <Chip>{t('hero.age', { age: hero.age })}</Chip>
+                  <Chip>{t('ui.level', { level: hero.level })}</Chip>
+                  <Chip>{t('retire.since', { year: retiree.retiredYear })}</Chip>
+                </span>
+                <label className="field">
+                  <span>{t('retire.post')}</span>
+                  <select
+                    value={retiree.building ?? ''}
+                    onChange={(event) =>
+                      onAction({ type: 'assignRetiree', id: hero.id, building: event.target.value === '' ? null : (event.target.value as BuildingId) })
+                    }
+                  >
+                    <option value="">{t('retire.noPost')}</option>
+                    {villageRules.buildings.map((building) => {
+                      const id = building.id as BuildingId
+                      const taken = save.retirees.find((other) => other.building === id && other.hero.id !== hero.id)
+                      return (
+                        <option key={id} value={id} disabled={Boolean(taken) || save.buildings[id] < 1}>
+                          {t(`building.${id}`)} — {t(`retire.bonus.${id}`, { value: bonusValue(id) })}
+                          {taken ? ` (${taken.hero.name})` : ''}
+                        </option>
+                      )
+                    })}
+                  </select>
+                </label>
+              </span>
+            </div>
+          )
+        })}
+      </div>
+    </>
+  )
+}
+
+// Percent for multipliers, plain number for the inn's visitor potential.
+export function bonusValue(id: BuildingId): number {
+  const value = retirementRules.bonus[id]
+  return id === 'inn' ? value : Math.round(value * 100)
 }

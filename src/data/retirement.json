@@ -1,0 +1,12 @@
+{
+  "minAge": 40,
+  "adviseAge": 50,
+  "bonus": {
+    "hall": 0.15,
+    "inn": 5,
+    "house": 0.3,
+    "guild": 0.15,
+    "smith": 0.1,
+    "temple": 0.3
+  }
+}

@@ -11,6 +11,8 @@ export type VillageSceneProps = {
   visitors: Hero[]
   // Heroes out on an expedition: they walk out of town and back in.
   awayIds: string[]
+  // Retired heroes stroll slowly around the plaza.
+  retirees: Hero[]
   partyIds: string[]
   selectedId: string | null
   buildings: Record<BuildingId, number>
@@ -23,7 +25,7 @@ type Area = { minX: number; maxX: number; minZ: number; maxZ: number }
 
 type Walker = {
   id: string
-  kind: 'roster' | 'visitor'
+  kind: 'roster' | 'visitor' | 'retiree'
   root: THREE.Group
   rig: Rig
   key: string
@@ -124,6 +126,7 @@ export class VillageScene {
     this.syncWalkers([
       ...living.map((hero) => ({ hero, kind: 'roster' as const })),
       ...props.visitors.map((hero) => ({ hero, kind: 'visitor' as const })),
+      ...props.retirees.map((hero) => ({ hero, kind: 'retiree' as const })),
     ])
     this.paces = new Map(living.map((hero) => [hero.id, PACE[hero.condition]]))
     this.syncAway(new Set(props.awayIds))
@@ -217,7 +220,7 @@ export class VillageScene {
         existing.key = key
         if (existing.kind !== kind) {
           existing.kind = kind
-          this.placeIn(existing, kind === 'roster' ? PLAZA_AREA : YARD_AREA)
+          this.placeIn(existing, kind === 'visitor' ? YARD_AREA : PLAZA_AREA)
         }
         if (existing.marker) {
           existing.marker.position.y = existing.rig.height + 0.2
@@ -242,7 +245,7 @@ export class VillageScene {
         marker: null,
       }
       walker.root.add(walker.rig.group)
-      this.placeIn(walker, kind === 'roster' ? PLAZA_AREA : YARD_AREA)
+      this.placeIn(walker, kind === 'visitor' ? YARD_AREA : PLAZA_AREA)
       walker.root.rotation.y = random() * Math.PI * 2
       this.actors.add(walker.root)
       this.walkers.set(hero.id, walker)
@@ -377,7 +380,7 @@ export class VillageScene {
       walker.marker.rotation.y = time * 2
       walker.marker.position.y = walker.rig.height + 0.2 + Math.sin(time * 3 + walker.phase) * 0.04
     }
-    const pace = walker.kind === 'roster' ? (this.paces.get(walker.id) ?? 1) : 0.8
+    const pace = walker.kind === 'roster' ? (this.paces.get(walker.id) ?? 1) : walker.kind === 'retiree' ? 0.55 : 0.8
     if (walker.state === 'gone') {
       return
     }
@@ -396,7 +399,7 @@ export class VillageScene {
       idlePose(walker.rig, time, walker.phase)
       walker.timer -= delta
       if (walker.timer <= 0) {
-        const area = walker.kind === 'roster' ? PLAZA_AREA : YARD_AREA
+        const area = walker.kind === 'visitor' ? YARD_AREA : PLAZA_AREA
         walker.target.set(
           area.minX + walker.random() * (area.maxX - area.minX),
           0,

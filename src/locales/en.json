@@ -176,7 +176,9 @@
     "healed": "Healed {{amount}}",
     "busyHero": "A hero in this party is already on an expedition.",
     "slotsFull": "No expedition slot is free. A higher guild adds more.",
-    "lockedDungeon": "That dungeon is not open yet."
+    "lockedDungeon": "That dungeon is not open yet.",
+    "tooYoung": "Too young to retire yet.",
+    "postTaken": "Another retiree already runs that building."
   },
   "defeat": {
     "noHealer": "There was no healer, so the party could not survive the damage.",
@@ -583,5 +585,24 @@
     "homeLose": "Defeat. Limping back to town.",
     "damage": "Damage",
     "healing": "Healing"
+  },
+  "retire": {
+    "advised": "Retirement advised",
+    "action": "Retire",
+    "confirm": "Really retire {{name}}",
+    "title": "Retired heroes",
+    "hint": "Retired heroes stay in town without wages and can each run one building.",
+    "since": "Retired in year {{year}}",
+    "post": "Runs",
+    "noPost": "No post",
+    "keeper": "Run by {{name}}",
+    "bonus": {
+      "hall": "Build time −{{value}}%",
+      "inn": "Visitor potential +{{value}}",
+      "house": "Fatigue recovery +{{value}}%",
+      "guild": "Auto run rewards +{{value}}%",
+      "smith": "Enhance odds +{{value}} pts",
+      "temple": "Care time −{{value}}%"
+    }
   }
 }

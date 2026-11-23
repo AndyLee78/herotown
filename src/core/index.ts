@@ -1,5 +1,5 @@
-export { adRules, expeditionRules, ageBands, classById, classList, combatRules, dungeonById, dungeons, lifeRules, maxAge, monsterById, monsters, progression, smithRules, timeRules, traits, validateGameData, villageRules } from './data'
-export { SAVE_VERSION, adsRemaining, bedCount, busyHeroIds, dungeonUnlocked, presetById, catchUp, expeditionSlots, exportSave, freshState, importSave, localDateKey, migrate, reduce, restBonus, townLevel, visitorCap, visitorStay } from './game'
+export { adRules, expeditionRules, retirementRules, ageBands, classById, classList, combatRules, dungeonById, dungeons, lifeRules, maxAge, monsterById, monsters, progression, smithRules, timeRules, traits, validateGameData, villageRules } from './data'
+export { SAVE_VERSION, adsRemaining, bedCount, busyHeroIds, retireeBonus, retirementAdvised, dungeonUnlocked, presetById, catchUp, expeditionSlots, exportSave, freshState, importSave, localDateKey, migrate, reduce, restBonus, townLevel, visitorCap, visitorStay } from './game'
 export { DEFAULT_TACTICS, applyReport, heroPower, runDungeon } from './dungeon'
 export { ageUp, canDeploy, createHero, deriveStats, generateVisitors, grantXp, hireCost, potentialBand, restHero, statRange, train, withAge } from './hero'
 export { guideStatus, guideSteps } from './guide'
@@ -10,6 +10,7 @@ export type {
   AbsenceReport,
   AdPlacement,
   Expedition,
+  Retiree,
   PartyPreset,
   GameNotice,
   BuildingId,
