@@ -66,10 +66,10 @@ Claude Code, Cursor, GPT(Codex)가 함께 쓰는 작업 목록이다. 작업 하
 | 24 | 첫 3시간 시뮬레이터의 플레이어를 사람처럼 | GPT | `tools/first-hour.ts` | 완료 (이 커밋) |
 | 25 | 권장 레벨을 여러 파티 구성으로 재기 | GPT | `tools/curve.ts`, `tools/print-curve.ts`, `tools/tune-curve.ts` | 완료 (이 커밋) |
 | 26 | 출발 준비의 파티 구성 안내 | Cursor | `src/ui/game/battleScreens.tsx`, `src/locales/*` | 대기 (지금 시작 가능) |
-| 27 | 명예의 전당·묘지·조상 화면 | Cursor | `src/ui/game/heroScreens.tsx`, `villageScreens.tsx`, `App.tsx`, `styles.css`, `src/locales/*` | 대기 (26과 2b core 뒤) |
+| 27 | 명예의 전당·묘지·조상 화면 | Cursor | `src/ui/game/heroScreens.tsx`, `villageScreens.tsx`, `App.tsx`, `styles.css`, `src/locales/*` | 대기 (26 뒤, 2b core는 들어감) |
 | 28 | 집 레벨별 모습·묘지 비석 3D | Cursor | `src/ui/voxel/VillageScene.ts`, `src/ui/voxel/world.ts` | 대기 (27 뒤) |
-| 29 | 2b core 코드 리뷰 | GPT | `Docs/reviews/<해시>.md` (새 파일만) | 대기 (2b core 뒤) |
-| 30 | 세대 시뮬레이터 60년 | GPT | `tools/generations.ts` | 대기 (2b core 뒤) |
+| 29 | 2b core 코드 리뷰 (f7fdf88) | GPT | `Docs/reviews/f7fdf88.md` (새 파일만) | 대기 (지금 시작 가능) |
+| 30 | 세대 시뮬레이터 60년 | GPT | `tools/generations.ts` | 대기 (지금 시작 가능) |
 
 ---
 
