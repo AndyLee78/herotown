@@ -76,7 +76,7 @@ Claude Code, Cursor, GPT(Codex)가 함께 쓰는 작업 목록이다. 작업 하
 | 34 | 분수가 초반 골드에 주는 몫 측정 | GPT | `tools/first-hour.ts` | 완료 (a47f68a) |
 | 35 | 독늪 몬스터·던전 그림 | Cursor | `src/ui/voxel/enemies.ts`, `portrait.ts` | 완료 (ad6c4c7) |
 | 36 | 상태이상·물약 화면과 연금술 공방 | Cursor | `App.tsx`, `src/ui/game/*.tsx`, `styles.css`, `src/locales/*` | 완료 (c8299cb) |
-| 37 | 상태 표시·물약 동작·공방 건물 3D | Cursor | `BattleScene.ts`, `replay.ts`, `world.ts`, `VillageScene.ts` | 대기 (36 뒤) |
+| 37 | 상태 표시·물약 동작·공방 건물 3D | Cursor | `BattleScene.ts`, `replay.ts`, `world.ts`, `VillageScene.ts` | 완료 (4d4ded2) |
 | 38 | 3a core 코드 리뷰 (1918eda) | GPT | `Docs/reviews/1918eda.md` (새 파일만) | 대기 (지금 시작 가능) |
 | 39 | 독늪 밸런스 측정 | GPT | `tools/curve.ts`, `print-curve.ts`, `tune-curve.ts`, `first-hour.ts` | 대기 (지금 시작 가능) |
 
@@ -1017,7 +1017,7 @@ src/ui/voxel/BattleScene.ts, src/ui/voxel/replay.ts, src/ui/voxel/world.ts, src/
 확인: 스크린샷을 메모에.
 ```
 
-메모:
+메모: 다시 보기에서 중독은 초록 방울, 마비는 노란 번개, 둔화는 껍데기, 침묵은 X 말풍선으로 머리 위에 켜진다. 물약을 마시면 병을 기울이고 반짝인 뒤 해당 상태가 꺼진다. 층이 바뀌면 표시를 지운다. 공방은 초록 지붕, 앞의 솥, 굴뚝 연기다. 2레벨은 약병, 3레벨은 금색 간판이 더해진다. 마을 세이브의 공방은 아직 0레벨이라 빈 터라, 1·3레벨 모델을 따로 그려 확인했다. 병 기울이는 순간은 정지 화면으로 남기지 못했다.
 
 ---
 
