@@ -1,3 +1,5 @@
+import type { Genes } from './genes'
+
 export const STAT_KEYS = ['str', 'agi', 'vit', 'int', 'wil', 'wis'] as const
 
 export type StatKey = (typeof STAT_KEYS)[number]
@@ -121,7 +123,32 @@ export type Hero = {
   resurrectAt?: number
   treatAt?: number
   recoverAt?: number
+  // Family (stage 2). Missing on heroes from before families existed.
+  family?: string
+  parents?: [string, string]
+  spouseId?: string
+  widowedAt?: number
+  // A child on the way: decided at conception, born at dueAt.
+  expecting?: { dueAt: number; child: Hero }
+  genes?: Genes
 }
+
+// Affinity between two heroes, stored once per pair with a < b.
+export type Bond = {
+  a: string
+  b: string
+  affinity: number
+  // No new proposal from this pair before this time (after a refusal).
+  cooldownUntil?: number
+}
+
+export type Proposal = {
+  a: string
+  b: string
+  at: number
+}
+
+export type BondStage = 'stranger' | 'friend' | 'lover' | 'spouse'
 
 export type Tactics = {
   target: TargetPriority
@@ -132,6 +159,8 @@ export type Tactics = {
 export type PartyMember = {
   hero: Hero
   row: Row
+  // Bonds with others in the party: attack and healing go up by this share.
+  bonus?: number
 }
 
 export type LogEntry = {
@@ -169,6 +198,7 @@ export type ReplayHero = {
   classId: ClassId
   gender: Gender
   age: number
+  genes?: Genes
 }
 
 export type DungeonReport = {

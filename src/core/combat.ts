@@ -69,6 +69,7 @@ export function createHeroUnit(member: PartyMember, index: number): BattleUnit {
         : 0
   const fatigueScale = 1 - fatiguePenalty
   const injuryScale = 1 - injuryPenalty
+  const bondScale = 1 + Math.max(0, member.bonus ?? 0)
   const maxHp = Math.max(1, Math.round(baseHp * injuryScale))
   return {
     id: hero.id,
@@ -86,9 +87,9 @@ export function createHeroUnit(member: PartyMember, index: number): BattleUnit {
     hasDebuff: skills.has('debuff'),
     hp: maxHp,
     maxHp,
-    attack: (hero.stats[klass.attackStat] * klass.attackScale + gear.attack) * fatigueScale * injuryScale,
+    attack: (hero.stats[klass.attackStat] * klass.attackScale + gear.attack) * fatigueScale * injuryScale * bondScale,
     defense: hero.stats.vit * klass.defenseScale + gear.defense,
-    heal: hero.stats.wis * klass.healScale,
+    heal: hero.stats.wis * klass.healScale * bondScale,
     speed: Math.max(1, (hero.stats.agi + (hero.traitIds.includes('nocturnal') ? combatRules.nocturnalSpeed : 0)) * fatigueScale),
     gauge: 0,
     threat: klass.role === 'tank' ? combatRules.tankThreat : combatRules.baseThreat,

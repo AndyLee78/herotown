@@ -444,6 +444,8 @@ describe('economy fixes', () => {
       adClaimed: false,
       aged: [],
       returned: [],
+      births: [],
+      proposals: 0,
     }
     const start = { ...freshState(1, day), gold: 10, absence }
     const once = reduce(start, { type: 'adReward', placement: 'absence', now: day })

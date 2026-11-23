@@ -70,7 +70,7 @@ export function runDungeon(party: PartyMember[], dungeonId: string, tactics: Tac
 
   const report: DungeonReport = {
     dungeonId,
-    party: party.map(({ hero }) => ({ id: hero.id, classId: hero.classId, gender: hero.gender, age: hero.age })),
+    party: party.map(({ hero }) => ({ id: hero.id, classId: hero.classId, gender: hero.gender, age: hero.age, ...(hero.genes ? { genes: hero.genes } : {}) })),
     floors,
     victory,
     defeatReason: victory

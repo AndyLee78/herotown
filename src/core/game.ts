@@ -2,12 +2,13 @@ import { claimGuide } from './guide'
 import { adRules, classById, combatRules, dungeonById, dungeons, expeditionRules, lifeRules, progression, retirementRules, smithRules, timeRules, villageRules } from './data'
 import { forgeGear, normalizeGear, recipeById } from './gear'
 import { applyReport, DEFAULT_TACTICS, runDungeon } from './dungeon'
-import { canDeploy, ageUp, generateHero, generateVisitors, normalizeHero, restHero } from './hero'
+import { canDeploy, generateHero, generateVisitors, normalizeHero, restHero, withAge } from './hero'
+import { acceptProposal, bondParty, declineProposal, deliverBirths, femaleChance, nextAge, partyBonus, readBonds, readProposals, tidyFamily, turnSeason, wageCount, type FamilyEvents } from './family'
 import { createRng } from './rng'
 import type { Rng } from './rng'
-import type { ClassId, CombatError, DungeonReport, Gear, GearSlot, Hero, Row, Tactics } from './types'
+import type { Bond, ClassId, CombatError, DungeonReport, Gear, GearSlot, Hero, PartyMember, Proposal, Row, Tactics } from './types'
 
-export const SAVE_VERSION = 7
+export const SAVE_VERSION = 8
 
 export type SeasonId = 'spring' | 'summer' | 'autumn' | 'winter'
 
@@ -34,6 +35,8 @@ export type AbsenceReport = {
   adClaimed: boolean
   aged: { name: string; age: number }[]
   returned: { dungeonId: string; victory: boolean }[]
+  births: string[]
+  proposals: number
 }
 
 export type SmithJob = {
@@ -131,6 +134,7 @@ export type GameNotice =
   | 'tooYoung'
   | 'postTaken'
   | 'wornParty'
+  | 'noHouse'
   | CombatError
   | 'checksum'
   | 'newer'
@@ -172,6 +176,9 @@ export type GameState = {
   ads: AdUses
   guideStep: number
   retirees: Retiree[]
+  bonds: Bond[]
+  proposals: Proposal[]
+  familyNonce: number
 }
 
 export type AdPlacement = 'absence' | 'construction' | 'temple'
@@ -217,6 +224,8 @@ export type GameAction =
   | { type: 'claimGuide' }
   | { type: 'retire'; id: string }
   | { type: 'assignRetiree'; id: string; building: BuildingId | null }
+  | { type: 'acceptProposal'; a: string; b: string; now?: number }
+  | { type: 'declineProposal'; a: string; b: string; now?: number }
 
 export function freshState(seed: number, now: number): GameState {
   return {
@@ -255,16 +264,20 @@ export function freshState(seed: number, now: number): GameState {
     ads: emptyAds(now),
     guideStep: 0,
     retirees: [],
+    bonds: [],
+    proposals: [],
+    familyNonce: 0,
   }
 }
 
 export function reduce(state: GameState, action: GameAction): GameState {
-  const next = apply(state, action)
+  const now = 'now' in action && typeof action.now === 'number' ? action.now : state.lastTickAt
+  const next = tidyFamily(apply(state, action), now)
   return action.type === 'catchUp' ? next : { ...next, notice: next.notice }
 }
 
 export function catchUp(state: GameState, now: number): GameState {
-  return apply(state, { type: 'catchUp', now })
+  return reduce(state, { type: 'catchUp', now })
 }
 
 export function checksum(text: string): string {
@@ -450,6 +463,7 @@ function apply(state: GameState, action: GameAction): GameState {
       state.seed + visitorNonce * progression.visitorNonceStride,
       visitorCap(state.buildings.inn),
       townLevel(state.fame).visitorPotential + retireeBonus(state, 'inn'),
+      femaleChance(state),
     ).map((hero) => ({ ...hero, arrivedAt: now }))
     return {
       ...state,
@@ -474,6 +488,12 @@ function apply(state: GameState, action: GameAction): GameState {
   if (action.type === 'claimGuide') {
     return claimGuide(state)
   }
+  if (action.type === 'acceptProposal') {
+    return acceptProposal(state, action.a, action.b, action.now ?? state.lastTickAt)
+  }
+  if (action.type === 'declineProposal') {
+    return declineProposal(state, action.a, action.b, action.now ?? state.lastTickAt)
+  }
   if (action.type === 'adReward') {
     return grantAdReward(state, action.placement, action.now)
   }
@@ -493,10 +513,15 @@ function advance(state: GameState, now: number): GameState {
   const visitors: string[] = []
   const wages = { paid: 0 }
   const aged: { name: string; age: number }[] = []
+  const family: FamilyEvents = { births: [], proposals: 0 }
   let next = moveCalendar(state, elapsed, wages, aged)
+  for (let turned = seasonsBetween(state.calendar, next.calendar); turned > 0; turned -= 1) {
+    next = turnSeason(next, effectiveNow, family)
+  }
   next = finishConstruction(next, effectiveNow, completed)
   next = finishSmith(next, effectiveNow, crafted)
   next = finishCare(next, effectiveNow)
+  next = deliverBirths(next, effectiveNow, family)
   next = recoverRoster(next, elapsed, effectiveNow)
   next = updateVisitors(next, effectiveNow, visitors)
   const returned: AbsenceReport['returned'] = []
@@ -510,7 +535,7 @@ function advance(state: GameState, now: number): GameState {
   const absence: AbsenceReport = {
     elapsedMs: elapsed,
     capped,
-    seasonsPassed: next.calendar.year * 4 + seasonIndex(next.calendar.season) - (state.calendar.year * 4 + seasonIndex(state.calendar.season)),
+    seasonsPassed: seasonsBetween(state.calendar, next.calendar),
     year: next.calendar.year,
     season: next.calendar.season,
     // Income is the net change with wages added back, so it counts every
@@ -526,6 +551,8 @@ function advance(state: GameState, now: number): GameState {
     adClaimed: false,
     aged,
     returned,
+    births: family.births,
+    proposals: family.proposals,
   }
   return { ...next, absence }
 }
@@ -692,6 +719,10 @@ function stampVisitors(heroes: Hero[], now: number): Hero[] {
   return heroes.map((hero, index) => ({ ...hero, arrivedAt: now - stay + step * (index + 1) }))
 }
 
+function seasonsBetween(from: Calendar, to: Calendar): number {
+  return to.year * timeRules.seasons.length + seasonIndex(to.season) - (from.year * timeRules.seasons.length + seasonIndex(from.season))
+}
+
 function seasonIndex(season: SeasonId): number {
   const index = timeRules.seasons.indexOf(season)
   return index < 0 ? 0 : index
@@ -711,7 +742,8 @@ function moveCalendar(state: GameState, elapsed: number, wages: { paid: number }
       year += 1
       years += 1
     }
-    const due = progression.wage * state.roster.length
+    // Children under the adult age live free.
+    const due = progression.wage * wageCount(state)
     const paid = Math.min(gold, due)
     gold -= paid
     wages.paid += paid
@@ -738,7 +770,7 @@ function growOlder(state: GameState, years: number, aged: { name: string; age: n
 function older(hero: Hero, years: number, aged: { name: string; age: number }[]): Hero {
   let next = hero
   for (let year = 0; year < years; year += 1) {
-    next = ageUp(next)
+    next = withAge(next, nextAge(next.age))
   }
   if (next.age !== hero.age) {
     aged.push({ name: next.name, age: next.age })
@@ -782,7 +814,7 @@ function updateVisitors(state: GameState, now: number, arrived: string[]): GameS
   while (visitors.length < cap && nextVisitorAt <= now) {
     nonce += 1
     const hero = {
-      ...generateHero(createRng(state.seed + nonce * progression.visitorNonceStride), `${state.seed}-v${nonce}`, bonus),
+      ...generateHero(createRng(state.seed + nonce * progression.visitorNonceStride), `${state.seed}-v${nonce}`, bonus, femaleChance(state)),
       arrivedAt: now,
     }
     visitors.push(hero)
@@ -840,7 +872,7 @@ function dungeonForMaterial(state: GameState): string | null {
   )
 }
 
-function autoMembers(state: GameState): { hero: Hero; row: Row }[] {
+function autoMembers(state: GameState): PartyMember[] {
   const slots = state.auto.policy === 'fixed' ? state.auto.party : (presetById(state, state.presetId)?.slots ?? [])
   const away = busyHeroIds(state)
   const members = slots.flatMap((slot) => {
@@ -857,7 +889,13 @@ function autoMembers(state: GameState): { hero: Hero; row: Row }[] {
   if (members.length === 0 || front > combatRules.frontRowSize || members.length - front > combatRules.backRowSize) {
     return []
   }
-  return members
+  return withBonds(state, members)
+}
+
+// Friends and lovers fight better side by side.
+function withBonds(state: GameState, members: PartyMember[]): PartyMember[] {
+  const bonus = partyBonus(state, members.map((member) => member.hero.id))
+  return members.map((member) => ((bonus[member.hero.id] ?? 0) > 0 ? { ...member, bonus: bonus[member.hero.id] } : member))
 }
 
 function runAuto(state: GameState, elapsed: number, tally: { runs: number; gold: number }): GameState {
@@ -889,7 +927,7 @@ function runAuto(state: GameState, elapsed: number, tally: { runs: number; gold:
     const heroIds = members.map((member) => member.hero.id)
     const settled = settleParty(next, report, battleSeed, next.lastTickAt, heroIds, dungeonId)
     const goldGain = report.victory ? Math.floor(result.report.gold * scale) : 0
-    next = dropFromPresets(grantVictoryRewards({ ...next, ...settled, gold: next.gold + goldGain }, report, dungeonId, scale))
+    next = dropFromPresets(grantVictoryRewards(bondParty({ ...next, ...settled, gold: next.gold + goldGain }, heroIds, report.victory), report, dungeonId, scale))
     budget -= villageRules.auto.runMs
     tally.runs += 1
     tally.gold += goldGain
@@ -1206,10 +1244,13 @@ function startExpedition(state: GameState, presetId: string, confirm: boolean, n
     return { ...state, notice: 'slotsFull' }
   }
   // Heroes who cannot go (dead, too young) stay home; the rest of the party still leaves.
-  const party = preset.slots.flatMap((slot) => {
-    const hero = state.roster.find((entry) => entry.id === slot.id)
-    return hero && canDeploy(hero) ? [{ hero, row: slot.row }] : []
-  })
+  const party = withBonds(
+    state,
+    preset.slots.flatMap((slot) => {
+      const hero = state.roster.find((entry) => entry.id === slot.id)
+      return hero && canDeploy(hero) ? [{ hero, row: slot.row }] : []
+    }),
+  )
   const dungeon = dungeonById(state.dungeonId)
   const worn = party.some((member) => needsWarning(member.hero))
   const marked = party.some((member) => member.hero.deaths >= 1)
@@ -1268,12 +1309,16 @@ function settleExpedition(state: GameState, expedition: Expedition): GameState {
   const settled = settleParty(state, report, expedition.seed, expedition.returnAt, expedition.heroIds, dungeonId)
   const repeat = state.cleared.includes(dungeonId)
   const goldGain = repeat ? Math.floor(report.gold * villageRules.repeatReward) : report.gold
-  const home: GameState = {
-    ...state,
-    ...settled,
-    gold: state.gold + goldGain,
-    expeditions: state.expeditions.filter((entry) => entry.id !== expedition.id),
-  }
+  const home: GameState = bondParty(
+    {
+      ...state,
+      ...settled,
+      gold: state.gold + goldGain,
+      expeditions: state.expeditions.filter((entry) => entry.id !== expedition.id),
+    },
+    expedition.heroIds,
+    report.victory,
+  )
   const next = dropFromPresets(grantVictoryRewards(home, report, dungeonId))
   const materials: Partial<Materials> = {}
   for (const key of ['wood', 'stone', 'iron', 'bone'] as const) {
@@ -1553,6 +1598,8 @@ function normalize(record: Record<string, unknown>, now: number): GameState {
           adClaimed: record.absence.adClaimed ?? false,
           aged: readAged(record.absence.aged),
           returned: Array.isArray(record.absence.returned) ? record.absence.returned : [],
+          births: Array.isArray(record.absence.births) ? record.absence.births : [],
+          proposals: numberOr(record.absence.proposals, 0),
         }
       : null,
     ads: readAds(record.ads, now),
@@ -1561,6 +1608,9 @@ function normalize(record: Record<string, unknown>, now: number): GameState {
     buildings: raiseToStart(record.buildings, base.buildings),
     retirees: Array.isArray(record.retirees) ? (record.retirees as Retiree[]).map((retiree) => ({ ...retiree, hero: normalizeHero(retiree.hero) })) : [],
     materials: readMaterials(record.materials, base.materials),
+    bonds: readBonds(record.bonds),
+    proposals: readProposals(record.proposals),
+    familyNonce: numberOr(record.familyNonce, 0),
     auto: isAuto(record.auto) ? record.auto : base.auto,
     notice: null,
   }

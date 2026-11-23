@@ -6,6 +6,7 @@ import smithFile from '../data/smith.json'
 import combatFile from '../data/combat.json'
 import dungeonsFile from '../data/dungeons.json'
 import expeditionFile from '../data/expedition.json'
+import familyFile from '../data/family.json'
 import retirementFile from '../data/retirement.json'
 import monstersFile from '../data/monsters.json'
 import namesFile from '../data/names.json'
@@ -168,6 +169,19 @@ export const smithRules = smithFile
 export const adRules = adsFile
 export const expeditionRules = expeditionFile
 export const retirementRules = retirementFile
+export const familyRules = familyFile
+
+if (familyRules.friendAt >= familyRules.loverAt || familyRules.loverAt > familyRules.proposeAt || familyRules.proposeAt > 100) {
+  throw new Error('Family thresholds must rise: friend < lover <= propose <= 100')
+}
+for (const key of ['birthChance', 'proposeChance', 'traitInherit', 'traitMutation', 'geniusChance', 'visitorBalanceChance'] as const) {
+  if (familyRules[key] < 0 || familyRules[key] > 1) {
+    throw new Error(`Family rule ${key} must be a chance between 0 and 1`)
+  }
+}
+if (!Number.isInteger(familyRules.childYearsPerYear) || familyRules.childYearsPerYear < 1) {
+  throw new Error('Children must age at least one year per year')
+}
 
 if (retirementRules.minAge > retirementRules.adviseAge) {
   throw new Error('Retirement must be allowed before it is advised')

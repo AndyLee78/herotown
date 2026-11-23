@@ -1,5 +1,6 @@
 import { ageMultiplier, bandForAge, classById, classList, maxAge, names, progression, traits } from './data'
 import { normalizeGear } from './gear'
+import { isGenes, type Genes } from './genes'
 import { createRng, type Rng } from './rng'
 import {
   STAT_KEYS,
@@ -35,6 +36,12 @@ export type HeroDraft = {
   resurrectAt?: number
   treatAt?: number
   recoverAt?: number
+  family?: string
+  parents?: [string, string]
+  spouseId?: string
+  widowedAt?: number
+  expecting?: { dueAt: number; child: Hero }
+  genes?: Genes
 }
 
 export function deriveStats(age: number, training: number, potentials: Stats): Stats {
@@ -75,7 +82,32 @@ export function createHero(draft: HeroDraft): Hero {
     resurrectAt: draft.resurrectAt,
     treatAt: draft.treatAt,
     recoverAt: draft.recoverAt,
+    ...familyFields(draft),
   }
+}
+
+// Family fields are only written when set, so older heroes stay unchanged.
+function familyFields(draft: HeroDraft): Partial<Hero> {
+  const fields: Partial<Hero> = {}
+  if (typeof draft.family === 'string') {
+    fields.family = draft.family
+  }
+  if (Array.isArray(draft.parents) && draft.parents.length === 2) {
+    fields.parents = [draft.parents[0], draft.parents[1]]
+  }
+  if (typeof draft.spouseId === 'string') {
+    fields.spouseId = draft.spouseId
+  }
+  if (typeof draft.widowedAt === 'number') {
+    fields.widowedAt = draft.widowedAt
+  }
+  if (draft.expecting && typeof draft.expecting.dueAt === 'number' && draft.expecting.child) {
+    fields.expecting = { dueAt: draft.expecting.dueAt, child: createHero(draft.expecting.child) }
+  }
+  if (isGenes(draft.genes)) {
+    fields.genes = { ...draft.genes }
+  }
+  return fields
 }
 
 export function normalizeHero(hero: Hero): Hero {
@@ -86,7 +118,7 @@ export function canDeploy(hero: Hero | number): boolean {
   if (typeof hero === 'number') {
     return bandForAge(clampAge(hero)).canDeploy
   }
-  return hero.condition !== 'dead' && bandForAge(clampAge(hero.age)).canDeploy
+  return hero.condition !== 'dead' && hero.expecting == null && bandForAge(clampAge(hero.age)).canDeploy
 }
 
 export function withAge(hero: Hero, age: number): Hero {
@@ -141,8 +173,8 @@ export function restHero(hero: Hero, bonus = 0): Hero {
   return { ...hero, fatigue }
 }
 
-export function generateHero(rng: Rng, id: string, potentialBonus = 0): Hero {
-  const gender: Gender = rng.next() < 0.5 ? 'male' : 'female'
+export function generateHero(rng: Rng, id: string, potentialBonus = 0, femaleChance = 0.5): Hero {
+  const gender: Gender = rng.next() < 1 - femaleChance ? 'male' : 'female'
   const pool = classList.filter((klass) => gender === 'female' || !klass.femaleOnly)
   const classId = rng.pick(pool).id
   const classDef = classById(classId)
@@ -167,9 +199,9 @@ export function generateHero(rng: Rng, id: string, potentialBonus = 0): Hero {
   })
 }
 
-export function generateVisitors(seed: number, count = progression.visitorCount, potentialBonus = 0): Hero[] {
+export function generateVisitors(seed: number, count = progression.visitorCount, potentialBonus = 0, femaleChance = 0.5): Hero[] {
   const rng = createRng(seed)
-  return Array.from({ length: count }, (_, index) => generateHero(rng, `${seed}-${index}`, potentialBonus))
+  return Array.from({ length: count }, (_, index) => generateHero(rng, `${seed}-${index}`, potentialBonus, femaleChance))
 }
 
 function clampAge(age: number): number {

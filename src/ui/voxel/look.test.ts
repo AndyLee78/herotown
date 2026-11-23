@@ -22,6 +22,16 @@ describe('hero look', () => {
     expect(keys.size).toBeGreaterThan(20)
   })
 
+  it('keeps the looks heroes had before genes moved into the core', () => {
+    expect(lookFor({ id: '4-0', classId: 'mage', gender: 'male', age: 55 })).toMatchObject({ skin: '#7b4c30', hair: '#7b4a2a', eye: '#2a2522', style: 'bald', beard: false })
+    expect(lookFor({ id: '1-v3', classId: 'mage', gender: 'female', age: 24 })).toMatchObject({ skin: '#d49d6e', hair: '#b0722f', eye: '#3c6fa8', style: 'ponytail', beard: false })
+  })
+
+  it('draws a child from stored genes', () => {
+    const genes = { skin: '#123456', hair: '#654321', eye: '#3c6fa8', style: 1, beard: false, height: 1, balding: false }
+    expect(lookFor({ ...hero, genes })).toMatchObject({ skin: '#123456', hair: '#654321', style: 'spiky' })
+  })
+
   it('never gives a woman a beard', () => {
     for (let index = 0; index < 40; index += 1) {
       expect(lookFor({ ...hero, id: `f-${index}`, gender: 'female' }).beard).toBe(false)

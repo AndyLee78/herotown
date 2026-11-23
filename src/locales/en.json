@@ -168,6 +168,7 @@
     "adLimit": "You’ve used today’s ad rewards.",
     "adUsed": "You’ve already claimed this ad reward.",
     "wornParty": "A hero is worn out. Ready to risk the trip?",
+    "noHouse": "No home for newlyweds yet. Upgrade the houses to make room.",
     "gold": "Gold {{gold}}",
     "xp": "XP {{xp}}",
     "floors": "Floors cleared {{count}}",
