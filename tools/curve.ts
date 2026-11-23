@@ -1,10 +1,10 @@
 // A fixed lineup for comparison and starter lineups drawn from the real game.
-import { progression } from '../src/core/data'
+import { classById, progression } from '../src/core/data'
 import { DEFAULT_TACTICS, runDungeon } from '../src/core/dungeon'
 import { freshState, presetById, reduce } from '../src/core/game'
 import { createHero, generateHero } from '../src/core/hero'
 import { createRng } from '../src/core/rng'
-import type { ClassId, Hero, PartyMember, Row } from '../src/core/types'
+import type { ClassId, Hero, PartyMember, Row, Supplies } from '../src/core/types'
 
 const LINEUP: [ClassId, Row][] = [
   ['warrior', 'front'],
@@ -16,6 +16,15 @@ const LINEUP: [ClassId, Row][] = [
 
 export const DEFAULT_PARTY_SAMPLES = 40
 export const BATTLES_PER_PARTY = 10
+export const MARSH_ID = 'venom_marsh'
+type Loadout = { supplies: Supplies; withoutHealer?: boolean }
+export const marshLoadouts = {
+  none: { supplies: {} },
+  antidote2: { supplies: { antidote: 2 } },
+  mixed: { supplies: { heal: 2, antidote: 2 } },
+  noHealer: { supplies: { heal: 4, antidote: 1 }, withoutHealer: true },
+  antidote4: { supplies: { antidote: 4 } },
+} satisfies Record<string, Loadout>
 
 export function starterParties(samples: number): PartyMember[][] {
   return Array.from({ length: samples }, (_, index) => {
@@ -60,15 +69,16 @@ export function winRate(dungeonId: string, level: number, samples: number): numb
   return wins / samples
 }
 
-export function starterWinRates(parties: PartyMember[][], dungeonId: string, level: number) {
+export function starterWinRates(parties: PartyMember[][], dungeonId: string, level: number, loadout?: Loadout, battles = BATTLES_PER_PARTY) {
   const outcomes = parties.map((party, index) => {
-    const leveled = partyAtLevel(party, level)
+    const lineup = loadout?.withoutHealer ? party.filter(({ hero }) => classById(hero.classId).role !== 'healer') : party
+    const leveled = partyAtLevel(lineup, level)
     let wins = 0
-    for (let seed = 1; seed <= BATTLES_PER_PARTY; seed += 1) {
-      const result = runDungeon(leveled, dungeonId, DEFAULT_TACTICS, seed)
+    for (let seed = 1; seed <= battles; seed += 1) {
+      const result = runDungeon(leveled, dungeonId, DEFAULT_TACTICS, seed, loadout?.supplies)
       if (result.ok && result.report.victory) wins += 1
     }
-    return { partySeed: index + 1, classes: party.map(({ hero }) => hero.classId), rate: wins / BATTLES_PER_PARTY }
+    return { partySeed: index + 1, classes: lineup.map(({ hero }) => hero.classId), rate: wins / battles }
   }).sort((a, b) => a.rate - b.rate)
   const middle = Math.floor(outcomes.length / 2)
   const lowerMiddle = Math.floor((outcomes.length - 1) / 2)

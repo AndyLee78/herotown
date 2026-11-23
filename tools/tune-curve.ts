@@ -1,20 +1,22 @@
-// Run: npx tsx tools/tune-curve.ts [samples] [--quartile]
+// Run: npx tsx tools/tune-curve.ts [samples] [--quartile|--marsh=antidote4]
 import { dungeons } from '../src/core/data'
-import { BATTLES_PER_PARTY, DEFAULT_PARTY_SAMPLES, starterParties, starterWinRates, winRate } from './curve'
+import { BATTLES_PER_PARTY, DEFAULT_PARTY_SAMPLES, MARSH_ID, marshLoadouts, starterParties, starterWinRates, winRate } from './curve'
 
 const TARGET_WIN_RATE = 0.6
 const SCALE_STEPS = 20
 const MAX_SCALE = 6
 const MAX_LEVEL = 14
 const args = process.argv.slice(2)
-const quartile = args.includes('--quartile')
-const samples = Number(args.find((arg) => arg !== '--quartile') ?? DEFAULT_PARTY_SAMPLES)
-if (!Number.isSafeInteger(samples) || samples < 1) {
-  throw new Error('Usage: npx tsx tools/tune-curve.ts [positive samples] [--quartile]')
+const marsh = args.find((arg) => arg.startsWith('--marsh='))?.slice(8)
+const loadout = Object.entries(marshLoadouts).find(([name]) => name === marsh)?.[1]
+const quartile = args.includes('--quartile') || marsh != null
+const samples = Number(args.find((arg) => !arg.startsWith('--')) ?? DEFAULT_PARTY_SAMPLES)
+if ((marsh != null && !loadout) || !Number.isSafeInteger(samples) || samples < 1) {
+  throw new Error('Usage: npx tsx tools/tune-curve.ts [positive samples] [--quartile|--marsh=none|antidote2|mixed|noHealer|antidote4]')
 }
 const parties = quartile ? starterParties(samples) : []
 const measure = (id: string, level: number) => quartile
-  ? starterWinRates(parties, id, level).lowerQuartile
+  ? starterWinRates(parties, id, level, loadout).lowerQuartile
   : winRate(id, level, samples)
 
 // Search the 0.05 grid assuming win rate generally falls as scale rises.
@@ -37,7 +39,7 @@ function firstPassingLevel(dungeonId: string, ceiling: number): number | undefin
   return undefined
 }
 
-const rows = dungeons.map((dungeon) => {
+const rows = dungeons.filter(({ id }) => marsh == null || id === MARSH_ID).map((dungeon) => {
   const originalScale = dungeon.monsterScale
   const target = dungeon.recommendedLevel
   try {
@@ -66,5 +68,5 @@ const rows = dungeons.map((dungeon) => {
   }
 })
 
-console.log(quartile ? `P25 ≥ 60% · ${samples} starter parties × ${BATTLES_PER_PARTY} battles` : `Fixed lineup ≥ 60% · ${samples} battles`)
+console.log(quartile ? `P25 ≥ 60% · ${samples} starter parties × ${BATTLES_PER_PARTY} battles${marsh ? ` · loadout ${marsh}` : ''}` : `Fixed lineup ≥ 60% · ${samples} battles`)
 console.table(rows)

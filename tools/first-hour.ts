@@ -1,6 +1,6 @@
 // Plays the first hours like a simple player would, to catch dead ends in
 // the early flow. Run: npx tsx tools/first-hour.ts [minutes] [seed,seed,...] [--fountain=off|ready|5min|compare]
-import { dungeons, progression, villageRules } from '../src/core/data'
+import { dungeons, potionById, progression, villageRules } from '../src/core/data'
 import { fountainWishes } from '../src/core/fountain'
 import { busyHeroIds, dungeonUnlocked, freshState, presetById, reduce, townLevel, type BuildingId, type GameState } from '../src/core/game'
 import { guideStatus } from '../src/core/guide'
@@ -46,6 +46,10 @@ function averageLevel(heroes: Hero[]): number | undefined {
 // The hardest open dungeon the party is levelled for.
 const difficultyOrder = [...dungeons].sort((a, b) => a.recommendedLevel - b.recommendedLevel || a.tier - b.tier)
 const difficulty = new Map(difficultyOrder.map((dungeon, index) => [dungeon.id, index]))
+const marshId = 'venom_marsh'
+const marshSupplies = { antidote: 4, heal: 2 } as const
+const workshop = villageRules.buildings.find(({ id }) => id === 'alchemy')!
+const workshopCost = workshop.levels.find(({ level }) => level === 1)!
 
 type Training = { dungeon: string; targetLevel: number }
 
@@ -70,6 +74,7 @@ function simulate(minutes: number, seed: number, fountain: FountainMode, keepFou
   let now = start
   let nextFountainCheck = start
   const income: Income = { fountain: 0, expedition: 0, guide: 0, jackpots: 0 }
+  let marshTrips = 0
   const incomeAt: Record<number, Income> = {}
   const log: string[] = []
   const note = (text: string) => log.push(`${String(Math.round((now - start) / 60_000)).padStart(3)}m  ${text}`)
@@ -131,9 +136,12 @@ function simulate(minutes: number, seed: number, fountain: FountainMode, keepFou
       state = reduce(state, { type: 'claimGuide' })
       income.guide += state.gold - goldBefore
     }
-    // Build the cheapest thing we can afford.
+    const prepareMarsh = dungeonUnlocked(state, marshId)
+    const needsWorkshop = prepareMarsh && state.buildings.alchemy === 0 && townLevel(state.fame).level >= workshop.unlockLevel
+    // Reserve money and materials for the workshop once the route to the marsh is open.
     if (!state.construction) {
       const options = villageRules.buildings
+        .filter(({ id }) => needsWorkshop ? id === 'alchemy' : id !== 'alchemy')
         .filter((building) => building.id !== 'fountain' || (fountain !== 'off' && !keepFountainAtLevelOne))
         .map((building) => ({ id: building.id as BuildingId, cost: building.levels.find((entry) => entry.level === state.buildings[building.id as BuildingId] + 1) }))
         .filter((entry) => entry.cost)
@@ -147,6 +155,11 @@ function simulate(minutes: number, seed: number, fountain: FountainMode, keepFou
         }
       }
     }
+    const nextPotion = (['antidote', 'heal'] as const).find((id) => (state.potions[id] ?? 0) < marshSupplies[id])
+    if (prepareMarsh && state.buildings.alchemy > 0 && nextPotion && !state.alchemy && state.expeditions.length === 0) {
+      state = reduce(state, { type: 'brew', potionId: nextPotion, now })
+      if (state.alchemy) note(`brew ${nextPotion}`)
+    }
     // Send the party out whenever it is home.
     const selected = selectedHeroes(state)
     if (training && (averageLevel(selected) ?? 0) >= training.targetLevel) {
@@ -154,13 +167,41 @@ function simulate(minutes: number, seed: number, fountain: FountainMode, keepFou
       training = undefined
     }
     if (state.expeditions.length === 0 && selected.length > 0 && !selected.some(isHurt)) {
-      const dungeon = pickDungeon(state, training)
-      state = reduce(state, { type: 'dungeon', id: dungeon })
-      const sent = reduce(state, { type: 'depart', presetId: state.presetId, confirm: true, now })
-      if (sent.expeditions.length > state.expeditions.length) {
-        state = sent
-      } else if (sent.notice && !log[log.length - 1]?.endsWith(sent.notice)) {
-        note(`cannot depart: ${sent.notice}`)
+      let dungeon: string | undefined = pickDungeon(state, training)
+      if (dungeon === marshId && (state.buildings.alchemy === 0 || nextPotion)) {
+        const recipe = nextPotion ? potionById(nextPotion) : undefined
+        if (state.buildings.alchemy === 0) {
+          if (state.construction?.id === 'alchemy') dungeon = undefined
+          else if (state.materials.wood < workshopCost.wood) dungeon = 'hill_cave'
+          else if (state.materials.stone < workshopCost.stone) dungeon = 'moss_path'
+          else if (state.materials.iron < workshopCost.iron) dungeon = 'abandoned_mine'
+          else dungeon = state.cleared[0] ?? 'hill_cave'
+        } else if (state.alchemy) {
+          dungeon = undefined
+        } else if (recipe && state.materials.herb < recipe.herb) {
+          dungeon = 'moss_path'
+        } else {
+          dungeon = state.cleared[0] ?? 'hill_cave'
+        }
+      }
+      if (dungeon) {
+        for (const [potionId, count] of Object.entries(marshSupplies) as [keyof typeof marshSupplies, number][]) {
+          const wanted = dungeon === marshId ? count : 0
+          if ((presetById(state, state.presetId)?.supplies?.[potionId] ?? 0) !== wanted) {
+            state = reduce(state, { type: 'supplies', potionId, count: wanted })
+          }
+        }
+        state = reduce(state, { type: 'dungeon', id: dungeon })
+        const sent = reduce(state, { type: 'depart', presetId: state.presetId, confirm: true, now })
+        if (sent.expeditions.length > state.expeditions.length) {
+          state = sent
+          if (dungeon === marshId) {
+            marshTrips += 1
+            note(`marsh departure · supplies ${JSON.stringify(sent.expeditions.at(-1)?.supplies)}`)
+          }
+        } else if (sent.notice && !log[log.length - 1]?.endsWith(sent.notice)) {
+          note(`cannot depart: ${sent.notice}`)
+        }
       }
     }
     recordGold()
@@ -210,7 +251,7 @@ function simulate(minutes: number, seed: number, fountain: FountainMode, keepFou
   }
   const wins = state.history.filter((report) => report.victory).length
   const party = selectedHeroes(state)
-  return { firstClear, incomeAt, seed, state, log, wins, maxLosingStreak, maxLowGoldMs, partyLevel: averageLevel(party), ready: party.filter((hero) => !isHurt(hero)).length, partySize: party.length }
+  return { firstClear, incomeAt, seed, state, log, wins, marshTrips, maxLosingStreak, maxLowGoldMs, partyLevel: averageLevel(party), ready: party.filter((hero) => !isHurt(hero)).length, partySize: party.length }
 }
 
 function median(sorted: number[]): number {
@@ -252,7 +293,7 @@ function incomeSummary(mode: string, at: number, results: Simulation[]) {
   }
 }
 
-const order = ['hill_cave', 'moss_path', 'abandoned_mine', 'deep_shaft', 'barrow', 'sunken_crypt']
+const order = ['hill_cave', 'moss_path', 'abandoned_mine', 'deep_shaft', 'barrow', 'sunken_crypt', marshId]
 function firstClearSummary(results: Simulation[], at: number) {
   return Object.fromEntries(order.map((id) => {
     const times = results.flatMap((result) => {
@@ -294,5 +335,6 @@ if (compare) {
   console.log(`seeds below hire cost for over 30m: ${results.filter((result) => result.maxLowGoldMs > 30 * 60_000).length}/${results.length}`)
 
   console.log('first clear (minutes): ' + Object.entries(firstClearSummary(results, minutes)).map(([id, value]) => `${id} ${value}`).join(' · '))
+  console.log(`workshop built: ${results.filter(({ state }) => state.buildings.alchemy > 0).length}/${results.length} · marsh trips: ${results.reduce((sum, result) => sum + result.marshTrips, 0)}`)
   console.table([incomeSummary(fountain!, minutes, results)])
 }
