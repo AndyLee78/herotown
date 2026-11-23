@@ -566,5 +566,22 @@
       "guild": "Build the guild once the village reaches level 2",
       "mine": "Bring a tank and a healer to clear the Abandoned Mine"
     }
+  },
+  "expedition": {
+    "title": "Expeditions in progress",
+    "phase": {
+      "out": "Heading out",
+      "battle": "In battle",
+      "back": "Heading home"
+    },
+    "returnIn": "Back in {{time}}",
+    "floor": "Floor {{floor}}",
+    "expand": "Expand expedition panel",
+    "collapse": "Collapse expedition panel",
+    "travelling": "The party packed supplies and is on the road…",
+    "homeWin": "Victory! Heading back to town.",
+    "homeLose": "Defeat. Limping back to town.",
+    "damage": "Damage",
+    "healing": "Healing"
   }
 }

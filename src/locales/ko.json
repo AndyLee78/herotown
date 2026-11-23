@@ -566,5 +566,22 @@
       "guild": "마을 레벨 2가 되면 길드를 짓자",
       "mine": "탱커와 힐러를 데리고 버려진 광산을 클리어하자"
     }
+  },
+  "expedition": {
+    "title": "진행 중인 원정",
+    "phase": {
+      "out": "출발 이동 중",
+      "battle": "전투 중",
+      "back": "귀환 중"
+    },
+    "returnIn": "귀환까지 {{time}}",
+    "floor": "{{floor}}층",
+    "expand": "원정 패널 펼치기",
+    "collapse": "원정 패널 접기",
+    "travelling": "파티가 준비물을 챙겨 던전으로 가고 있다…",
+    "homeWin": "승리! 마을로 돌아오는 중이다.",
+    "homeLose": "패배. 다친 몸으로 돌아오는 중이다.",
+    "damage": "피해량",
+    "healing": "치유량"
   }
 }

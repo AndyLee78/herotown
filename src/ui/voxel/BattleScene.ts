@@ -156,6 +156,35 @@ export class BattleScene {
     this.running = true
   }
 
+  // Jumps to `seconds` into the replay (at 1× speed) without animating the
+  // part it skips, so a live view can join a fight already in progress.
+  seek(seconds: number) {
+    this.quiet = true
+    let start = 0
+    let last: ReplayStep | null = null
+    while (this.index < this.steps.length) {
+      const step = this.steps[this.index]
+      if (!step || start > seconds) {
+        break
+      }
+      this.index += 1
+      this.apply(step, true)
+      last = step
+      start += DURATION[step.type]
+    }
+    for (const fighter of this.fighters.values()) {
+      fighter.anim = null
+    }
+    this.quiet = false
+    this.wait = Math.max(0, start - seconds)
+    if (last) {
+      this.callbacks.onStep(last.log)
+    }
+    if (this.index >= this.steps.length) {
+      this.callbacks.onDone()
+    }
+  }
+
   // Jumps to the final state without animation.
   skip() {
     this.quiet = true
@@ -801,4 +830,9 @@ function easeOut(t: number): number {
 
 function easeIn(t: number): number {
   return Math.pow(Math.min(1, Math.max(0, t)), 3)
+}
+
+// How long a replay runs at 1× speed, in seconds.
+export function replayLength(steps: ReplayStep[]): number {
+  return steps.reduce((sum, step) => sum + DURATION[step.type], 0)
 }

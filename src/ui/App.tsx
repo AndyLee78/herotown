@@ -28,6 +28,7 @@ import { loadGame, storeGame } from './storage'
 import { registerSW } from 'virtual:pwa-register'
 import { isSoundName, play, unlockSound } from './sound'
 
+const ExpeditionPanel = lazy(() => import('./ExpeditionPanel').then((mod) => ({ default: mod.ExpeditionPanel })))
 const VillageView = lazy(() => import('./VillageView').then((mod) => ({ default: mod.VillageView })))
 
 type Screen = 'town' | 'inn' | 'roster' | 'battle' | 'smith' | 'settings'
@@ -325,6 +326,12 @@ export function App() {
 
       <Hud save={save} onOpen={open} />
       <GuideCard save={save} onOpen={open} onClaim={() => apply({ type: 'claimGuide' })} />
+
+      {save.expeditions.length > 0 ? (
+        <Suspense fallback={null}>
+          <ExpeditionPanel save={save} />
+        </Suspense>
+      ) : null}
 
       <nav className="dock" aria-label={t('label.village')}>
         {DOCK.map((item) => {
