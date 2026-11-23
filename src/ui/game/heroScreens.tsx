@@ -7,8 +7,6 @@ import {
   adsRemaining,
   canDeploy,
   classById,
-  combatRules,
-  dungeons,
   lifeRules,
   potentialBand,
   progression,
@@ -18,7 +16,6 @@ import {
   type GameAction,
   type GameState,
   type Hero,
-  type TargetPriority,
 } from '../../core'
 import { gameNow } from '../clock'
 import { josa } from '../josa'
@@ -27,7 +24,6 @@ import {
   Chip,
   Portrait,
   Res,
-  clampPercent,
   conditionTone,
   fatigueText,
   fatigueTone,
@@ -305,193 +301,5 @@ function HeroDetail({
       </div>
       {canDeploy(hero) ? null : <p className="muted">{t('result.dead')}</p>}
     </article>
-  )
-}
-
-export function Party({ save, onAction }: { save: GameState; onAction: Act }) {
-  const { t } = useTranslation()
-  const inParty = new Set(save.party.map((slot) => slot.id))
-  const bench = save.roster.filter((hero) => !inParty.has(hero.id))
-  const full = save.party.length >= combatRules.maxParty
-  const rows = (['back', 'front'] as const).map((row) => ({
-    row,
-    size: row === 'front' ? combatRules.frontRowSize : combatRules.backRowSize,
-    slots: save.party.filter((slot) => slot.row === row),
-  }))
-  const dungeon = dungeons.find((entry) => entry.id === save.dungeonId)
-  return (
-    <div className="split wide-right">
-      <div>
-        <h3 className="section-title">{t('ui.formation')}</h3>
-        <div className="formation">
-          {rows.map(({ row, size, slots }) => (
-            <div key={row} className="formation-row">
-              <span className="formation-label">{t(`row.${row}`)}</span>
-              {Array.from({ length: size }, (_, index) => {
-                const slot = slots[index]
-                const hero = slot ? save.roster.find((entry) => entry.id === slot.id) : undefined
-                if (!slot || !hero) {
-                  return (
-                    <div key={index} className="slot empty-slot">
-                      {t('ui.emptySlot')}
-                    </div>
-                  )
-                }
-                return (
-                  <div key={slot.id} className="slot">
-                    <Portrait hero={hero} />
-                    <span className="slot-body">
-                      <strong>{hero.name}</strong>
-                      <span className="chips">
-                        <Chip tone="info">{t(`class.${hero.classId}`)}</Chip>
-                        {needsWarning(hero) ? <Chip tone="bad">{t(`condition.${hero.condition}`)}</Chip> : null}
-                      </span>
-                      <span className="row">
-                        <button
-                          type="button"
-                          className="btn tiny"
-                          onClick={() => onAction({ type: 'row', id: slot.id, row: row === 'front' ? 'back' : 'front' })}
-                        >
-                          {t(row === 'front' ? 'action.back' : 'action.front')}
-                        </button>
-                        <button type="button" className="btn tiny" onClick={() => onAction({ type: 'remove', id: slot.id })}>
-                          {t('action.remove')}
-                        </button>
-                      </span>
-                    </span>
-                  </div>
-                )
-              })}
-            </div>
-          ))}
-          <span className="formation-arrow" aria-hidden="true">
-            ➜
-          </span>
-        </div>
-
-        <h3 className="section-title">{t('ui.bench')}</h3>
-        {bench.length === 0 ? <p className="muted">{save.roster.length === 0 ? t('hint.emptyRoster') : t('ui.allInParty')}</p> : null}
-        <div className="bench">
-          {bench.map((hero) => (
-            <button key={hero.id} type="button" className="bench-hero" disabled={!canDeploy(hero) || full} onClick={() => onAction({ type: 'add', id: hero.id })}>
-              <Portrait hero={hero} />
-              <span>
-                <strong>{hero.name}</strong>
-                <span className="muted">
-                  {t(`class.${hero.classId}`)} · {t(`condition.${hero.condition}`)}
-                </span>
-              </span>
-              {needsWarning(hero) ? <span className="warn-dot" aria-label={t('hero.warning')} /> : null}
-            </button>
-          ))}
-        </div>
-      </div>
-
-      <div className="column">
-        <h3 className="section-title">{t('label.dungeon')}</h3>
-        <div className="dungeon-list">
-          {dungeons.map((entry) => (
-            <button
-              key={entry.id}
-              type="button"
-              className={save.dungeonId === entry.id ? 'dungeon selected' : 'dungeon'}
-              onClick={() => onAction({ type: 'dungeon', id: entry.id })}
-            >
-              <span className={`tier tier-${entry.tier}`}>{entry.tier}</span>
-              <span className="dungeon-body">
-                <strong>{t(`dungeon.${entry.id}.name`)}</strong>
-                <span className="muted">{t('dungeon.recommended', { level: entry.recommendedLevel })}</span>
-              </span>
-              {save.cleared.includes(entry.id) ? <Chip tone="good">{t('dungeon.cleared')}</Chip> : null}
-            </button>
-          ))}
-        </div>
-        {dungeon ? <p className="muted">{t(`dungeon.${dungeon.id}.hint`)}</p> : null}
-
-        <details className="fold">
-          <summary>{t('label.tactics')}</summary>
-          <label className="field">
-            <span>{t('label.target')}</span>
-            <select value={save.tactics.target} onChange={(event) => onAction({ type: 'tactics', tactics: { ...save.tactics, target: event.target.value as TargetPriority } })}>
-              {(['lowestHp', 'backRow', 'boss'] as const).map((target) => (
-                <option key={target} value={target}>
-                  {t(`target.${target}`)}
-                </option>
-              ))}
-            </select>
-          </label>
-          <label className="field">
-            <span>{t('label.healBelow')}</span>
-            <input
-              type="number"
-              min={0}
-              max={100}
-              value={save.tactics.healBelow}
-              onChange={(event) => onAction({ type: 'tactics', tactics: { ...save.tactics, healBelow: clampPercent(event.target.value) } })}
-            />
-          </label>
-          <label className="field">
-            <span>{t('label.retreatBelow')}</span>
-            <input
-              type="number"
-              min={0}
-              max={100}
-              value={save.tactics.retreatBelow}
-              onChange={(event) => onAction({ type: 'tactics', tactics: { ...save.tactics, retreatBelow: clampPercent(event.target.value) } })}
-            />
-          </label>
-        </details>
-
-        <details className="fold">
-          <summary>
-            {t('label.auto')} {save.auto.enabled ? <Chip tone="good">ON</Chip> : <Chip>OFF</Chip>}
-          </summary>
-          <button type="button" className={save.auto.enabled ? 'btn primary' : 'btn'} onClick={() => onAction({ type: 'auto', enabled: !save.auto.enabled })}>
-            {t('action.auto')} {save.auto.enabled ? 'ON' : 'OFF'}
-          </button>
-          <label className="field">
-            <span>{t('label.policy')}</span>
-            <select value={save.auto.policy} onChange={(event) => onAction({ type: 'autoPolicy', policy: event.target.value as 'material' | 'safe' | 'fixed' })}>
-              {(['safe', 'material', 'fixed'] as const).map((policy) => (
-                <option key={policy} value={policy}>
-                  {t(`policy.${policy}`)}
-                </option>
-              ))}
-            </select>
-          </label>
-          {save.auto.policy === 'material' ? (
-            <label className="field">
-              <span>{t('label.material')}</span>
-              <select value={save.auto.material} onChange={(event) => onAction({ type: 'autoMaterial', material: event.target.value as 'wood' | 'stone' | 'iron' | 'bone' })}>
-                {(['wood', 'stone', 'iron', 'bone'] as const).map((material) => (
-                  <option key={material} value={material}>
-                    {t(`material.${material}`)}
-                  </option>
-                ))}
-              </select>
-            </label>
-          ) : (
-            <label className="field">
-              <span>{t('label.autoDungeon')}</span>
-              <select value={save.auto.dungeonId} onChange={(event) => onAction({ type: 'autoDungeon', id: event.target.value })}>
-                {dungeons.map((entry) => (
-                  <option key={entry.id} value={entry.id}>
-                    {t(`dungeon.${entry.id}.name`)}
-                  </option>
-                ))}
-              </select>
-            </label>
-          )}
-          <button type="button" className="btn small" onClick={() => onAction({ type: 'autoParty' })}>
-            {t('action.autoParty')}
-          </button>
-          <p className="muted">{t('hint.auto')}</p>
-        </details>
-
-        <button type="button" className="btn primary big" onClick={() => onAction({ type: 'depart' })} disabled={save.party.length === 0}>
-          {t('action.fight')}
-        </button>
-      </div>
-    </div>
   )
 }

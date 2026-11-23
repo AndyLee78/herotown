@@ -10,6 +10,15 @@ import { createRng } from './rng'
 
 const now = 1_700_000_000_000
 
+function withParty<T extends GameState>(state: T, slots: { id: string; row: 'front' | 'back' }[]): T {
+  return { ...state, presets: state.presets.map((preset, index) => (index === 0 ? { ...preset, slots } : preset)) }
+}
+
+function home(state: GameState): GameState {
+  const at = Math.max(state.lastTickAt + 1, ...state.expeditions.map((expedition) => expedition.returnAt))
+  return reduce(state, { type: 'catchUp', now: at })
+}
+
 describe('game state', () => {
   it('hires only through the action and keeps the same combat seed inputs', () => {
     const start = freshState(4, now)
@@ -142,15 +151,18 @@ describe('game state', () => {
     const start = freshState(1, now)
     const hired = reduce(start, { type: 'hire', id: start.visitors[0]?.id ?? '' })
     const id = hired.roster[0]?.id ?? ''
-    const marked = {
-      ...hired,
-      dungeonId: 'abandoned_mine',
-      roster: hired.roster.map((hero) => ({ ...hero, deaths: 1 })),
-      party: [{ id, row: 'front' as const }],
-    }
+    const marked = withParty(
+      {
+        ...hired,
+        cleared: ['hill_cave'],
+        dungeonId: 'abandoned_mine',
+        roster: hired.roster.map((hero) => ({ ...hero, deaths: 1 })),
+      },
+      [{ id, row: 'front' as const }],
+    )
     const warned = reduce(marked, { type: 'depart' })
     expect(warned.notice).toBe('seenDeath')
-    expect(warned.report).toBeNull()
+    expect(warned.expeditions).toHaveLength(0)
   })
 
   it('keeps a first death on the roster and buries the second', () => {
@@ -298,23 +310,25 @@ describe('game state', () => {
       potentials: { str: 6, agi: 8, vit: 12, int: 8, wil: 12, wis: 18 },
       gear: [],
     })
-    const ready = {
-      ...start,
-      cleared: ['hill_cave'],
-      fame: 12,
-      materials: { ...start.materials, wood: 0 },
-      roster: [hero, cleric],
-      party: [
+    const ready = withParty(
+      {
+        ...start,
+        cleared: ['hill_cave'],
+        fame: 12,
+        materials: { ...start.materials, wood: 0 },
+        roster: [hero, cleric],
+      },
+      [
         { id: hero.id, row: 'front' as const },
         { id: cleric.id, row: 'back' as const },
       ],
-    }
-    const again = reduce(ready, { type: 'depart' })
-    expect(again.report?.victory).toBe(true)
+    )
+    const again = home(reduce(ready, { type: 'depart' }))
+    expect(again.history[0]?.victory).toBe(true)
     expect(again.materials.wood).toBeLessThan(4)
     expect(again.fame).toBe(12)
     const watching = reduce(again, { type: 'autoDungeon', id: 'hill_cave' })
-    const running = reduce({ ...watching, auto: { ...watching.auto, enabled: true } }, { type: 'catchUp', now: now + villageRules.auto.runMs })
+    const running = reduce({ ...watching, auto: { ...watching.auto, enabled: true } }, { type: 'catchUp', now: watching.lastTickAt + villageRules.auto.runMs })
     expect(running.gold).toBeGreaterThan(watching.gold)
     expect(running.materials.wood).toBeGreaterThan(watching.materials.wood)
     expect(running.roster.every((entry) => entry.condition !== 'dead')).toBe(true)
@@ -363,20 +377,20 @@ describe('economy fixes', () => {
     for (const hero of state.roster) {
       state = reduce(state, { type: 'add', id: hero.id })
     }
-    state = reduce(state, { type: 'depart' })
-    expect(state.report?.victory).toBe(true)
+    state = home(reduce(state, { type: 'depart' }))
+    expect(state.history[0]?.victory).toBe(true)
     return state
   }
 
   it('pays an automatic run less than repeating the dungeon by hand', () => {
     const cleared = clearedCave(7)
-    const manual = reduce(cleared, { type: 'depart' })
+    const manual = home(reduce(cleared, { type: 'depart' }))
     const manualGold = manual.gold - cleared.gold
     const manualWood = manual.materials.wood - cleared.materials.wood
     let auto = reduce(cleared, { type: 'auto', enabled: true })
     auto = reduce(auto, { type: 'autoDungeon', id: 'hill_cave' })
     const ran = reduce(auto, { type: 'catchUp', now: auto.lastTickAt + villageRules.auto.runMs })
-    expect(ran.report?.victory).toBe(true)
+    expect(ran.roster.some((hero) => hero.clears.includes('hill_cave'))).toBe(true)
     const autoGold = ran.gold - auto.gold
     expect(autoGold).toBeGreaterThan(0)
     expect(autoGold).toBeLessThan(manualGold)
@@ -425,6 +439,7 @@ describe('economy fixes', () => {
       autoGold: 0,
       adClaimed: false,
       aged: [],
+      returned: [],
     }
     const start = { ...freshState(1, day), gold: 10, absence }
     const once = reduce(start, { type: 'adReward', placement: 'absence', now: day })
@@ -587,24 +602,21 @@ describe('economy fixes', () => {
     if (!hero) {
       throw new Error('expected a hero')
     }
-    const worn = {
-      ...hired,
-      roster: [{ ...hero, fatigue: lifeRules.fatigue.exhaustedAt }],
-      party: [{ id: hero.id, row: 'front' as const }],
-    }
+    const worn = withParty({ ...hired, roster: [{ ...hero, fatigue: lifeRules.fatigue.exhaustedAt }] }, [{ id: hero.id, row: 'front' as const }])
     const warned = reduce(worn, { type: 'depart' })
     expect(warned.notice).toBe('wornParty')
-    expect(warned.report).toBeNull()
+    expect(warned.expeditions).toHaveLength(0)
     const sent = reduce(worn, { type: 'depart', confirm: true })
     expect(sent.notice).toBeNull()
-    expect(sent.report).not.toBeNull()
+    expect(sent.expeditions).toHaveLength(1)
     const both = {
       ...worn,
+      cleared: ['hill_cave'],
       dungeonId: 'abandoned_mine',
       roster: [{ ...hero, fatigue: lifeRules.fatigue.exhaustedAt, deaths: 1 }],
     }
     expect(reduce(both, { type: 'depart' }).notice).toBe('wornParty')
-    expect(reduce(both, { type: 'depart', confirm: true }).report).not.toBeNull()
+    expect(reduce(both, { type: 'depart', confirm: true }).expeditions).toHaveLength(1)
   })
 
   it('keeps a critical hero out of automatic runs', () => {
@@ -616,10 +628,9 @@ describe('economy fixes', () => {
     }
     for (const policy of ['material', 'fixed'] as const) {
       const parked = {
-        ...hired,
+        ...withParty(hired, [{ id: hero.id, row: 'front' as const }]),
         cleared: ['hill_cave'],
         roster: [{ ...hero, condition: 'critical' as const, fatigue: 0 }],
-        party: [{ id: hero.id, row: 'front' as const }],
         auto: {
           enabled: true,
           dungeonId: 'hill_cave',
@@ -629,7 +640,7 @@ describe('economy fixes', () => {
         },
       }
       const later = reduce(parked, { type: 'catchUp', now: now + villageRules.auto.runMs })
-      expect(later.report).toBeNull()
+      expect(later.roster[0]?.clears).toEqual(hero.clears)
       expect(later.roster[0]?.fatigue).toBe(0)
       expect(later.roster[0]?.condition).toBe('critical')
     }

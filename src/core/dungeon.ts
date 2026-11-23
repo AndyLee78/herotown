@@ -160,3 +160,10 @@ function judgeCondition(unit: BattleUnit): Condition {
   }
   return 'healthy'
 }
+
+// One number to compare heroes on cards. It reads the same combat unit the
+// battle uses (so fatigue and injuries count) but never decides a fight.
+export function heroPower(hero: Hero): number {
+  const unit = createHeroUnit({ hero, row: 'front' }, 0)
+  return Math.round(unit.attack * 2 + unit.defense * 2 + unit.maxHp / 4 + unit.speed + unit.heal)
+}

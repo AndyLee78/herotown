@@ -5,6 +5,7 @@ import lifeFile from '../data/life.json'
 import smithFile from '../data/smith.json'
 import combatFile from '../data/combat.json'
 import dungeonsFile from '../data/dungeons.json'
+import expeditionFile from '../data/expedition.json'
 import monstersFile from '../data/monsters.json'
 import namesFile from '../data/names.json'
 import progressionFile from '../data/progression.json'
@@ -164,6 +165,13 @@ export const villageRules = villageFile
 export const lifeRules = lifeFile
 export const smithRules = smithFile
 export const adRules = adsFile
+export const expeditionRules = expeditionFile
+
+for (const key of ['travelMs', 'msPerTick', 'presets', 'history'] as const) {
+  if (!Number.isInteger(expeditionRules[key]) || expeditionRules[key] < 1) {
+    throw new Error(`Expedition rule ${key} must be a positive integer`)
+  }
+}
 
 const adPlacements = ['absence', 'construction', 'temple'] as const
 for (const placement of adPlacements) {

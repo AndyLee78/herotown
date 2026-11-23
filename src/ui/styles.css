@@ -1368,3 +1368,173 @@ input[type='range'] {
     width: calc(100% - 16px);
   }
 }
+
+/* ---------- battle window ---------- */
+
+.tabs {
+  display: flex;
+  gap: 6px;
+  border-bottom: 3px solid var(--line);
+}
+
+.tabs button {
+  min-height: 40px;
+  padding: 0 16px;
+  font-weight: 900;
+  color: var(--muted);
+  background: var(--paper-2);
+  border: 2px solid var(--line);
+  border-bottom: none;
+  border-radius: 12px 12px 0 0;
+}
+
+.tabs button[aria-selected='true'] {
+  color: #fff;
+  background: var(--wood);
+  border-color: var(--wood-dark);
+}
+
+.board {
+  display: grid;
+  grid-template-columns: minmax(200px, 260px) minmax(0, 1fr) minmax(220px, 280px);
+  gap: 12px;
+  align-items: start;
+}
+
+.board-list {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.board-rewards {
+  gap: 10px;
+}
+
+.board-rewards .btn {
+  width: 100%;
+}
+
+.reward-row {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  padding-bottom: 8px;
+  border-bottom: 2px dashed var(--line);
+}
+
+.tier.big {
+  width: 48px;
+  height: 48px;
+  font-size: 22px;
+}
+
+.prep-head {
+  flex-direction: row;
+  flex-wrap: wrap;
+  align-items: center;
+}
+
+.preset-list {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(250px, 1fr));
+  gap: 10px;
+}
+
+.preset {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 10px;
+  text-align: left;
+  background: #fff;
+  border: 2px solid var(--line);
+  border-radius: 16px;
+  box-shadow: 0 3px 0 var(--line);
+}
+
+.preset.selected {
+  background: #fff4d6;
+  border-color: var(--gold);
+  box-shadow: 0 3px 0 var(--gold-dark);
+}
+
+.preset-top {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.power {
+  font-size: 13px;
+  font-weight: 900;
+  color: var(--red-dark);
+}
+
+.preset-faces {
+  display: flex;
+  gap: 4px;
+}
+
+.preset-faces .portrait {
+  width: 40px;
+  height: 40px;
+  border-radius: 10px;
+}
+
+.empty-face {
+  background: var(--paper-2);
+  border-style: dashed;
+}
+
+.supplies {
+  flex-direction: row;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 10px;
+  opacity: 0.75;
+}
+
+.btn.depart {
+  font-size: 20px;
+}
+
+.editor .sort {
+  min-height: 30px;
+  padding: 0 8px;
+  background: #fff;
+  border: 2px solid var(--line);
+  border-radius: 9px;
+}
+
+.hero-row:disabled {
+  opacity: 0.5;
+}
+
+.history {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
+  gap: 10px;
+}
+
+.history-card.win {
+  border-color: #b9e0a5;
+}
+
+.history-card.lose {
+  border-color: #f1c2bd;
+}
+
+.history-card .card-top {
+  flex-wrap: wrap;
+}
+
+.back-link {
+  align-self: flex-start;
+}
+
+@media (max-width: 900px) {
+  .board {
+    grid-template-columns: 1fr;
+  }
+}

@@ -19,26 +19,26 @@ import {
 } from '../core'
 import { rewardedAds } from './ads'
 import { addGameOffset, gameNow, offsetSteps, resetGameOffset } from './clock'
-import { Inn, Party, Roster } from './game/heroScreens'
+import { BattleHub } from './game/battleScreens'
+import { Inn, Roster } from './game/heroScreens'
 import { UiIcon, TownLogo, type ResourceKind } from './game/icons'
 import { Bar, Res, Window, needsWarning, useNow, waitLabel } from './game/kit'
-import { Absence, ConfirmDepart, Report, Settings, Smith, Town } from './game/villageScreens'
+import { Absence, ConfirmDepart, Settings, Smith, Town } from './game/villageScreens'
 import { loadGame, storeGame } from './storage'
 import { registerSW } from 'virtual:pwa-register'
 import { isSoundName, play, unlockSound } from './sound'
 
 const VillageView = lazy(() => import('./VillageView').then((mod) => ({ default: mod.VillageView })))
 
-type Screen = 'town' | 'inn' | 'roster' | 'party' | 'smith' | 'result' | 'settings'
+type Screen = 'town' | 'inn' | 'roster' | 'battle' | 'smith' | 'settings'
 type Toast = { id: number; text: string }
 
 const DOCK: { screen: Screen; icon: ReactNode }[] = [
   { screen: 'town', icon: <UiIcon name="town" size={26} /> },
   { screen: 'inn', icon: <UiIcon name="inn" size={26} /> },
   { screen: 'roster', icon: <UiIcon name="roster" size={26} /> },
-  { screen: 'party', icon: <UiIcon name="party" size={26} /> },
+  { screen: 'battle', icon: <UiIcon name="party" size={26} /> },
   { screen: 'smith', icon: <UiIcon name="smith" size={26} /> },
-  { screen: 'result', icon: <UiIcon name="result" size={26} /> },
 ]
 
 // Tapping a building in the village opens the screen that runs it.
@@ -46,7 +46,7 @@ const BUILDING_SCREEN: Record<BuildingId, Screen> = {
   hall: 'town',
   inn: 'inn',
   house: 'roster',
-  guild: 'party',
+  guild: 'battle',
   smith: 'smith',
   temple: 'roster',
 }
@@ -68,6 +68,8 @@ export function App() {
   const [confirm, setConfirm] = useState<'seenDeath' | 'wornParty' | null>(null)
   const [reportUnseen, setReportUnseen] = useState(false)
   const toastId = useRef(0)
+  const pendingPreset = useRef('p1')
+  const lastReturn = useRef<number | null>(null)
 
   useEffect(() => {
     document.title = t('app.title')
@@ -161,6 +163,35 @@ export function App() {
     return () => window.clearTimeout(timer)
   }, [save])
 
+  // Wake up when the next expedition comes home, and tell the player.
+  useEffect(() => {
+    const next = save?.expeditions.reduce((soon, trip) => Math.min(soon, trip.returnAt), Number.POSITIVE_INFINITY)
+    if (next == null || !Number.isFinite(next)) {
+      return
+    }
+    const timer = window.setTimeout(() => {
+      setSave((current) => (current ? reduce(current, { type: 'catchUp', now: gameNow() }) : current))
+    }, Math.max(250, next - gameNow() + 40))
+    return () => window.clearTimeout(timer)
+  }, [save?.expeditions])
+
+  const latest = save?.history[0]?.finishedAt ?? null
+  useEffect(() => {
+    if (latest == null) {
+      return
+    }
+    if (lastReturn.current != null && latest > lastReturn.current) {
+      const report = saveRef.current?.history[0]
+      setReportUnseen(true)
+      if (report?.dungeonId) {
+        pushToast(t(report.victory ? 'battle.returnedWin' : 'battle.returnedLose', { dungeon: t(`dungeon.${report.dungeonId}.name`) }))
+        play(report.victory ? 'victory' : 'defeat')
+      }
+    }
+    lastReturn.current = latest
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [latest])
+
   const pushToast = (text: string) => {
     play('notice')
     const id = (toastId.current += 1)
@@ -198,11 +229,10 @@ export function App() {
     if (action.type === 'claimGuide' && next !== current && !guideStatus(next).step) {
       pushToast(t('guide.done'))
     }
-    if (action.type === 'depart' && !next.notice) {
+    if (action.type === 'depart' && next.expeditions.length > current.expeditions.length) {
       setConfirm(null)
-      setReportUnseen(false)
-      setScreen('result')
-      play('open')
+      setScreen(null)
+      pushToast(t('battle.departed', { dungeon: t(`dungeon.${next.dungeonId}.name`) }))
     }
   }
 
@@ -241,10 +271,16 @@ export function App() {
     })
   }
 
+  // The confirm window re-sends the same preset if the player goes anyway.
+  const depart = (presetId: string) => {
+    pendingPreset.current = presetId
+    apply({ type: 'depart', presetId, now: gameNow() })
+  }
+
   const open = (next: Screen) => {
     setScreen(next)
     play('open')
-    if (next === 'result') {
+    if (next === 'battle') {
       setReportUnseen(false)
     }
   }
@@ -259,19 +295,20 @@ export function App() {
 
   const buildingLabels = Object.fromEntries(villageRules.buildings.map((building) => [building.id, t(`building.${building.id}`)])) as Record<BuildingId, string>
   const covered = screen != null || save.absence != null || confirm != null
+  const away = new Set(save.expeditions.flatMap((expedition) => expedition.heroIds))
   const badges: Partial<Record<Screen, number | boolean>> = {
     inn: save.visitors.length,
     roster: save.roster.some(needsWarning),
-    result: reportUnseen,
+    battle: reportUnseen || save.expeditions.length > 0,
   }
 
   return (
     <div className="game">
       <Suspense fallback={<div className="village-canvas" />}>
         <VillageView
-          roster={save.roster}
+          roster={save.roster.filter((hero) => !away.has(hero.id))}
           visitors={save.visitors}
-          partyIds={save.party.map((slot) => slot.id)}
+          partyIds={(save.presets.find((preset) => preset.id === save.presetId)?.slots ?? []).map((slot) => slot.id)}
           selectedId={selectedId}
           onSelect={(id) => {
             setSelectedId(id)
@@ -309,9 +346,8 @@ export function App() {
           {screen === 'roster' ? (
             <Roster save={save} selectedId={selectedId} onSelect={setSelectedId} onAction={apply} busy={adBusy} onWatch={() => watchAd('temple')} />
           ) : null}
-          {screen === 'party' ? <Party save={save} onAction={apply} /> : null}
+          {screen === 'battle' ? <BattleHub save={save} onAction={apply} onDepart={depart} /> : null}
           {screen === 'smith' ? <Smith save={save} onAction={apply} /> : null}
-          {screen === 'result' ? <Report report={save.report} /> : null}
           {screen === 'settings' ? (
             <Settings
               save={save}
@@ -338,7 +374,7 @@ export function App() {
       ) : null}
 
       {save.absence ? <Absence save={save} busy={adBusy} onWatch={() => watchAd('absence')} onClose={() => { play('close'); apply({ type: 'dismissAbsence' }) }} /> : null}
-      {confirm ? <ConfirmDepart notice={confirm} onCancel={() => { play('close'); setConfirm(null) }} onConfirm={() => apply({ type: 'depart', confirm: true })} /> : null}
+      {confirm ? <ConfirmDepart notice={confirm} onCancel={() => { play('close'); setConfirm(null) }} onConfirm={() => apply({ type: 'depart', presetId: pendingPreset.current, confirm: true, now: gameNow() })} /> : null}
 
       <div className="toasts" aria-live="polite">
         {updateReady ? (

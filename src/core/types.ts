@@ -174,6 +174,10 @@ export type DungeonReport = {
   dungeonId?: string
   party?: ReplayHero[]
   floors?: ReplayUnit[][]
+  // Filled in when an expedition comes home.
+  presetId?: string
+  finishedAt?: number
+  gained?: { gold: number; fame: number; materials: Partial<Record<'wood' | 'stone' | 'iron' | 'bone', number>> }
   victory: boolean
   defeatReason: DefeatReason | null
   ticks: number

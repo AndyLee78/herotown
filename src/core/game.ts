@@ -1,5 +1,5 @@
 import { claimGuide } from './guide'
-import { adRules, classById, combatRules, dungeonById, lifeRules, progression, smithRules, timeRules, villageRules } from './data'
+import { adRules, classById, combatRules, dungeonById, dungeons, expeditionRules, lifeRules, progression, smithRules, timeRules, villageRules } from './data'
 import { forgeGear, normalizeGear, recipeById } from './gear'
 import { applyReport, DEFAULT_TACTICS, runDungeon } from './dungeon'
 import { canDeploy, ageUp, generateHero, generateVisitors, normalizeHero, restHero } from './hero'
@@ -7,7 +7,7 @@ import { createRng } from './rng'
 import type { Rng } from './rng'
 import type { ClassId, CombatError, DungeonReport, Gear, GearSlot, Hero, Row, Tactics } from './types'
 
-export const SAVE_VERSION = 5
+export const SAVE_VERSION = 6
 
 export type SeasonId = 'spring' | 'summer' | 'autumn' | 'winter'
 
@@ -33,6 +33,7 @@ export type AbsenceReport = {
   autoGold: number
   adClaimed: boolean
   aged: { name: string; age: number }[]
+  returned: { dungeonId: string; victory: boolean }[]
 }
 
 export type SmithJob = {
@@ -66,6 +67,28 @@ export type PartySlot = {
   row: Row
 }
 
+// A saved party: who stands where, and the tactics they fight with.
+export type PartyPreset = {
+  id: string
+  slots: PartySlot[]
+  tactics: Tactics
+}
+
+// A party out of town. The fight is decided when it leaves; rewards and
+// injuries land when it comes back at returnAt.
+export type Expedition = {
+  id: string
+  presetId: string
+  dungeonId: string
+  heroIds: string[]
+  seed: number
+  report: DungeonReport
+  departAt: number
+  battleAt: number
+  battleEndAt: number
+  returnAt: number
+}
+
 export type Grave = {
   id: string
   name: string
@@ -94,6 +117,9 @@ export type GameNotice =
   | 'autoLocked'
   | 'adLimit'
   | 'adUsed'
+  | 'busyHero'
+  | 'slotsFull'
+  | 'lockedDungeon'
   | 'wornParty'
   | CombatError
   | 'checksum'
@@ -124,10 +150,12 @@ export type GameState = {
   lastTickAt: number
   visitors: Hero[]
   roster: Hero[]
-  party: PartySlot[]
-  tactics: Tactics
+  presets: PartyPreset[]
+  presetId: string
+  expeditions: Expedition[]
+  expeditionNonce: number
+  history: DungeonReport[]
   dungeonId: string
-  report: DungeonReport | null
   absence: AbsenceReport | null
   notice: GameNotice
   auto: AutoPlan
@@ -145,7 +173,7 @@ export type AdUses = {
 export type GameAction =
   | { type: 'hire'; id: string; now?: number }
   | { type: 'rest'; times: number }
-  | { type: 'depart'; confirm?: boolean }
+  | { type: 'depart'; presetId?: string; confirm?: boolean; now?: number }
   | { type: 'learn'; id: string; skillId: string }
   | { type: 'treat'; id: string; now: number }
   | { type: 'revive'; id: string; now: number }
@@ -154,11 +182,12 @@ export type GameAction =
   | { type: 'enhance'; gearId: string; now: number }
   | { type: 'equip'; heroId: string; gearId: string }
   | { type: 'unequip'; heroId: string; slot: GearSlot }
-  | { type: 'add'; id: string }
-  | { type: 'row'; id: string; row: Row }
-  | { type: 'remove'; id: string }
+  | { type: 'add'; id: string; presetId?: string }
+  | { type: 'row'; id: string; row: Row; presetId?: string }
+  | { type: 'remove'; id: string; presetId?: string }
+  | { type: 'preset'; id: string }
   | { type: 'dungeon'; id: string }
-  | { type: 'tactics'; tactics: Tactics }
+  | { type: 'tactics'; tactics: Tactics; presetId?: string }
   | { type: 'build'; id: BuildingId; now: number }
   | { type: 'finishBuild'; now: number }
   | { type: 'auto'; enabled: boolean }
@@ -201,10 +230,12 @@ export function freshState(seed: number, now: number): GameState {
     lastTickAt: now,
     visitors: stampVisitors(generateVisitors(seed, visitorCap(1), townLevel(0).visitorPotential), now),
     roster: [],
-    party: [],
-    tactics: { ...DEFAULT_TACTICS },
+    presets: makePresets(),
+    presetId: 'p1',
+    expeditions: [],
+    expeditionNonce: 0,
+    history: [],
     dungeonId: 'hill_cave',
-    report: null,
     absence: null,
     notice: null,
     auto: { enabled: false, dungeonId: 'hill_cave', policy: 'safe', material: 'wood', party: [] },
@@ -296,31 +327,7 @@ function apply(state: GameState, action: GameAction): GameState {
     return { ...state, notice: null, roster, day: state.day + times }
   }
   if (action.type === 'depart') {
-    const party = state.party.flatMap((slot) => {
-      const hero = state.roster.find((entry) => entry.id === slot.id)
-      return hero ? [{ hero, row: slot.row }] : []
-    })
-    const dungeon = dungeonById(state.dungeonId)
-    const worn = party.some((member) => needsWarning(member.hero))
-    const marked = party.some((member) => member.hero.deaths >= 1)
-    if (!action.confirm && (worn || (marked && dungeon.tier >= lifeRules.dangerousTier))) {
-      return { ...state, notice: worn ? 'wornParty' : 'seenDeath' }
-    }
-    const battleSeed = state.seedLocked ? state.seed : state.seed + state.day
-    const result = runDungeon(party, state.dungeonId, state.tactics, battleSeed)
-    if (!result.ok) {
-      return { ...state, notice: result.error }
-    }
-    const settled = settleParty(state, result.report, battleSeed, state.lastTickAt)
-    const repeat = state.cleared.includes(state.dungeonId)
-    const goldGain = repeat ? Math.floor(result.report.gold * villageRules.repeatReward) : result.report.gold
-    return grantVictoryRewards({
-      ...state,
-      ...settled,
-      notice: null,
-      gold: state.gold + goldGain,
-      report: result.report,
-    })
+    return startExpedition(state, action.presetId ?? state.presetId, action.confirm === true, action.now ?? state.lastTickAt)
   }
   if (action.type === 'learn') {
     return learnSkill(state, action.id, action.skillId)
@@ -332,12 +339,10 @@ function apply(state: GameState, action: GameAction): GameState {
     return startRevive(state, action.id, action.now)
   }
   if (action.type === 'dismiss') {
-    return {
-      ...state,
-      notice: null,
-      roster: state.roster.filter((hero) => hero.id !== action.id),
-      party: state.party.filter((slot) => slot.id !== action.id),
+    if (busyHeroIds(state).has(action.id)) {
+      return { ...state, notice: 'busyHero' }
     }
+    return dropFromPresets({ ...state, notice: null, roster: state.roster.filter((hero) => hero.id !== action.id) })
   }
   if (action.type === 'craft') {
     return startCraft(state, action.recipeId, action.now)
@@ -373,38 +378,43 @@ function apply(state: GameState, action: GameAction): GameState {
     return { ...state, notice: null, auto: { ...state.auto, dungeonId: action.id } }
   }
   if (action.type === 'autoParty') {
-    return { ...state, notice: null, auto: { ...state.auto, party: state.party.map((slot) => ({ ...slot })) } }
+    const preset = presetById(state, state.presetId)
+    return { ...state, notice: null, auto: { ...state.auto, party: (preset?.slots ?? []).map((slot) => ({ ...slot })) } }
   }
   if (action.type === 'add') {
-    if (state.party.some((slot) => slot.id === action.id) || state.party.length >= combatRules.maxParty) {
-      return state
-    }
-    if (!state.roster.some((hero) => hero.id === action.id)) {
-      return state
-    }
-    const row: Row = state.party.filter((slot) => slot.row === 'front').length < combatRules.frontRowSize ? 'front' : 'back'
-    return { ...state, notice: null, party: [...state.party, { id: action.id, row }] }
+    return editPreset(state, action.presetId, (preset) => {
+      if (preset.slots.some((slot) => slot.id === action.id) || preset.slots.length >= combatRules.maxParty) {
+        return null
+      }
+      if (!state.roster.some((hero) => hero.id === action.id)) {
+        return null
+      }
+      const front = preset.slots.filter((slot) => slot.row === 'front').length
+      const row: Row = front < combatRules.frontRowSize ? 'front' : 'back'
+      return { ...preset, slots: [...preset.slots, { id: action.id, row }] }
+    })
   }
   if (action.type === 'row') {
-    const nextFront = state.party.filter((slot) => slot.id !== action.id && slot.row === 'front').length + (action.row === 'front' ? 1 : 0)
-    const nextBack = state.party.length - nextFront
-    if (nextFront > combatRules.frontRowSize || nextBack > combatRules.backRowSize) {
-      return state
-    }
-    return {
-      ...state,
-      notice: null,
-      party: state.party.map((slot) => (slot.id === action.id ? { ...slot, row: action.row } : slot)),
-    }
+    return editPreset(state, action.presetId, (preset) => {
+      const nextFront = preset.slots.filter((slot) => slot.id !== action.id && slot.row === 'front').length + (action.row === 'front' ? 1 : 0)
+      const nextBack = preset.slots.length - nextFront
+      if (nextFront > combatRules.frontRowSize || nextBack > combatRules.backRowSize) {
+        return null
+      }
+      return { ...preset, slots: preset.slots.map((slot) => (slot.id === action.id ? { ...slot, row: action.row } : slot)) }
+    })
   }
   if (action.type === 'remove') {
-    return { ...state, notice: null, party: state.party.filter((slot) => slot.id !== action.id) }
+    return editPreset(state, action.presetId, (preset) => ({ ...preset, slots: preset.slots.filter((slot) => slot.id !== action.id) }))
+  }
+  if (action.type === 'preset') {
+    return presetById(state, action.id) ? { ...state, notice: null, presetId: action.id } : state
   }
   if (action.type === 'dungeon') {
     return { ...state, notice: null, dungeonId: action.id }
   }
   if (action.type === 'tactics') {
-    return { ...state, notice: null, tactics: { ...action.tactics } }
+    return editPreset(state, action.presetId, (preset) => ({ ...preset, tactics: { ...action.tactics } }))
   }
   if (action.type === 'dismissAbsence') {
     return { ...state, absence: null }
@@ -465,6 +475,8 @@ function advance(state: GameState, now: number): GameState {
   next = finishCare(next, effectiveNow)
   next = recoverRoster(next, elapsed, effectiveNow)
   next = updateVisitors(next, effectiveNow, visitors)
+  const returned: AbsenceReport['returned'] = []
+  next = returnExpeditions(next, effectiveNow, returned)
   const autoTally = { runs: 0, gold: 0 }
   next = runAuto(next, elapsed, autoTally)
   next = { ...next, lastTickAt: effectiveNow }
@@ -489,6 +501,7 @@ function advance(state: GameState, now: number): GameState {
     autoGold: autoTally.gold,
     adClaimed: false,
     aged,
+    returned,
   }
   return { ...next, absence }
 }
@@ -803,10 +816,11 @@ function dungeonForMaterial(state: GameState): string | null {
 }
 
 function autoMembers(state: GameState): { hero: Hero; row: Row }[] {
-  const slots = state.auto.policy === 'fixed' ? state.auto.party : state.party
+  const slots = state.auto.policy === 'fixed' ? state.auto.party : (presetById(state, state.presetId)?.slots ?? [])
+  const away = busyHeroIds(state)
   const members = slots.flatMap((slot) => {
     const hero = state.roster.find((entry) => entry.id === slot.id)
-    if (!hero || !canDeploy(hero)) {
+    if (!hero || !canDeploy(hero) || away.has(hero.id)) {
       return []
     }
     if (hero.condition === 'critical' || (state.auto.policy === 'safe' && hero.condition === 'injured')) {
@@ -834,7 +848,7 @@ function runAuto(state: GameState, elapsed: number, tally: { runs: number; gold:
       break
     }
     const battleSeed = next.seed + 9000 + tally.runs + next.day
-    const result = runDungeon(members, dungeonId, next.tactics, battleSeed)
+    const result = runDungeon(members, dungeonId, presetById(next, next.presetId)?.tactics ?? DEFAULT_TACTICS, battleSeed)
     // Auto runs only repeat cleared dungeons, so they earn a share of the
     // repeat reward and always less than sending the party by hand.
     const scale = villageRules.repeatReward * villageRules.auto.rewardScale
@@ -847,10 +861,10 @@ function runAuto(state: GameState, elapsed: number, tally: { runs: number; gold:
         entry.condition === 'dead' ? { ...entry, condition: 'critical' as const } : entry,
       ),
     }
-    const slots = members.map((member) => ({ id: member.hero.id, row: member.row }))
-    const settled = settleParty({ ...next, dungeonId, party: slots }, report, battleSeed, next.lastTickAt)
+    const heroIds = members.map((member) => member.hero.id)
+    const settled = settleParty(next, report, battleSeed, next.lastTickAt, heroIds, dungeonId)
     const goldGain = report.victory ? Math.floor(result.report.gold * scale) : 0
-    next = grantVictoryRewards({ ...next, ...settled, dungeonId, gold: next.gold + goldGain, report: { ...report, gold: goldGain } }, scale)
+    next = dropFromPresets(grantVictoryRewards({ ...next, ...settled, gold: next.gold + goldGain }, report, dungeonId, scale))
     budget -= villageRules.auto.runMs
     tally.runs += 1
     tally.gold += goldGain
@@ -858,15 +872,15 @@ function runAuto(state: GameState, elapsed: number, tally: { runs: number; gold:
   return next
 }
 
-function grantVictoryRewards(state: GameState, scale?: number): GameState {
-  if (!state.report?.victory) {
+function grantVictoryRewards(state: GameState, report: DungeonReport, dungeonId: string, scale?: number): GameState {
+  if (!report.victory) {
     return state
   }
-  const drop = villageRules.drops[state.dungeonId as keyof typeof villageRules.drops]
+  const drop = villageRules.drops[dungeonId as keyof typeof villageRules.drops]
   if (!drop) {
     return state
   }
-  const first = !state.cleared.includes(state.dungeonId)
+  const first = !state.cleared.includes(dungeonId)
   const applied = scale ?? (first ? 1 : villageRules.repeatReward)
   const gained = Math.max(1, Math.floor(drop.amount * applied))
   const material = drop.material as MaterialName
@@ -875,14 +889,14 @@ function grantVictoryRewards(state: GameState, scale?: number): GameState {
     materials.iron += Math.max(1, Math.floor(drop.iron * applied))
   }
   let fame = state.fame
-  const cleared = state.cleared.includes(state.dungeonId) ? state.cleared : [...state.cleared, state.dungeonId]
+  const cleared = state.cleared.includes(dungeonId) ? state.cleared : [...state.cleared, dungeonId]
   if (first) {
     fame += drop.fame
   }
   let questProgress = state.questProgress
   let questClaimed = state.questClaimed
   let gold = state.gold
-  if (state.buildings.guild > 0 && state.dungeonId === villageRules.guild.questDungeon && !questClaimed) {
+  if (state.buildings.guild > 0 && dungeonId === villageRules.guild.questDungeon && !questClaimed) {
     questProgress += gained
     if (questProgress >= villageRules.guild.questCount) {
       questClaimed = true
@@ -995,9 +1009,16 @@ export function applyCasualty(
   return { hero: { ...next, deaths: 1, condition: 'dead' }, grave: null }
 }
 
-function settleParty(state: GameState, report: DungeonReport, seed: number, now: number): Pick<GameState, 'roster' | 'party' | 'graveyard'> {
+function settleParty(
+  state: GameState,
+  report: DungeonReport,
+  seed: number,
+  now: number,
+  heroIds: string[],
+  dungeonId: string,
+): Pick<GameState, 'roster' | 'graveyard'> {
   const rng = createRng(seed + 17)
-  const partyIds = new Set(state.party.map((slot) => slot.id))
+  const partyIds = new Set(heroIds)
   const alliesLived = report.conditions.filter((entry) => entry.condition !== 'dead').length > 0
   const roster: Hero[] = []
   const graveyard = [...state.graveyard]
@@ -1006,7 +1027,7 @@ function settleParty(state: GameState, report: DungeonReport, seed: number, now:
       roster.push(hero)
       continue
     }
-    const outcome = applyCasualty(hero, report, state.dungeonId, alliesLived, rng)
+    const outcome = applyCasualty(hero, report, dungeonId, alliesLived, rng)
     if (outcome.hero) {
       roster.push(stampRecovery(hero, outcome.hero, now))
     }
@@ -1014,8 +1035,145 @@ function settleParty(state: GameState, report: DungeonReport, seed: number, now:
       graveyard.push(outcome.grave)
     }
   }
-  const alive = new Set(roster.map((hero) => hero.id))
-  return { roster, graveyard, party: state.party.filter((slot) => alive.has(slot.id)) }
+  return { roster, graveyard }
+}
+
+// ---------- party presets and expeditions ----------
+
+function makePresets(): PartyPreset[] {
+  return Array.from({ length: expeditionRules.presets }, (_, index) => ({ id: `p${index + 1}`, slots: [], tactics: { ...DEFAULT_TACTICS } }))
+}
+
+export function presetById(state: GameState, id: string): PartyPreset | undefined {
+  return state.presets.find((preset) => preset.id === id)
+}
+
+// Heroes out of town on an expedition.
+export function busyHeroIds(state: GameState): Set<string> {
+  return new Set(state.expeditions.flatMap((expedition) => expedition.heroIds))
+}
+
+// Tier 1 is open from the start; each later tier opens once any dungeon of
+// the tier below has been cleared.
+export function dungeonUnlocked(state: GameState, id: string): boolean {
+  const dungeon = dungeons.find((entry) => entry.id === id)
+  if (!dungeon) {
+    return false
+  }
+  if (dungeon.tier <= 1) {
+    return true
+  }
+  return dungeons.some((entry) => entry.tier === dungeon.tier - 1 && state.cleared.includes(entry.id))
+}
+
+function editPreset(state: GameState, id: string | undefined, change: (preset: PartyPreset) => PartyPreset | null): GameState {
+  const target = id ?? state.presetId
+  const preset = presetById(state, target)
+  const next = preset ? change(preset) : null
+  if (!next) {
+    return state
+  }
+  return { ...state, notice: null, presets: state.presets.map((entry) => (entry.id === target ? next : entry)) }
+}
+
+// Removes heroes who left the roster (dismissed, buried) from every preset.
+function dropFromPresets(state: GameState): GameState {
+  const ids = new Set(state.roster.map((hero) => hero.id))
+  const keep = (slots: PartySlot[]) => slots.filter((slot) => ids.has(slot.id))
+  return {
+    ...state,
+    presets: state.presets.map((preset) => ({ ...preset, slots: keep(preset.slots) })),
+    auto: { ...state.auto, party: keep(state.auto.party) },
+  }
+}
+
+function startExpedition(state: GameState, presetId: string, confirm: boolean, now: number): GameState {
+  const preset = presetById(state, presetId)
+  if (!preset) {
+    return { ...state, notice: 'missing' }
+  }
+  if (!dungeonUnlocked(state, state.dungeonId)) {
+    return { ...state, notice: 'lockedDungeon' }
+  }
+  const away = busyHeroIds(state)
+  if (preset.slots.some((slot) => away.has(slot.id))) {
+    return { ...state, notice: 'busyHero' }
+  }
+  if (state.expeditions.length >= expeditionSlots(state.buildings.guild)) {
+    return { ...state, notice: 'slotsFull' }
+  }
+  const party = preset.slots.flatMap((slot) => {
+    const hero = state.roster.find((entry) => entry.id === slot.id)
+    return hero ? [{ hero, row: slot.row }] : []
+  })
+  const dungeon = dungeonById(state.dungeonId)
+  const worn = party.some((member) => needsWarning(member.hero))
+  const marked = party.some((member) => member.hero.deaths >= 1)
+  if (!confirm && (worn || (marked && dungeon.tier >= lifeRules.dangerousTier))) {
+    return { ...state, notice: worn ? 'wornParty' : 'seenDeath' }
+  }
+  // The first expedition of a day keeps the old seed so earlier results replay.
+  const battleSeed = state.seedLocked ? state.seed : state.seed + state.day + state.expeditionNonce * 7919
+  const result = runDungeon(party, state.dungeonId, preset.tactics, battleSeed)
+  if (!result.ok) {
+    return { ...state, notice: result.error }
+  }
+  const battleAt = now + expeditionRules.travelMs
+  const battleEndAt = battleAt + result.report.ticks * expeditionRules.msPerTick
+  const expedition: Expedition = {
+    id: `e${state.expeditionNonce + 1}`,
+    presetId,
+    dungeonId: state.dungeonId,
+    heroIds: party.map((member) => member.hero.id),
+    seed: battleSeed,
+    report: result.report,
+    departAt: now,
+    battleAt,
+    battleEndAt,
+    returnAt: battleEndAt + expeditionRules.travelMs,
+  }
+  return { ...state, notice: null, expeditionNonce: state.expeditionNonce + 1, expeditions: [...state.expeditions, expedition] }
+}
+
+function returnExpeditions(state: GameState, now: number, returned: AbsenceReport['returned']): GameState {
+  let next = state
+  for (const expedition of [...state.expeditions].sort((a, b) => a.returnAt - b.returnAt)) {
+    if (expedition.returnAt <= now) {
+      next = settleExpedition(next, expedition)
+      returned.push({ dungeonId: expedition.dungeonId, victory: expedition.report.victory })
+    }
+  }
+  return next
+}
+
+// Applies an expedition's result when the party walks back in.
+function settleExpedition(state: GameState, expedition: Expedition): GameState {
+  const { report, dungeonId } = expedition
+  const settled = settleParty(state, report, expedition.seed, expedition.returnAt, expedition.heroIds, dungeonId)
+  const repeat = state.cleared.includes(dungeonId)
+  const goldGain = repeat ? Math.floor(report.gold * villageRules.repeatReward) : report.gold
+  const home: GameState = {
+    ...state,
+    ...settled,
+    gold: state.gold + goldGain,
+    expeditions: state.expeditions.filter((entry) => entry.id !== expedition.id),
+  }
+  const next = dropFromPresets(grantVictoryRewards(home, report, dungeonId))
+  const materials: Partial<Materials> = {}
+  for (const key of ['wood', 'stone', 'iron', 'bone'] as const) {
+    const diff = next.materials[key] - state.materials[key]
+    if (diff > 0) {
+      materials[key] = diff
+    }
+  }
+  const record: DungeonReport = {
+    ...report,
+    dungeonId,
+    presetId: expedition.presetId,
+    finishedAt: expedition.returnAt,
+    gained: { gold: next.gold - state.gold, fame: next.fame - state.fame, materials },
+  }
+  return { ...next, history: [record, ...next.history].slice(0, expeditionRules.history) }
 }
 
 function learnSkill(state: GameState, id: string, skillId: string): GameState {
@@ -1265,9 +1423,11 @@ function normalize(record: Record<string, unknown>, now: number): GameState {
     smith: isSmith(record.smith) ? record.smith : null,
     stash: Array.isArray(record.stash) ? (record.stash as Partial<Gear>[]).map((item) => normalizeGear(item, 'warrior')) : [],
     craftNonce: numberOr(record.craftNonce, 0),
-    party: Array.isArray(record.party) ? (record.party as PartySlot[]) : [],
-    tactics: isTactics(record.tactics) ? record.tactics : base.tactics,
-    report: record.report == null ? null : (record.report as DungeonReport),
+    presets: readPresets(record, base.presets),
+    presetId: typeof record.presetId === 'string' ? record.presetId : base.presetId,
+    expeditions: Array.isArray(record.expeditions) ? (record.expeditions as Expedition[]) : [],
+    expeditionNonce: numberOr(record.expeditionNonce, 0),
+    history: Array.isArray(record.history) ? (record.history as DungeonReport[]) : record.report != null ? [record.report as DungeonReport] : [],
     absence: isAbsence(record.absence)
       ? {
           ...record.absence,
@@ -1276,6 +1436,7 @@ function normalize(record: Record<string, unknown>, now: number): GameState {
           autoGold: record.absence.autoGold ?? 0,
           adClaimed: record.absence.adClaimed ?? false,
           aged: readAged(record.absence.aged),
+          returned: Array.isArray(record.absence.returned) ? record.absence.returned : [],
         }
       : null,
     ads: readAds(record.ads, now),
@@ -1292,6 +1453,21 @@ function isCalendar(value: unknown): value is Calendar {
   }
   const calendar = value as Calendar
   return timeRules.seasons.includes(calendar.season) && typeof calendar.year === 'number'
+}
+
+// Version 5 and older saves had one party and one set of tactics; they become the first preset.
+function readPresets(record: Record<string, unknown>, fallback: PartyPreset[]): PartyPreset[] {
+  if (Array.isArray(record.presets) && record.presets.length > 0) {
+    const saved = record.presets as PartyPreset[]
+    return fallback.map((preset) => saved.find((entry) => entry.id === preset.id) ?? preset)
+  }
+  const first = fallback[0]
+  if (!first) {
+    return fallback
+  }
+  const slots = Array.isArray(record.party) ? (record.party as PartySlot[]) : []
+  const tactics = isTactics(record.tactics) ? record.tactics : first.tactics
+  return [{ ...first, slots, tactics }, ...fallback.slice(1)]
 }
 
 function isTactics(value: unknown): value is Tactics {

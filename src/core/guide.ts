@@ -18,7 +18,7 @@ export type GuideReward = Partial<Record<'gold' | MaterialName, number>>
 export type GuideStep = {
   id: string
   goal: GuideGoal
-  screen: 'inn' | 'party' | 'town'
+  screen: 'inn' | 'battle' | 'town'
   reward: GuideReward
 }
 

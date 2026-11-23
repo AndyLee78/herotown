@@ -18,7 +18,8 @@
     "save": "Save",
     "smith": "Smithy",
     "debug": "Debug",
-    "settings": "Settings"
+    "settings": "Settings",
+    "battle": "Battle"
   },
   "action": {
     "hire": "Hire ({{cost}})",
@@ -172,7 +173,10 @@
     "floors": "Floors cleared {{count}}",
     "dealt": "Dealt {{amount}}",
     "taken": "Taken {{amount}}",
-    "healed": "Healed {{amount}}"
+    "healed": "Healed {{amount}}",
+    "busyHero": "A hero in this party is already on an expedition.",
+    "slotsFull": "No expedition slot is free. A higher guild adds more.",
+    "lockedDungeon": "That dungeon is not open yet."
   },
   "defeat": {
     "noHealer": "There was no healer, so the party could not survive the damage.",
@@ -441,7 +445,53 @@
     "pause": "Pause",
     "replay": "Watch again",
     "skip": "Skip to result",
-    "speed": "{{speed}}× speed"
+    "speed": "{{speed}}× speed",
+    "tab": {
+      "dungeons": "Dungeons",
+      "prep": "Prepare",
+      "history": "Chronicle",
+      "editor": "Party"
+    },
+    "backToHistory": "Back to chronicle",
+    "lockedHint": "Clear a tier {{tier}} dungeon to open",
+    "floors": "{{count}} floors",
+    "boss": "Boss",
+    "monsters": "Monsters",
+    "rewards": "Rewards",
+    "firstClear": "First clear",
+    "repeat": "Repeat",
+    "autoReward": "Auto run",
+    "prepare": "Prepare",
+    "slots": "Expeditions {{used}}/{{count}}",
+    "changeDungeon": "Change dungeon",
+    "presets": "Party presets",
+    "preset": "Party {{number}}",
+    "away": "Away · {{time}}",
+    "emptyPreset": "Empty party",
+    "editParty": "Set up party {{number}}",
+    "supplies": "Supplies",
+    "suppliesLater": "Potions and bombs arrive with the alchemy workshop.",
+    "role": {
+      "all": "All",
+      "tank": "Tank",
+      "dps": "DPS",
+      "healer": "Heal",
+      "support": "Support"
+    },
+    "sort": "Sort",
+    "sortBy": {
+      "power": "By power",
+      "level": "By level",
+      "fatigue": "Least tired"
+    },
+    "onTrip": "Away",
+    "done": "Save and go back",
+    "historyEmpty": "No expedition yet.",
+    "ago": "{{minutes}} min ago",
+    "watch": "Watch",
+    "departed": "Set out for {{dungeon}}!",
+    "returnedWin": "Back from {{dungeon}} with a victory!",
+    "returnedLose": "Back from {{dungeon}} after a defeat."
   },
   "log": {
     "floor": "Floor {{floor}}",

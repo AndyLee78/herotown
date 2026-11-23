@@ -1,0 +1,6 @@
+{
+  "travelMs": 20000,
+  "msPerTick": 450,
+  "presets": 3,
+  "history": 10
+}

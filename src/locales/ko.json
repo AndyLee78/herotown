@@ -18,7 +18,8 @@
     "save": "저장",
     "smith": "대장간",
     "debug": "디버그",
-    "settings": "설정"
+    "settings": "설정",
+    "battle": "전투"
   },
   "action": {
     "hire": "고용 ({{cost}})",
@@ -172,7 +173,10 @@
     "floors": "클리어한 층 {{count}}",
     "dealt": "가한 피해 {{amount}}",
     "taken": "받은 피해 {{amount}}",
-    "healed": "회복량 {{amount}}"
+    "healed": "회복량 {{amount}}",
+    "busyHero": "원정 중인 영웅이 있습니다.",
+    "slotsFull": "동시 출정 자리가 없습니다. 길드를 올리면 늘어납니다.",
+    "lockedDungeon": "아직 열리지 않은 던전입니다."
   },
   "defeat": {
     "noHealer": "치유사가 없어 피해를 버티지 못했다.",
@@ -441,7 +445,53 @@
     "pause": "일시정지",
     "replay": "다시 보기",
     "skip": "결과로 건너뛰기",
-    "speed": "{{speed}}배속"
+    "speed": "{{speed}}배속",
+    "tab": {
+      "dungeons": "던전",
+      "prep": "출발 준비",
+      "history": "원정 기록",
+      "editor": "파티 편성"
+    },
+    "backToHistory": "기록 목록",
+    "lockedHint": "티어 {{tier}} 던전을 클리어하면 열린다",
+    "floors": "{{count}}층",
+    "boss": "보스",
+    "monsters": "일반 몬스터",
+    "rewards": "보상",
+    "firstClear": "첫 클리어",
+    "repeat": "다시 돌 때",
+    "autoReward": "자동 출정",
+    "prepare": "출발 준비",
+    "slots": "동시 출정 {{used}}/{{count}}",
+    "changeDungeon": "던전 바꾸기",
+    "presets": "파티 프리셋",
+    "preset": "파티 {{number}}",
+    "away": "원정 중 · {{time}}",
+    "emptyPreset": "비어 있는 파티",
+    "editParty": "파티 {{number}} 구성하기",
+    "supplies": "준비물",
+    "suppliesLater": "연금술 공방이 생기면 물약과 폭탄을 챙길 수 있다.",
+    "role": {
+      "all": "전체",
+      "tank": "탱",
+      "dps": "딜",
+      "healer": "힐",
+      "support": "서포트"
+    },
+    "sort": "정렬",
+    "sortBy": {
+      "power": "전투력순",
+      "level": "레벨순",
+      "fatigue": "피로 적은 순"
+    },
+    "onTrip": "원정 중",
+    "done": "저장하고 돌아가기",
+    "historyEmpty": "아직 다녀온 원정이 없다.",
+    "ago": "{{minutes}}분 전",
+    "watch": "다시 보기",
+    "departed": "{{dungeon}}(으)로 출발했다!",
+    "returnedWin": "{{dungeon}}에서 승리하고 돌아왔다!",
+    "returnedLose": "{{dungeon}}에서 패배하고 돌아왔다."
   },
   "log": {
     "floor": "{{floor}}층",
