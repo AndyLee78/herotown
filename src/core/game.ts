@@ -403,8 +403,12 @@ function apply(state: GameState, action: GameAction): GameState {
       if (!state.roster.some((hero) => hero.id === action.id)) {
         return null
       }
+      // Melee fighters take the front row and everyone else the back, while there is room.
+      const hero = state.roster.find((entry) => entry.id === action.id)
       const front = preset.slots.filter((slot) => slot.row === 'front').length
-      const row: Row = front < combatRules.frontRowSize ? 'front' : 'back'
+      const back = preset.slots.length - front
+      const wantsFront = hero ? classById(hero.classId).reach === 'melee' : true
+      const row: Row = wantsFront ? (front < combatRules.frontRowSize ? 'front' : 'back') : back < combatRules.backRowSize ? 'back' : 'front'
       return { ...preset, slots: [...preset.slots, { id: action.id, row }] }
     })
   }
@@ -946,7 +950,8 @@ function finishCare(state: GameState, now: number): GameState {
       next = { ...next, resurrectAt: undefined, condition: 'injured', recoverAt: now + lifeRules.injury.recoverMs }
     }
     if (next.treatAt != null && next.treatAt <= now) {
-      next = stepCondition({ ...next, treatAt: undefined }, now)
+      // A temple treatment sends a hero home fit to fight again, only tired.
+      next = next.condition === 'injured' || next.condition === 'critical' ? { ...next, treatAt: undefined, condition: 'fatigued', recoverAt: undefined } : { ...next, treatAt: undefined }
     }
     return next
   })
@@ -1064,7 +1069,7 @@ function settleParty(
 
 // The bonus a building gets from the retiree running it, or 0.
 export function retireeBonus(state: GameState, building: BuildingId): number {
-  if (!state.retirees.some((retiree) => retiree.building === building)) {
+  if (!(state.retirees ?? []).some((retiree) => retiree.building === building)) {
     return 0
   }
   return retirementRules.bonus[building]
@@ -1177,9 +1182,10 @@ function startExpedition(state: GameState, presetId: string, confirm: boolean, n
   if (state.expeditions.length >= expeditionSlots(state.buildings.guild)) {
     return { ...state, notice: 'slotsFull' }
   }
+  // Heroes who cannot go (dead, too young) stay home; the rest of the party still leaves.
   const party = preset.slots.flatMap((slot) => {
     const hero = state.roster.find((entry) => entry.id === slot.id)
-    return hero ? [{ hero, row: slot.row }] : []
+    return hero && canDeploy(hero) ? [{ hero, row: slot.row }] : []
   })
   const dungeon = dungeonById(state.dungeonId)
   const worn = party.some((member) => needsWarning(member.hero))
@@ -1223,7 +1229,12 @@ function returnExpeditions(state: GameState, now: number, returned: AbsenceRepor
 
 // Applies an expedition's result when the party walks back in.
 function settleExpedition(state: GameState, expedition: Expedition): GameState {
-  const { report, dungeonId } = expedition
+  const { dungeonId } = expedition
+  // Training grounds: a fatal blow in a low-tier dungeon leaves a hero critical, not dead.
+  const report =
+    dungeonById(dungeonId).tier <= lifeRules.safeTier
+      ? { ...expedition.report, conditions: expedition.report.conditions.map((entry) => (entry.condition === 'dead' ? { ...entry, condition: 'critical' as const } : entry)) }
+      : expedition.report
   const settled = settleParty(state, report, expedition.seed, expedition.returnAt, expedition.heroIds, dungeonId)
   const repeat = state.cleared.includes(dungeonId)
   const goldGain = repeat ? Math.floor(report.gold * villageRules.repeatReward) : report.gold
@@ -1516,6 +1527,8 @@ function normalize(record: Record<string, unknown>, now: number): GameState {
       : null,
     ads: readAds(record.ads, now),
     guideStep: numberOr(record.guideStep, 0),
+    // Buildings that now start built (the temple) are raised on older saves too.
+    buildings: raiseToStart(record.buildings, base.buildings),
     retirees: Array.isArray(record.retirees) ? (record.retirees as Retiree[]).map((retiree) => ({ ...retiree, hero: normalizeHero(retiree.hero) })) : [],
     materials: readMaterials(record.materials, base.materials),
     auto: isAuto(record.auto) ? record.auto : base.auto,
@@ -1529,6 +1542,16 @@ function isCalendar(value: unknown): value is Calendar {
   }
   const calendar = value as Calendar
   return timeRules.seasons.includes(calendar.season) && typeof calendar.year === 'number'
+}
+
+function raiseToStart(value: unknown, fallback: Record<BuildingId, number>): Record<BuildingId, number> {
+  const saved = value != null && typeof value === 'object' ? (value as Partial<Record<BuildingId, number>>) : {}
+  const levels = { ...fallback }
+  for (const building of villageRules.buildings) {
+    const id = building.id as BuildingId
+    levels[id] = Math.max(building.startLevel, numberOr(saved[id], fallback[id]))
+  }
+  return levels
 }
 
 // Version 5 and older saves had one party and one set of tactics; they become the first preset.

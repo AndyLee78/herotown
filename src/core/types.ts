@@ -74,6 +74,8 @@ export type DungeonDef = {
   id: string
   tier: 1 | 2 | 3
   recommendedLevel: number
+  // Multiplies monster health and attack in this dungeon (1 = as listed).
+  monsterScale?: number
   betweenHeal: number
   gold: number
   xp: number

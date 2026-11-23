@@ -1,3 +1,4 @@
+import { dungeonById, progression } from '../src/core/data'
 import { DEFAULT_TACTICS, runDungeon } from '../src/core/dungeon'
 import { createHero } from '../src/core/hero'
 import type { ClassId, PartyMember, Row, Stats, Tactics } from '../src/core/types'
@@ -52,7 +53,8 @@ const comps: Record<CompName, [ClassId, Row][]> = {
   ],
 }
 
-export function partyFor(name: CompName): PartyMember[] {
+// level also adds the training a hero of that level would have earned.
+export function partyFor(name: CompName, level = 1): PartyMember[] {
   return comps[name].map(([classId, row], index) => ({
     hero: createHero({
       id: `${name}-${classId}-${index}`,
@@ -61,6 +63,8 @@ export function partyFor(name: CompName): PartyMember[] {
       classId,
       age: 28,
       potentials: adult[classId],
+      level,
+      training: (level - 1) * progression.trainingPerLevel,
     }),
     row,
   }))
@@ -71,10 +75,10 @@ export type Survey = {
   turns: number
 }
 
-export function survey(name: CompName, dungeonId: string, tactics: Tactics, runs: number): Survey {
+export function survey(name: CompName, dungeonId: string, tactics: Tactics, runs: number, level = 1): Survey {
   let wins = 0
   let turns = 0
-  const party = partyFor(name)
+  const party = partyFor(name, level)
   for (let seed = 1; seed <= runs; seed += 1) {
     const result = runDungeon(party, dungeonId, tactics, seed)
     if (!result.ok) {
@@ -88,22 +92,24 @@ export function survey(name: CompName, dungeonId: string, tactics: Tactics, runs
   return { rate: wins / runs, turns: turns / runs }
 }
 
-export function winRate(name: CompName, dungeonId: string, tactics: Tactics, runs: number): number {
-  return survey(name, dungeonId, tactics, runs).rate
+export function winRate(name: CompName, dungeonId: string, tactics: Tactics, runs: number, level = 1): number {
+  return survey(name, dungeonId, tactics, runs, level).rate
 }
 
 export function balanceTable(runs = 1000): { text: string; rows: Record<CompName, { cave: Survey; mine: Survey }>; careful: number; reckless: number } {
   const names: CompName[] = ['standard', 'dealers', 'noHealer', 'noTank', 'twoSupports']
   const lines = ['comp        cave   mine   cave turns  mine turns']
   const rows = {} as Record<CompName, { cave: Survey; mine: Survey }>
+  // The mine is judged at its recommended level, as players meet it.
+  const mineLevel = dungeonById('abandoned_mine').recommendedLevel
   for (const name of names) {
     const cave = survey(name, 'hill_cave', DEFAULT_TACTICS, runs)
-    const mine = survey(name, 'abandoned_mine', DEFAULT_TACTICS, runs)
+    const mine = survey(name, 'abandoned_mine', DEFAULT_TACTICS, runs, mineLevel)
     rows[name] = { cave, mine }
     lines.push(`${name.padEnd(12)}${pct(cave.rate)}  ${pct(mine.rate)}  ${Math.round(cave.turns).toString().padStart(6)}      ${Math.round(mine.turns).toString().padStart(6)}`)
   }
-  const careful = winRate('standard', 'abandoned_mine', { ...DEFAULT_TACTICS, healBelow: 80 }, runs)
-  const reckless = winRate('standard', 'abandoned_mine', { ...DEFAULT_TACTICS, healBelow: 0 }, runs)
+  const careful = winRate('standard', 'abandoned_mine', { ...DEFAULT_TACTICS, healBelow: 80 }, runs, mineLevel)
+  const reckless = winRate('standard', 'abandoned_mine', { ...DEFAULT_TACTICS, healBelow: 0 }, runs, mineLevel)
   lines.push(`tactics heal80 ${pct(careful)}  heal0 ${pct(reckless)}  delta ${pct(Math.abs(careful - reckless))}`)
   return { text: `${lines.join('\n')}\n`, rows, careful, reckless }
 }

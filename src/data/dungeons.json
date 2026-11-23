@@ -6,77 +6,170 @@
       "recommendedLevel": 1,
       "betweenHeal": 0.45,
       "gold": 24,
-      "xp": 12,
+      "xp": 15,
       "floors": [
-        { "monsters": ["wolf", "bat", "wolf"] },
-        { "monsters": ["boar", "slime"] },
-        { "monsters": ["cave_boss", "bat"] }
-      ]
+        {
+          "monsters": [
+            "wolf",
+            "bat",
+            "wolf"
+          ]
+        },
+        {
+          "monsters": [
+            "boar",
+            "slime"
+          ]
+        },
+        {
+          "monsters": [
+            "cave_boss",
+            "bat"
+          ]
+        }
+      ],
+      "monsterScale": 1
     },
     {
       "id": "abandoned_mine",
       "tier": 2,
-      "recommendedLevel": 1,
+      "recommendedLevel": 4,
       "betweenHeal": 0.28,
       "gold": 55,
-      "xp": 24,
+      "xp": 40,
       "floors": [
-        { "monsters": ["miner", "brigand"] },
-        { "monsters": ["spider", "toad"] },
-        { "monsters": ["mine_boss"] }
-      ]
+        {
+          "monsters": [
+            "miner",
+            "brigand"
+          ]
+        },
+        {
+          "monsters": [
+            "spider",
+            "toad"
+          ]
+        },
+        {
+          "monsters": [
+            "mine_boss"
+          ]
+        }
+      ],
+      "monsterScale": 1.4
     },
     {
       "id": "moss_path",
       "tier": 1,
-      "recommendedLevel": 1,
+      "recommendedLevel": 2,
       "betweenHeal": 0.45,
       "gold": 20,
-      "xp": 10,
+      "xp": 20,
       "floors": [
-        { "monsters": ["slime", "bat"] },
-        { "monsters": ["boar", "wolf"] },
-        { "monsters": ["cave_boss"] }
-      ]
+        {
+          "monsters": [
+            "slime",
+            "bat"
+          ]
+        },
+        {
+          "monsters": [
+            "boar",
+            "wolf"
+          ]
+        },
+        {
+          "monsters": [
+            "cave_boss"
+          ]
+        }
+      ],
+      "monsterScale": 4.7
     },
     {
       "id": "deep_shaft",
       "tier": 2,
-      "recommendedLevel": 1,
+      "recommendedLevel": 5,
       "betweenHeal": 0.28,
       "gold": 48,
-      "xp": 20,
+      "xp": 50,
       "floors": [
-        { "monsters": ["miner", "spider"] },
-        { "monsters": ["toad", "brigand"] },
-        { "monsters": ["mine_boss"] }
-      ]
+        {
+          "monsters": [
+            "miner",
+            "spider"
+          ]
+        },
+        {
+          "monsters": [
+            "toad",
+            "brigand"
+          ]
+        },
+        {
+          "monsters": [
+            "mine_boss"
+          ]
+        }
+      ],
+      "monsterScale": 1.7
     },
     {
       "id": "barrow",
       "tier": 3,
-      "recommendedLevel": 1,
+      "recommendedLevel": 7,
       "betweenHeal": 0.22,
       "gold": 70,
-      "xp": 28,
+      "xp": 70,
       "floors": [
-        { "monsters": ["skeleton", "zombie"] },
-        { "monsters": ["wraith", "ghoul"] },
-        { "monsters": ["barrow_lord"] }
-      ]
+        {
+          "monsters": [
+            "skeleton",
+            "zombie"
+          ]
+        },
+        {
+          "monsters": [
+            "wraith",
+            "ghoul"
+          ]
+        },
+        {
+          "monsters": [
+            "barrow_lord"
+          ]
+        }
+      ],
+      "monsterScale": 2.6
     },
     {
       "id": "sunken_crypt",
       "tier": 3,
-      "recommendedLevel": 1,
+      "recommendedLevel": 9,
       "betweenHeal": 0.18,
       "gold": 90,
-      "xp": 34,
+      "xp": 90,
       "floors": [
-        { "monsters": ["wraith", "skeleton", "zombie"] },
-        { "monsters": ["ghoul", "wraith"] },
-        { "monsters": ["crypt_lord"] }
-      ]
+        {
+          "monsters": [
+            "wraith",
+            "skeleton",
+            "zombie"
+          ]
+        },
+        {
+          "monsters": [
+            "ghoul",
+            "wraith"
+          ]
+        },
+        {
+          "monsters": [
+            "crypt_lord"
+          ]
+        }
+      ],
+      "monsterScale": 3.3
     }
   ]
 }

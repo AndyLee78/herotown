@@ -9,8 +9,10 @@
   "hireCost": 35,
   "wage": 6,
   "restFatigue": 40,
-  "xpPerLevel": 30,
+  "xpPerLevel": 20,
   "debugGold": 100,
   "debugRestTimes": 4,
-  "visitorNonceStride": 100000
+  "visitorNonceStride": 100000,
+  "trainingPerLevel": 1,
+  "defeatXpShare": 0.5
 }

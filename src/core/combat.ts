@@ -121,8 +121,9 @@ export function simulateFloor(
   log: LogEntry[],
   floorNumber: number,
   floors?: ReplayUnit[][],
+  monsterScale = 1,
 ): { outcome: FloorOutcome; ticks: number } {
-  const enemies = monsterIds.map((id, index) => enemyUnit(monsterById(id), index))
+  const enemies = monsterIds.map((id, index) => enemyUnit(monsterById(id), index, monsterScale))
   floors?.push([...heroes, ...enemies].map(replayUnit))
   push(log, 0, 'log.floor', { floor: floorNumber })
   let tick = 0
@@ -324,7 +325,8 @@ function vary(rng: Rng, amount: number): number {
   return amount * (1 + swing)
 }
 
-function enemyUnit(monster: MonsterDef, index: number): BattleUnit {
+function enemyUnit(monster: MonsterDef, index: number, scale: number): BattleUnit {
+  const hp = Math.round(monster.hp * scale)
   return {
     id: `${monster.id}-${index + 1}`,
     refId: monster.id,
@@ -339,9 +341,9 @@ function enemyUnit(monster: MonsterDef, index: number): BattleUnit {
     aoe: false,
     hasBuff: false,
     hasDebuff: false,
-    hp: monster.hp,
-    maxHp: monster.hp,
-    attack: monster.attack,
+    hp,
+    maxHp: hp,
+    attack: monster.attack * scale,
     defense: monster.defense,
     heal: 0,
     speed: monster.speed,

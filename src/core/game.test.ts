@@ -74,7 +74,8 @@ describe('game state', () => {
     expect(started.materials.wood).toBe(start.materials.wood - 20)
     expect(reduce(started, { type: 'build', id: 'inn', now }).notice).toBe('building')
     const finishAt = started.construction?.finishAt ?? now
-    const done = reduce(started, { type: 'catchUp', now: finishAt })
+    // Wait past the report threshold so the absence report lists the finished house.
+    const done = reduce(started, { type: 'catchUp', now: finishAt + timeRules.reportAfterMs })
     expect(done.buildings.house).toBe(2)
     expect(done.construction).toBeNull()
     expect(done.absence?.completed).toEqual(['house'])
@@ -129,7 +130,7 @@ describe('game state', () => {
     expect(arrived.absence).toBeNull()
   })
 
-  it('lets the house clear fatigue and leaves injuries for the temple', () => {
+  it('lets the house clear fatigue and leaves injuries to the temple, which stands from the start', () => {
     const start = freshState(1, now)
     const hired = reduce(start, { type: 'hire', id: start.visitors[0]?.id ?? '' })
     const id = hired.roster[0]?.id ?? ''
@@ -140,8 +141,9 @@ describe('game state', () => {
     const rested = reduce(injured, { type: 'rest', times: 1 })
     expect(rested.roster[0]?.condition).toBe('injured')
     expect(rested.roster[0]?.fatigue).toBe(0)
-    expect(reduce(rested, { type: 'treat', id, now }).notice).toBe('noTemple')
-    const temple = { ...rested, buildings: { ...rested.buildings, temple: 1 } }
+    expect(rested.buildings.temple).toBe(1)
+    expect(reduce({ ...rested, buildings: { ...rested.buildings, temple: 0 } }, { type: 'treat', id, now }).notice).toBe('noTemple')
+    const temple = rested
     const treating = reduce(temple, { type: 'treat', id, now })
     const healed = reduce(treating, { type: 'catchUp', now: now + lifeRules.treatMs })
     expect(healed.roster[0]?.condition).toBe('fatigued')
@@ -262,6 +264,8 @@ describe('game state', () => {
         classId,
         age: 22,
         potentials: stats,
+        // Two levels of training: strong enough that iron gear tips the mine.
+        training: 2,
         gear: [],
       }),
     })
@@ -325,7 +329,7 @@ describe('game state', () => {
     )
     const again = home(reduce(ready, { type: 'depart' }))
     expect(again.history[0]?.victory).toBe(true)
-    expect(again.materials.wood).toBeLessThan(4)
+    expect(again.materials.wood).toBeLessThan(villageRules.drops.hill_cave.amount)
     expect(again.fame).toBe(12)
     const watching = reduce(again, { type: 'autoDungeon', id: 'hill_cave' })
     const running = reduce({ ...watching, auto: { ...watching.auto, enabled: true } }, { type: 'catchUp', now: watching.lastTickAt + villageRules.auto.runMs })
@@ -477,7 +481,10 @@ describe('economy fixes', () => {
 
   it('shortens construction by the larger of 30 percent and 30 minutes', () => {
     const day = new Date(2026, 10, 22, 15).getTime()
-    const started = reduce(freshState(1, day), { type: 'build', id: 'house', now: day })
+    // A long build (smith level 3) so 30 percent is more than 30 minutes.
+    const base = freshState(1, day)
+    const ready = { ...base, fame: 36, buildings: { ...base.buildings, smith: 2 }, materials: { wood: 40, stone: 40, iron: 40, bone: 0 } }
+    const started = reduce(ready, { type: 'build', id: 'smith', now: day })
     const finishAt = started.construction?.finishAt ?? day
     const remaining = finishAt - day
     const cut = Math.round(Math.max(remaining * adRules.construction.shortenRatio, adRules.construction.shortenMinMs))
@@ -568,7 +575,7 @@ describe('economy fixes', () => {
     expect(clearing.roster[0]?.condition).toBe('healthy')
   })
 
-  it('improves a critical hero one step per season', () => {
+  it('improves a critical hero one step per recovery period', () => {
     const start = freshState(1, now)
     const hired = reduce(start, { type: 'hire', id: start.visitors[0]?.id ?? '' })
     const hero = hired.roster[0]
@@ -577,7 +584,7 @@ describe('economy fixes', () => {
     }
     const forward = (state: GameState) => {
       let next = state
-      const target = next.lastTickAt + timeRules.seasonMs
+      const target = next.lastTickAt + lifeRules.injury.recoverMs
       while (next.lastTickAt < target) {
         next = reduce(next, { type: 'catchUp', now: target })
       }

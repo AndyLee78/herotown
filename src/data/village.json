@@ -1,28 +1,90 @@
 {
-  "start": { "wood": 40, "stone": 25, "iron": 10, "bone": 0 },
+  "start": {
+    "wood": 40,
+    "stone": 25,
+    "iron": 10,
+    "bone": 0
+  },
   "repeatReward": 0.4,
-  "auto": { "runMs": 1200000, "rewardScale": 0.8 },
+  "auto": {
+    "runMs": 1200000,
+    "rewardScale": 0.8
+  },
   "buildingFame": 4,
   "levels": [
-    { "level": 1, "fame": 0, "visitorPotential": 0, "maxBuildingLevel": 2 },
-    { "level": 2, "fame": 12, "visitorPotential": 10, "maxBuildingLevel": 3 },
-    { "level": 3, "fame": 36, "visitorPotential": 20, "maxBuildingLevel": 4 }
+    {
+      "level": 1,
+      "fame": 0,
+      "visitorPotential": 0,
+      "maxBuildingLevel": 2
+    },
+    {
+      "level": 2,
+      "fame": 12,
+      "visitorPotential": 10,
+      "maxBuildingLevel": 3
+    },
+    {
+      "level": 3,
+      "fame": 36,
+      "visitorPotential": 20,
+      "maxBuildingLevel": 4
+    }
   ],
   "inn": {
-    "visitorsByLevel": [0, 5, 6, 7],
+    "visitorsByLevel": [
+      0,
+      5,
+      6,
+      7
+    ],
     "stayMs": 180000,
     "stayPerLevelMs": 120000,
     "arriveEveryMs": 60000
   },
-  "house": { "bedsPerLevel": 5, "restBonusPerLevel": 15 },
-  "guild": { "questDungeon": "hill_cave", "questMaterial": "wood", "questCount": 10, "rewardFame": 8, "rewardGold": 25 },
+  "house": {
+    "bedsPerLevel": 5,
+    "restBonusPerLevel": 15
+  },
+  "guild": {
+    "questDungeon": "hill_cave",
+    "questMaterial": "wood",
+    "questCount": 10,
+    "rewardFame": 8,
+    "rewardGold": 25
+  },
   "drops": {
-    "hill_cave": { "material": "wood", "amount": 4, "fame": 12, "iron": 2 },
-    "abandoned_mine": { "material": "iron", "amount": 3, "fame": 20 },
-    "moss_path": { "material": "stone", "amount": 4, "fame": 8 },
-    "deep_shaft": { "material": "stone", "amount": 6, "fame": 16 },
-    "barrow": { "material": "bone", "amount": 4, "fame": 24 },
-    "sunken_crypt": { "material": "bone", "amount": 6, "fame": 30 }
+    "hill_cave": {
+      "material": "wood",
+      "amount": 10,
+      "fame": 12,
+      "iron": 2
+    },
+    "abandoned_mine": {
+      "material": "iron",
+      "amount": 6,
+      "fame": 20
+    },
+    "moss_path": {
+      "material": "stone",
+      "amount": 10,
+      "fame": 8
+    },
+    "deep_shaft": {
+      "material": "stone",
+      "amount": 12,
+      "fame": 16
+    },
+    "barrow": {
+      "material": "bone",
+      "amount": 8,
+      "fame": 24
+    },
+    "sunken_crypt": {
+      "material": "bone",
+      "amount": 12,
+      "fame": 30
+    }
   },
   "buildings": [
     {
@@ -30,8 +92,22 @@
       "unlockLevel": 1,
       "startLevel": 1,
       "levels": [
-        { "level": 1, "gold": 0, "wood": 0, "stone": 0, "iron": 0, "ms": 0 },
-        { "level": 2, "gold": 60, "wood": 20, "stone": 20, "iron": 0, "ms": 7200000 }
+        {
+          "level": 1,
+          "gold": 0,
+          "wood": 0,
+          "stone": 0,
+          "iron": 0,
+          "ms": 0
+        },
+        {
+          "level": 2,
+          "gold": 60,
+          "wood": 20,
+          "stone": 20,
+          "iron": 0,
+          "ms": 600000
+        }
       ]
     },
     {
@@ -39,8 +115,22 @@
       "unlockLevel": 1,
       "startLevel": 1,
       "levels": [
-        { "level": 1, "gold": 0, "wood": 0, "stone": 0, "iron": 0, "ms": 0 },
-        { "level": 2, "gold": 40, "wood": 20, "stone": 0, "iron": 0, "ms": 7200000 }
+        {
+          "level": 1,
+          "gold": 0,
+          "wood": 0,
+          "stone": 0,
+          "iron": 0,
+          "ms": 0
+        },
+        {
+          "level": 2,
+          "gold": 40,
+          "wood": 20,
+          "stone": 0,
+          "iron": 0,
+          "ms": 300000
+        }
       ]
     },
     {
@@ -48,8 +138,22 @@
       "unlockLevel": 1,
       "startLevel": 1,
       "levels": [
-        { "level": 1, "gold": 0, "wood": 0, "stone": 0, "iron": 0, "ms": 0 },
-        { "level": 2, "gold": 30, "wood": 20, "stone": 0, "iron": 0, "ms": 7200000 }
+        {
+          "level": 1,
+          "gold": 0,
+          "wood": 0,
+          "stone": 0,
+          "iron": 0,
+          "ms": 0
+        },
+        {
+          "level": 2,
+          "gold": 30,
+          "wood": 20,
+          "stone": 0,
+          "iron": 0,
+          "ms": 300000
+        }
       ]
     },
     {
@@ -57,8 +161,22 @@
       "unlockLevel": 2,
       "startLevel": 0,
       "levels": [
-        { "level": 1, "gold": 40, "wood": 25, "stone": 15, "iron": 0, "ms": 10800000 },
-        { "level": 2, "gold": 80, "wood": 20, "stone": 20, "iron": 5, "ms": 14400000 }
+        {
+          "level": 1,
+          "gold": 40,
+          "wood": 25,
+          "stone": 15,
+          "iron": 0,
+          "ms": 600000
+        },
+        {
+          "level": 2,
+          "gold": 80,
+          "wood": 20,
+          "stone": 20,
+          "iron": 5,
+          "ms": 3600000
+        }
       ]
     },
     {
@@ -66,17 +184,53 @@
       "unlockLevel": 2,
       "startLevel": 0,
       "levels": [
-        { "level": 1, "gold": 50, "wood": 15, "stone": 10, "iron": 8, "ms": 10800000 },
-        { "level": 2, "gold": 80, "wood": 20, "stone": 15, "iron": 10, "ms": 14400000 },
-        { "level": 3, "gold": 120, "wood": 20, "stone": 20, "iron": 16, "ms": 21600000 }
+        {
+          "level": 1,
+          "gold": 50,
+          "wood": 15,
+          "stone": 10,
+          "iron": 8,
+          "ms": 600000
+        },
+        {
+          "level": 2,
+          "gold": 80,
+          "wood": 20,
+          "stone": 15,
+          "iron": 10,
+          "ms": 3600000
+        },
+        {
+          "level": 3,
+          "gold": 120,
+          "wood": 20,
+          "stone": 20,
+          "iron": 16,
+          "ms": 10800000
+        }
       ]
     },
     {
       "id": "temple",
-      "unlockLevel": 3,
-      "startLevel": 0,
+      "unlockLevel": 1,
+      "startLevel": 1,
       "levels": [
-        { "level": 1, "gold": 80, "wood": 10, "stone": 30, "iron": 0, "ms": 14400000 }
+        {
+          "level": 1,
+          "gold": 0,
+          "wood": 0,
+          "stone": 0,
+          "iron": 0,
+          "ms": 0
+        },
+        {
+          "level": 2,
+          "gold": 80,
+          "wood": 10,
+          "stone": 30,
+          "iron": 0,
+          "ms": 3600000
+        }
       ]
     }
   ]

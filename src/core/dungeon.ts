@@ -1,6 +1,6 @@
 import { classById, combatRules, dungeonById, lifeRules, progression } from './data'
 import { createHeroUnit, heroUnitsToReport, simulateFloor, type BattleUnit } from './combat'
-import { canDeploy } from './hero'
+import { canDeploy, createHero } from './hero'
 import { createRng } from './rng'
 import type { Condition, DungeonReport, DungeonResult, Hero, PartyMember, Tactics } from './types'
 
@@ -40,7 +40,7 @@ export function runDungeon(party: PartyMember[], dungeonId: string, tactics: Tac
     if (!floorDef) {
       break
     }
-    const result = simulateFloor(heroes, floorDef.monsters, tactics, rng, log, floor + 1, floors)
+    const result = simulateFloor(heroes, floorDef.monsters, tactics, rng, log, floor + 1, floors, dungeon.monsterScale ?? 1)
     ticks += result.ticks
     if (result.outcome !== 'victory') {
       outcome = result.outcome
@@ -62,7 +62,8 @@ export function runDungeon(party: PartyMember[], dungeonId: string, tactics: Tac
   const hadHealer = party.some((member) => classById(member.hero.classId).role === 'healer')
   const treasure = party.some((member) => member.hero.traitIds.includes('treasure') && member.hero.condition !== 'dead')
   const gold = victory ? Math.round(dungeon.gold * (treasure ? 1.25 : 1)) : 0
-  const xp = victory ? dungeon.xp : 0
+  // A loss still teaches something: half the XP, for the share of floors cleared.
+  const xp = victory ? dungeon.xp : Math.round((dungeon.xp * progression.defeatXpShare * floorsCleared) / dungeon.floors.length)
   if (victory) {
     log.push({ tick: ticks, key: 'log.victory', params: {} })
   }
@@ -95,7 +96,7 @@ export function applyReport(hero: Hero, report: DungeonReport): Hero {
   if (!next) {
     return hero
   }
-  let xp = hero.xp + (report.victory ? report.xp : 0)
+  let xp = hero.xp + report.xp
   let level = hero.level
   while (xp >= level * progression.xpPerLevel) {
     xp -= level * progression.xpPerLevel
@@ -104,8 +105,10 @@ export function applyReport(hero: Hero, report: DungeonReport): Hero {
   const skillPoints = (hero.skillPoints ?? 0) + (level - hero.level) * lifeRules.skillPointsPerLevel
   const rank = { healthy: 0, fatigued: 1, injured: 2, critical: 3, dead: 4 }
   const condition = rank[next.condition] > rank[hero.condition] ? next.condition : hero.condition
+  // Each level is a round of hard-won experience: every stat grows by the training it adds.
+  const grown = level > hero.level ? createHero({ ...hero, training: hero.training + (level - hero.level) * progression.trainingPerLevel }) : hero
   return {
-    ...hero,
+    ...grown,
     xp,
     level,
     skillPoints,
@@ -125,10 +128,11 @@ export function defeatReason(
   if (outcome === 'retreat') {
     return 'retreated'
   }
-  if (tier >= 2 && !hadTank) {
+  // Missing a tank or a healer is named first at every tier: it is the most useful advice.
+  if (!hadTank && tier >= 1) {
     return 'noTank'
   }
-  if (tier >= 2 && !hadHealer) {
+  if (!hadHealer && tier >= 1) {
     return 'noHealer'
   }
   if ((outcome === 'wipe' || outcome === 'timeout') && averageLevel < recommendedLevel) {

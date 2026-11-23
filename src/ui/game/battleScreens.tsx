@@ -88,7 +88,7 @@ function DungeonBoard({ save, onAction, onPrepare }: { save: GameState; onAction
   return (
     <div className="board">
       <div className="board-list">
-        {dungeons.map((entry) => {
+        {[...dungeons].sort((a, b) => a.tier - b.tier || a.recommendedLevel - b.recommendedLevel).map((entry) => {
           const unlocked = dungeonUnlocked(save, entry.id)
           return (
             <button

@@ -109,8 +109,8 @@ export function validateGameData(data: GameData): void {
   if (data.monsters.length < 8 || bosses < 2) {
     throw new Error('Need at least 8 monsters and 2 bosses')
   }
-  if (data.life.injury.recoverMs !== data.time.seasonMs) {
-    throw new Error('Injury recovery must last one season')
+  if (data.life.injury.recoverMs <= 0 || data.life.injury.recoverMs > data.time.seasonMs) {
+    throw new Error('Injury recovery must be positive and at most one season')
   }
   if (data.life.fatigue.tiredAt >= data.life.fatigue.exhaustedAt) {
     throw new Error('Exhaustion must start after tiredness')

@@ -1,9 +1,9 @@
 import { describe, expect, it } from 'vitest'
 import { createHeroUnit, simulateFloor } from './combat'
-import { dungeons } from './data'
+import { dungeonById, dungeons, progression } from './data'
 import { DEFAULT_TACTICS, defeatReason, runDungeon } from './dungeon'
 import { createHero } from './hero'
-import { clearingLevel } from '../../tools/recommended-level'
+import { winRate } from '../../tools/curve'
 import { createRng } from './rng'
 import type { ClassId, Hero, PartyMember, Row, Stats, Tactics } from './types'
 
@@ -81,8 +81,9 @@ describe('dungeon battles', () => {
     }
   })
 
-  it('wins the mine with a level 1 standard party, which is already the recommended level', () => {
-    const party = standard.map((member) => ({ ...member, hero: { ...member.hero, level: 1 } }))
+  it('wins the mine with a standard party at the recommended level', () => {
+    const level = dungeonById('abandoned_mine').recommendedLevel
+    const party = standard.map((member) => ({ ...member, hero: createHero({ ...member.hero, level, training: (level - 1) * progression.trainingPerLevel }) }))
     const result = runDungeon(party, 'abandoned_mine', DEFAULT_TACTICS, 3)
     expect(result.ok).toBe(true)
     if (result.ok) {
@@ -101,9 +102,16 @@ describe('dungeon battles', () => {
     expect(defeatReason('retreat', 2, true, true, 1, 4)).toBe('retreated')
   })
 
-  it('stores the lowest level where the standard party wins more than 60%', () => {
+  it('asks for higher levels deeper in, and ordinary visitors win at the recommended level', () => {
+    const sorted = [...dungeons].sort((a, b) => a.tier - b.tier || a.recommendedLevel - b.recommendedLevel)
+    for (let index = 1; index < sorted.length; index += 1) {
+      expect(sorted[index]!.recommendedLevel).toBeGreaterThanOrEqual(sorted[index - 1]!.recommendedLevel)
+    }
     for (const dungeon of dungeons) {
-      expect(dungeon.recommendedLevel).toBe(clearingLevel(dungeon.id, 12, 1))
+      expect(winRate(dungeon.id, dungeon.recommendedLevel, 12), dungeon.id).toBeGreaterThanOrEqual(0.5)
+      if (dungeon.recommendedLevel >= 4) {
+        expect(winRate(dungeon.id, dungeon.recommendedLevel - 3, 12), dungeon.id).toBeLessThan(0.5)
+      }
     }
   })
 })

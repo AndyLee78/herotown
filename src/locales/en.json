@@ -561,7 +561,7 @@
     "done": "Guide complete! Grow your village as you like.",
     "step": {
       "hire": "Hire a hero at the inn",
-      "team": "Gather three heroes",
+      "team": "Gather three heroes (a warrior and a cleric make it safer)",
       "cave": "Form a party and clear the Hill Cave",
       "build": "Build something from Village",
       "auto": "Turn on auto expeditions in Party",
