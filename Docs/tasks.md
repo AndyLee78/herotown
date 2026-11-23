@@ -56,6 +56,12 @@ Claude Code, Cursor, GPT(Codex)가 함께 쓰는 작업 목록이다. 작업 하
 | 14 | 던전 미리보기를 배경 일러스트처럼 | Cursor | `src/ui/voxel/portrait.ts` | 완료 (1dce191) |
 | 15 | 영어 문구 다듬기 | GPT | `src/locales/en.json` | 완료 (e6754c1) |
 | 16 | 초반 흐름 개편 코드 리뷰 (a1dd951) | GPT | `Docs/reviews/a1dd951.md` (새 파일만) | 완료 (5759763) |
+| 17 | 리뷰 a1dd951의 버그 두 개 수정 | GPT | `src/core/game.ts`, `src/core/flow.test.ts` | 대기 (세대 core보다 먼저) |
+| 18 | 밸런스 도구 리뷰 지적 수정 | GPT | `tools/first-hour.ts`, `tools/tune-curve.ts`, `Docs/dungeons.md` | 대기 |
+| 19 | 세대 화면 (가족·관계·청혼·인구·가계도) | Cursor | `src/ui/game/heroScreens.tsx`, `villageScreens.tsx`, `App.tsx`, `styles.css`, `src/locales/*` | 대기 (세대 core 커밋 뒤) |
+| 20 | 세대 3D 연출 (부부·아이·광장) | Cursor | `src/ui/voxel/VillageScene.ts`, `src/ui/VillageView.tsx` | 대기 (19 뒤) |
+| 21 | 세대 core 코드 리뷰 | GPT | `Docs/reviews/<해시>.md` (새 파일만) | 대기 (세대 core 커밋 뒤) |
+| 22 | 세대 시뮬레이터 | GPT | `tools/generations.ts` (새 파일), `package.json` 스크립트 한 줄 | 대기 (세대 core 커밋 뒤) |
 
 ---
 
@@ -540,3 +546,126 @@ src/ui/voxel/portrait.ts의 dungeonPreviewUrl을 "던전 입구 풍경 일러스
 메모:
 - 광고 치료와 오프라인 귀환 후 회복 문제, 초반 시뮬레이터 집계와 권장 레벨 산정 문제를 Docs/reviews/a1dd951.md에 기록했다.
 - npx tsc --noEmit, npm test(97개), npm run build 통과.
+
+---
+
+## 17. 리뷰 a1dd951의 버그 두 개 수정 (GPT)
+
+**전달할 내용**
+
+```
+Docs/reviews/a1dd951.md의 "보통" 두 건을 고친다. 이 작업은 src/core/game.ts와 src/core/flow.test.ts만 고친다. 세대 시스템 core 작업이 이 커밋 뒤에 game.ts를 크게 바꾸므로 범위 밖 정리는 하지 않는다.
+
+1. 광고로 신전 치료를 끝내면 중상이 남는다.
+   - 일반 치료 완료(finishCare)와 광고 보상(adReward placement 'temple')이 같은 "치료 완료" 함수를 부르게 한다. 결과: 부상·중상 → 피로, treatAt과 recoverAt을 지움.
+   - flow.test.ts에 중상 영웅을 광고로 치료하는 테스트를 추가한다(기대 condition 'fatigued').
+2. 오프라인 귀환 뒤 지난 시간이 부상 회복에 바로 반영되지 않는다.
+   - advance()에서 returnExpeditions로 상태가 바뀐 영웅은, 그 원정의 returnAt부터 effectiveNow까지의 자연 회복을 같은 따라잡기 안에서 적용한다. 원정 중이던 시간은 회복으로 세지 않고, 다른 영웅의 회복을 두 번 세지 않는다.
+   - 귀환으로 중상이 된 영웅이, returnAt + lifeRules.injury.recoverMs * 2가 지난 시각에 한 번 catchUp하면 바로 피로까지 회복되는지 확인하는 테스트를 추가한다. 회복이 runAuto보다 먼저 반영돼 자동 출정이 그 영웅을 쓸 수 있는지도 확인한다.
+
+완료 기준: 공통 기준(tsc, test, build) 통과. 세이브 형식(SAVE_VERSION)은 바꾸지 않는다.
+```
+
+메모:
+
+---
+
+## 18. 밸런스 도구 리뷰 지적 수정 (GPT)
+
+**전달할 내용**
+
+```
+Docs/reviews/a1dd951.md의 "낮음" 두 건을 고친다. tools/first-hour.ts, tools/tune-curve.ts, Docs/dungeons.md만 고친다. 게임 코드(src/)는 건드리지 않는다.
+
+1. first-hour.ts: 던전 선택에 보유 영웅 전체 평균 대신 실제로 출정할 후보(선택한 프리셋에서 canDeploy이고 다치지 않은 영웅)의 평균 레벨을 쓴다. 새 귀환은 history 길이 대신 갱신 전후의 가장 최근 기록(finishedAt)을 비교해 찾는다(기록이 10개로 꽉 차도 잡히게).
+2. tune-curve.ts: 권장 레벨 승률 기준을 Docs/dungeons.md와 맞춘다. 문서의 "약 80%"가 실제 의도인지 코드의 60%인지 판단해 하나로 통일하고, 기준 값은 파일 위쪽 상수 하나로 둔다. 목표 레벨에서 기준 승률을 못 넘으면 "목표 미달"을 출력한다.
+
+완료 기준: 공통 기준 통과. npx tsx tools/first-hour.ts 180 과 npx tsx tools/tune-curve.ts 결과를 커밋 메시지에 요약한다. dungeons.json 값은 바꾸지 않는다(바꿀 필요가 보이면 메모에 제안만 적는다).
+```
+
+메모:
+
+---
+
+## 19. 세대 화면 (Cursor)
+
+설계: `Docs/generations.md`. **세대 core(단계 A) 커밋 뒤에 시작한다.**
+
+**전달할 내용**
+
+```
+Docs/generations.md를 읽고, core에 이미 들어간 세대 규칙을 화면으로 보여준다. core(src/core, src/data)는 고치지 않는다. 필요한 조회 함수가 core에 없으면 멈추고 알린다.
+
+만들 것:
+1. 영웅 상세(heroScreens.tsx HeroDetail)에 "가족" 칸: 가문 이름, 배우자, 부모, 자녀(누르면 그 영웅 상세로). familyOf(state, id) 사용.
+2. 같은 칸에 "친한 사이" 상위 3명: 이름, 호감도 막대, 단계(친구/연인/부부). topBonds(state, id, 3), bondStage 사용. 임신 중이면 "출산 예정" 칩과 남은 시간(hero.dueAt).
+3. 청혼 카드: state.proposals가 있으면 마을 화면 위쪽 GuideCard 근처에 카드(두 영웅 초상, "승낙"/"나중에"/"거절"). 승낙은 acceptProposal, 거절은 declineProposal. 빈 집이 없으면(housingFree(state) === 0) 승낙을 막고 "집을 올리면 신혼집이 생겨요" 안내.
+4. 마을 운영(villageScreens.tsx Town)에 "마을 인구" 칩 → 창: 나이대(어린이/견습/청년/…) × 남/여 표, 기혼/미혼 수, 침대 사용. population(state) 사용.
+5. 가계도 창: 가문별로 세대를 줄로 그린 단순 트리(부부는 가로선, 자녀는 아래). 영웅 상세의 가문 이름을 누르면 열린다. 초상은 기존 portrait 함수.
+6. 알림: 출생·결혼 때 토스트, 부재 보고서(Absence)에 "새 청혼 n건", "태어난 아이: 이름들" 줄.
+7. 문구는 ko.json과 en.json에 같은 키로 넣는다(parity 테스트). 영어는 초안이면 된다(나중에 GPT가 다듬음).
+
+확인: npm run dev에서 디버그 시간 가속으로 결혼·출생까지 진행해 각 화면을 본다. 폰 폭(375px)에서도 본다. 확인 못 한 부분은 메모에 적는다.
+```
+
+메모:
+
+---
+
+## 20. 세대 3D 연출 (Cursor)
+
+**작업 19가 커밋된 뒤에 시작한다.**
+
+**전달할 내용**
+
+```
+Docs/generations.md를 읽고 마을 3D에서 가족이 보이게 한다. src/ui/voxel/VillageScene.ts와 src/ui/VillageView.tsx만 고친다. 외형은 core의 genesFor로 이미 부모를 닮으니 캐릭터 모델은 바꾸지 않는다.
+
+1. 부부(spouseId)는 둘 다 마을에 있으면 산책할 때 나란히 걷는다(한 명이 목적지를 정하고 다른 한 명이 옆 자리를 따라감).
+2. 14세 미만 아이는 부모 중 한 명 근처를 따라다니고, 가끔 혼자 뛰어다닌다. 크기는 기존 ageLook 그대로.
+3. 결혼을 승낙하면 광장에서 두 영웅이 마주 보고 하트·꽃잎 파티클(코드로 만든 복셀). 아이가 태어나면 집 위에 작은 별 반짝임. VillageView가 state 변화(배우자 생김, roster에 parents가 있는 0세 영웅 추가)를 감지해 장면에 이벤트를 넘긴다.
+4. 성능: 기존 표시 인원 자동 조절을 지킨다. 파티클은 짧게(2–3초) 끝나고 지오메트리를 해제한다.
+
+확인: npm run dev에서 결혼·출생을 만들어 보고 스크린샷을 메모에 남긴다.
+```
+
+메모:
+
+---
+
+## 21. 세대 core 코드 리뷰 (GPT)
+
+**세대 core(단계 A) 커밋 뒤에 시작한다.** 해시는 사용자가 알려준다.
+
+**전달할 내용**
+
+```
+세대 core 커밋 <해시>를 리뷰한다. 코드는 고치지 않고 Docs/reviews/<해시>.md 새 파일 하나에만 쓴다. 형식은 Docs/reviews/README.md를 따른다.
+
+볼 것:
+- Docs/generations.md 규칙과 코드가 다른 곳(수치, 조건, 순서).
+- AGENTS.md 규칙: 코어 순수성, 데이터 주도(family.json), rng/nonce 사용, 세이브 8 변환, 테스트.
+- 경계: 원정 중 청혼·임신·출생, 배우자가 해고·묘지·은퇴, 오프라인 12시간에 계절이 여러 번 바뀔 때, 침대가 꽉 찼을 때, 무희 유전, 같은 영웅이 청혼 두 개에 걸리는 경우, 예전 세이브.
+- genesFor가 기존 영웅의 외형을 바꾸지 않는지(look.test.ts와 비교).
+```
+
+메모:
+
+---
+
+## 22. 세대 시뮬레이터 (GPT)
+
+**세대 core(단계 A) 커밋 뒤에 시작한다.**
+
+**전달할 내용**
+
+```
+tools/generations.ts 새 파일을 만든다. 실제 reduce를 써서 마을을 N년(기본 20년) 돌리고 결과를 표로 출력한다. tools/first-hour.ts의 플레이어 흉내(고용, 치료, 건설, 출정)를 참고하되 그 파일은 고치지 않는다. 청혼은 빈 집이 있으면 바로 승낙한다.
+
+출력: 해마다 인구(어린이/성인/노인), 남녀 수, 부부 수, 누적 출생, 천재 수, 2세대·3세대 영웅 수, 평균 잠재력(1세대 vs 2세대). 마지막에 "첫 결혼까지 걸린 날", "첫 아이 출전까지 걸린 날".
+package.json에 "sim:generations": "tsx tools/generations.ts" 한 줄만 추가한다. 다른 파일은 고치지 않는다.
+
+완료 기준: 공통 기준 통과. 출력 요약과 눈에 띄는 밸런스 문제(예: 결혼이 너무 늦다, 인구가 침대를 넘친다)를 메모에 적는다. family.json 값은 바꾸지 않는다.
+```
+
+메모:
