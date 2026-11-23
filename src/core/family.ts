@@ -1,8 +1,8 @@
-import { bandForAge, ageBands, classById, familyRules, names, timeRules, traits, villageRules } from './data'
+import { bandForAge, ageBands, classById, dungeonById, familyRules, maxAge, names, timeRules, traits, villageRules } from './data'
 import { genesFor, inheritGenes } from './genes'
 import { createHero } from './hero'
 import { createRng, type Rng } from './rng'
-import type { GameState } from './game'
+import type { GameState, Grave } from './game'
 import { STAT_KEYS, type Bond, type BondStage, type Gender, type Hero, type Proposal, type Stats, type TraitId } from './types'
 
 // Stage 2 families (Docs/generations.md): affinity between heroes, proposals
@@ -11,6 +11,7 @@ import { STAT_KEYS, type Bond, type BondStage, type Gender, type Hero, type Prop
 export type FamilyEvents = {
   births: string[]
   proposals: number
+  deaths: string[]
 }
 
 export type FamilyView = {
@@ -290,7 +291,7 @@ function conceive(state: GameState, rng: Rng, now: number): GameState {
     }
     nonce += 1
     taken += 1
-    const child = makeChild(rng, `${state.seed}-c${nonce}`, mother, father)
+    const child = makeChild(rng, `${state.seed}-c${nonce}`, mother, father, legendBonus(state, father.family ?? father.name))
     return { ...mother, expecting: { dueAt: now + timeRules.seasonMs, child } }
   })
   return { ...state, roster, familyNonce: nonce }
@@ -315,7 +316,7 @@ export function deliverBirths(state: GameState, now: number, events: FamilyEvent
   return { ...state, roster: [...roster, ...born], retirees }
 }
 
-export function makeChild(rng: Rng, id: string, mother: Hero, father: Hero): Hero {
+export function makeChild(rng: Rng, id: string, mother: Hero, father: Hero, bonus = 0): Hero {
   const gender: Gender = rng.next() < 0.5 ? 'male' : 'female'
   const genius = rng.next() < familyRules.geniusChance
   let classId = rng.next() < 0.5 ? mother.classId : father.classId
@@ -332,7 +333,7 @@ export function makeChild(rng: Rng, id: string, mother: Hero, father: Hero): Her
     potentials[key] = Math.max(1, Math.round(average * drift * (genius ? familyRules.geniusScale : 1)))
   }
   const spread = (rng.next() * 2 - 1) * familyRules.potentialSpread
-  const potential = clamp(Math.round((mother.potential + father.potential) / 2 + spread + (genius ? familyRules.geniusPotential : 0)), 0, 100)
+  const potential = clamp(Math.round((mother.potential + father.potential) / 2 + spread + (genius ? familyRules.geniusPotential : 0) + bonus), 0, 100)
   // A trait both parents share is rolled once, not twice.
   const traitIds: TraitId[] = []
   for (const trait of new Set([...mother.traitIds, ...father.traitIds])) {
@@ -430,6 +431,112 @@ export function tidyFamily(state: GameState, now: number): GameState {
     roster: widowed ? state.roster.map(widow) : state.roster,
     retirees: widowed ? state.retirees.map((retiree) => ({ ...retiree, hero: widow(retiree.hero) })) : state.retirees,
   }
+}
+
+// ---------- old age, graves and the hall of fame ----------
+
+// Whether a hero who leaves for the graveyard is remembered as a legend.
+export function isLegend(hero: Hero): boolean {
+  return hero.level >= familyRules.legendLevel || hero.clears.some((id) => dungeonById(id).tier >= familyRules.legendTier)
+}
+
+export function graveFor(hero: Hero, cause: 'battle' | 'oldAge', year?: number): Grave {
+  const grave: Grave = {
+    id: hero.id,
+    name: hero.name,
+    classId: hero.classId,
+    level: hero.level,
+    clears: [...hero.clears],
+    cause,
+    age: hero.age,
+    gender: hero.gender,
+    genes: genesFor(hero),
+  }
+  if (year != null) grave.year = year
+  if (hero.family != null) grave.family = hero.family
+  if (hero.parents) grave.parents = [hero.parents[0], hero.parents[1]]
+  if (hero.spouseId != null) grave.spouseId = hero.spouseId
+  if (isLegend(hero)) grave.legend = true
+  return grave
+}
+
+// Chance that a hero of this age passes away when the year turns.
+export function oldAgeChance(age: number): number {
+  if (age >= maxAge) {
+    return 1
+  }
+  return age < familyRules.oldAgeFrom ? 0 : Math.min(1, (age - familyRules.oldAgeFrom + 1) * familyRules.oldAgeChancePerYear)
+}
+
+// Run when a year turns: the old at home (not on an expedition) may pass away.
+export function passAway(state: GameState, events: FamilyEvents): GameState {
+  const rng = createRng(state.seed + 9_100_019 + state.calendar.year * 7907)
+  const away = new Set(state.expeditions.flatMap((expedition) => expedition.heroIds))
+  const graves: Grave[] = []
+  const dies = (hero: Hero) => {
+    const chance = oldAgeChance(hero.age)
+    if (chance <= 0 || away.has(hero.id) || rng.next() >= chance) {
+      return false
+    }
+    graves.push(graveFor(hero, 'oldAge', state.calendar.year))
+    events.deaths.push(hero.name)
+    return true
+  }
+  const roster = state.roster.filter((hero) => !dies(hero))
+  const retirees = state.retirees.filter((retiree) => !dies(retiree.hero))
+  if (graves.length === 0) {
+    return state
+  }
+  // Leaving the roster also takes them out of saved parties.
+  const gone = new Set(graves.map((grave) => grave.id))
+  const presets = state.presets.map((preset) => ({ ...preset, slots: preset.slots.filter((slot) => !gone.has(slot.id)) }))
+  const auto = { ...state.auto, party: state.auto.party.filter((slot) => !gone.has(slot.id)) }
+  return { ...state, roster, retirees, presets, auto, graveyard: [...state.graveyard, ...graves] }
+}
+
+export function hallOfFame(state: GameState): Grave[] {
+  return state.graveyard.filter((grave) => grave.legend).reverse()
+}
+
+export function familyLegends(state: GameState, family: string): Grave[] {
+  return state.graveyard.filter((grave) => grave.legend && (grave.family ?? grave.name) === family)
+}
+
+// Potential a newborn of this family gets from its legends.
+export function legendBonus(state: GameState, family: string): number {
+  return Math.min(familyRules.legendPotentialMax, familyLegends(state, family).length * familyRules.legendPotential)
+}
+
+export type Ancestor = { id: string; name: string; gender?: Gender; living: boolean; hero?: Hero; grave?: Grave; generation: number }
+
+// Parents, grandparents and so on, living or in the graveyard (nearest first).
+export function ancestorsOf(state: GameState, id: string, depth = 3): Ancestor[] {
+  const living = residents(state)
+  const find = (key: string): { parents?: [string, string]; ancestor: Ancestor | null } => {
+    const hero = living.find((entry) => entry.id === key)
+    if (hero) {
+      return { parents: hero.parents, ancestor: { id: hero.id, name: hero.name, gender: hero.gender, living: true, hero, generation: 0 } }
+    }
+    const grave = state.graveyard.find((entry) => entry.id === key)
+    if (grave) {
+      return { parents: grave.parents, ancestor: { id: grave.id, name: grave.name, gender: grave.gender, living: false, grave, generation: 0 } }
+    }
+    return { ancestor: null }
+  }
+  const result: Ancestor[] = []
+  let frontier: string[] = [...(find(id).parents ?? [])]
+  for (let generation = 1; generation <= depth && frontier.length > 0; generation += 1) {
+    const next: string[] = []
+    for (const key of frontier) {
+      const found = find(key)
+      if (found.ancestor) {
+        result.push({ ...found.ancestor, generation })
+      }
+      next.push(...(found.parents ?? []))
+    }
+    frontier = next
+  }
+  return result
 }
 
 export function readBonds(value: unknown): Bond[] {

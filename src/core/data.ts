@@ -179,6 +179,9 @@ for (const key of ['birthChance', 'proposeChance', 'traitInherit', 'traitMutatio
     throw new Error(`Family rule ${key} must be a chance between 0 and 1`)
   }
 }
+if (familyRules.oldAgeChancePerYear <= 0 || familyRules.oldAgeFrom >= maxAge) {
+  throw new Error('Old age must start before the oldest age and carry a positive chance')
+}
 if (!Number.isInteger(familyRules.childYearsPerYear) || familyRules.childYearsPerYear < 1) {
   throw new Error('Children must age at least one year per year')
 }

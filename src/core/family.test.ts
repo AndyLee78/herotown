@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest'
 import { createHeroUnit } from './combat'
-import { familyRules, progression, timeRules } from './data'
-import { bondOf, bondParty, bondStage, canCourt, familyOf, femaleChance, housingFree, makeChild, nextAge, partyBonus, population, topBonds } from './family'
+import { familyRules, maxAge, progression, timeRules, villageRules } from './data'
+import { ancestorsOf, bondOf, bondParty, bondStage, canCourt, familyLegends, familyOf, graveFor, hallOfFame, legendBonus, oldAgeChance, passAway, femaleChance, housingFree, makeChild, nextAge, partyBonus, population, topBonds } from './family'
 import { canDeploy, createHero, type HeroDraft } from './hero'
 import { freshState, migrate, reduce, type GameState } from './game'
 import { createRng } from './rng'
@@ -284,5 +284,82 @@ describe('review 443bde5 fixes', () => {
     }
     expect(tough / runs).toBeGreaterThan(familyRules.traitInherit - 0.05)
     expect(tough / runs).toBeLessThan(familyRules.traitInherit + 0.07)
+  })
+})
+
+describe('stage 2b: old age, graves and legends', () => {
+  const noEvents = () => ({ births: [], proposals: 0, deaths: [] as string[] })
+
+  it('raises the chance of passing away each year after 60, and is certain at the oldest age', () => {
+    expect(oldAgeChance(familyRules.oldAgeFrom - 1)).toBe(0)
+    expect(oldAgeChance(61)).toBeCloseTo(2 * familyRules.oldAgeChancePerYear)
+    expect(oldAgeChance(70)).toBeGreaterThan(oldAgeChance(65))
+    expect(oldAgeChance(maxAge)).toBe(1)
+  })
+
+  it('takes the oldest to the graveyard with their family record, widows the spouse and frees their post', () => {
+    const elder = hero('m', 'male', { age: maxAge, spouseId: 'f', family: 'Aldon', level: 13 })
+    const wife = hero('f', 'female', { age: 60, spouseId: 'm' })
+    const retired = hero('r', 'male', { age: maxAge })
+    const state = town([elder, wife], {
+      retirees: [{ hero: retired, retiredYear: 1, building: 'inn' }],
+      presets: freshState(5, now).presets.map((preset) => ({ ...preset, slots: [{ id: 'm', row: 'front' as const }] })),
+    })
+    const events = noEvents()
+    const after = reduce(passAway(state, events), { type: 'catchUp', now: now + 1 })
+    expect(events.deaths.sort()).toEqual(['m', 'r'])
+    expect(after.roster.map((entry) => entry.id)).toEqual(['f'])
+    expect(after.retirees).toEqual([])
+    expect(after.presets.every((preset) => preset.slots.length === 0)).toBe(true)
+    expect(after.roster[0]?.spouseId).toBeUndefined()
+    expect(after.roster[0]?.widowedAt).toBeDefined()
+    const grave = after.graveyard.find((entry) => entry.id === 'm')
+    expect(grave).toMatchObject({ cause: 'oldAge', age: maxAge, family: 'Aldon', spouseId: 'f', gender: 'male', legend: true })
+    expect(hallOfFame(after).map((entry) => entry.id)).toEqual(['m'])
+  })
+
+  it('lets an elder on an expedition come home before old age can take them', () => {
+    const elder = hero('m', 'male', { age: maxAge })
+    const state = town([elder], { expeditions: [{ heroIds: ['m'] } as GameState['expeditions'][number]] })
+    expect(passAway(state, noEvents()).roster).toHaveLength(1)
+  })
+
+  it('gives newborns of a family with legends extra potential, up to a cap', () => {
+    const legend = graveFor(hero('g', 'male', { family: 'Aldon', level: familyRules.legendLevel }), 'oldAge', 3)
+    const plain = graveFor(hero('p', 'male', { family: 'Aldon', level: 1 }), 'battle', 3)
+    const state = town([], { graveyard: [legend, plain] })
+    expect(familyLegends(state, 'Aldon').map((grave) => grave.id)).toEqual(['g'])
+    expect(legendBonus(state, 'Aldon')).toBe(familyRules.legendPotential)
+    const many = town([], { graveyard: Array.from({ length: 9 }, (_, index) => ({ ...legend, id: `g${index}` })) })
+    expect(legendBonus(many, 'Aldon')).toBe(familyRules.legendPotentialMax)
+    const mother = hero('f', 'female', { potential: 50 })
+    const father = hero('m', 'male', { potential: 50, family: 'Aldon' })
+    const without = makeChild(createRng(4), 'c', mother, father)
+    const withBonus = makeChild(createRng(4), 'c', mother, father, 10)
+    expect(withBonus.potential).toBe(Math.min(100, without.potential + 10))
+  })
+
+  it('finds parents and grandparents among the living and the graves', () => {
+    const grandpa = graveFor(hero('gp', 'male'), 'oldAge', 2)
+    const dad = hero('d', 'male', { age: 40, parents: ['gm', 'gp'] })
+    const kid = hero('k', 'female', { age: 10, parents: ['mm', 'd'] })
+    const found = ancestorsOf(town([dad, kid], { graveyard: [grandpa] }), 'k')
+    expect(found.map((entry) => [entry.id, entry.generation, entry.living])).toEqual([
+      ['d', 1, true],
+      ['gp', 2, false],
+    ])
+  })
+
+  it('builds houses up to level 4 with room for two couples per level', () => {
+    const house = villageRules.buildings.find((building) => building.id === 'house')
+    expect(house?.levels.map((level) => level.level)).toEqual([1, 2, 3, 4])
+    expect(housingFree(town([], { buildings: { ...freshState(5, now).buildings, house: 4 } }))).toBe(4 * familyRules.couplesPerHouseLevel)
+  })
+
+  it('opens a version 8 save whose graves have no family record', () => {
+    const saved = { ...couple(), version: 8, graveyard: [{ id: 'old', name: 'Old', classId: 'warrior', level: 3, clears: [] }] }
+    const loaded = migrate(JSON.parse(JSON.stringify(saved)), now)
+    expect(loaded.graveyard[0]).toMatchObject({ id: 'old', level: 3 })
+    expect(hallOfFame(loaded)).toEqual([])
   })
 })

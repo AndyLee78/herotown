@@ -104,7 +104,7 @@ GDD 6장(결혼·출산·2세)을 실제 규칙으로 옮긴다. 마을 영웅�
 | 단계 | 내용 | 담당 | 건드리는 파일 |
 | --- | --- | --- | --- |
 | P | 출발 준비의 파티 구성 안내(딜러 부족·힐러 없음·탱커 없음) | Cursor (작업 26, 지금) | `src/ui/game/battleScreens.tsx`, `src/locales/*` |
-| A | core: 9–11절 전부, 세이브 9, 테스트 | Claude Code | `src/core/*`, `src/data/family.json`, `village.json` |
+| A ✅ | core: 9–11절 전부, 세이브 9, 테스트 | Claude Code | `src/core/*`, `src/data/family.json`, `village.json` |
 | B | 화면: 명예의 전당, 묘지(사인·나이·가문), 가계도에 조상 무덤, 자연사 알림·부재 보고서 줄, 집 3·4레벨 | Cursor (작업 27, P와 A 다음) | `src/ui/game/heroScreens.tsx`, `villageScreens.tsx`, `App.tsx`, `styles.css`, `src/locales/*` |
 | C | 3D: 집 레벨별 모습(3·4레벨 집 추가), 묘지 비석 | Cursor (작업 28, B 다음) | `src/ui/voxel/VillageScene.ts`, `src/ui/voxel/world.ts` |
 | D | A 코드 리뷰 | GPT (작업 29) | `Docs/reviews/<해시>.md` |

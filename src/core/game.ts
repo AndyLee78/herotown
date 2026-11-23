@@ -3,12 +3,13 @@ import { adRules, classById, classList, combatRules, dungeonById, dungeons, expe
 import { forgeGear, normalizeGear, recipeById } from './gear'
 import { applyReport, DEFAULT_TACTICS, runDungeon } from './dungeon'
 import { canDeploy, generateHero, generateVisitors, normalizeHero, restHero, withAge } from './hero'
-import { acceptProposal, bedsTaken, bondParty, declineProposal, deliverBirths, femaleChance, nextAge, partyBonus, readBonds, readProposals, tidyFamily, turnSeason, wageCount, type FamilyEvents } from './family'
+import { acceptProposal, bedsTaken, bondParty, declineProposal, deliverBirths, femaleChance, graveFor, nextAge, partyBonus, passAway, readBonds, readProposals, tidyFamily, turnSeason, wageCount, type FamilyEvents } from './family'
 import { createRng } from './rng'
 import type { Rng } from './rng'
-import type { Bond, ClassId, CombatError, DungeonReport, Gear, GearSlot, Hero, PartyMember, Proposal, Role, Row, Tactics } from './types'
+import type { Genes } from './genes'
+import type { Bond, ClassId, CombatError, DungeonReport, Gear, GearSlot, Gender, Hero, PartyMember, Proposal, Role, Row, Tactics } from './types'
 
-export const SAVE_VERSION = 8
+export const SAVE_VERSION = 9
 
 export type SeasonId = 'spring' | 'summer' | 'autumn' | 'winter'
 
@@ -37,6 +38,7 @@ export type AbsenceReport = {
   returned: { dungeonId: string; victory: boolean }[]
   births: string[]
   proposals: number
+  deaths: string[]
 }
 
 export type SmithJob = {
@@ -106,6 +108,17 @@ export type Grave = {
   classId: ClassId
   level: number
   clears: string[]
+  // Stage 2b. Missing on graves from before natural death existed.
+  cause?: 'battle' | 'oldAge'
+  year?: number
+  age?: number
+  gender?: Gender
+  family?: string
+  parents?: [string, string]
+  spouseId?: string
+  genes?: Genes
+  // In the hall of fame (Docs/generations.md 11).
+  legend?: boolean
 }
 
 export type GameNotice =
@@ -516,7 +529,7 @@ function advance(state: GameState, now: number): GameState {
   const visitors: string[] = []
   const wages = { paid: 0 }
   const aged: { name: string; age: number }[] = []
-  const family: FamilyEvents = { births: [], proposals: 0 }
+  const family: FamilyEvents = { births: [], proposals: 0, deaths: [] }
   const returned: AbsenceReport['returned'] = []
   // Time moves in pieces that end on each season turn, so everything due
   // before a turn (returns, births) is settled before the season's family
@@ -538,6 +551,10 @@ function advance(state: GameState, now: number): GameState {
     next = deliverBirths(next, until, family)
     for (let turned = seasonsBetween(before, next.calendar); turned > 0; turned -= 1) {
       next = turnSeason(next, until, family)
+    }
+    // The old may pass away when a year turns, after everyone has aged.
+    for (let years = next.calendar.year - before.year; years > 0; years -= 1) {
+      next = passAway(next, family)
     }
     next = { ...next, lastTickAt: until }
   }
@@ -568,6 +585,7 @@ function advance(state: GameState, now: number): GameState {
     returned,
     births: family.births,
     proposals: family.proposals,
+    deaths: family.deaths,
   }
   return { ...next, absence }
 }
@@ -1107,6 +1125,7 @@ export function applyCasualty(
   dungeonId: string,
   alliesLived: boolean,
   rng: Rng,
+  year?: number,
 ): { hero: Hero | null; grave: Grave | null } {
   let next = applyReport(hero, report)
   if (report.victory && !next.clears.includes(dungeonId)) {
@@ -1119,10 +1138,7 @@ export function applyCasualty(
   const chance = alliesLived ? lifeRules.lossWithAllies : lifeRules.lossAlone
   next = { ...next, gear: next.gear.filter(() => rng.next() >= chance) }
   if (next.deaths >= 1) {
-    return {
-      hero: null,
-      grave: { id: next.id, name: next.name, classId: next.classId, level: next.level, clears: next.clears },
-    }
+    return { hero: null, grave: graveFor(next, 'battle', year) }
   }
   return { hero: { ...next, deaths: 1, condition: 'dead' }, grave: null }
 }
@@ -1145,7 +1161,7 @@ function settleParty(
       roster.push(hero)
       continue
     }
-    const outcome = applyCasualty(hero, report, dungeonId, alliesLived, rng)
+    const outcome = applyCasualty(hero, report, dungeonId, alliesLived, rng, state.calendar.year)
     if (outcome.hero) {
       roster.push(stampRecovery(hero, outcome.hero, now))
     }
@@ -1630,6 +1646,7 @@ function normalize(record: Record<string, unknown>, now: number): GameState {
           returned: Array.isArray(record.absence.returned) ? record.absence.returned : [],
           births: Array.isArray(record.absence.births) ? record.absence.births : [],
           proposals: numberOr(record.absence.proposals, 0),
+          deaths: Array.isArray(record.absence.deaths) ? record.absence.deaths : [],
         }
       : null,
     ads: readAds(record.ads, now),

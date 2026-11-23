@@ -446,6 +446,7 @@ describe('economy fixes', () => {
       returned: [],
       births: [],
       proposals: 0,
+      deaths: [],
     }
     const start = { ...freshState(1, day), gold: 10, absence }
     const once = reduce(start, { type: 'adReward', placement: 'absence', now: day })
@@ -697,9 +698,10 @@ describe('economy fixes', () => {
     expect(twoYears.absence?.aged).toContainEqual({ name: staying.name, age: 51 })
     const elder = { ...prepared, roster: [at(80)], visitors: [{ ...withAge(staying, 80), arrivedAt: now + timeRules.seasonMs * 8 }] }
     const capped = seasons(elder, 4)
-    expect(capped.roster[0]?.age).toBe(80)
-    expect(capped.roster).toHaveLength(1)
-    expect(capped.absence?.aged?.some((entry) => entry.name === hero.name)).toBe(false)
+    // At the oldest age a hero passes away when the year turns (Docs/generations.md 10).
+    expect(capped.roster).toHaveLength(0)
+    expect(capped.graveyard.at(-1)).toMatchObject({ id: hero.id, cause: 'oldAge', age: 80 })
+    expect(capped.visitors.find((entry) => entry.id === staying.id)?.age).toBe(80)
   })
 
   it('fills the aged list when an older absence report has none', () => {

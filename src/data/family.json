@@ -10,7 +10,7 @@
   "proposeChance": 0.5,
   "declineAffinity": 20,
   "declineCooldownSeasons": 2,
-  "couplesPerHouseLevel": 1,
+  "couplesPerHouseLevel": 2,
   "friendBonus": 0.01,
   "loverBonus": 0.03,
   "maxBonus": 0.05,
@@ -31,5 +31,11 @@
   "traitMutation": 0.05,
   "maxTraits": 2,
   "visitorBalanceAt": 0.6,
-  "visitorBalanceChance": 0.65
+  "visitorBalanceChance": 0.65,
+  "oldAgeFrom": 60,
+  "oldAgeChancePerYear": 0.04,
+  "legendLevel": 12,
+  "legendTier": 3,
+  "legendPotential": 5,
+  "legendPotentialMax": 15
 }

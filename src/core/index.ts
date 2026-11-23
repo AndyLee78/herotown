@@ -3,8 +3,8 @@ export { SAVE_VERSION, adsRemaining, bedCount, busyHeroIds, retireeBonus, retire
 export { DEFAULT_TACTICS, applyReport, heroPower, runDungeon } from './dungeon'
 export { ageUp, canDeploy, createHero, deriveStats, generateVisitors, grantXp, hireCost, potentialBand, restHero, statRange, train, withAge } from './hero'
 export { guideStatus, guideSteps } from './guide'
-export { bondOf, bondStage, canCourt, coupleCount, familyOf, housingFree, isSingle, partyBonus, population, residents, topBonds } from './family'
-export type { FamilyView, Population } from './family'
+export { ancestorsOf, bondOf, bondStage, canCourt, coupleCount, familyLegends, familyOf, hallOfFame, housingFree, isLegend, isSingle, legendBonus, oldAgeChance, partyBonus, population, residents, topBonds } from './family'
+export type { Ancestor, FamilyView, Population } from './family'
 export type { GuideStatus, GuideStep } from './guide'
 export { createRng } from './rng'
 export { EYES, HAIRS, SKINS, STYLES, genesFor, hashString, mixHex, seeded } from './genes'
@@ -18,6 +18,7 @@ export type {
   PartyPreset,
   GameNotice,
   BuildingId,
+  Grave,
   GameAction,
   GameState,
   SeasonId,
