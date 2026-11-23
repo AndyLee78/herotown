@@ -293,7 +293,7 @@ function incomeSummary(mode: string, at: number, results: Simulation[]) {
   }
 }
 
-const order = ['hill_cave', 'moss_path', 'abandoned_mine', 'deep_shaft', 'barrow', 'sunken_crypt', marshId]
+const order = ['hill_cave', 'moss_path', 'abandoned_mine', 'deep_shaft', 'barrow', 'sunken_crypt', marshId, 'bandit_fort']
 function firstClearSummary(results: Simulation[], at: number) {
   return Object.fromEntries(order.map((id) => {
     const times = results.flatMap((result) => {

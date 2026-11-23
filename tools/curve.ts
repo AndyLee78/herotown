@@ -1,10 +1,10 @@
 // A fixed lineup for comparison and starter lineups drawn from the real game.
-import { classById, progression } from '../src/core/data'
+import { classById, combatRules, progression } from '../src/core/data'
 import { DEFAULT_TACTICS, runDungeon } from '../src/core/dungeon'
 import { freshState, presetById, reduce } from '../src/core/game'
 import { createHero, generateHero } from '../src/core/hero'
 import { createRng } from '../src/core/rng'
-import type { ClassId, Hero, PartyMember, Row, Supplies } from '../src/core/types'
+import type { ClassId, Hero, PartyMember, Row, Supplies, TrinketId } from '../src/core/types'
 
 const LINEUP: [ClassId, Row][] = [
   ['warrior', 'front'],
@@ -17,7 +17,50 @@ const LINEUP: [ClassId, Row][] = [
 export const DEFAULT_PARTY_SAMPLES = 40
 export const BATTLES_PER_PARTY = 10
 export const MARSH_ID = 'venom_marsh'
-type Loadout = { supplies: Supplies; withoutHealer?: boolean }
+type Loadout = { supplies: Supplies; withoutHealer?: boolean; prepare?: (party: PartyMember[]) => PartyMember[] }
+export const FORT_ID = 'bandit_fort'
+
+function wear(member: PartyMember, ids: readonly TrinketId[]): PartyMember {
+  const gear = ids.map((id) => ({ id: `${member.hero.id}-${id}`, recipeId: `trinket.${id}`, slot: 'trinket' as const, grade: 'common' as const, enhance: 0 }))
+  return { ...member, hero: createHero({ ...member.hero, gear: [...member.hero.gear, ...gear] }) }
+}
+
+export function fortLoadout(rogue: boolean, trinkets: readonly TrinketId[]): Loadout {
+  return { supplies: {}, prepare(party) {
+    // Keep the same hero draws in each pair; ensure the remaining slots are damage dealers.
+    const existingRogue = party.findIndex(({ hero }) => hero.classId === 'rogue')
+    const recruit = existingRogue >= 0 ? existingRogue : party.findIndex(({ hero }) => classById(hero.classId).role === 'dps')
+    let keptWarrior = false
+    let keptCleric = false
+    let front = 0
+    let back = 0
+    const heroes = party.map(({ hero }, index) => {
+      let classId = hero.classId
+      if (classId === 'warrior' && !keptWarrior) keptWarrior = true
+      else if (classId === 'cleric' && !keptCleric) keptCleric = true
+      else if (rogue && index === (recruit < 0 ? 2 : recruit)) classId = 'rogue'
+      else if (classId === 'rogue' || classById(classId).role !== 'dps') classId = 'archer'
+      const frontRow = classById(classId).reach === 'melee' ? front < combatRules.frontRowSize : back >= combatRules.backRowSize
+      if (frontRow) front += 1
+      else back += 1
+      return { hero: createHero({ ...hero, classId }), row: frontRow ? 'front' as const : 'back' as const }
+    })
+    return heroes.map((member, index) => index === heroes.length - 1 ? wear(member, trinkets) : member)
+  } }
+}
+
+export const fortLoadouts = Object.fromEntries([false, true].flatMap((rogue) =>
+  ([['none', []], ['alert', ['alert']], ['both', ['alert', 'trapSense']]] as const)
+    .map(([name, trinkets]) => [`${rogue ? 'rogue' : 'noRogue'}-${name}`, fortLoadout(rogue, trinkets)]),
+))
+
+export function wardLoadout(count: number): Loadout {
+  return { supplies: {}, prepare(party) {
+    const carriers = [...party].sort((a, b) => Number(b.hero.classId === 'warrior') - Number(a.hero.classId === 'warrior')
+      || Number(b.row === 'front') - Number(a.row === 'front')).slice(0, count)
+    return party.map((member) => carriers.includes(member) ? wear(member, ['poisonWard']) : member)
+  } }
+}
 export const marshLoadouts = {
   none: { supplies: {} },
   antidote2: { supplies: { antidote: 2 } },
@@ -70,13 +113,19 @@ export function winRate(dungeonId: string, level: number, samples: number): numb
 }
 
 export function starterWinRates(parties: PartyMember[][], dungeonId: string, level: number, loadout?: Loadout, battles = BATTLES_PER_PARTY) {
+  const defeats: Record<string, number> = {}
   const outcomes = parties.map((party, index) => {
-    const lineup = loadout?.withoutHealer ? party.filter(({ hero }) => classById(hero.classId).role !== 'healer') : party
+    const prepared = loadout?.prepare?.(party) ?? party
+    const lineup = loadout?.withoutHealer ? prepared.filter(({ hero }) => classById(hero.classId).role !== 'healer') : prepared
     const leveled = partyAtLevel(lineup, level)
     let wins = 0
     for (let seed = 1; seed <= battles; seed += 1) {
       const result = runDungeon(leveled, dungeonId, DEFAULT_TACTICS, seed, loadout?.supplies)
       if (result.ok && result.report.victory) wins += 1
+      else {
+        const reason = result.ok ? result.report.defeatReason ?? 'unknown' : result.error
+        defeats[reason] = (defeats[reason] ?? 0) + 1
+      }
     }
     return { partySeed: index + 1, classes: lineup.map(({ hero }) => hero.classId), rate: wins / battles }
   }).sort((a, b) => a.rate - b.rate)
@@ -86,5 +135,6 @@ export function starterWinRates(parties: PartyMember[][], dungeonId: string, lev
     median: (outcomes[lowerMiddle]!.rate + outcomes[middle]!.rate) / 2,
     lowerQuartile: outcomes[Math.ceil(outcomes.length / 4) - 1]!.rate,
     weakest: outcomes[0]!,
+    defeats,
   }
 }
