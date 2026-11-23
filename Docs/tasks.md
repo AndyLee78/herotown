@@ -79,7 +79,7 @@ Claude Code, Cursor, GPT(Codex)가 함께 쓰는 작업 목록이다. 작업 하
 | 37 | 상태 표시·물약 동작·공방 건물 3D | Cursor | `BattleScene.ts`, `replay.ts`, `world.ts`, `VillageScene.ts` | 완료 (4d4ded2) |
 | 38 | 3a core 코드 리뷰 (1918eda) | GPT | `Docs/reviews/1918eda.md` (새 파일만) | 완료 (03d9e42) |
 | 39 | 독늪 밸런스 측정 | GPT | `tools/curve.ts`, `print-curve.ts`, `tune-curve.ts`, `first-hour.ts` | 완료 (c6e24d9) |
-| 40 | 도적 요새 몬스터·던전 그림 | Cursor | `src/ui/voxel/enemies.ts`, `portrait.ts` | 대기 |
+| 40 | 도적 요새 몬스터·던전 그림 | Cursor | `src/ui/voxel/enemies.ts`, `portrait.ts` | 완료 (c7b4d76) |
 | 41 | 마법 공방 화면·장신구 장착·함정/기습 문구 | Cursor | `App.tsx`, `src/ui/game/*.tsx`, `styles.css`, `src/locales/*` | 대기 |
 | 42 | 함정·기습 연출과 마법 공방 건물 3D | Cursor | `BattleScene.ts`, `replay.ts`, `world.ts`, `VillageScene.ts` | 대기 (41 뒤) |
 | 43 | 3b core 코드 리뷰 (1f690a1) | GPT | `Docs/reviews/1f690a1.md` (새 파일만) | 대기 |
@@ -1081,6 +1081,8 @@ Docs/depth.md의 3b를 읽고 도적 요새의 3D 그림을 만든다. src/ui/vo
 
 확인: 개발 화면에서 도적 요새 카드(디버그로 독늪까지 클리어한 세이브)나 portrait 함수를 직접 불러 확인하고 스크린샷을 메모에. 임시 코드는 커밋하지 않는다.
 ```
+
+메모: 졸개는 두건·몽둥이, 석궁병은 활·화살통, 암살자는 두건·쌍단검(왼손 단검 추가), 두목은 큰 체구·외투·곡괭이형 도끼다. 요새 입구는 나무 목책·망루·횃불·게이트다. portrait를 직접 불러 네 초상과 입구를 확인했다.
 
 ---
 
