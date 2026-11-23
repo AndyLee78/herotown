@@ -54,8 +54,8 @@ Claude Code, Cursor, GPT(Codex)가 함께 쓰는 작업 목록이다. 작업 하
 | 12 | GitHub Pages 배포 | Cursor 또는 GPT | `vite.config.ts`, `.github/workflows/` | 대기 (사용자가 저장소를 먼저 올려야 함) |
 | 13 | 원정 화면 그림·소리 다듬기 | Cursor | `src/ui/voxel/*`, `battleScreens.tsx` | 완료 (03806a1) |
 | 14 | 던전 미리보기를 배경 일러스트처럼 | Cursor | `src/ui/voxel/portrait.ts` | 완료 (1dce191) |
-| 15 | 영어 문구 다듬기 | GPT | `src/locales/en.json` | 대기 |
-| 16 | 초반 흐름 개편 코드 리뷰 (a1dd951) | GPT | `Docs/reviews/a1dd951.md` (새 파일만) | 대기 |
+| 15 | 영어 문구 다듬기 | GPT | `src/locales/en.json` | 완료 (e6754c1) |
+| 16 | 초반 흐름 개편 코드 리뷰 (a1dd951) | GPT | `Docs/reviews/a1dd951.md` (새 파일만) | 완료 (5759763) |
 
 ---
 
@@ -513,6 +513,9 @@ src/ui/voxel/portrait.ts의 dungeonPreviewUrl을 "던전 입구 풍경 일러스
 ```
 
 메모:
+- 영어 UI에서 여관·영웅·전투·마을 운영·설정을 확인했다. 여관 독의 숫자 배지가 버튼 경계를 넘는 것으로 측정됐다. 확인한 창의 버튼·칩에서는 잘림이 없었다.
+- 버튼·칩을 줄였지만 Set out, Heroes, Healthy 등은 한글 대비 글자 수 1.5배를 넘는다. 설정의 sound.depart·sound.return은 두 언어 모두 키가 표시된다.
+- 복수 처리 필요 후보: 던전 층 수(battle.floors), 부재 시간(absence.hours), 자동 원정 횟수(absence.auto), 클리어 횟수(hero.clears). 현재는 숫자 레이블이나 시간 단위 기호를 사용한다.
 
 ---
 
@@ -535,3 +538,5 @@ src/ui/voxel/portrait.ts의 dungeonPreviewUrl을 "던전 입구 풍경 일러스
 ```
 
 메모:
+- 광고 치료와 오프라인 귀환 후 회복 문제, 초반 시뮬레이터 집계와 권장 레벨 산정 문제를 Docs/reviews/a1dd951.md에 기록했다.
+- npx tsc --noEmit, npm test(97개), npm run build 통과.
