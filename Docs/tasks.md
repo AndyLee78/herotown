@@ -84,7 +84,7 @@ Claude Code, Cursor, GPT(Codex)가 함께 쓰는 작업 목록이다. 작업 하
 | 42 | 함정·기습 연출과 마법 공방 건물 3D | Cursor | `BattleScene.ts`, `replay.ts`, `world.ts`, `VillageScene.ts` | 완료 (7893f0c) |
 | 43 | 3b core 코드 리뷰 (1f690a1) | GPT | `Docs/reviews/1f690a1.md` (새 파일만) | 완료 (1c5c70e) |
 | 44 | 도적 요새 밸런스 측정 | GPT | `tools/curve.ts`, `print-curve.ts`, `tune-curve.ts`, `first-hour.ts` | 완료 (6d9ffd1) |
-| 45 | 마량 성채 몬스터·던전 그림 | Cursor | `src/ui/voxel/enemies.ts`, `portrait.ts` | 대기 |
+| 45 | 마량 성채 몬스터·던전 그림 | Cursor | `src/ui/voxel/enemies.ts`, `portrait.ts` | 완료 (1962d3a) |
 | 46 | 광역기 작전·리포트·로그 화면 | Cursor | `App.tsx`, `src/ui/game/*.tsx`, `styles.css`, `src/locales/*` | 대기 |
 | 47 | 예고·광역기·끊기·버티기·소환 연출 | Cursor | `BattleScene.ts`, `replay.ts` | 대기 (46 뒤) |
 | 48 | 3c core 코드 리뷰 (7eaca30) | GPT | `Docs/reviews/7eaca30.md` (새 파일만) | 대기 |
@@ -1192,6 +1192,8 @@ Docs/depth.md의 3c를 읽고 마량 성채의 3D 그림을 만든다. src/ui/vo
 
 확인: portrait 함수를 직접 불러 네 초상과 입구를 확인하고 스크린샷을 메모에. 임시 코드는 커밋하지 않는다.
 ```
+
+메모: 무덤 기사는 녹슨 갑옷·방패·초록 눈, 뼈 궁수는 활과 푸른 눈, 원령은 떠다니는 청록 혼령(보라 망령과 구분), 성채 군주는 뿔 투구·검은 망토·보라 눈이다. 성채 입구는 부서진 탑·성벽·푸른 불빛이다. portrait로 네 초상과 입구를 확인했다.
 
 ---
 
