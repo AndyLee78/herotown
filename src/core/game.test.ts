@@ -562,14 +562,15 @@ describe('economy fixes', () => {
     }
     const tired = {
       ...hired,
-      roster: [{ ...hero, fatigue: 40, condition: 'fatigued' as const }],
+      roster: [{ ...hero, fatigue: 100, condition: 'fatigued' as const }],
     }
-    const hour = now + 3_600_000
-    const house1 = reduce(tired, { type: 'catchUp', now: hour })
-    expect(house1.roster[0]?.fatigue).toBe(30)
+    const half = now + 1_800_000
+    const house1 = reduce(tired, { type: 'catchUp', now: half })
+    expect(house1.roster[0]?.fatigue).toBe(100 - lifeRules.fatigue.recoverPerHour / 2)
     expect(house1.roster[0]?.condition).toBe('fatigued')
-    const house2 = reduce({ ...tired, buildings: { ...tired.buildings, house: 2 } }, { type: 'catchUp', now: hour })
-    expect(house2.roster[0]?.fatigue).toBe(25)
+    const house2 = reduce({ ...tired, buildings: { ...tired.buildings, house: 2 } }, { type: 'catchUp', now: half })
+    expect(house2.roster[0]?.fatigue).toBe(100 - (lifeRules.fatigue.recoverPerHour + lifeRules.fatigue.recoverPerHouseLevel) / 2)
+    const hour = now + 3_600_000
     const clearing = reduce(
       { ...tired, roster: [{ ...hero, fatigue: lifeRules.fatigue.recoverPerHour, condition: 'fatigued' as const }] },
       { type: 'catchUp', now: hour },
@@ -612,7 +613,10 @@ describe('economy fixes', () => {
     if (!hero) {
       throw new Error('expected a hero')
     }
-    const worn = withParty({ ...hired, roster: [{ ...hero, fatigue: lifeRules.fatigue.exhaustedAt }] }, [{ id: hero.id, row: 'front' as const }])
+    // Fatigue alone never stops a departure (Docs/fatigue.md); a wound asks first.
+    const exhausted = withParty({ ...hired, roster: [{ ...hero, fatigue: lifeRules.fatigue.exhaustedAt }] }, [{ id: hero.id, row: 'front' as const }])
+    expect(reduce(exhausted, { type: 'depart' }).expeditions).toHaveLength(1)
+    const worn = withParty({ ...hired, roster: [{ ...hero, condition: 'injured' as const }] }, [{ id: hero.id, row: 'front' as const }])
     const warned = reduce(worn, { type: 'depart' })
     expect(warned.notice).toBe('wornParty')
     expect(warned.expeditions).toHaveLength(0)
@@ -623,7 +627,7 @@ describe('economy fixes', () => {
       ...worn,
       cleared: ['hill_cave'],
       dungeonId: 'abandoned_mine',
-      roster: [{ ...hero, fatigue: lifeRules.fatigue.exhaustedAt, deaths: 1 }],
+      roster: [{ ...hero, condition: 'injured' as const, deaths: 1 }],
     }
     expect(reduce(both, { type: 'depart' }).notice).toBe('wornParty')
     expect(reduce(both, { type: 'depart', confirm: true }).expeditions).toHaveLength(1)

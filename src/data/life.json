@@ -1,8 +1,8 @@
 {
   "skillPointsPerLevel": 1,
   "reviveCost": 80,
-  "reviveMs": 1800000,
-  "treatMs": 600000,
+  "reviveMs": 600000,
+  "treatMs": 180000,
   "lossAlone": 0.25,
   "lossWithAllies": 0.1,
   "dangerousTier": 2,
@@ -11,13 +11,23 @@
     "exhaustedAt": 80,
     "tiredPenalty": 0.1,
     "exhaustedPenalty": 0.2,
-    "recoverPerHour": 10,
-    "recoverPerHouseLevel": 5
+    "recoverPerHour": 90,
+    "recoverPerHouseLevel": 30,
+    "gainByTier": [
+      4,
+      6,
+      9,
+      12,
+      15,
+      18,
+      20
+    ],
+    "downedExtra": 12
   },
   "injury": {
     "injuredPenalty": 0.15,
     "criticalPenalty": 0.4,
-    "recoverMs": 14400000
+    "recoverMs": 3600000
   },
   "safeTier": 1
 }

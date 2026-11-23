@@ -134,8 +134,9 @@ export function waitLabel(ms: number): string {
   return hours > 0 ? `${hours}:${String(minutes).padStart(2, '0')}:${String(seconds).padStart(2, '0')}` : `${minutes}:${String(seconds).padStart(2, '0')}`
 }
 
+// Same rule as core: only wounds ask before leaving; fatigue just weakens (Docs/fatigue.md).
 export function needsWarning(hero: Hero): boolean {
-  return hero.fatigue >= lifeRules.fatigue.exhaustedAt || hero.condition === 'injured' || hero.condition === 'critical'
+  return hero.condition === 'injured' || hero.condition === 'critical'
 }
 
 export function fatigueTone(hero: Hero): 'good' | 'warn' | 'bad' {

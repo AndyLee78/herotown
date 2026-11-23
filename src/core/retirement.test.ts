@@ -71,8 +71,8 @@ describe('retirement', () => {
     expect((fast.construction?.finishAt ?? 0) - now).toBeLessThan((plain.construction?.finishAt ?? 0) - now)
 
     const tired = (s: GameState) => ({ ...s, roster: [{ ...s.retirees[0]!.hero, id: 'worker', fatigue: 80 }] })
-    const rested = reduce(tired(retired), { type: 'catchUp', now: retired.lastTickAt + 3_600_000 })
-    const restedWell = reduce(tired(post('house')), { type: 'catchUp', now: retired.lastTickAt + 3_600_000 })
+    const rested = reduce(tired(retired), { type: 'catchUp', now: retired.lastTickAt + 1_800_000 })
+    const restedWell = reduce(tired(post('house')), { type: 'catchUp', now: retired.lastTickAt + 1_800_000 })
     expect(restedWell.roster[0]!.fatigue).toBeLessThan(rested.roster[0]!.fatigue)
 
     expect(villageRules.buildings.some((b) => b.id === 'temple')).toBe(true)

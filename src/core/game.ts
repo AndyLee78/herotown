@@ -1108,7 +1108,8 @@ function completeTreatment(hero: Hero): Hero {
 }
 
 function needsWarning(hero: Hero): boolean {
-  return hero.fatigue >= lifeRules.fatigue.exhaustedAt || hero.condition === 'injured' || hero.condition === 'critical'
+  // Fatigue only weakens a hero; it never stops a departure (Docs/fatigue.md).
+  return hero.condition === 'injured' || hero.condition === 'critical'
 }
 
 function stepCondition(hero: Hero, now: number): Hero {
@@ -1139,8 +1140,11 @@ function recoverRoster(state: GameState, elapsed: number, now: number): GameStat
       if (until == null) {
         return recoverHero(hero, hours, rate, now)
       }
-      // Pause an existing wound's recovery clock for the part of this tick spent away.
-      return hero.recoverAt == null ? hero : { ...hero, recoverAt: hero.recoverAt + Math.max(0, until - state.lastTickAt) }
+      // Away heroes still shake off fatigue on the road (Docs/fatigue.md), but
+      // an existing wound's recovery clock pauses for the part spent away.
+      const awayHours = Math.max(0, until - state.lastTickAt) / 3_600_000
+      const rested = { ...hero, fatigue: Math.max(0, hero.fatigue - rate * awayHours) }
+      return hero.recoverAt == null ? rested : { ...rested, recoverAt: hero.recoverAt + Math.max(0, until - state.lastTickAt) }
     }),
   }
 }

@@ -60,7 +60,7 @@ describe('early game flow', () => {
     expect(back.roster.every((hero) => hero.condition === 'critical')).toBe(true)
   })
 
-  it('recovers only time spent at home and makes returned heroes available to auto runs', () => {
+  it('rests heroes on the road too, pauses wounds while away, and makes returned heroes available to auto runs', () => {
     const state = hireAll(3)
     const staying = state.roster[0]!
     const ready = reduce({
@@ -79,11 +79,14 @@ describe('early game flow', () => {
     const back = reduce(out, action)
     const rate = lifeRules.fatigue.recoverPerHour / 3_600_000
     expect(trip.heroIds).not.toContain(staying.id)
-    expect(back.roster.find((hero) => hero.id === staying.id)?.fatigue).toBeCloseTo(100 - (action.now - now) * rate)
+    expect(back.roster.find((hero) => hero.id === staying.id)?.fatigue).toBe(0)
+    // Fatigue falls during the trip as well (Docs/fatigue.md).
+    const onRoad = reduce(out, { type: 'catchUp', now: trip.returnAt - 1 })
     for (const id of trip.heroIds) {
+      expect(onRoad.roster.find((entry) => entry.id === id)?.fatigue).toBeCloseTo(Math.max(0, 100 - (trip.returnAt - 1 - now) * rate))
       const hero = back.roster.find((entry) => entry.id === id)
-      expect(hero).toMatchObject({ condition: 'fatigued', recoverAt: undefined })
-      expect(hero?.fatigue).toBeCloseTo(100 - (action.now - trip.returnAt) * rate)
+      expect(hero?.recoverAt).toBeUndefined()
+      expect(['fatigued', 'healthy']).toContain(hero?.condition)
     }
     const auto = reduce({ ...out, auto: { ...out.auto, enabled: true } }, action)
     expect(auto.absence?.autoRuns).toBeGreaterThan(0)

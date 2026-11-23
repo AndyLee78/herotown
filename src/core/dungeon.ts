@@ -103,10 +103,16 @@ export function runDungeon(party: PartyMember[], dungeonId: string, tactics: Tac
     conditions: heroes.map((hero) => ({
       id: hero.refId,
       condition: judgeCondition(hero),
-      fatigue: hero.hp > 0 ? 25 : 55,
+      // Short early trips tire a hero a little; deeper ones more (Docs/fatigue.md).
+      fatigue: tripFatigue(dungeon.tier) + (hero.hp > 0 ? 0 : lifeRules.fatigue.downedExtra),
     })),
   }
   return { ok: true, report }
+}
+
+export function tripFatigue(tier: number): number {
+  const gain = lifeRules.fatigue.gainByTier
+  return gain[Math.max(0, Math.min(gain.length, tier) - 1)] ?? 0
 }
 
 export function applyReport(hero: Hero, report: DungeonReport): Hero {
