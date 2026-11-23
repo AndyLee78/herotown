@@ -13,6 +13,7 @@ import {
   dungeons,
   expeditionSlots,
   heroPower,
+  heroTrinkets,
   monsterById,
   villageRules,
   type DungeonReport,
@@ -404,6 +405,8 @@ function Prep({
 
       <SuppliesPicker save={save} preset={preset} onAction={onAction} />
 
+      <FortReady dungeonId={dungeon.id} heroes={heroes} />
+
       {blocked ? <p className="banner bad">{blocked}</p> : null}
       <div className={stamping ? 'stamp-stage stamping' : 'stamp-stage'}>
         <button type="button" className="btn primary big depart" disabled={blocked != null || stamping} onClick={depart}>
@@ -438,8 +441,11 @@ function AutoSettings({ save, onAction }: { save: GameState; onAction: Act }) {
       {save.auto.policy === 'material' ? (
         <label className="field">
           <span>{t('label.material')}</span>
-          <select value={save.auto.material} onChange={(event) => onAction({ type: 'autoMaterial', material: event.target.value as 'wood' | 'stone' | 'iron' | 'bone' | 'herb' })}>
-            {(['wood', 'stone', 'iron', 'bone', 'herb'] as const).map((material) => (
+          <select
+            value={save.auto.material}
+            onChange={(event) => onAction({ type: 'autoMaterial', material: event.target.value as 'wood' | 'stone' | 'iron' | 'bone' | 'herb' | 'crystal' })}
+          >
+            {(['wood', 'stone', 'iron', 'bone', 'herb', 'crystal'] as const).map((material) => (
               <option key={material} value={material}>
                 {t(`material.${material}`)}
               </option>
@@ -623,6 +629,28 @@ function SuppliesPicker({ save, preset, onAction }: { save: GameState; preset: P
   )
 }
 
+function FortReady({ dungeonId, heroes }: { dungeonId: string; heroes: Hero[] }) {
+  const { t } = useTranslation()
+  const dungeon = dungeonById(dungeonId)
+  const hasTraps = dungeon.floors.some((floor) => (floor.trapChance ?? 0) > 0)
+  const hasAmbush = dungeon.floors.some((floor) => floor.monsters.some((id) => monsterById(id)?.ambush))
+  if (!hasTraps && !hasAmbush) {
+    return null
+  }
+  const rogue = heroes.some((hero) => hero.classId === 'rogue')
+  const sense = heroes.some((hero) => heroTrinkets(hero).has('trapSense'))
+  const alert = heroes.some((hero) => heroTrinkets(hero).has('alert'))
+  const trapStatus = rogue ? t('battle.trapRogue') : sense ? t('battle.trapSense') : t('battle.trapNone')
+  const ambushStatus = alert ? t('battle.ambushAlert') : t('battle.ambushNone')
+  return (
+    <p className="banner">
+      {hasTraps ? t('battle.trapReady', { status: trapStatus }) : null}
+      {hasTraps && hasAmbush ? ' · ' : null}
+      {hasAmbush ? t('battle.ambushReady', { status: ambushStatus }) : null}
+    </p>
+  )
+}
+
 function History({ save, onOpen }: { save: GameState; onOpen: (report: DungeonReport) => void }) {
   const { t } = useTranslation()
   if (save.history.length === 0) {
@@ -660,6 +688,8 @@ function History({ save, onOpen }: { save: GameState; onOpen: (report: DungeonRe
               {POTION_IDS.filter((id) => (report.potionsUsed?.[id] ?? 0) > 0).map((id) => (
                 <Chip key={id}>{t('battle.usedPotion', { potion: t(`potion.${id}`), count: report.potionsUsed?.[id] ?? 0 })}</Chip>
               ))}
+              {report.traps?.disarmed ? <Chip tone="good">{t('battle.trapsDisarmed', { count: report.traps.disarmed })}</Chip> : null}
+              {report.traps?.sprung ? <Chip tone="warn">{t('battle.trapsSprung', { count: report.traps.sprung })}</Chip> : null}
             </span>
             <button type="button" className="btn small" onClick={() => onOpen(report)}>
               {t('battle.watch')}

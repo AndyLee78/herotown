@@ -18,6 +18,7 @@
     "save": "Save",
     "smith": "Smithy",
     "alchemy": "Alchemy",
+    "magic": "Magic Workshop",
     "debug": "Debug",
     "settings": "Settings",
     "battle": "Battle"
@@ -53,6 +54,7 @@
     "autoParty": "Lock party",
     "craft": "Craft",
     "brew": "Brew",
+    "enchant": "Enchant",
     "enhance": "Enhance (iron {{iron}} · gold {{gold}})",
     "equip": "Equip {{name}}",
     "unequip": "Unequip {{name}}",
@@ -86,7 +88,8 @@
     "material": "Material",
     "autoDungeon": "Auto trips",
     "smith": "Crafting",
-    "stash": "Storage"
+    "stash": "Storage",
+    "trinkets": "Trinkets"
   },
   "hint": {
     "village": "Select a hero in the village.",
@@ -399,6 +402,7 @@
     "treating": "Treatment {{time}}",
     "reviving": "Revival {{time}}",
     "noGear": "No gear",
+    "trinketEmpty": "Empty trinket slot",
     "clears": "Clears: {{count}}",
     "fatigue": "Fatigue {{fatigue}}",
     "fatigueEffect": "Fatigue {{fatigue}} · attack and speed −{{percent}}%",
@@ -532,6 +536,16 @@
     "locked": "Opens at workshop level {{level}}.",
     "stock": "Potion stock"
   },
+  "magic": {
+    "open": "Open workshop",
+    "level": "Workshop level {{level}}",
+    "unbuilt": "No workshop yet.",
+    "idle": "The bench is clear.",
+    "working": "Making {{name}} · {{time}}",
+    "craft": "Trinkets",
+    "locked": "Opens at workshop level {{level}}.",
+    "stashHint": "{{count}} trinkets in storage"
+  },
   "smith": {
     "level": "Smithy level {{level}}",
     "idle": "Ready to craft.",
@@ -605,6 +619,15 @@
     "carry": "This trip {{count}}/{{max}}",
     "inStock": "Stock {{count}}",
     "usedPotion": "{{potion}} ×{{count}}",
+    "trapReady": "Traps: {{status}}",
+    "trapRogue": "rogue ready",
+    "trapSense": "Trap Sense ready",
+    "trapNone": "none",
+    "ambushReady": "Ambush: {{status}}",
+    "ambushAlert": "Watchful ready",
+    "ambushNone": "none",
+    "trapsDisarmed": "Disarmed {{count}}",
+    "trapsSprung": "Sprung {{count}}",
     "warn": {
       "noTank": "Without a tank, the back row falls.",
       "noHealer": "Without a healer, the party cannot last.",

@@ -11,12 +11,14 @@ import {
   ageBands,
   bedCount,
   dungeons,
+  enchantTime,
   expeditionSlots,
   fountainLevel,
   fountainNextAt,
   fountainRules,
   fountainWishes,
   hallOfFame,
+  magicRules,
   population,
   smithRules,
   timeRules,
@@ -40,7 +42,21 @@ const BattleView = lazy(() => import('../BattleView').then((mod) => ({ default: 
 
 type Act = (action: GameAction) => void
 
-export function Town({ save, onAction, busy, onWatch, onAlchemy }: { save: GameState; onAction: Act; busy: boolean; onWatch: () => void; onAlchemy: () => void }) {
+export function Town({
+  save,
+  onAction,
+  busy,
+  onWatch,
+  onAlchemy,
+  onMagic,
+}: {
+  save: GameState
+  onAction: Act
+  busy: boolean
+  onWatch: () => void
+  onAlchemy: () => void
+  onMagic: () => void
+}) {
   const { t } = useTranslation()
   const [census, setCensus] = useState(false)
   const [hall, setHall] = useState(false)
@@ -136,6 +152,11 @@ export function Town({ save, onAction, busy, onWatch, onAlchemy }: { save: GameS
               {id === 'alchemy' && current > 0 ? (
                 <button type="button" className="btn" onClick={onAlchemy}>
                   {t('alchemy.open')}
+                </button>
+              ) : null}
+              {id === 'magic' && current > 0 ? (
+                <button type="button" className="btn" onClick={onMagic}>
+                  {t('magic.open')}
                 </button>
               ) : null}
             </article>
@@ -323,6 +344,51 @@ export function Alchemy({ save, onAction }: { save: GameState; onAction: Act }) 
   )
 }
 
+export function Magic({ save, onAction }: { save: GameState; onAction: Act }) {
+  const { t } = useTranslation()
+  const working = save.magic != null
+  const now = useNow(working)
+  const level = save.buildings.magic
+  const job = save.magic
+  const total = job ? Math.max(1, enchantTime(save, job.trinketId)) : 1
+  const left = job ? Math.max(0, job.finishAt - now) : 0
+  return (
+    <>
+      <p className="banner">
+        <UiIcon name="magic" size={18} />
+        {level < 1 ? t('magic.unbuilt') : t('magic.level', { level })}
+        {' · '}
+        {job ? t('magic.working', { name: t(`item.trinket.${job.trinketId}`), time: waitLabel(left) }) : t('magic.idle')}
+      </p>
+      {job ? <Bar value={total - left} max={total} tone="info" /> : null}
+      <h3 className="section-title">{t('magic.craft')}</h3>
+      <div className="grid">
+        {magicRules.trinkets.map((trinket) => {
+          const locked = level < trinket.magicLevel
+          const cost = { gold: trinket.gold, crystal: trinket.crystal }
+          return (
+            <article key={trinket.id} className={locked ? 'card locked' : 'card'}>
+              <strong className="name">{t(`item.trinket.${trinket.id}`)}</strong>
+              <p className="muted">{t(`trinket.hint.${trinket.id}`)}</p>
+              <p className="muted">{waitLabel(enchantTime(save, trinket.id))}</p>
+              <CostList cost={cost} save={save} />
+              <button
+                type="button"
+                className="btn primary"
+                disabled={locked || working || level < 1 || !affordable(cost, save)}
+                onClick={() => onAction({ type: 'enchant', trinketId: trinket.id, now: gameNow() })}
+              >
+                {locked ? t('magic.locked', { level: trinket.magicLevel }) : t('action.enchant')}
+              </button>
+            </article>
+          )
+        })}
+      </div>
+      <p className="muted">{t('magic.stashHint', { count: save.stash.filter((item) => item.slot === 'trinket').length })}</p>
+    </>
+  )
+}
+
 export function Smith({ save, onAction }: { save: GameState; onAction: Act }) {
   const { t } = useTranslation()
   const working = save.smith != null
@@ -411,6 +477,12 @@ export function Report({ report }: { report: DungeonReport | null }) {
             {POTION_IDS.filter((id) => (report.potionsUsed?.[id] ?? 0) > 0).map((id) => (
               <Chip key={id}>{t('battle.usedPotion', { potion: t(`potion.${id}`), count: report.potionsUsed?.[id] ?? 0 })}</Chip>
             ))}
+          </span>
+        ) : null}
+        {report.traps ? (
+          <span className="chips">
+            {report.traps.disarmed > 0 ? <Chip tone="good">{t('battle.trapsDisarmed', { count: report.traps.disarmed })}</Chip> : null}
+            {report.traps.sprung > 0 ? <Chip tone="warn">{t('battle.trapsSprung', { count: report.traps.sprung })}</Chip> : null}
           </span>
         ) : null}
         <span className="row">

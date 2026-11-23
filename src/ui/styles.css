@@ -298,6 +298,17 @@ button,
   right: -4px;
 }
 
+.trinket-line {
+  align-items: flex-start;
+}
+
+.trinket-line > span {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+}
+
 .supply-row {
   display: flex;
   align-items: center;

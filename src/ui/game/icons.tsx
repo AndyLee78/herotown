@@ -5,8 +5,8 @@ import type { ReactNode } from 'react'
 
 const ink = '#5c3b22'
 
-export type ResourceKind = 'gold' | 'wood' | 'stone' | 'iron' | 'bone' | 'herb' | 'fame'
-export type UiIconName = 'town' | 'inn' | 'roster' | 'party' | 'smith' | 'alchemy' | 'result' | 'settings'
+export type ResourceKind = 'gold' | 'wood' | 'stone' | 'iron' | 'bone' | 'herb' | 'crystal' | 'fame'
+export type UiIconName = 'town' | 'inn' | 'roster' | 'party' | 'smith' | 'alchemy' | 'magic' | 'result' | 'settings'
 
 export function ResourceIcon({ kind, size = 24 }: { kind: ResourceKind; size?: number }) {
   return (
@@ -24,8 +24,8 @@ export function UiIcon({ name, size = 24 }: { name: UiIconName; size?: number })
   )
 }
 
-export const RESOURCE_KINDS: ResourceKind[] = ['gold', 'wood', 'stone', 'iron', 'bone', 'herb', 'fame']
-export const UI_ICONS: UiIconName[] = ['town', 'inn', 'roster', 'party', 'smith', 'alchemy', 'result', 'settings']
+export const RESOURCE_KINDS: ResourceKind[] = ['gold', 'wood', 'stone', 'iron', 'bone', 'herb', 'crystal', 'fame']
+export const UI_ICONS: UiIconName[] = ['town', 'inn', 'roster', 'party', 'smith', 'alchemy', 'magic', 'result', 'settings']
 
 export function IconSheet() {
   return (
@@ -115,6 +115,13 @@ const SHAPES: Record<ResourceKind, ReactNode> = {
       <path d="M12.2 13.4c4.2-1.2 7-4 7-8-4.2.2-7 3-7 8Z" fill="#b6e68a" stroke={ink} strokeWidth="1.5" strokeLinejoin="round" />
     </>
   ),
+  crystal: (
+    <>
+      <path d="M12 2.8 17.6 9.2 12 21.2 6.4 9.2Z" fill="#b48cff" stroke={ink} strokeWidth="1.5" strokeLinejoin="round" />
+      <path d="M12 2.8 14.8 9.2 12 16.5Z" fill="#e6d4ff" />
+      <path d="M8.2 9.2h7.6" stroke="#fff" strokeWidth="1.2" strokeLinecap="round" />
+    </>
+  ),
   bone: (
     <g transform="rotate(-28 12 12)">
       <rect x="7" y="10" width="10" height="4" rx="1" fill="#f4efe4" stroke={ink} strokeWidth="1.5" />
@@ -147,6 +154,14 @@ const UI: Record<UiIconName, ReactNode> = {
       <path d="M9 3.2h6v3.2L18.5 16a4.6 4.6 0 0 1-4.3 6.2H9.8A4.6 4.6 0 0 1 5.5 16L9 6.4Z" fill="#d7f0ea" stroke={ink} strokeWidth="1.5" strokeLinejoin="round" />
       <path d="M8.2 13.5h7.6c.4 1.8.2 4.2-1.6 5.6-1.6 1.2-3.6 1-5.2-.2-1.4-1.1-1.4-3.2-.8-5.4Z" fill="#6fbf4a" />
       <rect x="9" y="2.2" width="6" height="2.2" rx="0.6" fill="#8a5a32" stroke={ink} strokeWidth="1.4" />
+    </>
+  ),
+  magic: (
+    <>
+      <path d="M12 2.5 16.8 8.8 12 21.5 7.2 8.8Z" fill="#b48cff" stroke={ink} strokeWidth="1.5" strokeLinejoin="round" />
+      <path d="M12 2.5 14.6 8.8 12 16Z" fill="#efe0ff" />
+      <circle cx="18.2" cy="5.2" r="1.4" fill="#ffe56a" stroke={ink} strokeWidth="1.2" />
+      <circle cx="5.5" cy="11" r="1.1" fill="#ffe56a" stroke={ink} strokeWidth="1.1" />
     </>
   ),
   inn: (

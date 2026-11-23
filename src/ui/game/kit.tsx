@@ -60,7 +60,7 @@ export function Res({ kind, amount, short = false, light = false }: { kind: Reso
   )
 }
 
-type Cost = { gold: number; wood?: number; stone?: number; iron?: number; bone?: number; herb?: number }
+type Cost = { gold: number; wood?: number; stone?: number; iron?: number; bone?: number; herb?: number; crystal?: number }
 
 // Lists the non-zero parts of a cost, marking the ones the player lacks.
 export function CostList({ cost, save }: { cost: Cost; save: GameState }) {
@@ -71,6 +71,7 @@ export function CostList({ cost, save }: { cost: Cost; save: GameState }) {
     ['iron', cost.iron ?? 0, save.materials.iron],
     ['bone', cost.bone ?? 0, save.materials.bone],
     ['herb', cost.herb ?? 0, save.materials.herb],
+    ['crystal', cost.crystal ?? 0, save.materials.crystal],
   ]
   return (
     <span className="cost">
@@ -90,7 +91,8 @@ export function affordable(cost: Cost, save: GameState): boolean {
     save.materials.stone >= (cost.stone ?? 0) &&
     save.materials.iron >= (cost.iron ?? 0) &&
     save.materials.bone >= (cost.bone ?? 0) &&
-    save.materials.herb >= (cost.herb ?? 0)
+    save.materials.herb >= (cost.herb ?? 0) &&
+    save.materials.crystal >= (cost.crystal ?? 0)
   )
 }
 

@@ -23,8 +23,10 @@ import {
   type GameState,
   type Grave,
   type Hero,
+  magicRules,
   retirementAdvised,
   retirementRules,
+  trinketOf,
   villageRules,
   type BuildingId,
 } from '../../core'
@@ -297,27 +299,77 @@ function HeroDetail({
       </ul>
 
       <h3 className="section-title">{t('ui.gear')}</h3>
-      {hero.gear.length === 0 ? <p className="muted">{t('hero.noGear')}</p> : null}
+      {hero.gear.filter((item) => item.slot !== 'trinket').length === 0 ? <p className="muted">{t('hero.noGear')}</p> : null}
       <ul className="plain">
-        {hero.gear.map((item) => (
-          <li key={item.id} className="line">
-            <span>{itemLabel(t, item, hero.classId)}</span>
-            {inRoster ? (
-              <button type="button" className="btn small" onClick={() => onAction({ type: 'unequip', heroId: hero.id, slot: item.slot, gearId: item.id })}>
-                {t('ui.unequip')}
-              </button>
-            ) : null}
-          </li>
-        ))}
+        {hero.gear
+          .filter((item) => item.slot !== 'trinket')
+          .map((item) => (
+            <li key={item.id} className="line">
+              <span>{itemLabel(t, item, hero.classId)}</span>
+              {inRoster ? (
+                <button type="button" className="btn small" onClick={() => onAction({ type: 'unequip', heroId: hero.id, slot: item.slot, gearId: item.id })}>
+                  {t('ui.unequip')}
+                </button>
+              ) : null}
+            </li>
+          ))}
         {inRoster
-          ? save.stash.map((item) => (
-          <li key={item.id} className="line">
-            <span className="muted">{itemLabel(t, item, hero.classId)}</span>
-            <button type="button" className="btn small" onClick={() => onAction({ type: 'equip', heroId: hero.id, gearId: item.id })}>
-              {t('ui.equip')}
-            </button>
-          </li>
-        ))
+          ? save.stash
+              .filter((item) => item.slot !== 'trinket')
+              .map((item) => (
+                <li key={item.id} className="line">
+                  <span className="muted">{itemLabel(t, item, hero.classId)}</span>
+                  <button type="button" className="btn small" onClick={() => onAction({ type: 'equip', heroId: hero.id, gearId: item.id })}>
+                    {t('ui.equip')}
+                  </button>
+                </li>
+              ))
+          : null}
+      </ul>
+
+      <h3 className="section-title">{t('label.trinkets')}</h3>
+      <ul className="plain">
+        {Array.from({ length: magicRules.trinketSlots }, (_, slot) => {
+          const item = hero.gear.filter((gear) => gear.slot === 'trinket')[slot]
+          if (!item) {
+            return (
+              <li key={`empty-${slot}`} className="line">
+                <span className="muted">{t('hero.trinketEmpty')}</span>
+              </li>
+            )
+          }
+          const id = trinketOf(item)
+          return (
+            <li key={item.id} className="line trinket-line">
+              <span>
+                <strong>{itemLabel(t, item, hero.classId)}</strong>
+                {id ? <span className="muted">{t(`trinket.hint.${id}`)}</span> : null}
+              </span>
+              {inRoster ? (
+                <button type="button" className="btn small" onClick={() => onAction({ type: 'unequip', heroId: hero.id, slot: 'trinket', gearId: item.id })}>
+                  {t('ui.unequip')}
+                </button>
+              ) : null}
+            </li>
+          )
+        })}
+        {inRoster
+          ? save.stash
+              .filter((item) => item.slot === 'trinket')
+              .map((item) => {
+                const id = trinketOf(item)
+                return (
+                  <li key={item.id} className="line trinket-line">
+                    <span>
+                      <span className="muted">{itemLabel(t, item, hero.classId)}</span>
+                      {id ? <span className="muted">{t(`trinket.hint.${id}`)}</span> : null}
+                    </span>
+                    <button type="button" className="btn small" onClick={() => onAction({ type: 'equip', heroId: hero.id, gearId: item.id })}>
+                      {t('ui.equip')}
+                    </button>
+                  </li>
+                )
+              })
           : null}
       </ul>
 

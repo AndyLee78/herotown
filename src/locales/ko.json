@@ -18,6 +18,7 @@
     "save": "저장",
     "smith": "대장간",
     "alchemy": "연금술 공방",
+    "magic": "마법 공방",
     "debug": "디버그",
     "settings": "설정",
     "battle": "전투"
@@ -53,6 +54,7 @@
     "autoParty": "현재 편성 고정",
     "craft": "제작",
     "brew": "만들기",
+    "enchant": "만들기",
     "enhance": "강화 (철 {{iron}} · 골드 {{gold}})",
     "equip": "{{name}} 장착",
     "unequip": "{{name}} 해제",
@@ -86,7 +88,8 @@
     "material": "재료",
     "autoDungeon": "자동 던전",
     "smith": "제작",
-    "stash": "창고"
+    "stash": "창고",
+    "trinkets": "장신구"
   },
   "hint": {
     "village": "마을에서 영웅을 누르면 선택됩니다.",
@@ -399,6 +402,7 @@
     "treating": "치료 중 {{time}}",
     "reviving": "되살리는 중 {{time}}",
     "noGear": "장비 없음",
+    "trinketEmpty": "빈 장신구 칸",
     "clears": "토벌 {{count}}",
     "fatigue": "피로 {{fatigue}}",
     "fatigueEffect": "피로 {{fatigue}} · 공격·속도 −{{percent}}%",
@@ -532,6 +536,16 @@
     "locked": "공방 레벨 {{level}}에 열린다.",
     "stock": "물약 창고"
   },
+  "magic": {
+    "open": "공방 열기",
+    "level": "공방 레벨 {{level}}",
+    "unbuilt": "공방이 아직 없다.",
+    "idle": "작업대가 비어 있다.",
+    "working": "{{name}} 만드는 중 · {{time}}",
+    "craft": "장신구",
+    "locked": "공방 레벨 {{level}}에 열린다.",
+    "stashHint": "창고에 장신구 {{count}}개"
+  },
   "smith": {
     "level": "대장간 레벨 {{level}}",
     "idle": "작업대가 비어 있다.",
@@ -605,6 +619,15 @@
     "carry": "이번 출정 {{count}}/{{max}}",
     "inStock": "창고 {{count}}",
     "usedPotion": "{{potion}} {{count}}개 사용",
+    "trapReady": "함정: {{status}}",
+    "trapRogue": "도적 있음",
+    "trapSense": "함정 감지 있음",
+    "trapNone": "없음",
+    "ambushReady": "기습: {{status}}",
+    "ambushAlert": "경계 있음",
+    "ambushNone": "없음",
+    "trapsDisarmed": "함정 해제 {{count}}",
+    "trapsSprung": "함정 발동 {{count}}",
     "warn": {
       "noTank": "탱커가 없으면 후열이 무너지기 쉬워요",
       "noHealer": "치유사가 없으면 피해를 버티기 어려워요",
