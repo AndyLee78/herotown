@@ -120,7 +120,7 @@ export function dungeonPreviewUrl(dungeonId: string, tier: number, bossId: strin
     question(land)
   }
   const built = land.build({ castShadow: false, receiveShadow: false })
-  const water = mood.water ? waterSheet(locked) : null
+  const water = mood.water ? waterSheet(locked, typeof mood.water === 'string' ? mood.water : '#3d8ec8') : null
   const boss = buildEnemy(bossId)
   if (isRig(boss)) {
     idlePose(boss, 0, 0)
@@ -172,7 +172,7 @@ type Entrance = {
   sunX: number
   ridge: string
   ground: [string, string]
-  water?: boolean
+  water?: boolean | string
   draw: (land: Builder, locked: boolean) => void
 }
 
@@ -255,6 +255,20 @@ const ENTRANCE: Record<string, Entrance> = {
     ground: ['#3d5a52', '#314a44'],
     water: true,
     draw: sunkenCrypt,
+  },
+  venom_marsh: {
+    skyTop: '#6d7a58',
+    skyBottom: '#241c32',
+    hemiSky: '#b7c4a0',
+    hemiGround: '#3a4030',
+    sun: '#d5d8b0',
+    sunLevel: 0.65,
+    hemiLevel: 0.8,
+    sunX: -1,
+    ridge: '#3c4434',
+    ground: ['#4a5540', '#3c4a34'],
+    water: '#3a5c42',
+    draw: venomMarsh,
   },
 }
 
@@ -342,6 +356,30 @@ function sunkenCrypt(land: Builder, locked: boolean) {
   land.box(0.5, 0.18, 0.35, tone('#4a5c60', locked), -2.5, 0.16, 1.9)
 }
 
+function venomMarsh(land: Builder, locked: boolean) {
+  deadTree(land, locked, -2.7, -0.8, 1.7)
+  deadTree(land, locked, 2.6, -0.5, 2.05)
+  deadTree(land, locked, -3.2, 1.1, 1.25)
+  arch(land, locked, 0, -1.3, '#4a5644', '#10140e', '#5a6850')
+  land.box(1.3, 0.08, 0.9, tone('#2a4030', locked), -1.5, 0.14, 1.15)
+  land.box(0.9, 0.08, 0.7, tone('#243828', locked), 1.7, 0.14, 0.4)
+  land.box(0.55, 0.08, 0.45, tone('#314838', locked), 0.4, 0.16, 1.7)
+  for (const [x, z] of [[-1.7, 0.6], [-1.2, 1.5], [1.5, 1.2], [2.1, 0.2]] as const) {
+    land.box(0.06, 0.45, 0.06, tone('#6a7a48', locked), x, 0.3, z)
+    land.box(0.14, 0.1, 0.08, tone('#7a8a50', locked), x, 0.52, z)
+  }
+  for (const [x, y, z] of [[-0.8, 1.3, 0.2], [1.1, 1.7, -0.2], [0.2, 1.05, 0.8], [-1.8, 1.6, -0.6]] as const) {
+    land.box(0.55, 0.28, 0.4, tone('#d5e0c4', locked), x, y, z)
+  }
+}
+
+function deadTree(land: Builder, locked: boolean, x: number, z: number, height: number) {
+  land.box(0.22, height, 0.22, tone('#5a4636', locked), x, height / 2, z)
+  land.box(0.55, 0.1, 0.1, tone('#4a3a2e', locked), x + 0.2, height * 0.72, z, { rz: 0.7 })
+  land.box(0.4, 0.08, 0.08, tone('#3e3228', locked), x - 0.15, height * 0.55, z, { rz: -0.8 })
+  land.box(0.18, 0.12, 0.12, tone('#4a6a38', locked), x, height * 0.4, z + 0.1)
+}
+
 function ridge(land: Builder, locked: boolean, color: string) {
   const peaks: Array<[number, number, number]> = [
     [-3.6, 1.5, 2.1],
@@ -405,8 +443,8 @@ function question(land: Builder) {
   }
 }
 
-function waterSheet(locked: boolean): THREE.Mesh {
-  const color = new THREE.Color('#3d8ec8')
+function waterSheet(locked: boolean, hex: string): THREE.Mesh {
+  const color = new THREE.Color(hex)
   if (locked) {
     color.multiplyScalar(0.3)
   }

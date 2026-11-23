@@ -6,7 +6,7 @@ import { Builder } from './kit'
 // monsters reuse the hero body; animals and spirits have their own shapes.
 
 export type Creature = {
-  kind: 'beast' | 'flyer' | 'blob' | 'spider' | 'ghost'
+  kind: 'beast' | 'flyer' | 'blob' | 'spider' | 'ghost' | 'golem' | 'wisp'
   group: THREE.Group
   body: THREE.Group
   legs: THREE.Group[]
@@ -118,6 +118,16 @@ export function buildEnemy(refId: string): Actor {
       return spider()
     case 'wraith':
       return wraith()
+    case 'venom_toad':
+      return venomToad()
+    case 'bog_leech':
+      return bogLeech()
+    case 'moss_golem':
+      return mossGolem()
+    case 'wisp':
+      return wisp()
+    case 'bog_queen':
+      return bogQueen()
     default:
       return blob('#c96b6b', '#d98f8f', 1)
   }
@@ -260,6 +270,108 @@ function spider(): Creature {
   return c
 }
 
+function venomToad(): Creature {
+  const c = creature('blob', 0.7)
+  c.body.add(
+    new Builder()
+      .box(0.86, 0.4, 0.7, '#4e6234', 0, 0.22, 0)
+      .box(0.7, 0.08, 0.56, '#6a4a78', 0, 0.04, 0.04)
+      .box(0.18, 0.16, 0.16, '#3f5228', -0.24, 0.46, 0.2)
+      .box(0.18, 0.16, 0.16, '#3f5228', 0.24, 0.46, 0.2)
+      .box(0.09, 0.09, 0.02, '#d2e06a', -0.24, 0.48, 0.29, { glow: true })
+      .box(0.09, 0.09, 0.02, '#d2e06a', 0.24, 0.48, 0.29, { glow: true })
+      .box(0.1, 0.08, 0.08, '#7a4a9a', -0.18, 0.4, -0.16)
+      .box(0.12, 0.1, 0.1, '#6b3d82', 0.2, 0.34, 0.05)
+      .box(0.08, 0.08, 0.08, '#5a6a32', 0.02, 0.42, -0.22)
+      .box(0.5, 0.03, 0.02, '#2a3818', 0, 0.22, 0.36)
+      .box(0.18, 0.1, 0.28, '#3d4e28', -0.42, 0.08, 0.22)
+      .box(0.18, 0.1, 0.28, '#3d4e28', 0.42, 0.08, 0.22)
+      .build(),
+  )
+  return c
+}
+
+function bogLeech(): Creature {
+  const c = creature('blob', 0.42)
+  const body = new Builder()
+  const segments: Array<[number, number, string]> = [
+    [0.34, 0.34, '#5a3d55'],
+    [0.3, 0.22, '#6a4458'],
+    [0.26, 0.1, '#4e3848'],
+    [0.22, -0.02, '#6e4a3a'],
+    [0.18, -0.16, '#5a4038'],
+  ]
+  for (const [width, z, color] of segments) {
+    body.box(width, width * 0.7, 0.16, color, 0, 0.16, z)
+  }
+  body
+    .box(0.16, 0.12, 0.12, '#3a2834', 0, 0.16, 0.48)
+    .box(0.08, 0.04, 0.02, '#e07a8a', 0, 0.16, 0.55, { glow: true })
+    .box(0.04, 0.1, 0.04, '#2a1c22', -0.08, 0.22, 0.2)
+    .box(0.04, 0.1, 0.04, '#2a1c22', 0.08, 0.22, 0.05)
+  c.body.add(body.build())
+  return c
+}
+
+function mossGolem(): Creature {
+  const c = creature('golem', 1.7)
+  c.body.add(
+    new Builder()
+      .box(0.85, 0.7, 0.55, '#6d7564', 0, 0.7, 0)
+      .box(0.55, 0.18, 0.4, '#4f8a3c', 0, 1.08, 0.04)
+      .box(0.5, 0.48, 0.48, '#7a8270', 0, 1.28, 0)
+      .box(0.22, 0.16, 0.16, '#3d7a34', -0.12, 1.42, 0.16)
+      .box(0.16, 0.12, 0.12, '#3d7a34', 0.16, 1.2, 0.18)
+      .box(0.1, 0.08, 0.02, '#d6e07a', -0.12, 1.32, 0.25, { glow: true })
+      .box(0.1, 0.08, 0.02, '#d6e07a', 0.12, 1.32, 0.25, { glow: true })
+      .box(0.28, 0.55, 0.28, '#5e6758', -0.55, 0.72, 0)
+      .box(0.28, 0.55, 0.28, '#5e6758', 0.55, 0.72, 0)
+      .box(0.32, 0.4, 0.32, '#656d5c', -0.22, 0.28, 0.06)
+      .box(0.32, 0.4, 0.32, '#656d5c', 0.22, 0.28, 0.06)
+      .box(0.4, 0.12, 0.3, '#2f6a32', 0.1, 0.55, 0.22)
+      .build(),
+  )
+  return c
+}
+
+function wisp(): Creature {
+  const c = creature('wisp', 0.7, 0.85)
+  c.body.add(
+    new Builder()
+      .box(0.28, 0.28, 0.28, '#e7f6a4', 0, 0, 0, { glow: true })
+      .box(0.16, 0.16, 0.16, '#fff8c8', 0, 0.02, 0.04, { glow: true })
+      .box(0.1, 0.16, 0.1, '#b48cff', -0.16, 0.1, 0, { glow: true })
+      .box(0.1, 0.14, 0.1, '#9fd48a', 0.16, -0.06, 0.02, { glow: true })
+      .box(0.08, 0.1, 0.08, '#d7c4ff', 0.04, 0.2, -0.06, { glow: true })
+      .build(),
+  )
+  c.body.position.y = c.hover
+  return c
+}
+
+function bogQueen(): Creature {
+  const c = creature('blob', 1.7)
+  c.body.add(
+    new Builder()
+      .box(1.15, 0.55, 0.95, '#3f5a30', 0, 0.32, 0)
+      .box(0.9, 0.1, 0.72, '#6a3f78', 0, 0.06, 0.06)
+      .box(0.26, 0.22, 0.22, '#314824', -0.32, 0.68, 0.28)
+      .box(0.26, 0.22, 0.22, '#314824', 0.32, 0.68, 0.28)
+      .box(0.12, 0.12, 0.02, '#f0e06a', -0.32, 0.72, 0.4, { glow: true })
+      .box(0.12, 0.12, 0.02, '#f0e06a', 0.32, 0.72, 0.4, { glow: true })
+      .box(0.7, 0.04, 0.02, '#24180e', 0, 0.32, 0.48)
+      .box(0.08, 0.28, 0.08, '#2f6a32', -0.22, 0.95, 0.05, { rz: 0.4 })
+      .box(0.08, 0.32, 0.08, '#3d7a38', 0, 1.05, 0, { rz: -0.15 })
+      .box(0.08, 0.26, 0.08, '#2a5a2c', 0.24, 0.92, 0.02, { rz: -0.45 })
+      .box(0.12, 0.12, 0.12, '#c9a6ff', 0.02, 1.18, 0.04, { glow: true })
+      .box(0.22, 0.12, 0.28, '#345028', -0.58, 0.1, 0.3)
+      .box(0.22, 0.12, 0.28, '#345028', 0.58, 0.1, 0.3)
+      .build(),
+  )
+  c.group.scale.setScalar(1.35)
+  return c
+}
+
 function wraith(): Creature {
   const c = creature('ghost', 1.25, 0.2)
   c.body.add(
@@ -298,6 +410,12 @@ export function idleActor(actor: Actor, time: number, phase: number) {
     }
   } else if (actor.kind === 'ghost') {
     actor.body.position.y = actor.hover + Math.sin(time * 2 + phase) * 0.06
+  } else if (actor.kind === 'wisp') {
+    actor.body.position.y = actor.hover + Math.sin(time * 3 + phase) * 0.12
+    const pulse = 1 + Math.sin(time * 6 + phase) * 0.08
+    actor.body.scale.setScalar(pulse)
+  } else if (actor.kind === 'golem') {
+    actor.body.rotation.z = wave * 0.03
   } else if (actor.kind === 'spider') {
     actor.body.position.y = Math.abs(wave) * 0.02
   } else {
