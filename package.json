@@ -7,7 +7,8 @@
     "dev": "vite",
     "build": "tsc --noEmit && vite build",
     "test": "vitest run",
-    "simulate": "npx vite-node tools/print-balance.ts"
+    "simulate": "npx vite-node tools/print-balance.ts",
+    "sync:rules": "node tools/sync-rules.mjs"
   },
   "dependencies": {
     "i18next": "^27.2.2",
