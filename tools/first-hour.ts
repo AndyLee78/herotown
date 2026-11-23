@@ -1,6 +1,6 @@
 // Plays the first hours like a simple player would, to catch dead ends in
 // the early flow. Run: npx tsx tools/first-hour.ts [minutes] [seed,seed,...] [--fountain=off|ready|5min|compare]
-import { dungeons, potionById, progression, villageRules } from '../src/core/data'
+import { classById, dungeons, potionById, progression, villageRules } from '../src/core/data'
 import { fountainWishes } from '../src/core/fountain'
 import { busyHeroIds, dungeonUnlocked, freshState, presetById, reduce, townLevel, type BuildingId, type GameState } from '../src/core/game'
 import { guideStatus } from '../src/core/guide'
@@ -47,6 +47,7 @@ function averageLevel(heroes: Hero[]): number | undefined {
 const difficultyOrder = [...dungeons].sort((a, b) => a.recommendedLevel - b.recommendedLevel || a.tier - b.tier)
 const difficulty = new Map(difficultyOrder.map((dungeon, index) => [dungeon.id, index]))
 const marshId = 'venom_marsh'
+const citadelId = 'haunted_citadel'
 const marshSupplies = { antidote: 4, heal: 2 } as const
 const workshop = villageRules.buildings.find(({ id }) => id === 'alchemy')!
 const workshopCost = workshop.levels.find(({ level }) => level === 1)!
@@ -185,6 +186,11 @@ function simulate(minutes: number, seed: number, fountain: FountainMode, keepFou
         }
       }
       if (dungeon) {
+        const preset = presetById(state, state.presetId)
+        if (dungeon === citadelId && preset) {
+          const blast = selected.some(({ classId }) => classById(classId).interrupt) ? 'interrupt' : 'brace'
+          if (preset.tactics.blast !== blast) state = reduce(state, { type: 'tactics', presetId: preset.id, tactics: { ...preset.tactics, blast } })
+        }
         for (const [potionId, count] of Object.entries(marshSupplies) as [keyof typeof marshSupplies, number][]) {
           const wanted = dungeon === marshId ? count : 0
           if ((presetById(state, state.presetId)?.supplies?.[potionId] ?? 0) !== wanted) {
@@ -293,7 +299,7 @@ function incomeSummary(mode: string, at: number, results: Simulation[]) {
   }
 }
 
-const order = ['hill_cave', 'moss_path', 'abandoned_mine', 'deep_shaft', 'barrow', 'sunken_crypt', marshId, 'bandit_fort']
+const order = ['hill_cave', 'moss_path', 'abandoned_mine', 'deep_shaft', 'barrow', 'sunken_crypt', marshId, 'bandit_fort', citadelId]
 function firstClearSummary(results: Simulation[], at: number) {
   return Object.fromEntries(order.map((id) => {
     const times = results.flatMap((result) => {

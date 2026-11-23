@@ -4,7 +4,7 @@ import { DEFAULT_TACTICS, runDungeon } from '../src/core/dungeon'
 import { freshState, presetById, reduce } from '../src/core/game'
 import { createHero, generateHero } from '../src/core/hero'
 import { createRng } from '../src/core/rng'
-import type { ClassId, Hero, PartyMember, Row, Supplies, TrinketId } from '../src/core/types'
+import type { ClassId, Hero, PartyMember, Row, Supplies, Tactics, TrinketId } from '../src/core/types'
 
 const LINEUP: [ClassId, Row][] = [
   ['warrior', 'front'],
@@ -17,8 +17,26 @@ const LINEUP: [ClassId, Row][] = [
 export const DEFAULT_PARTY_SAMPLES = 40
 export const BATTLES_PER_PARTY = 10
 export const MARSH_ID = 'venom_marsh'
-type Loadout = { supplies: Supplies; withoutHealer?: boolean; prepare?: (party: PartyMember[]) => PartyMember[] }
+type Loadout = { supplies: Supplies; withoutHealer?: boolean; prepare?: (party: PartyMember[]) => PartyMember[]; blast?: Tactics['blast'] }
 export const FORT_ID = 'bandit_fort'
+export const CITADEL_ID = 'haunted_citadel'
+
+export const citadelLoadouts = Object.fromEntries([0, 1, 2].flatMap((extra) =>
+  (['interrupt', 'brace'] as const).map((blast): [string, Loadout] => [`extra${extra}-${blast}`, {
+    supplies: {},
+    blast,
+    prepare(party) {
+      // Pair the same stat/trait samples, keeping a tank, a healer and three damage dealers.
+      const warrior = party.find(({ hero }) => hero.classId === 'warrior')!
+      const cleric = party.find(({ hero }) => hero.classId === 'cleric')!
+      const damage = party.filter((member) => member !== warrior && member !== cleric)
+      return [warrior, cleric, ...damage.map((member, index) => {
+        const classId = index < extra ? (index === 0 ? 'rogue' : 'archer') : 'mage'
+        return { hero: createHero({ ...member.hero, classId }), row: index === 0 ? 'front' as const : 'back' as const }
+      })]
+    },
+  }]),
+))
 
 function wear(member: PartyMember, ids: readonly TrinketId[]): PartyMember {
   const gear = ids.map((id) => ({ id: `${member.hero.id}-${id}`, recipeId: `trinket.${id}`, slot: 'trinket' as const, grade: 'common' as const, enhance: 0 }))
@@ -114,13 +132,22 @@ export function winRate(dungeonId: string, level: number, samples: number): numb
 
 export function starterWinRates(parties: PartyMember[][], dungeonId: string, level: number, loadout?: Loadout, battles = BATTLES_PER_PARTY) {
   const defeats: Record<string, number> = {}
+  let charges = 0
+  let interrupts = 0
+  const tactics = loadout?.blast ? { ...DEFAULT_TACTICS, blast: loadout.blast } : DEFAULT_TACTICS
   const outcomes = parties.map((party, index) => {
     const prepared = loadout?.prepare?.(party) ?? party
     const lineup = loadout?.withoutHealer ? prepared.filter(({ hero }) => classById(hero.classId).role !== 'healer') : prepared
     const leveled = partyAtLevel(lineup, level)
     let wins = 0
     for (let seed = 1; seed <= battles; seed += 1) {
-      const result = runDungeon(leveled, dungeonId, DEFAULT_TACTICS, seed, loadout?.supplies)
+      const result = runDungeon(leveled, dungeonId, tactics, seed, loadout?.supplies)
+      if (result.ok && loadout?.blast) {
+        for (const { key } of result.report.log) {
+          if (key === 'log.charge') charges += 1
+          if (key === 'log.interrupt') interrupts += 1
+        }
+      }
       if (result.ok && result.report.victory) wins += 1
       else {
         const reason = result.ok ? result.report.defeatReason ?? 'unknown' : result.error
@@ -136,5 +163,7 @@ export function starterWinRates(parties: PartyMember[][], dungeonId: string, lev
     lowerQuartile: outcomes[Math.ceil(outcomes.length / 4) - 1]!.rate,
     weakest: outcomes[0]!,
     defeats,
+    charges,
+    interrupts,
   }
 }

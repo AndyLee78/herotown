@@ -2,24 +2,26 @@
 // Reproduce the design sample size: npx tsx tools/print-curve.ts --marsh 24 14 --battles=6
 import { alchemyRules, dungeonById, dungeons, potionById, villageRules } from '../src/core/data'
 import type { PotionId } from '../src/core/types'
-import { BATTLES_PER_PARTY, DEFAULT_PARTY_SAMPLES, FORT_ID, MARSH_ID, fortLoadouts, marshLoadouts, starterParties, starterWinRates, wardLoadout, winRate } from './curve'
+import { BATTLES_PER_PARTY, CITADEL_ID, DEFAULT_PARTY_SAMPLES, FORT_ID, MARSH_ID, citadelLoadouts, fortLoadouts, marshLoadouts, starterParties, starterWinRates, wardLoadout, winRate } from './curve'
 
 const args = process.argv.slice(2)
 const fixed = args.includes('--fixed')
 const marsh = args.includes('--marsh')
 const fort = args.includes('--fort')
 const wards = args.includes('--wards')
+const citadel = args.includes('--citadel')
 const battles = Number(args.find((arg) => arg.startsWith('--battles='))?.slice(10) ?? BATTLES_PER_PARTY)
 const [sampleArg, maxLevelArg] = args.filter((arg) => !arg.startsWith('--'))
 const samples = Number(sampleArg ?? DEFAULT_PARTY_SAMPLES)
-const maxLevel = Number(maxLevelArg ?? (fort ? 17 : marsh ? 14 : 12))
-if ([fixed, marsh, fort, wards].filter(Boolean).length > 1 || !Number.isSafeInteger(samples) || samples < 1 || !Number.isSafeInteger(maxLevel) || maxLevel < (fort ? 12 : marsh ? 8 : 1) || !Number.isSafeInteger(battles) || battles < 1) {
-  throw new Error('Usage: npx tsx tools/print-curve.ts [positive samples] [maxLevel] [--fixed|--marsh|--fort|--wards] [--battles=N]')
+const minLevel = citadel ? 14 : fort ? 12 : marsh ? 8 : 1
+const maxLevel = Number(maxLevelArg ?? (citadel ? 18 : fort ? 17 : marsh ? 14 : 12))
+if ([fixed, marsh, fort, wards, citadel].filter(Boolean).length > 1 || !Number.isSafeInteger(samples) || samples < 1 || !Number.isSafeInteger(maxLevel) || maxLevel < minLevel || !Number.isSafeInteger(battles) || battles < 1) {
+  throw new Error('Usage: npx tsx tools/print-curve.ts [positive samples] [maxLevel] [--fixed|--marsh|--fort|--wards|--citadel] [--battles=N]')
 }
 const percent = (rate: number) => `${Math.round(rate * 100)}%`
 const parties = fixed ? [] : starterParties(samples)
-if (fort || wards) {
-  const scenarios = fort ? fortLoadouts : {
+if (fort || wards || citadel) {
+  const scenarios = citadel ? citadelLoadouts : fort ? fortLoadouts : {
     none: marshLoadouts.none,
     ward1: wardLoadout(1),
     ward2: wardLoadout(2),
@@ -28,11 +30,15 @@ if (fort || wards) {
     antidote3: { supplies: { antidote: 3 } },
     antidote4: marshLoadouts.antidote4,
   }
-  const levels = fort ? Array.from({ length: maxLevel - 11 }, (_, index) => index + 12) : [10, 11, 12]
-  console.log(`${fort ? 'Bandit Fortress' : 'Venom Marsh wards'} · median/P25 · ${samples} starter parties × ${battles} battles per row`)
+  const levels = wards ? [10, 11, 12] : Array.from({ length: maxLevel - minLevel + 1 }, (_, index) => index + minLevel)
+  const dungeon = citadel ? CITADEL_ID : fort ? FORT_ID : MARSH_ID
+  console.log(`${dungeon} · median/P25 · ${samples} starter parties × ${battles} battles per row`)
+  if (citadel) console.log('extra counts rogue/archer in addition to the warrior; interrupts counted per logged charge.')
   console.table(Object.entries(scenarios).flatMap(([loadout, kit]) => levels.map((level) => {
-    const result = starterWinRates(parties, fort ? FORT_ID : MARSH_ID, level, kit, battles)
-    return { loadout, level, 'median/P25': `${percent(result.median)}/${percent(result.lowerQuartile)}`, defeats: Object.entries(result.defeats).sort(([a], [b]) => a.localeCompare(b)).map(([reason, count]) => `${reason}:${count}`).join(' ') || '—' }
+    const result = starterWinRates(parties, dungeon, level, kit, battles)
+    return { loadout, level, 'median/P25': `${percent(result.median)}/${percent(result.lowerQuartile)}`,
+      ...(citadel ? { interrupted: `${result.interrupts}/${result.charges} (${result.charges ? percent(result.interrupts / result.charges) : '—'})` } : {}),
+      defeats: Object.entries(result.defeats).sort(([a], [b]) => a.localeCompare(b)).map(([reason, count]) => `${reason}:${count}`).join(' ') || '—' }
   })))
 } else if (marsh) {
   const repeatGold = Math.floor(dungeonById(MARSH_ID).gold * villageRules.repeatReward)
