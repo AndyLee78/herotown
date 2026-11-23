@@ -72,7 +72,7 @@ Claude Code, Cursor, GPT(Codex)가 함께 쓰는 작업 목록이다. 작업 하
 | 30 | 세대 시뮬레이터 60년 | GPT | `tools/generations.ts` | 완료 (이 커밋) |
 | 31 | 행운의 분수 3D | Cursor | `src/ui/voxel/VillageScene.ts`, `world.ts`, `src/ui/VillageView.tsx` | 완료 (e7427eb) |
 | 32 | 행운의 분수 화면·소리 | Cursor | `App.tsx`, `villageScreens.tsx`, `heroScreens.tsx`, `sound.ts`, `styles.css`, `src/locales/*` | 완료 (6c7e357) |
-| 33 | 분수 core 코드 리뷰 (5322f86) | GPT | `Docs/reviews/5322f86.md` (새 파일만) | 대기 (지금 시작 가능) |
+| 33 | 분수 core 코드 리뷰 (5322f86) | GPT | `Docs/reviews/5322f86.md` (새 파일만) | 완료 (이 커밋) |
 | 34 | 분수가 초반 골드에 주는 몫 측정 | GPT | `tools/first-hour.ts` | 대기 (지금 시작 가능) |
 
 ---
@@ -926,6 +926,8 @@ Docs/fountain.md를 읽고 분수의 화면 요소를 만든다. src/ui/App.tsx,
 ```
 
 메모:
+- 증축 전 시간에 새 충전 규칙이 소급되는 경우와, 시계가 뒤로 갔다 돌아올 때 같은 시간으로 소원이 다시 차는 경우를 재현했다.
+- 충전 상한·진행 보존, 시드와 nonce, 은퇴자 보너스, 길잡이 단계 이동과 세이브 10 변환을 확인했다. 재현 및 수정 제안은 Docs/reviews/5322f86.md에 정리했다.
 
 ---
 
