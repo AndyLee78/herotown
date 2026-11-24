@@ -156,6 +156,15 @@ const HUMANOIDS: Record<string, Omit<BodySpec, 'head' | 'stoop' | 'style' | 'bea
     shoe: '#1a1620',
     scale: 1.55,
   },
+  kobold_mystic: {
+    outfit: { body: '#6a8a3a', trim: '#d9b54a', pants: '#4a6a2e', weapon: 'staff', robe: true, hat: 'wizard' },
+    skin: '#8ab84a',
+    eye: '#ff8a3d',
+    eyeGlow: true,
+    hair: '#3a5020',
+    style: 'spiky',
+    scale: 0.78,
+  },
 }
 
 export function buildEnemy(refId: string): Actor {
@@ -202,6 +211,12 @@ export function buildEnemy(refId: string): Actor {
       return bogQueen()
     case 'specter':
       return specter()
+    case 'drake':
+      return drake()
+    case 'wyvern':
+      return wyvern()
+    case 'elder_dragon':
+      return elderDragon()
     default:
       return blob('#c96b6b', '#d98f8f', 1)
   }
@@ -511,6 +526,111 @@ function specter(): Creature {
       .build(),
   )
   c.body.position.y = c.hover
+  return c
+}
+
+function drake(): Creature {
+  const c = creature('beast', 1.05)
+  c.body.add(
+    new Builder()
+      .box(0.55, 0.38, 0.85, '#c45a2e', 0, 0.42, 0)
+      .box(0.42, 0.12, 0.65, '#e08a40', 0, 0.22, 0.05)
+      .box(0.18, 0.16, 0.4, '#a84828', 0, 0.48, -0.55, { rx: 0.4 })
+      .box(0.08, 0.08, 0.08, '#ffcf5a', 0, 0.58, -0.72, { glow: true })
+      .box(0.42, 0.36, 0.42, '#d46834', 0, 0.58, 0.55)
+      .box(0.28, 0.18, 0.28, '#e08a40', 0, 0.48, 0.78)
+      .box(0.07, 0.07, 0.02, '#ffe27a', -0.1, 0.64, 0.76, { glow: true })
+      .box(0.07, 0.07, 0.02, '#ffe27a', 0.1, 0.64, 0.76, { glow: true })
+      .box(0.06, 0.16, 0.06, '#8a3a20', -0.12, 0.8, 0.48, { rz: 0.3 })
+      .box(0.06, 0.16, 0.06, '#8a3a20', 0.12, 0.8, 0.48, { rz: -0.3 })
+      .box(0.04, 0.1, 0.04, '#f2efe6', -0.1, 0.42, 0.92, { rx: -0.5 })
+      .box(0.04, 0.1, 0.04, '#f2efe6', 0.1, 0.42, 0.92, { rx: -0.5 })
+      .build(),
+  )
+  for (const [x, z] of [[-0.18, 0.28], [0.18, 0.28], [-0.18, -0.28], [0.18, -0.28]] as const) {
+    const leg = new THREE.Group()
+    leg.position.set(x, 0.28, z)
+    leg.add(new Builder().box(0.14, 0.28, 0.14, '#a84828', 0, -0.14, 0).box(0.15, 0.06, 0.18, '#e08a40', 0, -0.26, 0.02).build({ castShadow: false }))
+    c.body.add(leg)
+    c.legs.push(leg)
+  }
+  return c
+}
+
+function wyvern(): Creature {
+  const c = creature('flyer', 1.35, 0.9)
+  c.body.add(
+    new Builder()
+      .box(0.38, 0.32, 0.7, '#c0392b', 0, 0.1, 0)
+      .box(0.28, 0.1, 0.5, '#e0673a', 0, -0.05, 0.05)
+      .box(0.12, 0.12, 0.35, '#a82e22', 0, 0.15, -0.45, { rx: 0.35 })
+      .box(0.34, 0.3, 0.34, '#d44a32', 0, 0.28, 0.42)
+      .box(0.2, 0.14, 0.22, '#e0673a', 0, 0.2, 0.62)
+      .box(0.06, 0.06, 0.02, '#ffe27a', -0.08, 0.34, 0.58, { glow: true })
+      .box(0.06, 0.06, 0.02, '#ffe27a', 0.08, 0.34, 0.58, { glow: true })
+      .box(0.05, 0.14, 0.05, '#8a2818', -0.1, 0.48, 0.36, { rz: 0.35 })
+      .box(0.05, 0.14, 0.05, '#8a2818', 0.1, 0.48, 0.36, { rz: -0.35 })
+      .build(),
+  )
+  for (const side of [-1, 1]) {
+    const wing = new THREE.Group()
+    wing.position.set(side * 0.18, 0.12, 0)
+    wing.add(
+      new Builder()
+        .box(0.55, 0.04, 0.35, '#a82e22', side * 0.28, 0, 0)
+        .box(0.28, 0.04, 0.22, '#c0392b', side * 0.58, 0.02, -0.05)
+        .box(0.08, 0.04, 0.4, '#ff8a3d', side * 0.2, 0.02, 0.05, { glow: true })
+        .build({ castShadow: false }),
+    )
+    c.body.add(wing)
+    c.wings.push(wing)
+  }
+  c.body.position.y = c.hover
+  return c
+}
+
+function elderDragon(): Creature {
+  const c = creature('beast', 2.4)
+  c.body.add(
+    new Builder()
+      .box(0.9, 0.7, 1.4, '#a82818', 0, 0.85, 0)
+      .box(0.7, 0.2, 1.1, '#d44828', 0, 0.48, 0.05)
+      .box(0.28, 0.28, 0.7, '#8a1e12', 0, 0.95, -0.85, { rx: 0.35 })
+      .box(0.14, 0.14, 0.14, '#ffcf5a', 0, 1.1, -1.15, { glow: true })
+      .box(0.7, 0.6, 0.7, '#c0392b', 0, 1.15, 0.85)
+      .box(0.45, 0.32, 0.5, '#e05830', 0, 0.95, 1.25)
+      .box(0.12, 0.12, 0.03, '#ffe27a', -0.18, 1.28, 1.18, { glow: true })
+      .box(0.12, 0.12, 0.03, '#ffe27a', 0.18, 1.28, 1.18, { glow: true })
+      .box(0.12, 0.4, 0.12, '#5a1810', -0.22, 1.55, 0.7, { rz: 0.35 })
+      .box(0.12, 0.4, 0.12, '#5a1810', 0.22, 1.55, 0.7, { rz: -0.35 })
+      .box(0.1, 0.18, 0.1, '#d9b54a', -0.28, 1.78, 0.62, { rz: 0.45 })
+      .box(0.1, 0.18, 0.1, '#d9b54a', 0.28, 1.78, 0.62, { rz: -0.45 })
+      .box(0.08, 0.2, 0.08, '#f2efe6', -0.16, 0.85, 1.48, { rx: -0.45 })
+      .box(0.08, 0.2, 0.08, '#f2efe6', 0.16, 0.85, 1.48, { rx: -0.45 })
+      .box(0.55, 0.08, 0.9, '#ff8a3d', 0, 1.25, 0.1, { glow: true })
+      .build(),
+  )
+  for (const [x, z] of [[-0.32, 0.4], [0.32, 0.4], [-0.32, -0.4], [0.32, -0.4]] as const) {
+    const leg = new THREE.Group()
+    leg.position.set(x, 0.5, z)
+    leg.add(new Builder().box(0.22, 0.5, 0.22, '#8a1e12', 0, -0.25, 0).box(0.24, 0.1, 0.28, '#c0392b', 0, -0.48, 0.04).build({ castShadow: false }))
+    c.body.add(leg)
+    c.legs.push(leg)
+  }
+  for (const side of [-1, 1]) {
+    const wing = new THREE.Group()
+    wing.position.set(side * 0.45, 1.1, -0.1)
+    wing.add(
+      new Builder()
+        .box(0.7, 0.06, 0.5, '#8a1e12', side * 0.35, 0, 0)
+        .box(0.4, 0.06, 0.35, '#a82818', side * 0.75, 0.04, -0.08)
+        .build({ castShadow: false }),
+    )
+    c.body.add(wing)
+    c.wings.push(wing)
+  }
+  c.group.scale.setScalar(1.35)
+  c.height *= 1.35
   return c
 }
 
