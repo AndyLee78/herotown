@@ -1702,3 +1702,73 @@ core에 이미 있는 것('../../core'에서 export):
 
 - [리뷰](reviews/62e7837.md)에 진로 변경 졸업의 장비 소실, 집중 과목 사이 소수점 이전, 겨울 경계의 졸업·수업 순서를 기록했다.
 - 수업료 부족 시 지불 순서, 잠재력 상한, 은퇴자 할인의 반올림과 v18 세이브 이관을 확인했다.
+
+---
+
+## 72. 집 화면: 방으로 묶어 보기 (GPT, Cursor 대신)
+
+**지금 시작할 수 있다.** 설계: `Docs/house.md`. 끝나면 Claude Code가 화면을 직접 확인한다.
+
+**전달할 내용**
+
+```
+Docs/house.md의 "집: 방으로 묶어 보기"를 화면으로 만든다. src/ui/App.tsx, src/ui/game/*.tsx, src/ui/styles.css, src/locales/*만 고친다. core는 고치지 않는다. 기존 창 구조와 kit.tsx 공용 조각(Chip, Bar, Portrait 등)을 그대로 쓴다.
+
+core에 이미 있는 것('../../core'에서 export):
+- houseRooms(state): { beds, used, free, overflow, coupleHomes, emptyCoupleHomes, rooms: Room[], retirees: Hero[] }
+- Room: { kind: 'family' | 'parent' | 'shared', members: Hero[], beds, empty, expecting }
+- busyHeroIds(state), isChild(hero), familyOf(state, id)
+
+1. 집 건물을 누르면 지금은 영웅 목록(roster)이 열린다. 새 집 창(App.tsx BUILDING_SCREEN의 house)을 만든다.
+2. 위 요약: 침대 used/beds, 방 수(가족방 a · 한부모 b · 2인실 c), 빈 침대, 빈 신혼방 emptyCoupleHomes/coupleHomes. overflow > 0이면 경고 줄.
+3. 방 카드 목록: 가족방 → 한부모 방 → 2인실 순. 카드마다 방 이름("가족방: 이름 가족"), 사람마다 초상·이름·나이(아이는 "아이" 표시, 은퇴자는 "은퇴" 표시), expecting이면 "곧 태어날 아기", 2인실의 빈 침대는 빈 칸으로. 원정·정찰·훈련 중(busyHeroIds)이면 작은 표시.
+4. 빈 신혼방은 점선 카드 몇 개로("빈 신혼방: 결혼하면 들어온다").
+5. 은퇴자(retirees)는 맨 아래 한 줄.
+6. 사람을 누르면 기존 영웅/아이 상세를 연다.
+7. 문구 ko/en 같은 키. 좁은 화면(375px)에서 카드가 넘치지 않게.
+
+확인: npm run dev에서 부부·아이·싱글이 섞인 세이브로 방 묶음을 본다. 확인한 내용을 메모에.
+```
+
+---
+
+## 73. 파티 구성·전투 준비 화면의 영웅 상태와 소속 (GPT, Cursor 대신)
+
+**작업 72 뒤에 시작한다(같은 도구라 순서대로).** 설계: `Docs/house.md`의 "파티 구성"과 "전투 준비".
+
+**전달할 내용**
+
+```
+Docs/house.md의 "파티 구성: 다른 파티에 있는지"와 "전투 준비: 영웅 상태"를 화면으로 만든다. src/ui/game/battleScreens.tsx(준비 탭), 필요하면 src/ui/App.tsx, src/ui/styles.css, src/locales/*만 고친다. core는 고치지 않는다.
+
+core에 이미 있는 것('../../core'에서 export):
+- readiness(state, hero): { busy, condition, recoverAt, fatigue, fatigueLevel: 'fresh'|'tired'|'exhausted', morale, moraleLevel: 'low'|'normal'|'high', parties: string[] }
+- busy: { kind: 'expedition', until, dungeonId, presetId } | { kind: 'scout', until } | { kind: 'drill', until } | null
+- partiesOf(state, heroId): ['p1', 'p2', 'auto'] 같은 목록('auto'는 자동 출정 파티)
+- lifeRules.fatigue(tiredAt 50, exhaustedAt 80), moraleRules(low 30, high 85)
+
+1. 준비 탭의 영웅 고르기 목록과 파티 칸의 영웅마다 한 줄 상태: 피로 막대(색: fresh 초록, tired 노랑, exhausted 빨강), 사기 막대(low 빨강, high 금색), 상태 칩(부상·중상과 회복까지 남은 시간, 원정 중 "던전 이름 · 0:25 뒤 귀환", 정찰 중, 훈련 중 남은 시간).
+2. 소속 칩: 지금 보고 있는 파티가 아닌 다른 파티(파티 1/2/3, 자동)를 작게 표시.
+3. 지금 보낼 수 없는 영웅(busy가 있거나 사망)은 흐리게 보이고 이유를 적는다. 고르는 것 자체는 지금 규칙 그대로 둔다.
+4. 남은 시간은 기존 useNow 같은 시계로 갱신.
+5. 문구 ko/en 같은 키. 좁은 화면(375px)에서 넘치지 않게.
+
+확인: npm run dev에서 한 파티를 원정 보내고 다른 파티 구성에서 그 영웅의 소속·원정 표시를 본다. 피로·사기가 다른 영웅으로 색을 본다. 확인한 내용을 메모에.
+```
+
+---
+
+## 74. 집·준비 상태 core 코드 리뷰 (GPT)
+
+**작업 73 뒤에 시작한다(같은 도구라 순서대로).** core 커밋은 **7995eb2**와 **b1261a7**이다.
+
+**전달할 내용**
+
+```
+core 커밋 7995eb2(자동 출정 사이 휴식, 피로한 영웅 제외)와 b1261a7(houseRooms, readiness, partiesOf)를 리뷰한다. 코드는 고치지 않고 Docs/reviews/b1261a7.md 새 파일 하나에만 쓴다(Docs/reviews/README.md 형식).
+볼 것: Docs/house.md와 차이, 오프라인 자동 출정의 휴식량(피로 회복 속도 × 출정 시간)과 집 레벨 보너스, 피로한 영웅이 빠져 파티가 비는 경우, houseRooms의 침대 합계가 bedsTaken과 맞는지(은퇴자·임신·사망·아이), 부부 한쪽만 은퇴했을 때, 한부모와 고아, partiesOf의 자동 파티(policy fixed가 아닐 때).
+VillageScene/BattleScene의 연출은 화면 작업이라 리뷰 대상이 아니다.
+```
+
+**메모**
+
