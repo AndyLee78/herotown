@@ -991,10 +991,10 @@ function moveCalendar(state: GameState, elapsed: number, wages: { paid: number }
     wages.paid += paid
     warning = paid < due ? 'wages' : null
   }
-  const lived = years > 0 ? growOlder(state, years, aged) : state
+  // Aging may charge a pupil's last tuition (Docs/school.md), on top of the wages.
+  const lived = years > 0 ? growOlder({ ...state, gold }, years, aged) : { ...state, gold }
   return {
     ...lived,
-    gold,
     warning,
     calendar: { year, season: (timeRules.seasons[index] ?? 'spring') as SeasonId, intoSeasonMs },
   }
@@ -1004,8 +1004,11 @@ function growOlder(state: GameState, years: number, aged: { name: string; age: n
   let roster = state.roster.map((hero) => older(hero, years, aged))
   // A child who reaches deploy age joins the hero lists with a welcome.
   const grownUp = roster.filter((hero, index) => isChild(state.roster[index]!) && !isChild(hero)).map((hero) => hero.id)
-  // Pupils come of age and leave school, maybe for the career they chose (Docs/school.md).
-  roster = roster.map((hero) => (grownUp.includes(hero.id) ? graduate(hero) : hero))
+  // Pupils coming of age get the lesson of the season just ended, then leave
+  // school, maybe for the career they chose (Docs/school.md, review 62e7837).
+  const lastLesson = teachSeason({ ...state, roster }, new Set(grownUp))
+  roster = lastLesson.roster.map((hero) => (grownUp.includes(hero.id) ? graduate(hero) : hero))
+  state = { ...state, gold: lastLesson.gold }
   const proud = roster.filter((hero) => grownUp.includes(hero.id)).flatMap((hero) => hero.parents ?? [])
   return {
     ...state,

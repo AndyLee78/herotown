@@ -88,3 +88,38 @@ describe('coming of age', () => {
     expect(migrate(JSON.parse(JSON.stringify(old)), now).roster[0]?.school).toBeUndefined()
   })
 })
+
+describe('review 62e7837 fixes', () => {
+  it('keeps the gear of a pupil who takes a new career', () => {
+    const charm = { id: 'charm', recipeId: 'trinket.alert', slot: 'trinket' as const, grade: 'common' as const, enhance: 0 }
+    const pupil = { ...child('a', familyRules.adultAge), gear: [...child('a', 6).gear, charm], school: { career: 'rogue' as const, seasons: 3, carry: 0 } }
+    const graduated = graduate(pupil)
+    expect(graduated.classId).toBe('rogue')
+    expect(graduated.gear.some((item) => item.id === 'charm')).toBe(true)
+  })
+
+  it('starts a new focus without the old fraction', () => {
+    let state = reduce(town([child('a', 6)]), { type: 'enroll', heroId: 'a', focus: 'str', career: null })
+    state = teachSeason(state)
+    expect(state.roster[0]?.school?.carry).toBe(0.5)
+    state = reduce(state, { type: 'enroll', heroId: 'a', focus: 'agi', career: null })
+    expect(state.roster[0]?.school?.carry).toBe(0)
+    expect(teachSeason(state).roster[0]?.potentials.agi).toBe(12)
+  })
+
+  it('gives a winter pupil the last lesson before graduating', () => {
+    const pupil = { ...child('a', familyRules.adultAge - 1), school: { career: 'rogue' as const, seasons: 2, carry: 0 } }
+    const base = town([pupil])
+    const late = { ...base, calendar: { year: 1, season: 'winter' as const, intoSeasonMs: timeRules.seasonMs - 1000 } }
+    const after = reduce(late, { type: 'catchUp', now: now + 2000 })
+    expect(after.roster[0]?.classId).toBe('rogue')
+    expect(after.gold).toBeLessThan(base.gold)
+  })
+
+  it('never lowers a potential already past 100', () => {
+    const genius = { ...child('g', 6), potential: 105 }
+    const state = reduce(town([genius]), { type: 'enroll', heroId: 'g', focus: null, career: null })
+    expect(teachSeason(state).roster[0]?.potential).toBe(105)
+  })
+})
+

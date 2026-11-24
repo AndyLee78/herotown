@@ -39,8 +39,10 @@ export function enroll(state: GameState, heroId: string, focus: StatKey | null, 
   if (!already && pupils(state).length >= schoolSeats(state)) {
     return { ...state, notice: 'schoolFull' }
   }
-  // Changing the plan keeps the seasons already studied.
-  const school: Schooling = { seasons: child.school?.seasons ?? 0, carry: child.school?.carry ?? 0, ...(focus ? { focus } : {}), ...(career ? { career } : {}) }
+  // Changing the plan keeps the seasons already studied; a new focus starts
+  // its fraction afresh (review 62e7837).
+  const carry = child.school && child.school.focus === (focus ?? undefined) ? child.school.carry : 0
+  const school: Schooling = { seasons: child.school?.seasons ?? 0, carry, ...(focus ? { focus } : {}), ...(career ? { career } : {}) }
   return { ...state, notice: null, roster: state.roster.map((hero) => (hero.id === heroId ? { ...hero, school } : hero)) }
 }
 
@@ -49,7 +51,7 @@ export function unenroll(state: GameState, heroId: string): GameState {
 }
 
 // A season of lessons for every pupil whose tuition the village can pay.
-export function teachSeason(state: GameState): GameState {
+export function teachSeason(state: GameState, only?: Set<string>): GameState {
   if (state.buildings.school < 1) {
     return state
   }
@@ -57,12 +59,13 @@ export function teachSeason(state: GameState): GameState {
   const fee = tuition(state)
   let gold = state.gold
   const roster = state.roster.map((hero) => {
-    if (!hero.school || gold < fee) {
+    if (!hero.school || gold < fee || (only && !only.has(hero.id))) {
       return hero
     }
     gold -= fee
     const school = { ...hero.school, seasons: hero.school.seasons + 1, carry: hero.school.carry }
-    const potential = Math.min(100, Math.max(hero.potential, hero.potential + schoolRules.potentialPerSeason[level]!))
+    // Up to 100, never below what the child already has.
+    const potential = Math.max(hero.potential, Math.min(100, hero.potential + schoolRules.potentialPerSeason[level]!))
     const potentials = { ...hero.potentials }
     if (school.focus) {
       school.carry += schoolRules.focusPerSeason[level]!
@@ -83,6 +86,7 @@ export function graduate(hero: Hero): Hero {
   }
   const career = hero.school.career
   const switched = career && career !== hero.classId && hero.school.seasons >= schoolRules.careerSeasons
-  const next = switched ? createHero({ ...hero, classId: career, gear: undefined }) : hero
+  // The gear stays: weapons and armour are not tied to a class (review 62e7837).
+  const next = switched ? createHero({ ...hero, classId: career }) : hero
   return { ...next, school: undefined }
 }
