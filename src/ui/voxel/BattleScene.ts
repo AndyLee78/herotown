@@ -80,6 +80,9 @@ const DURATION: Record<ReplayStep['type'], number> = {
   brace: 0.45,
   phase: 0.7,
   summon: 0.9,
+  volley: 0.55,
+  weaken: 0.4,
+  cleanse: 0.45,
   clear: 0.8,
   retreat: 1.4,
   end: 0,
@@ -586,6 +589,38 @@ export class BattleScene {
       case 'summon':
         this.summonAdds(step.units, step.refs, step.hps, instant)
         break
+      case 'volley': {
+        const actor = this.fighters.get(step.actorId)
+        if (actor && !instant) {
+          this.act(step.actorId, actor.ranged || actor.caster ? 'cast' : 'melee', instant, () => {
+            const origin = this.chest(actor)
+            for (let index = 0; index < 7; index += 1) {
+              const angle = -0.9 + (index / 6) * 1.8
+              const tip = origin.clone().add(new THREE.Vector3(Math.cos(angle) * 2.4 * (actor.side === 'hero' ? 1 : -1), 0.1, Math.sin(angle) * 1.6))
+              this.burst(tip, '#ffe27a', 4)
+            }
+            this.burst(origin, '#ffb04a', 10)
+          })
+        }
+        break
+      }
+      case 'weaken': {
+        const target = this.fighters.get(step.targetId)
+        if (target) {
+          this.banner('▼', '#c4a574', target.root.position.clone().setY(target.actor.height + 0.7))
+          this.burst(this.chest(target), '#c4a574', 8)
+        }
+        break
+      }
+      case 'cleanse': {
+        const target = this.fighters.get(step.targetId)
+        if (target) {
+          const chest = this.chest(target)
+          this.burst(chest, '#7dff9a', 14)
+          this.burst(chest.clone().setY(chest.y + 0.4), '#b8f5c8', 8)
+        }
+        break
+      }
       case 'clear':
         for (const fighter of this.fighters.values()) {
           if (fighter.side === 'hero' && fighter.alive && !instant) {

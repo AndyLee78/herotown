@@ -28,6 +28,9 @@ export type ReplayStep =
   | (Base & { type: 'brace'; actorId: string })
   | (Base & { type: 'phase'; actorId: string; phase: number })
   | (Base & { type: 'summon'; actorId: string; units: string[]; refs: string[]; hps: number[] })
+  | (Base & { type: 'volley'; actorId: string })
+  | (Base & { type: 'weaken'; targetId: string })
+  | (Base & { type: 'cleanse'; targetId: string })
   | (Base & { type: 'clear'; floor: number })
   | (Base & { type: 'retreat' })
   | (Base & { type: 'end'; victory: boolean })
@@ -151,6 +154,15 @@ export function buildSteps(report: DungeonReport): ReplayStep[] {
           previous.downs.push(actorId)
           previous.log = index
         }
+        break
+      case 'log.volley':
+        steps.push({ type: 'volley', actorId, log: index, downs: [] })
+        break
+      case 'log.weaken':
+        steps.push({ type: 'weaken', targetId, log: index, downs: [] })
+        break
+      case 'log.cleanse':
+        steps.push({ type: 'cleanse', targetId, log: index, downs: [] })
         break
       case 'log.floorClear':
         steps.push({ type: 'clear', floor: number(entry, 'floor'), log: index, downs: [] })

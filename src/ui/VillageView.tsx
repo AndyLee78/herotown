@@ -7,6 +7,7 @@ type Props = {
   roster: Hero[]
   visitors: Hero[]
   awayIds: string[]
+  drillIds: string[]
   retirees: Hero[]
   partyIds: string[]
   selectedId: string | null
@@ -26,7 +27,7 @@ type Props = {
   onWish: () => void
 }
 
-export function VillageView({ roster, visitors, awayIds, retirees, partyIds, selectedId, onSelect, onPickBuilding, villageLabel, buildings, constructing, buildingLabels, expeditions, active, graves, wishes, wishCap, wishAt, wishJackpot, onWish }: Props) {
+export function VillageView({ roster, visitors, awayIds, drillIds, retirees, partyIds, selectedId, onSelect, onPickBuilding, villageLabel, buildings, constructing, buildingLabels, expeditions, active, graves, wishes, wishCap, wishAt, wishJackpot, onWish }: Props) {
   const canvasRef = useRef<HTMLCanvasElement>(null)
   const sceneRef = useRef<VillageScene | null>(null)
   const onSelectRef = useRef(onSelect)
@@ -81,6 +82,7 @@ export function VillageView({ roster, visitors, awayIds, retirees, partyIds, sel
       roster,
       visitors,
       awayIds,
+      drillIds,
       retirees,
       partyIds,
       selectedId,

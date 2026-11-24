@@ -18,10 +18,15 @@ export const LOTS: Record<BuildingId, Lot> = {
   // The lucky fountain stands in the middle of the square (Docs/fountain.md).
   fountain: { x: 0, z: 0, w: 2.2, d: 2.2 },
   alchemy: { x: -10.5, z: -1.5, w: 3, d: 2.6 },
-  // East of the temple, facing the plaza, so floating crystals catch the light.
-  // Placeholder spot for the training ground until it gets a model (Docs/skills.md).
-  training: { x: -5.5, z: 9.5, w: 3.2, d: 2.6 },
+  // West of the smith, open sand yard facing the plaza (Docs/skills.md).
+  training: { x: -6.5, z: 9.2, w: 3.6, d: 3.2 },
   magic: { x: 5.2, z: -10.2, w: 3, d: 2.6 },
+}
+
+// Where a drilling hero stands to hit the scarecrow.
+export function trainingPad(): { x: number; z: number; faceX: number; faceZ: number } {
+  const lot = LOTS.training
+  return { x: lot.x - 0.35, z: lot.z + 0.55, faceX: lot.x + 0.55, faceZ: lot.z - 0.35 }
 }
 
 export const PLAZA = { min: -5.3, max: 5.3 }
@@ -336,6 +341,43 @@ function drawMagic(b: Builder, w: number, d: number, level: number): number {
   return top + 1
 }
 
+// Open sand yard with a shed, scarecrow and wooden-sword rack (Docs/skills.md).
+function drawTraining(b: Builder, w: number, d: number, level: number): number {
+  const sand = '#e2c48a'
+  const post = '#6b4a33'
+  b.box(w * 0.95, 0.08, d * 0.95, sand, 0, 0.06, 0)
+  b.box(w * 0.7, 0.05, d * 0.55, '#d4b474', 0.1, 0.1, 0.15)
+  // Small open shed at the back.
+  const shedH = 1.15 + (level - 1) * 0.2
+  b.box(w * 0.7, shedH, 0.12, '#c9b48a', 0, shedH / 2 + 0.08, -d * 0.42)
+  b.box(0.12, shedH, d * 0.35, '#c9b48a', -w * 0.32, shedH / 2 + 0.08, -d * 0.28)
+  b.box(0.12, shedH, d * 0.35, '#c9b48a', w * 0.32, shedH / 2 + 0.08, -d * 0.28)
+  b.box(w * 0.82, 0.12, d * 0.45, '#8a5a32', 0, shedH + 0.14, -d * 0.3)
+  // Scarecrow.
+  b.box(0.12, 1.1, 0.12, post, 0.55, 0.6, -0.35)
+  b.box(0.7, 0.12, 0.12, post, 0.55, 1.05, -0.35)
+  b.box(0.28, 0.28, 0.28, '#e8d4a8', 0.55, 1.35, -0.35)
+  b.box(0.08, 0.08, 0.04, '#3a2a20', 0.48, 1.38, -0.2)
+  b.box(0.08, 0.08, 0.04, '#3a2a20', 0.62, 1.38, -0.2)
+  b.box(0.45, 0.5, 0.2, '#c4a574', 0.55, 0.85, -0.35)
+  // Wooden sword rack.
+  b.box(0.08, 0.9, 0.08, post, -0.85, 0.5, 0.2)
+  b.box(0.08, 0.9, 0.08, post, -0.45, 0.5, 0.2)
+  b.box(0.55, 0.08, 0.08, post, -0.65, 0.85, 0.2)
+  b.box(0.08, 0.55, 0.08, '#9a7450', -0.75, 0.7, 0.28, { rz: 0.35 })
+  b.box(0.08, 0.55, 0.08, '#9a7450', -0.55, 0.7, 0.28, { rz: -0.25 })
+  if (level >= 2) {
+    b.box(0.08, 0.55, 0.08, '#9a7450', -0.65, 0.7, 0.35, { rz: 0.1 })
+    b.box(0.9, 0.08, 0.5, '#6b4a33', 0, 0.12, 0.7)
+  }
+  if (level >= 3) {
+    b.box(0.35, 0.35, 0.35, '#c9b48a', w * 0.35, 0.3, d * 0.3)
+    b.box(0.2, 0.5, 0.08, post, w * 0.35, 0.55, d * 0.3)
+    b.box(0.4, 0.18, 0.08, '#d9b54a', -w * 0.2, shedH * 0.7, -d * 0.35)
+  }
+  return shedH + 0.3
+}
+
 function magicCrystals(level: number): THREE.Group {
   const group = new THREE.Group()
   const materials: THREE.Material[] = []
@@ -448,6 +490,9 @@ function drawBuilding(b: Builder, id: BuildingId, lot: Lot, level: number): numb
   }
   if (id === 'magic') {
     return drawMagic(b, w, d, level)
+  }
+  if (id === 'training') {
+    return drawTraining(b, w, d, level)
   }
   if (id === 'smith') {
     const top = house(b, { w, d, h: 1.4 + grow * 0.25, wall: '#9a7a5c', roof: '#6d6d6d', steps: 3 })

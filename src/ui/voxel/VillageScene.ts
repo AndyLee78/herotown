@@ -4,13 +4,15 @@ import { familyRules, type BuildingId, type Hero } from '../../core'
 import { buildCharacter, idlePose, walkPose, type Rig } from './character'
 import { Builder, disposeTree, makeLabel } from './kit'
 import { hashString, lookFor, lookKey, seeded } from './look'
-import { GATE, GATHER, INN_YARD, LOTS, PLAZA, buildCemetery, buildLot, buildTerrain } from './world'
+import { GATE, GATHER, INN_YARD, LOTS, PLAZA, buildCemetery, buildLot, buildTerrain, trainingPad } from './world'
 
 export type VillageSceneProps = {
   roster: Hero[]
   visitors: Hero[]
   // Heroes out on an expedition: they walk out of town and back in.
   awayIds: string[]
+  // Heroes at the training ground (Docs/skills.md).
+  drillIds: string[]
   // Retired heroes stroll slowly around the plaza.
   retirees: Hero[]
   partyIds: string[]
@@ -37,7 +39,8 @@ type Walker = {
   rig: Rig
   key: string
   // gather → pack → leave → gone when a party sets out; arrive when it comes home.
-  state: 'idle' | 'walk' | 'gather' | 'pack' | 'leave' | 'gone' | 'arrive' | 'vow'
+  // drill: hitting the scarecrow at the training ground.
+  state: 'idle' | 'walk' | 'gather' | 'pack' | 'leave' | 'gone' | 'arrive' | 'vow' | 'drill'
   away: boolean
   fresh: boolean
   timer: number
@@ -148,8 +151,9 @@ export class VillageScene {
     ])
     this.paces = new Map(living.map((hero) => [hero.id, PACE[hero.condition]]))
     this.syncAway(new Set(props.awayIds))
+    this.syncDrills(new Set(props.drillIds))
     this.syncGate(props.expeditions)
-    this.syncFamily(living, new Set(props.awayIds))
+    this.syncFamily(living, new Set([...props.awayIds, ...props.drillIds]))
     for (const [first, second] of props.weddings) {
       this.playWedding(first, second)
     }
@@ -520,6 +524,30 @@ export class VillageScene {
     }
   }
 
+  // Heroes in training stand by the scarecrow and keep swinging.
+  private syncDrills(drills: Set<string>) {
+    const pad = trainingPad()
+    let slot = 0
+    for (const walker of this.walkers.values()) {
+      if (walker.kind !== 'roster') {
+        continue
+      }
+      const training = drills.has(walker.id)
+      if (training && walker.state !== 'drill' && walker.state !== 'gone' && walker.state !== 'leave' && walker.state !== 'gather' && walker.state !== 'pack') {
+        walker.state = 'drill'
+        walker.root.visible = true
+        walker.target.set(pad.x + (slot % 2) * 0.55, 0, pad.z + Math.floor(slot / 2) * 0.55)
+        walker.root.position.copy(walker.target)
+        walker.root.rotation.y = Math.atan2(pad.faceX - pad.x, pad.faceZ - pad.z)
+        slot += 1
+      } else if (!training && walker.state === 'drill') {
+        walker.state = 'idle'
+        walker.timer = 0.8
+        walker.target.set(PLAZA.min + walker.random() * (PLAZA.max - PLAZA.min), 0, walker.random() * PLAZA.max)
+      }
+    }
+  }
+
   // Starts the walk out for heroes who just left, and the walk in for those
   // who just came back. Heroes already away when the page opens stay hidden.
   // A lone scout (Docs/depth.md 3d) slips out the south gate without packing.
@@ -711,6 +739,13 @@ export class VillageScene {
         walker.state = 'idle'
         walker.timer = 1.2
       }
+      return
+    }
+    if (walker.state === 'drill') {
+      const pad = trainingPad()
+      walker.root.rotation.y = Math.atan2(pad.faceX - walker.root.position.x, pad.faceZ - walker.root.position.z)
+      walkPose(walker.rig, time * 2.4, walker.phase, 1.6)
+      walker.rig.group.position.y = Math.abs(Math.sin(time * 10 + walker.phase)) * 0.04
       return
     }
     if (walker.state === 'pack') {
