@@ -89,6 +89,10 @@ export function House({ save, onSelectHero }: { save: GameState; onSelectHero: (
           {isChild(hero) ? <Chip>{t('house.child')}</Chip> : null}
           {retired.has(hero.id) ? <Chip>{t('house.retired')}</Chip> : null}
           {busy.has(hero.id) ? <Chip tone="info">{t('house.busy')}</Chip> : null}
+          {/* The fallen and the wounded keep their bed (review b1261a7). */}
+          {hero.condition === 'dead' || hero.condition === 'injured' || hero.condition === 'critical' ? (
+            <Chip tone={hero.condition === 'injured' ? 'warn' : 'bad'}>{t(`condition.${hero.condition}`)}</Chip>
+          ) : null}
         </span>
       </span>
     </button>
