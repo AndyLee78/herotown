@@ -111,9 +111,9 @@ Claude Code, Cursor, GPT(Codex)가 함께 쓰는 작업 목록이다. 작업 하
 | 69 | 면담·스카우팅 core 코드 리뷰 (8e1fa30) | GPT | `Docs/reviews/8e1fa30.md` (새 파일만) | 완료 (c5b60da) |
 | 70 | 학교 화면 | GPT (Cursor 대신) | `App.tsx`, `src/ui/game/*.tsx`, `styles.css`, `src/locales/*` | 완료 (0b09ec7) |
 | 71 | 학교 core 코드 리뷰 (62e7837) | GPT | `Docs/reviews/62e7837.md` (새 파일만) | 완료 (798bfcc) |
-| 72 | 집 화면: 방으로 묶어 보기 | GPT | `src/ui/App.tsx`, `src/ui/game/*.tsx`, `src/ui/styles.css`, `src/locales/*` | 대기 |
-| 73 | 파티 구성·전투 준비 화면의 영웅 상태와 소속 | GPT | `src/ui/game/battleScreens.tsx`, `src/ui/App.tsx`, `src/ui/styles.css`, `src/locales/*` | 대기 (72 뒤) |
-| 74 | 집·준비 상태 core 코드 리뷰 (7995eb2, b1261a7) | GPT | `Docs/reviews/b1261a7.md` (새 파일만) | 대기 (73 뒤) |
+| 72 | 집 화면: 방으로 묶어 보기 | GPT | `src/ui/App.tsx`, `src/ui/game/*.tsx`, `src/ui/styles.css`, `src/locales/*` | 완료 (2102e68) |
+| 73 | 파티 구성·전투 준비 화면의 영웅 상태와 소속 | GPT | `src/ui/game/battleScreens.tsx`, `src/ui/App.tsx`, `src/ui/styles.css`, `src/locales/*` | 완료 (c85b59e) |
+| 74 | 집·준비 상태 core 코드 리뷰 (7995eb2, b1261a7) | GPT | `Docs/reviews/b1261a7.md` (새 파일만) | 완료 (55e1167) |
 
 ---
 
@@ -1733,6 +1733,11 @@ core에 이미 있는 것('../../core'에서 export):
 확인: npm run dev에서 부부·아이·싱글이 섞인 세이브로 방 묶음을 본다. 확인한 내용을 메모에.
 ```
 
+**메모**
+
+- 집 건물에서 집 창을 열고 방·침대·신혼방·은퇴자를 확인할 수 있게 했다. 이름을 누르면 기존 영웅·아이 상세로 이동한다.
+- 부부·아이·싱글·은퇴자·정찰 중 영웅이 섞인 상태로 Vite SSR을 검증했다. 브라우저 클릭 및 375px 실측은 남았다.
+
 ---
 
 ## 73. 파티 구성·전투 준비 화면의 영웅 상태와 소속 (GPT, Cursor 대신)
@@ -1759,6 +1764,11 @@ core에 이미 있는 것('../../core'에서 export):
 확인: npm run dev에서 한 파티를 원정 보내고 다른 파티 구성에서 그 영웅의 소속·원정 표시를 본다. 피로·사기가 다른 영웅으로 색을 본다. 확인한 내용을 메모에.
 ```
 
+**메모**
+
+- 준비와 편성 화면에 피로·사기 막대, 회복·귀환·정찰·훈련 시간, 다른 파티와 자동 소속을 추가했다. 치료 중에는 치료 종료 시각을 표시한다.
+- 실제 리듀서 출정 상태를 두 화면에 렌더링해 귀환·소속·피로와 사기 색상 클래스를 확인했다. 브라우저 클릭 및 375px 실측은 남았다. 타입 검사·테스트 282개·빌드 통과.
+
 ---
 
 ## 74. 집·준비 상태 core 코드 리뷰 (GPT)
@@ -1774,4 +1784,7 @@ VillageScene/BattleScene의 연출은 화면 작업이라 리뷰 대상이 아�
 ```
 
 **메모**
+
+- [리뷰](reviews/b1261a7.md)에 피로 이중 회복, 전사자의 방 정원과 신혼방 불일치, 2인실 성별 혼합, 자동 소속과 실제 파티 불일치, 치료 종료 시각 누락을 기록했다.
+- 전원 피로 시 자동 출정 보류, 은퇴 배우자·임신·고아의 방 배정을 확인했다.
 
