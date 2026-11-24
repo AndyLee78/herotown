@@ -66,6 +66,10 @@ export type AutoPlan = {
   policy: AutoPolicy
   material: MaterialName
   party: PartySlot[]
+  // Time toward the next auto run and a run counter for battle seeds, so
+  // splitting time into short ticks changes nothing (review 1208be3).
+  carryMs?: number
+  nonce?: number
 }
 export type Materials = Record<MaterialName, number>
 
@@ -631,6 +635,7 @@ function advance(state: GameState, now: number): GameState {
   // Time moves in pieces that end on each season turn, so everything due
   // before a turn (returns, births) is settled before the season's family
   // rolls, and those rolls happen at the turn itself.
+  const autoTally = { runs: 0, gold: 0 }
   let next = state
   while (next.lastTickAt < effectiveNow) {
     const turnAt = next.lastTickAt + (timeRules.seasonMs - next.calendar.intoSeasonMs)
@@ -650,6 +655,9 @@ function advance(state: GameState, now: number): GameState {
     next = recoverRoster(next, piece, until)
     next = updateVisitors(next, until, visitors)
     next = returnExpeditions(next, until, returned)
+    // Auto runs settle within their season, against that season's board (review 1208be3).
+    next = ensureBoard(next)
+    next = runAuto(next, piece, autoTally)
     // Then the season (and maybe the year) turns at the end of the piece.
     next = moveCalendar(next, piece, wages, aged)
     next = deliverBirths(next, until, family)
@@ -665,8 +673,6 @@ function advance(state: GameState, now: number): GameState {
     // The fountain fills offline too, up to its cap, at the level it had.
     next = { ...next, fountain: chargeFountain(next.fountain, next.buildings.fountain, until) }
   }
-  const autoTally = { runs: 0, gold: 0 }
-  next = runAuto(next, elapsed, autoTally)
   // A new season (or a new guild) puts up a fresh contract board.
   next = ensureBoard(next)
   next = { ...next, lastTickAt: effectiveNow }
@@ -1073,10 +1079,10 @@ function runAuto(state: GameState, elapsed: number, tally: { runs: number; gold:
   // Auto runs need the guild, which also sets how many parties go (Docs/guild.md).
   const parties = guildLevel(state.buildings.guild).autoParties
   if (!state.auto.enabled || parties < 1) {
-    return state
+    return state.auto.carryMs ? { ...state, auto: { ...state.auto, carryMs: 0 } } : state
   }
   let next = state
-  let budget = elapsed
+  let budget = (state.auto.carryMs ?? 0) + elapsed
   while (budget >= villageRules.auto.runMs && tally.runs < 36 * parties) {
     const dungeonId = next.auto.policy === 'material' ? dungeonForMaterial(next) : next.auto.dungeonId
     if (!dungeonId || !next.cleared.includes(dungeonId)) {
@@ -1084,9 +1090,14 @@ function runAuto(state: GameState, elapsed: number, tally: { runs: number; gold:
     }
     let ran = 0
     const used = new Set<string>()
-    for (const presetId of autoPresetOrder(next).slice(0, parties)) {
-      const members = autoMembers(next, presetId).filter((member) => !used.has(member.hero.id))
-      if (members.length === 0) {
+    // Whole parties only: a preset that shares a hero with one already out
+    // is skipped, and the next one gets the place (review 1208be3).
+    for (const presetId of autoPresetOrder(next)) {
+      if (ran >= parties) {
+        break
+      }
+      const members = autoMembers(next, presetId)
+      if (members.length === 0 || members.some((member) => used.has(member.hero.id))) {
         continue
       }
       for (const member of members) {
@@ -1100,7 +1111,8 @@ function runAuto(state: GameState, elapsed: number, tally: { runs: number; gold:
     }
     budget -= villageRules.auto.runMs
   }
-  return next
+  // Leftover time waits for the next tick, but never more than one run's worth.
+  return { ...next, auto: { ...next.auto, carryMs: Math.min(budget, villageRules.auto.runMs) } }
 }
 
 // The selected preset goes first, then the others in order.
@@ -1111,7 +1123,10 @@ function autoPresetOrder(state: GameState): string[] {
 function autoRun(state: GameState, members: PartyMember[], presetId: string, dungeonId: string, tally: { runs: number; gold: number }): GameState {
   let next = state
   const preset = presetById(next, presetId)
-  const battleSeed = next.seed + 9000 + tally.runs + next.day
+  // A lasting run counter keeps every auto battle on its own seed.
+  const nonce = (next.auto.nonce ?? 0) + 1
+  next = { ...next, auto: { ...next.auto, nonce } }
+  const battleSeed = next.seed + 9000 + nonce
   // Auto runs carry the preset's potions too, and bring back the rest.
   const carry = takeSupplies(next.potions, preset?.supplies)
   const result = runDungeon(members, dungeonId, preset?.tactics ?? DEFAULT_TACTICS, battleSeed, carry.taken, nestVariant(next, dungeonId))
@@ -1853,7 +1868,7 @@ function normalize(record: Record<string, unknown>, now: number): GameState {
     // Buildings that now start built (the temple) are raised on older saves too.
     buildings: raiseToStart(record.buildings, base.buildings),
     retirees: Array.isArray(record.retirees) ? (record.retirees as Retiree[]).map((retiree) => ({ ...retiree, hero: normalizeHero(retiree.hero) })) : [],
-    materials: readMaterials(record.materials, base.materials),
+    materials: addMaterials(readMaterials(record.materials, base.materials), skippedGuildReward(record)),
     bonds: readBonds(record.bonds),
     proposals: readProposals(record.proposals),
     familyNonce: numberOr(record.familyNonce, 0),
@@ -1874,10 +1889,38 @@ function normalize(record: Record<string, unknown>, now: number): GameState {
 // Saves from before the fountain step was added to the guide: a player past
 // the first step moves one further so they keep their place (Docs/fountain.md 4).
 function shiftGuide(record: Record<string, unknown>): number {
-  const step = numberOr(record.guideStep, 0)
+  let step = numberOr(record.guideStep, 0)
   const wishAt = guideSteps.findIndex((entry) => entry.id === 'wish')
-  const before = typeof record.version === 'number' && record.version < 10
-  return before && wishAt >= 0 && step >= wishAt ? Math.min(guideSteps.length, step + 1) : step
+  const version = typeof record.version === 'number' ? record.version : SAVE_VERSION
+  if (version < 10 && wishAt >= 0 && step >= wishAt) {
+    step = Math.min(guideSteps.length, step + 1)
+  }
+  // Version 15 put the guild before auto runs. A player who already took the
+  // auto reward and stood on the guild step moves past both; the guild's
+  // reward is paid on loading (review 1208be3).
+  const guildAt = guideSteps.findIndex((entry) => entry.id === 'guild')
+  if (version < 15 && guildAt >= 0 && step === guildAt + 1) {
+    step = guildAt + 2
+  }
+  return step
+}
+
+function addMaterials(materials: Materials, more: Partial<Materials>): Materials {
+  const next = { ...materials }
+  for (const key of Object.keys(more) as MaterialName[]) {
+    next[key] = (next[key] ?? 0) + (more[key] ?? 0)
+  }
+  return next
+}
+
+// The guild step's reward for a player moved past it by shiftGuide.
+function skippedGuildReward(record: Record<string, unknown>): Partial<Materials> {
+  const guildAt = guideSteps.findIndex((entry) => entry.id === 'guild')
+  const version = typeof record.version === 'number' ? record.version : SAVE_VERSION
+  if (version >= 15 || guildAt < 0 || numberOr(record.guideStep, 0) !== guildAt + 1) {
+    return {}
+  }
+  return (guideSteps[guildAt]?.reward ?? {}) as Partial<Materials>
 }
 
 function isCalendar(value: unknown): value is Calendar {

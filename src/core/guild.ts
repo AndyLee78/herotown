@@ -102,11 +102,16 @@ export function ensureBoard(state: GameState): GameState {
   const count = guildLevel(state.buildings.guild).contracts
   const base = state.seed * 13 + state.calendar.year * 977 + key.length * 31 + ['spring', 'summer', 'autumn', 'winter'].indexOf(state.calendar.season) * 101
   const seasonal = Array.from({ length: count }, (_, index) => makeContract(state, `${key}-s${index + 1}`, base + index * 7919, 1, true)).filter((entry): entry is Contract => entry != null)
+  // Nothing cleared yet: wait and try again once there is something to ask for (review 1208be3).
+  if (seasonal.length === 0) {
+    return board === state.guild ? state : { ...state, guild: board }
+  }
+  // The count is set when the board goes up; a guild upgrade shows next season.
   return { ...state, guild: { ...board, season: key, seasonal, repeat: null } }
 }
 
 function nextRepeat(state: GameState, board: GuildBoard): GuildBoard {
-  if (board.seasonal.some((contract) => !contract.done)) {
+  if (board.season !== seasonKey(state.calendar) || board.seasonal.length === 0 || board.seasonal.some((contract) => !contract.done)) {
     return board
   }
   const nonce = board.repeatNonce + 1
