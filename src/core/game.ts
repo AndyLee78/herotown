@@ -1189,6 +1189,11 @@ function runAuto(state: GameState, elapsed: number, tally: { runs: number; gold:
   }
   let next = state
   let budget = (state.auto.carryMs ?? 0) + elapsed
+  // The piece's rest is already in everyone's fatigue (recoverRoster), so the
+  // time between runs only rests off what the runs themselves added; nobody
+  // else gets it twice (review b1261a7).
+  const debt = new Map<string, number>()
+  const rest = (fatigueRecoveryRate(state) * villageRules.auto.runMs) / 3_600_000
   while (budget >= villageRules.auto.runMs && tally.runs < 36 * parties) {
     const dungeonId = next.auto.policy === 'material' ? dungeonForMaterial(next) : next.auto.dungeonId
     if (!dungeonId || !next.cleared.includes(dungeonId)) {
@@ -1209,17 +1214,40 @@ function runAuto(state: GameState, elapsed: number, tally: { runs: number; gold:
       for (const member of members) {
         used.add(member.hero.id)
       }
+      const before = new Map(members.map((member) => [member.hero.id, member.hero.fatigue]))
       next = autoRun(next, members, presetId, dungeonId, tally)
+      for (const hero of next.roster) {
+        const was = before.get(hero.id)
+        if (was != null && hero.fatigue > was) {
+          debt.set(hero.id, (debt.get(hero.id) ?? 0) + hero.fatigue - was)
+        }
+      }
       ran += 1
     }
-    if (ran === 0) {
+    // With everyone tired there is nothing to wait for unless runs are still
+    // being rested off.
+    if (ran === 0 && debt.size === 0) {
       break
     }
     budget -= villageRules.auto.runMs
-    // Heroes rest between runs too: a long absence is many runs with time in
+    // Heroes rest between runs: a long absence is many runs with time in
     // between, not one marathon (fatigue used to pile up offline).
-    const rest = (fatigueRecoveryRate(next) * villageRules.auto.runMs) / 3_600_000
-    next = { ...next, roster: next.roster.map((hero) => (hero.fatigue > 0 ? { ...hero, fatigue: Math.max(0, hero.fatigue - rest) } : hero)) }
+    next = {
+      ...next,
+      roster: next.roster.map((hero) => {
+        const owed = debt.get(hero.id)
+        if (owed == null) {
+          return hero
+        }
+        const eased = Math.min(owed, rest, hero.fatigue)
+        if (owed - eased <= 0 || hero.fatigue - eased <= 0) {
+          debt.delete(hero.id)
+        } else {
+          debt.set(hero.id, owed - eased)
+        }
+        return { ...hero, fatigue: hero.fatigue - eased }
+      }),
+    }
   }
   // Leftover time waits for the next tick, but never more than one run's worth.
   return { ...next, auto: { ...next.auto, carryMs: Math.min(budget, villageRules.auto.runMs) } }

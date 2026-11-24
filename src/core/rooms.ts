@@ -40,7 +40,9 @@ export type HouseView = {
 export function houseRooms(state: GameState): HouseView {
   const beds = bedCount(state.buildings.house)
   const used = bedsTaken(state)
-  const people = residents(state).filter((hero) => hero.condition !== 'dead')
+  // The fallen who can still be revived keep their bed and their marriage,
+  // so they stay in their room (review b1261a7).
+  const people = residents(state)
   const inRoster = new Set(state.roster.map((hero) => hero.id))
   const placed = new Set<string>()
   const rooms: Room[] = []
@@ -75,16 +77,17 @@ export function houseRooms(state: GameState): HouseView {
   }
 
   // Everyone else in the roster shares, two to a room: women together, men
-  // together, younger first.
-  const rest = state.roster
-    .filter((hero) => !placed.has(hero.id) && hero.condition !== 'dead')
-    .sort((a, b) => (a.gender === b.gender ? a.age - b.age : a.gender === 'female' ? -1 : 1))
+  // together (never one of each, review b1261a7), younger first.
+  const rest = state.roster.filter((hero) => !placed.has(hero.id)).sort((a, b) => a.age - b.age)
   let free = Math.max(0, beds - used)
-  for (let index = 0; index < rest.length; index += 2) {
-    const members = rest.slice(index, index + 2)
-    const empty = members.length === 1 && free > 0 ? 1 : 0
-    free -= empty
-    rooms.push({ kind: 'shared', members, beds: members.length + empty, empty, expecting: false })
+  for (const gender of ['female', 'male'] as const) {
+    const group = rest.filter((hero) => hero.gender === gender)
+    for (let index = 0; index < group.length; index += 2) {
+      const members = group.slice(index, index + 2)
+      const empty = members.length === 1 && free > 0 ? 1 : 0
+      free -= empty
+      rooms.push({ kind: 'shared', members, beds: members.length + empty, empty, expecting: false })
+    }
   }
   for (; free > 0; free -= 2) {
     const empty = Math.min(2, free)

@@ -146,5 +146,18 @@ describe('auto runs while away', () => {
     expect(Math.max(...back.roster.map((entry) => entry.fatigue))).toBeLessThan(lifeRules.fatigue.tiredAt)
     expect(villageRules.auto.runMs).toBeGreaterThan(0)
   })
+
+  it('gives heroes outside the auto party no extra rest (review b1261a7)', () => {
+    const base = town({ buildings: { ...town().buildings, guild: 1 }, cleared: ['hill_cave'] })
+    let state: GameState = { ...base, roster: [hero('w', 'warrior', 9), hero('c', 'cleric', 9), { ...hero('idle', 'archer', 9), fatigue: 95 }] }
+    for (const id of ['w', 'c']) state = reduce(state, { type: 'add', id })
+    state = { ...state, calendar: { ...state.calendar, intoSeasonMs: 0 } }
+    const later = { type: 'catchUp' as const, now: now + villageRules.auto.runMs * 3 }
+    const without = reduce(state, later)
+    const withAuto = reduce(reduce(state, { type: 'auto', enabled: true }), later)
+    expect(withAuto.absence?.autoRuns ?? 0).toBeGreaterThan(0)
+    const idle = (s: GameState) => s.roster.find((entry) => entry.id === 'idle')!.fatigue
+    expect(idle(withAuto)).toBeCloseTo(idle(without))
+  })
 })
 

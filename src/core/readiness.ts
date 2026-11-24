@@ -1,5 +1,6 @@
 import { lifeRules, moraleRules } from './data'
-import type { GameState } from './game'
+import { presetById, type GameState } from './game'
+import { guildLevel } from './guild'
 import { moraleOf } from './morale'
 import type { Condition, Hero } from './types'
 
@@ -14,13 +15,15 @@ export type HeroBusy =
 export type HeroReadiness = {
   busy: HeroBusy | null
   condition: Condition
-  // When treatment or rest from an injury ends, if it is under way.
+  // When the wound heals on its own, and when treatment at the temple ends.
   recoverAt: number | null
+  treatAt: number | null
   fatigue: number
   fatigueLevel: 'fresh' | 'tired' | 'exhausted'
   morale: number
   moraleLevel: 'low' | 'normal' | 'high'
-  // Preset ids (p1, p2, …) with this hero in a slot, plus 'auto' for the auto-run party.
+  // Preset ids (p1, p2, …) with this hero in a slot, plus 'auto' when auto
+  // runs are on and would take this hero.
   parties: string[]
 }
 
@@ -38,10 +41,25 @@ export function heroBusy(state: GameState, heroId: string): HeroBusy | null {
 
 export function partiesOf(state: GameState, heroId: string): string[] {
   const parties = state.presets.filter((preset) => preset.slots.some((slot) => slot.id === heroId)).map((preset) => preset.id)
-  if ((state.auto.party ?? []).some((slot) => slot.id === heroId)) {
+  if (autoLineups(state).some((slots) => slots.some((slot) => slot.id === heroId))) {
     parties.push('auto')
   }
   return parties
+}
+
+// The lineups auto runs send, as the game picks them: the selected preset
+// first (the fixed policy's own party in its place), then as many other
+// presets as the guild allows (review b1261a7).
+function autoLineups(state: GameState): { id: string }[][] {
+  const count = guildLevel(state.buildings.guild).autoParties
+  if (!state.auto.enabled || count < 1) {
+    return []
+  }
+  const order = [state.presetId, ...state.presets.map((preset) => preset.id).filter((id) => id !== state.presetId)]
+  return order
+    .map((id) => (state.auto.policy === 'fixed' && id === state.presetId ? state.auto.party : (presetById(state, id)?.slots ?? [])))
+    .filter((slots) => slots.length > 0)
+    .slice(0, count)
 }
 
 export function readiness(state: GameState, hero: Hero): HeroReadiness {
@@ -51,6 +69,7 @@ export function readiness(state: GameState, hero: Hero): HeroReadiness {
     busy: heroBusy(state, hero.id),
     condition: hero.condition,
     recoverAt: hero.recoverAt ?? null,
+    treatAt: hero.treatAt ?? null,
     fatigue: hero.fatigue,
     fatigueLevel: hero.fatigue >= exhaustedAt ? 'exhausted' : hero.fatigue >= tiredAt ? 'tired' : 'fresh',
     morale,

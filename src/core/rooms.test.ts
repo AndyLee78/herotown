@@ -34,7 +34,7 @@ describe('house rooms', () => {
     expect(family.expecting).toBe(true)
     expect(family.beds).toBe(4)
     const shared = view.rooms.filter((room) => room.kind === 'shared')
-    expect(shared[0]?.members.map((hero) => hero.id)).toEqual(['a', 'b'])
+    expect(shared.map((room) => room.members.map((hero) => hero.id))).toEqual([['a'], ['b']])
     expect(view.used).toBe(6)
     expect(view.beds).toBe(5)
     expect(view.overflow).toBe(1)
@@ -54,6 +54,19 @@ describe('house rooms', () => {
     expect(view.rooms[0]?.kind).toBe('parent')
     expect(view.rooms[0]?.members.map((hero) => hero.id)).toEqual(['mum', 'kid'])
   })
+
+  it('never puts a woman and a man in one shared room (review b1261a7)', () => {
+    const view = houseRooms(town([person('a', 'female', 20), person('b', 'male', 21)]))
+    const shared = view.rooms.filter((room) => room.members.length > 0)
+    expect(shared.map((room) => room.members.map((hero) => hero.id))).toEqual([['a'], ['b']])
+  })
+
+  it('keeps a fallen spouse in the family room and their couple home taken (review b1261a7)', () => {
+    const view = houseRooms(town([person('wife', 'female', 30, { spouseId: 'man' }), person('man', 'male', 31, { spouseId: 'wife', condition: 'dead' })]))
+    expect(view.rooms[0]?.members.map((hero) => hero.id)).toEqual(['wife', 'man'])
+    expect(view.rooms.reduce((sum, room) => sum + room.beds, 0)).toBe(view.beds)
+    expect(view.emptyCoupleHomes).toBe(1)
+  })
 })
 
 describe('readiness', () => {
@@ -62,7 +75,8 @@ describe('readiness', () => {
     const state = {
       ...base,
       presets: base.presets.map((preset) => (preset.id === 'p2' ? { ...preset, slots: [{ id: 'a', row: 'front' as const }] } : preset)),
-      auto: { ...base.auto, party: [{ id: 'a', row: 'front' as const }] },
+      buildings: { ...base.buildings, guild: 1 },
+      auto: { ...base.auto, enabled: true, policy: 'fixed' as const, party: [{ id: 'a', row: 'front' as const }] },
       drills: [{ heroId: 'a', finishAt: now + 5000, xp: 10 }],
     }
     const status = readiness(state, state.roster[0]!)
@@ -70,5 +84,23 @@ describe('readiness', () => {
     expect(status.fatigueLevel).toBe('tired')
     expect(status.moraleLevel).toBe('low')
     expect(status.busy).toEqual({ kind: 'drill', until: now + 5000 })
+  })
+
+  it('marks only the party auto runs would send (review b1261a7)', () => {
+    const base = town([person('a', 'male', 20), person('b', 'male', 20)])
+    const state = {
+      ...base,
+      buildings: { ...base.buildings, guild: 1 },
+      presets: base.presets.map((preset) => (preset.id === 'p1' ? { ...preset, slots: [{ id: 'a', row: 'front' as const }] } : preset)),
+      auto: { ...base.auto, enabled: true, policy: 'safe' as const, party: [{ id: 'b', row: 'front' as const }] },
+    }
+    expect(readiness(state, state.roster[0]!).parties).toEqual(['p1', 'auto'])
+    expect(readiness(state, state.roster[1]!).parties).toEqual([])
+    expect(readiness({ ...state, auto: { ...state.auto, enabled: false } }, state.roster[0]!).parties).toEqual(['p1'])
+  })
+
+  it('gives the end of temple treatment (review b1261a7)', () => {
+    const state = town([person('a', 'male', 20, { condition: 'injured', treatAt: now + 9000 })])
+    expect(readiness(state, state.roster[0]!).treatAt).toBe(now + 9000)
   })
 })
