@@ -266,11 +266,16 @@ function raiseProposals(state: GameState, rng: Rng, now: number, events: FamilyE
   return { ...state, proposals }
 }
 
-// Heroes out of the village: on an expedition or scouting the nest (review f47daff).
+// Heroes out of the village or busy: on an expedition, scouting the nest
+// (review f47daff) or training (review 8e25753).
 function awayIds(state: GameState): Set<string> {
   const away = new Set(state.expeditions.flatMap((expedition) => expedition.heroIds))
   if (state.scout) {
     away.add(state.scout.heroId)
+  }
+  // Heroes at the training ground are busy too (review 8e25753).
+  for (const drill of state.drills ?? []) {
+    away.add(drill.heroId)
   }
   return away
 }

@@ -663,9 +663,10 @@ function strike(actor: BattleUnit, target: BattleUnit, rng: Rng, tick: number, l
     multiplier *= 1.6
   }
   attack *= multiplier
-  const raw = Math.max(combatRules.minDamage, Math.round(vary(rng, attack - target.defense)))
-  // Guarding skills shave the blow (only for heroes who learned them, so older fights match).
-  const amount = target.guard > 0 ? Math.max(combatRules.minDamage, Math.round(raw * (1 - target.guard))) : raw
+  const rolled = vary(rng, attack - target.defense)
+  // Guarding skills shave the blow before rounding (review 8e25753); only
+  // heroes who learned them take this path, so older fights match.
+  const amount = Math.max(combatRules.minDamage, Math.round(target.guard > 0 ? rolled * (1 - target.guard) : rolled))
   actor.dealt += amount
   hurt(target, amount, tick, log, 'log.attack', actor)
   if (target.hp > 0 && actor.dotOnHit > 0 && target.immunePoison <= 0) {

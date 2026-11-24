@@ -134,3 +134,39 @@ describe('the training ground', () => {
     expect(migrate(JSON.parse(JSON.stringify(old)), now).drills).toEqual([])
   })
 })
+
+describe('review 8e25753 fixes', () => {
+  it('frees the training slot of a hero who leaves, and keeps trainees out of family events', () => {
+    const base = freshState(5, now)
+    const trainee = hero('t', 'warrior', 4)
+    const state = { ...base, gold: 500, buildings: { ...base.buildings, training: 1 }, roster: [hero('a', 'warrior', 10), trainee] }
+    const busy = reduce(state, { type: 'drill', heroId: 't', now })
+    expect(busy.drills).toHaveLength(1)
+    const gone = reduce({ ...busy, roster: busy.roster.filter((entry) => entry.id !== 't') }, { type: 'catchUp', now: now + 1000 })
+    expect(gone.drills).toEqual([])
+  })
+
+  it('gives no early pick back when a kept low-level skill is forgotten', () => {
+    const [starter, taunt, guard] = ids('warrior')
+    const base = freshState(5, now)
+    const kept = { ...hero('w', 'warrior', 2), learned: [starter!, taunt!], skillPoints: 0 }
+    const state = { ...base, gold: 500, buildings: { ...base.buildings, training: 1 }, roster: [kept] }
+    const forgot = reduce(state, { type: 'forget', heroId: 'w', skillId: taunt! })
+    expect(forgot.roster[0]).toMatchObject({ learned: [starter], skillPoints: 0 })
+    expect(reduce(forgot, { type: 'learn', id: 'w', skillId: guard! }).notice).toBe('skill')
+    expect(reduce({ ...state, roster: [{ ...kept, skillPoints: 3 }] }, { type: 'learn', id: 'w', skillId: guard! }).notice).toBe('skill')
+  })
+
+  it('shaves small blows too, since guard applies before rounding', () => {
+    const [starter, , guard] = ids('warrior')
+    const plain = createHeroUnit({ hero: hero('p', 'warrior', 8), row: 'front' }, 0)
+    const guarded = createHeroUnit({ hero: hero('g', 'warrior', 8, [starter!, guard!]), row: 'front' }, 0)
+    const hit = (target: typeof plain) => {
+      const log: LogEntry[] = []
+      simulateFloor([target], ['bat'], DEFAULT_TACTICS, createRng(4), log, 1)
+      return log.filter((entry) => entry.key === 'log.attack' && entry.params.targetId === target.id).reduce((sum, entry) => sum + Number(entry.params.amount), 0)
+    }
+    expect(hit(guarded)).toBeLessThanOrEqual(hit(plain))
+  })
+})
+

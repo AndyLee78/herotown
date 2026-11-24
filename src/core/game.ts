@@ -1,5 +1,6 @@
 import { chargeFountain, freshFountain, makeWish, readFountain, upgradeFountain, type FountainState } from './fountain'
 import { claimGuide, guideSteps } from './guide'
+import { skillPicks } from './skills'
 import { finishDrills, forgetSkill, readDrills, startDrill, type Drill } from './drill'
 import { buyIntel, finishScout, isNest, nestSeason, readScout, seasonKey, startScout, type ScoutJob } from './nest'
 import { finishEnchant, readMagicJob, startEnchant, type MagicJob } from './magic'
@@ -1535,7 +1536,9 @@ function learnSkill(state: GameState, id: string, skillId: string): GameState {
     return { ...state, notice: 'missing' }
   }
   const known = classById(hero.classId).skills.some((skill) => skill.id === skillId)
-  if (!known || hero.learned.includes(skillId) || hero.skillPoints < 1) {
+  // Picks open by level (Docs/skills.md), whatever points a save carries.
+  const open = skillPicks(hero.level) - (hero.learned.length - 1)
+  if (!known || hero.learned.includes(skillId) || hero.skillPoints < 1 || open < 1) {
     return { ...state, notice: 'skill' }
   }
   return {

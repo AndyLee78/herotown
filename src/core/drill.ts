@@ -2,7 +2,7 @@ import { progression, retirementRules, trainingRules } from './data'
 import { gainXp } from './dungeon'
 import type { GameState } from './game'
 import { canDeploy, isChild } from './hero'
-import { starterSkill } from './skills'
+import { normalizeLearned, starterSkill } from './skills'
 import type { Hero } from './types'
 
 // The training ground (Docs/skills.md): heroes behind the party catch up,
@@ -54,6 +54,12 @@ export function startDrill(state: GameState, heroId: string, now: number, busy: 
 }
 
 export function finishDrills(state: GameState, until: number): GameState {
+  // A hero who left the roster (old age, dismissal) frees the slot at once (review 8e25753).
+  const present = new Set(state.roster.filter((hero) => hero.condition !== 'dead').map((hero) => hero.id))
+  const kept = state.drills.filter((drill) => present.has(drill.heroId))
+  if (kept.length !== state.drills.length) {
+    state = { ...state, drills: kept }
+  }
   const done = state.drills.filter((drill) => drill.finishAt <= until)
   if (!done.length) {
     return state
@@ -83,7 +89,9 @@ export function forgetSkill(state: GameState, heroId: string, skillId: string): 
     notice: null,
     gold: state.gold - trainingRules.forgetGold,
     roster: state.roster.map((entry) =>
-      entry.id === heroId ? { ...entry, learned: entry.learned.filter((id) => id !== skillId), skillPoints: entry.skillPoints + 1 } : entry,
+      // The points follow the level, so a pick kept from an older save below
+      // Lv3 does not turn into a free early pick (review 8e25753).
+      entry.id === heroId ? { ...entry, ...normalizeLearned(entry.classId, entry.learned.filter((id) => id !== skillId), entry.level) } : entry,
     ),
   }
 }
