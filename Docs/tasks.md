@@ -100,7 +100,7 @@ Claude Code, Cursor, GPT(Codex)가 함께 쓰는 작업 목록이다. 작업 하
 | 58 | 스킬·훈련소 core 코드 리뷰 (8e25753) | GPT | `Docs/reviews/8e25753.md` (새 파일만) | 완료 (226ee9b) |
 | 59 | 스킬을 배우는 곡선·시뮬레이터 | GPT | `tools/curve.ts`, `print-curve.ts`, `tune-curve.ts`, `first-hour.ts` | 완료 (52b4cfd) |
 | 60 | 길드 화면(의뢰 게시판·레벨·감정) | Cursor | `App.tsx`, `src/ui/game/*.tsx`, `styles.css`, `src/locales/*` | 대기 |
-| 61 | 길드 core 코드 리뷰 (커밋 해시는 아래) | GPT | `Docs/reviews/<해시>.md` (새 파일만) | 대기 |
+| 61 | 길드 core 코드 리뷰 (1208be3) | GPT | `Docs/reviews/1208be3.md` (새 파일만) | 대기 |
 | 62 | 의뢰 보상·자동 파티 측정 | GPT | `tools/curve.ts`, `print-curve.ts`, `tune-curve.ts`, `first-hour.ts` | 대기 |
 
 ---
@@ -1461,12 +1461,12 @@ core에 이미 있는 것('../../core'에서 export):
 
 ## 61. 길드 core 코드 리뷰 (GPT)
 
-**길드 core 커밋 뒤에 시작한다.** 커밋은 git log에서 "Rework the guild"로 찾는다.
+길드 core 커밋은 **1208be3**이다.
 
 **전달할 내용**
 
 ```
-길드 core 커밋("Rework the guild"로 찾는다)을 리뷰한다. 코드는 고치지 않고 Docs/reviews/<해시>.md 새 파일 하나에만 쓴다(Docs/reviews/README.md 형식).
+길드 core 커밋 1208be3를 리뷰한다. 코드는 고치지 않고 Docs/reviews/1208be3.md 새 파일 하나에만 쓴다(Docs/reviews/README.md 형식).
 볼 것: Docs/guild.md와 수치·규칙 차이, 의뢰판 생성의 결정성(계절·시드)과 계절이 바뀌는 순간, 길드 레벨이 계절 중에 오를 때, 반복 의뢰가 끝나자마자 새로 걸리는 경로, 토벌 진행이 직접 원정·자동 출정·패배에서 어떻게 세어지는지, 자동 출정 여러 파티(겹치는 영웅, 프리셋 물약, 시드), 자동 출정이 길드를 요구하게 된 뒤 예전 세이브(자동 출정이 켜져 있지만 길드가 없는 경우), 길잡이 순서 변경, 세이브 14 → 15.
 ```
 
