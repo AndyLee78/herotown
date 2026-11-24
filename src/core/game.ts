@@ -3,6 +3,7 @@ import { claimGuide, guideSteps } from './guide'
 import { skillPicks } from './skills'
 import { deliver, ensureBoard, expeditionSlotsFor, guildLevel, progressClear, readBoard, type GuildBoard } from './guild'
 import { cheer, driftMorale, lowMorale, mourn, shiftMorale } from './morale'
+import { arrive, interview, type Interviews } from './scouting'
 import { forgetSkill, readDrills, runDrills, startDrill, type Drill } from './drill'
 import { buyIntel, finishScout, isNest, nestSeason, readScout, seasonKey, startScout, type ScoutJob } from './nest'
 import { TRINKET_IDS, enchantTime, finishEnchant, readMagicJob, startEnchant, type MagicJob } from './magic'
@@ -17,7 +18,7 @@ import type { Rng } from './rng'
 import type { Genes } from './genes'
 import type { Bond, ClassId, CombatError, DungeonReport, Gear, GearSlot, Gender, Hero, PartyMember, PotionId, Proposal, Role, Row, Supplies, Tactics, TrinketId } from './types'
 
-export const SAVE_VERSION = 17
+export const SAVE_VERSION = 18
 
 export type SeasonId = 'spring' | 'summer' | 'autumn' | 'winter'
 
@@ -162,6 +163,8 @@ export type GameNotice =
   | 'guildRecord'
   | 'festivalDone'
   | 'queueFull'
+  | 'interviewed'
+  | 'hireTown'
   | 'drillHero'
   | 'trainingFull'
   | 'scoutBusy'
@@ -242,6 +245,8 @@ export type GameState = {
   festival: Festival | null
   // Workshop queues and standing orders (Docs/automation.md).
   automation: Automation
+  // Interviews used this season (Docs/scouting.md).
+  interviews: Interviews | null
 }
 
 export type QueueBuilding = 'smith' | 'alchemy' | 'magic'
@@ -313,6 +318,7 @@ export type GameAction =
   | { type: 'dequeue'; building: QueueBuilding; index: number }
   | { type: 'automation'; care?: boolean; drill?: boolean }
   | { type: 'potionTarget'; potionId: PotionId; count: number }
+  | { type: 'interview'; id: string }
   | { type: 'declineProposal'; a: string; b: string; now?: number }
   | { type: 'wish'; now: number }
   | { type: 'brew'; potionId: PotionId; now: number }
@@ -370,6 +376,7 @@ export function freshState(seed: number, now: number): GameState {
     guild: null,
     festival: null,
     automation: freshAutomation(),
+    interviews: null,
   }
 }
 
@@ -445,6 +452,10 @@ function apply(state: GameState, action: GameAction): GameState {
     }
     if (state.gold < progression.hireCost) {
       return { ...state, notice: 'poor' }
+    }
+    // Promising visitors join only a village big enough (Docs/scouting.md).
+    if (hero.terms && townLevel(state.fame).level < hero.terms) {
+      return { ...state, notice: 'hireTown' }
     }
     // Babies on the way already have a bed waiting for them.
     if (bedsTaken(state) >= bedCount(state.buildings.house)) {
@@ -630,6 +641,9 @@ function apply(state: GameState, action: GameAction): GameState {
   }
   if (action.type === 'buyIntel') {
     return buyIntel(state)
+  }
+  if (action.type === 'interview') {
+    return interview(state, action.id)
   }
   if (action.type === 'dequeue') {
     return dequeue(state, action.building, action.index)
@@ -1034,7 +1048,7 @@ function updateVisitors(state: GameState, now: number, arrived: string[]): GameS
   }
   while (visitors.length < cap && nextVisitorAt <= now) {
     nonce += 1
-    const hero = {
+    const drawn = {
       ...generateHero(
         createRng(state.seed + nonce * progression.visitorNonceStride),
         `${state.seed}-v${nonce}`,
@@ -1044,6 +1058,8 @@ function updateVisitors(state: GameState, now: number, arrived: string[]): GameS
       ),
       arrivedAt: now,
     }
+    // A separate stream decides prodigies and terms (Docs/scouting.md).
+    const hero = { ...arrive(drawn, createRng(state.seed + nonce * progression.visitorNonceStride + 31), townLevel(state.fame).level), arrivedAt: now }
     visitors.push(hero)
     arrived.push(hero.name)
     nextVisitorAt += villageRules.inn.arriveEveryMs
@@ -1918,7 +1934,7 @@ function normalize(record: Record<string, unknown>, now: number): GameState {
     calendar,
     lastTickAt: numberOr(record.lastTickAt, now),
     visitors: validHeroes(record.visitors)
-      ? openStays(record.visitors.map((hero) => withRecovery(hero, now)), now, visitorStay(innLevel(record, base)))
+      ? openStays(record.visitors.map((hero) => withRecovery(knownBefore18(record, hero), now)), now, visitorStay(innLevel(record, base)))
       : base.visitors,
     roster: validHeroes(record.roster) ? record.roster.map((hero) => withRecovery(hero, now)) : [],
     graveyard: Array.isArray(record.graveyard) ? (record.graveyard as Grave[]) : [],
@@ -1964,6 +1980,7 @@ function normalize(record: Record<string, unknown>, now: number): GameState {
     guild: readBoard(record.guild),
     festival: readFestival(record.festival),
     automation: readAutomation(record.automation),
+    interviews: readInterviews(record.interviews),
     auto: isAuto(record.auto) ? record.auto : base.auto,
     notice: null,
   }
@@ -2309,5 +2326,19 @@ function drillReserved(state: GameState): Set<string> {
     taken += 1
   }
   return reserved
+}
+
+function readInterviews(value: unknown): Interviews | null {
+  if (value == null || typeof value !== 'object') {
+    return null
+  }
+  const record = value as Interviews
+  return typeof record.season === 'string' && typeof record.used === 'number' ? { season: record.season, used: record.used } : null
+}
+
+// Visitors already looked over before interviews existed stay known (Docs/scouting.md).
+function knownBefore18(record: Record<string, unknown>, hero: Hero): Hero {
+  const version = typeof record.version === 'number' ? record.version : SAVE_VERSION
+  return version < 18 && !hero.interviewed ? { ...hero, interviewed: 1 } : hero
 }
 

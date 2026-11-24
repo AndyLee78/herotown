@@ -166,6 +166,11 @@ export type Hero = {
   learned: string[]
   // 0-100; missing means the base (Docs/morale.md).
   morale?: number
+  // Scouting (Docs/scouting.md): how much an interview revealed, a hidden
+  // prodigy, and the town level a visitor asks for before joining.
+  interviewed?: number
+  prodigy?: boolean
+  terms?: number
   gear: Gear[]
   clears: string[]
   deaths: number

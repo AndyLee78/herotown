@@ -287,7 +287,9 @@
     "trainingFull": "The training ground is full.",
     "guildRecord": "Not enough finished contracts. Complete more guild contracts.",
     "festivalDone": "This season's festival has already been held.",
-    "queueFull": "The queue is full. A higher building level makes room."
+    "queueFull": "The queue is full. A higher building level makes room.",
+    "interviewed": "You have already interviewed this visitor.",
+    "hireTown": "They will only join a bigger village. An interview shows their terms."
   },
   "defeat": {
     "noHealer": "Bring a healer to keep the party going.",

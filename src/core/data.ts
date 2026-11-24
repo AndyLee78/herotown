@@ -9,6 +9,7 @@ import trainingFile from '../data/training.json'
 import guildFile from '../data/guild.json'
 import moraleFile from '../data/morale.json'
 import automationFile from '../data/automation.json'
+import scoutingFile from '../data/scouting.json'
 import smithFile from '../data/smith.json'
 import combatFile from '../data/combat.json'
 import dungeonsFile from '../data/dungeons.json'
@@ -220,6 +221,7 @@ if (magicRules.trinkets.some((trinket) => trinket.magicLevel < 1 || trinket.ms <
 export const trainingRules = trainingFile
 export const moraleRules = moraleFile
 export const automationRules = automationFile
+export const scoutingRules = scoutingFile
 export const guildRules = guildFile as typeof guildFile & { deliverAmount: Record<string, number>; materialValue: Record<string, number> }
 export const nestRules = nestFile as typeof nestFile & { floors: string[][][] }
 export const fountainRules = fountainFile

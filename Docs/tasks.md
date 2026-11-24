@@ -107,6 +107,8 @@ Claude Code, Cursor, GPT(Codex)가 함께 쓰는 작업 목록이다. 작업 하
 | 65 | 사기가 진행에 주는 영향 측정 | GPT | `tools/curve.ts`, `print-curve.ts`, `tune-curve.ts`, `first-hour.ts` | 완료 (727df45) |
 | 66 | 자동화 화면(대기열·물약 유지·자동 치료·자동 훈련) | GPT (Cursor 대신) | `App.tsx`, `src/ui/game/*.tsx`, `styles.css`, `src/locales/*` | 완료 (4bbfcda) |
 | 67 | 자동화 core 코드 리뷰 (a6be730) | GPT | `Docs/reviews/a6be730.md` (새 파일만) | 완료 (f48be69) |
+| 68 | 면담·스카우팅 화면 | GPT (Cursor 대신) | `App.tsx`, `src/ui/game/*.tsx`, `styles.css`, `src/locales/*` | 대기 |
+| 69 | 면담·스카우팅 core 코드 리뷰 (커밋 해시는 아래) | GPT | `Docs/reviews/<해시>.md` (새 파일만) | 대기 (68 뒤) |
 
 ---
 
@@ -1599,3 +1601,43 @@ core에 이미 있는 것:
 
 - [리뷰](reviews/a6be730.md)에 공방 업그레이드의 소급 적용, 부재 종료 시 자동 치료 시작, 두 번째 자동 출정 파티와 훈련 충돌, 정찰 중 훈련 소급 시작을 기록했다.
 - 계절 경계의 대기열 연결, 골드 부족 시 훈련 보류, 세이브 16 자동화 기본값 이관을 확인했다.
+
+---
+
+## 68. 면담·스카우팅 화면 (GPT, Cursor 대신)
+
+**지금 시작할 수 있다.** 설계: `Docs/scouting.md`. 끝나면 Claude Code가 화면을 직접 확인한다.
+
+**전달할 내용**
+
+```
+Docs/scouting.md를 읽고 여관 화면을 고친다. src/ui/App.tsx, src/ui/game/*.tsx, src/ui/styles.css, src/locales/*만 고친다. core는 고치지 않는다. 기존 여관 카드 구조와 kit.tsx 공용 조각을 그대로 쓴다.
+
+core에 이미 있는 것('../../core'에서 export):
+- knowledge(hero): 0 가림, 1 잠재력·특성 공개, 2 전성기 능력치까지. peakStats(hero): 전성기(27살) 능력치.
+- hero.prodigy(숨은 인재), hero.terms(고용에 필요한 마을 레벨, 없으면 조건 없음).
+- { type: 'interview', id }: 계절마다 여관 레벨만큼 무료, 그다음은 골드 scoutingRules.interviewGold. interviewsLeft(state), freeInterviews(state). 결과 notice: interviewed, poor.
+- 고용 시 마을 레벨이 terms보다 낮으면 notice 'hireTown'.
+
+1. 여관 방문자 카드: knowledge 0이면 잠재력 칩과 특성 칩 자리에 "?"(면담하면 알 수 있다). 1 이상이면 지금처럼 보인다. 2면 능력치 옆에 "전성기 n" 표시.
+2. [면담] 버튼: 남은 무료 면담이 있으면 "면담 (무료 n/m)", 없으면 "면담 골드 10". 이미 면담했으면 숨긴다(여관 Lv3 이상이고 knowledge 1이면 "더 깊이 면담" 버튼).
+3. 숨은 인재: 면담 후 prodigy면 금색 "숨은 인재!" 칩과 반짝임.
+4. 고용 조건: 면담 후 terms가 있으면 "마을 Lv n 필요" 칩, 마을 레벨이 모자라면 고용 버튼 비활성과 안내. 면담 전에 거절되면 'hireTown' 문구가 뜬다.
+5. 여관 창 위쪽에 "이번 계절 무료 면담 n/m".
+6. 문구 ko/en 같은 키.
+
+확인: npm run dev에서 디버그 세이브로 방문자를 면담해 보고(무료 → 골드), 여관 레벨 3에서 깊은 면담을 해 본다. 확인한 내용을 메모에.
+```
+
+---
+
+## 69. 면담·스카우팅 core 코드 리뷰 (GPT)
+
+**작업 68 뒤에 시작한다(같은 도구라 순서대로).** core 커밋은 git log에서 "Add interviews"로 찾는다.
+
+**전달할 내용**
+
+```
+면담·스카우팅 core 커밋("Add interviews"로 찾는다)을 리뷰한다. 코드는 고치지 않고 Docs/reviews/<해시>.md 새 파일 하나에만 쓴다(Docs/reviews/README.md 형식).
+볼 것: Docs/scouting.md와 규칙 차이, 면담 횟수의 계절 판정과 여관 레벨 변화, 깊은 면담, 숨은 인재가 기존 방문자 생성(시드 흐름)을 바꾸지 않는지, 숨은 인재의 능력치 재계산(나이·잠재력·potentials), 고용 조건과 처음 방문자, 방문자가 나이 들거나 떠날 때 필드가 유지되는지(createHero), 고용 후 영웅에 남는 필드, 세이브 17 → 18(예전 방문자를 면담한 것으로 처리).
+```

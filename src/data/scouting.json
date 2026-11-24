@@ -1,0 +1,23 @@
+{
+  "freePerInnLevel": 1,
+  "interviewGold": 10,
+  "deepInnLevel": 3,
+  "primeAge": 27,
+  "prodigyChance": 0.03,
+  "prodigyPerTownLevel": 0.01,
+  "prodigyBoost": 25,
+  "prodigyAge": [
+    16,
+    19
+  ],
+  "terms": [
+    {
+      "potential": 85,
+      "townLevel": 4
+    },
+    {
+      "potential": 70,
+      "townLevel": 3
+    }
+  ]
+}
