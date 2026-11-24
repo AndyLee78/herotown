@@ -92,7 +92,7 @@ Claude Code, Cursor, GPT(Codex)가 함께 쓰는 작업 목록이다. 작업 하
 | 50 | 아이를 영웅·출전 목록에서 빼고 성인식 알림 | Claude Code (사용자 요청으로 직접) | `src/ui/game/*.tsx`, `App.tsx`, `styles.css`, `src/locales/*` | 완료 (다음 커밋) |
 | 51 | 용의 둥지 몬스터·던전 그림 | Cursor | `src/ui/voxel/enemies.ts`, `portrait.ts` | 완료 (ac00d51) |
 | 52 | 둥지 카드(가려진 어픽스·정찰·정보 구매)와 리포트 | Cursor | `App.tsx`, `src/ui/game/*.tsx`, `styles.css`, `src/locales/*` | 완료 (a63366f) |
-| 53 | 정찰 나가는 도적과 어픽스 연출 | Cursor | `BattleScene.ts`, `replay.ts`, `VillageScene.ts` | 대기 (52 뒤) |
+| 53 | 정찰 나가는 도적과 어픽스 연출 | Cursor | `BattleScene.ts`, `replay.ts`, `VillageScene.ts` | 완료 (613ee56) |
 | 54 | 3d core 코드 리뷰 (f47daff) | GPT | `Docs/reviews/f47daff.md` (새 파일만) | 대기 |
 | 55 | 용의 둥지 밸런스 측정 | GPT | `tools/curve.ts`, `print-curve.ts`, `tune-curve.ts`, `first-hour.ts` | 대기 |
 
@@ -1332,17 +1332,7 @@ core에 이미 있는 것:
 
 ## 53. 정찰 나가는 도적과 어픽스 연출 (Cursor)
 
-**작업 52 뒤에 시작한다.**
-
-**전달할 내용**
-
-```
-src/ui/voxel/BattleScene.ts, src/ui/voxel/replay.ts, src/ui/voxel/VillageScene.ts만 고친다.
-1. 마을: state.scout가 있으면 그 도적이 남쪽 문으로 몰래 나갔다가 finishAt에 돌아온다(원정 파티와 같은 길).
-2. 전투 다시 보기: report.affixes가 있으면 층 시작에 어픽스 아이콘 두 개를 잠깐 띄운다. 매복은 기존 log.ambush, 함정은 log.trap, 숨결은 log.charge/log.blast 연출을 그대로 쓴다.
-3. 둥지 전투 배경에 붉은 빛과 떠다니는 불씨.
-확인: 스크린샷을 메모에.
-```
+**완료 (613ee56).** 혼자 떠나는 정찰은 남쪽 문으로 바로 나감. 층 시작 어픽스 배너·둥지 붉은 빛·불씨 확인.
 
 ---
 
