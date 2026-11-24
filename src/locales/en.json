@@ -433,7 +433,8 @@
     "warning": "Warning",
     "childrenElsewhere": "{{count}} children are listed in the census window.",
     "growsUp": "Can go out at age {{age}}.",
-    "afterBirth": "Can go out after the birth."
+    "afterBirth": "Can go out after the birth.",
+    "scouting": "Scouting"
   },
   "skill": {
     "warrior": {
@@ -878,6 +879,27 @@
   "nest": {
     "hidden": "This season's dangers: ?",
     "scout": "Send a rogue to scout (5 min)",
-    "intel": "Buy guild intel"
+    "intel": "Buy guild intel",
+    "intelCost": "Buy guild intel · {{gold}} gold",
+    "seasonLeft": "Next season in {{time}}",
+    "affixes": "This season's affixes",
+    "floors": "Floor lineups",
+    "floor": "Floor {{n}}",
+    "scouting": "Scouting · {{time}}",
+    "pickRogue": "Pick a rogue to scout",
+    "noRogue": "No rogue is free to scout.",
+    "cancelPick": "Cancel",
+    "ready": "Ready",
+    "notReady": "Not ready",
+    "check": {
+      "venom": "Antidotes or an Antidote Amulet",
+      "traps": "A rogue or Trap Sense",
+      "ambush": "A Watchful Charm",
+      "charged": "An interrupter or Brace",
+      "silence": "A Calm Earring or clarity draughts",
+      "paralyze": "A Steady Bracelet or tonics",
+      "noRest": "Healing potions",
+      "swift": "Fast heroes and levels"
+    }
   }
 }

@@ -373,6 +373,9 @@ export function App() {
   const welcoming = save.absence == null && confirm == null && (save.comingOfAge ?? []).length > 0
   const covered = screen != null || save.absence != null || confirm != null || welcoming
   const away = new Set(save.expeditions.flatMap((expedition) => expedition.heroIds))
+  if (save.scout) {
+    away.add(save.scout.heroId)
+  }
   const badges: Partial<Record<Screen, number | boolean>> = {
     inn: save.visitors.length,
     roster: save.roster.some(needsWarning),

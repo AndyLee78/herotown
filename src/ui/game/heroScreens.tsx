@@ -56,7 +56,7 @@ type Act = (action: GameAction) => void
 // Stats never go far past 30 in stage 1; bars are scaled to that.
 const STAT_SCALE = 30
 
-function HeroChips({ hero }: { hero: Hero }) {
+function HeroChips({ hero, scouting = false }: { hero: Hero; scouting?: boolean }) {
   const { t } = useTranslation()
   return (
     <span className="chips">
@@ -64,6 +64,7 @@ function HeroChips({ hero }: { hero: Hero }) {
       <Chip>{t('ui.level', { level: hero.level })}</Chip>
       <Chip>{t('hero.age', { age: hero.age })}</Chip>
       <Chip tone={conditionTone(hero)}>{t(`condition.${hero.condition}`)}</Chip>
+      {scouting ? <Chip tone="info">{t('hero.scouting')}</Chip> : null}
       {hero.deaths > 0 ? <Chip tone="bad">{t('hero.seenDeath')}</Chip> : null}
       {retirementAdvised(hero) ? <Chip tone="warn">{t('retire.advised')}</Chip> : null}
     </span>
@@ -161,7 +162,7 @@ export function Roster({
               <Portrait hero={hero} />
               <span className="hero-row-body">
                 <strong>{hero.name}</strong>
-                <HeroChips hero={hero} />
+                <HeroChips hero={hero} scouting={save.scout?.heroId === hero.id} />
                 <span className="fatigue">
                   <Bar value={hero.fatigue} max={100} tone={fatigueTone(hero)} />
                   <span className="muted">{fatigueText(t, hero)}</span>
@@ -253,7 +254,7 @@ function HeroDetail({
         <Portrait hero={hero} large />
         <div>
           <strong className="name">{hero.family ? `${hero.name} · ${hero.family}` : hero.name}</strong>
-          <HeroChips hero={hero} />
+          <HeroChips hero={hero} scouting={save.scout?.heroId === hero.id} />
           <span className="chips">
             {hero.traitIds.map((trait) => (
               <Chip key={trait}>{t(`trait.${trait}`)}</Chip>

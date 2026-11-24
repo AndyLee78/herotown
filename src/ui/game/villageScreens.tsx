@@ -563,6 +563,15 @@ export function Report({ report }: { report: DungeonReport | null }) {
             ))}
           </span>
         ) : null}
+        {report.affixes?.length ? (
+          <span className="chips">
+            {report.affixes.map((id) => (
+              <Chip key={id} tone="warn">
+                {t(`affix.${id}`)}
+              </Chip>
+            ))}
+          </span>
+        ) : null}
         {report.traps ? (
           <span className="chips">
             {report.traps.disarmed > 0 ? <Chip tone="good">{t('battle.trapsDisarmed', { count: report.traps.disarmed })}</Chip> : null}

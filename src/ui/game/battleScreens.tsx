@@ -15,14 +15,21 @@ import {
   expeditionSlots,
   heroPower,
   heroTrinkets,
+  isNest,
   monsterById,
+  nestRevealed,
+  nestRules,
+  nestSeason,
+  timeRules,
   villageRules,
+  type AffixId,
   type DungeonReport,
   type GameAction,
   type GameState,
   type Hero,
   type PartyPreset,
   type PotionId,
+  type Supplies,
   type TargetPriority,
 } from '../../core'
 import { gameNow } from '../clock'
@@ -86,7 +93,9 @@ function DungeonBoard({ save, onAction, onPrepare }: { save: GameState; onAction
   const dungeon = dungeonById(save.dungeonId)
   const open = dungeonUnlocked(save, dungeon.id)
   const drop = villageRules.drops[dungeon.id as keyof typeof villageRules.drops]
-  const monsterIds = [...new Set(dungeon.floors.flatMap((floor) => floor.monsters))]
+  const season = isNest(dungeon.id) ? nestSeason(save.seed, save.calendar) : null
+  const revealed = isNest(dungeon.id) && nestRevealed(save)
+  const monsterIds = [...new Set((revealed && season ? season.floors : dungeon.floors).flatMap((floor) => floor.monsters))]
   const bosses = monsterIds.filter((id) => monsterById(id).boss)
   const regulars = monsterIds.filter((id) => !monsterById(id).boss)
   const repeat = villageRules.repeatReward
@@ -131,24 +140,30 @@ function DungeonBoard({ save, onAction, onPrepare }: { save: GameState; onAction
               </div>
             </div>
             <p>{t(`dungeon.${dungeon.id}.hint`)}</p>
-            <h3 className="section-title">{t('battle.boss')}</h3>
-            <span className="chips">
-              {bosses.map((id) => (
-                <Chip key={id} tone="bad">
-                  <MonsterFace refId={id} large />
-                  {t(`enemy.${id}`)}
-                </Chip>
-              ))}
-            </span>
-            <h3 className="section-title">{t('battle.monsters')}</h3>
-            <span className="chips">
-              {regulars.map((id) => (
-                <Chip key={id}>
-                  <MonsterFace refId={id} />
-                  {t(`enemy.${id}`)}
-                </Chip>
-              ))}
-            </span>
+            {isNest(dungeon.id) ? (
+              <NestCard save={save} onAction={onAction} />
+            ) : (
+              <>
+                <h3 className="section-title">{t('battle.boss')}</h3>
+                <span className="chips">
+                  {bosses.map((id) => (
+                    <Chip key={id} tone="bad">
+                      <MonsterFace refId={id} large />
+                      {t(`enemy.${id}`)}
+                    </Chip>
+                  ))}
+                </span>
+                <h3 className="section-title">{t('battle.monsters')}</h3>
+                <span className="chips">
+                  {regulars.map((id) => (
+                    <Chip key={id}>
+                      <MonsterFace refId={id} />
+                      {t(`enemy.${id}`)}
+                    </Chip>
+                  ))}
+                </span>
+              </>
+            )}
           </>
         ) : (
           <p className="empty">
@@ -172,6 +187,94 @@ function DungeonBoard({ save, onAction, onPrepare }: { save: GameState; onAction
           {t('battle.prepare')}
         </button>
       </div>
+    </div>
+  )
+}
+
+function NestCard({ save, onAction }: { save: GameState; onAction: Act }) {
+  const { t } = useTranslation()
+  const now = useNow(true)
+  const [picking, setPicking] = useState(false)
+  const season = nestSeason(save.seed, save.calendar)
+  const known = nestRevealed(save)
+  const left = Math.max(0, timeRules.seasonMs - save.calendar.intoSeasonMs)
+  const away = new Set(save.expeditions.flatMap((expedition) => expedition.heroIds))
+  if (save.scout) {
+    away.add(save.scout.heroId)
+  }
+  const rogues = save.roster.filter(
+    (hero) => hero.classId === 'rogue' && canDeploy(hero) && hero.condition !== 'injured' && hero.condition !== 'critical' && !away.has(hero.id),
+  )
+  return (
+    <div className="nest-card">
+      <p className="muted">{t('nest.seasonLeft', { time: waitLabel(left) })}</p>
+      {known ? (
+        <>
+          <h3 className="section-title">{t('nest.affixes')}</h3>
+          {season.affixes.map((id) => (
+            <div key={id} className="nest-affix">
+              <Chip tone="warn">{t(`affix.${id}`)}</Chip>
+              <span className="muted">{t(`affix.hint.${id}`)}</span>
+            </div>
+          ))}
+          <h3 className="section-title">{t('nest.floors')}</h3>
+          {season.floors.map((floor, index) => (
+            <div key={index} className="nest-floor">
+              <strong>{t('nest.floor', { n: index + 1 })}</strong>
+              <span className="chips">
+                {floor.monsters.map((id, slot) => (
+                  <Chip key={`${id}-${slot}`} tone={monsterById(id).boss ? 'bad' : undefined}>
+                    <MonsterFace refId={id} />
+                    {t(`enemy.${id}`)}
+                  </Chip>
+                ))}
+              </span>
+            </div>
+          ))}
+        </>
+      ) : (
+        <>
+          <p className="banner">{t('nest.hidden')}</p>
+          <h3 className="section-title">{t('nest.floors')}</h3>
+          <p className="muted">?</p>
+          {save.scout ? (
+            <div className="nest-scout">
+              <Bar value={Math.max(0, nestRules.scoutMs - (save.scout.finishAt - now))} max={nestRules.scoutMs} tone="info" />
+              <span className="muted">{t('nest.scouting', { time: waitLabel(Math.max(0, save.scout.finishAt - now)) })}</span>
+            </div>
+          ) : picking ? (
+            <div className="nest-pick">
+              <strong>{t('nest.pickRogue')}</strong>
+              {rogues.length === 0 ? <p className="muted">{t('nest.noRogue')}</p> : null}
+              {rogues.map((hero) => (
+                <button
+                  key={hero.id}
+                  type="button"
+                  className="btn small"
+                  onClick={() => {
+                    onAction({ type: 'scout', heroId: hero.id, now: gameNow() })
+                    setPicking(false)
+                  }}
+                >
+                  <Portrait hero={hero} /> {hero.name}
+                </button>
+              ))}
+              <button type="button" className="btn tiny" onClick={() => setPicking(false)}>
+                {t('nest.cancelPick')}
+              </button>
+            </div>
+          ) : (
+            <div className="nest-actions">
+              <button type="button" className="btn" onClick={() => setPicking(true)}>
+                {t('nest.scout')}
+              </button>
+              <button type="button" className="btn gold" disabled={save.buildings.guild < 1 || save.gold < nestRules.intelGold} onClick={() => onAction({ type: 'buyIntel' })}>
+                {t('nest.intelCost', { gold: nestRules.intelGold })}
+              </button>
+            </div>
+          )}
+        </>
+      )}
     </div>
   )
 }
@@ -276,7 +379,7 @@ function Prep({
 }) {
   const { t, i18n } = useTranslation()
   const korean = i18n.language.startsWith('ko')
-  const now = useNow(save.expeditions.length > 0)
+  const now = useNow(save.expeditions.length > 0 || save.scout != null)
   const dungeon = dungeonById(save.dungeonId)
   const slots = expeditionSlots(save.buildings.guild)
   const preset = save.presets.find((entry) => entry.id === save.presetId) ?? save.presets[0]
@@ -284,6 +387,9 @@ function Prep({
     return null
   }
   const away = new Set(save.expeditions.flatMap((expedition) => expedition.heroIds))
+  if (save.scout) {
+    away.add(save.scout.heroId)
+  }
   const heroes = presetHeroes(save, preset)
   const busy = heroes.some((hero) => away.has(hero.id))
   const full = save.expeditions.length >= slots
@@ -424,6 +530,13 @@ function Prep({
 
       <FortReady dungeonId={dungeon.id} heroes={heroes} />
       <CitadelReady dungeonId={dungeon.id} heroes={heroes} blast={preset.tactics.blast ?? 'interrupt'} />
+      <NestReady
+        save={save}
+        dungeonId={dungeon.id}
+        heroes={heroes}
+        supplies={preset.supplies ?? {}}
+        blast={preset.tactics.blast ?? 'interrupt'}
+      />
 
       {blocked ? <p className="banner bad">{blocked}</p> : null}
       <div className={stamping ? 'stamp-stage stamping' : 'stamp-stage'}>
@@ -501,6 +614,9 @@ function PartyEditor({ save, onAction, onBack }: { save: GameState; onAction: Ac
     return null
   }
   const away = new Set(save.expeditions.flatMap((expedition) => expedition.heroIds))
+  if (save.scout) {
+    away.add(save.scout.heroId)
+  }
   const inPreset = new Set(preset.slots.map((slot) => slot.id))
   const full = preset.slots.length >= combatRules.maxParty
   // Children stay off this list until they come of age (Docs/tasks.md 50).
@@ -538,6 +654,7 @@ function PartyEditor({ save, onAction, onBack }: { save: GameState; onAction: Ac
           {listed.map(({ hero, power }) => {
             const chosen = inPreset.has(hero.id)
             const unavailable = away.has(hero.id) || !canDeploy(hero)
+            const scouting = save.scout?.heroId === hero.id
             return (
               <button
                 key={hero.id}
@@ -554,7 +671,7 @@ function PartyEditor({ save, onAction, onBack }: { save: GameState; onAction: Ac
                   <span className="chips">
                     <Chip tone="info">{t(`class.${hero.classId}`)}</Chip>
                     <Chip>{t('ui.level', { level: hero.level })}</Chip>
-                    {away.has(hero.id) ? <Chip tone="info">{t('battle.onTrip')}</Chip> : null}
+                    {scouting ? <Chip tone="info">{t('hero.scouting')}</Chip> : away.has(hero.id) ? <Chip tone="info">{t('battle.onTrip')}</Chip> : null}
                     {needsWarning(hero) || hero.condition === 'dead' ? <Chip tone="bad">{t(`condition.${hero.condition}`)}</Chip> : null}
                     {hero.expecting ? <Chip tone="info">{t('battle.expecting')}</Chip> : null}
                   </span>
@@ -689,6 +806,82 @@ function CitadelReady({ dungeonId, heroes, blast }: { dungeonId: string; heroes:
   )
 }
 
+function affixReady(
+  id: AffixId,
+  heroes: Hero[],
+  supplies: Supplies,
+  blast: 'interrupt' | 'brace',
+): boolean {
+  const trinkets = (hero: Hero) => heroTrinkets(hero)
+  switch (id) {
+    case 'venom':
+      return (supplies.antidote ?? 0) > 0 || heroes.some((hero) => trinkets(hero).has('poisonWard'))
+    case 'traps':
+      return heroes.some((hero) => hero.classId === 'rogue') || heroes.some((hero) => trinkets(hero).has('trapSense'))
+    case 'ambush':
+      return heroes.some((hero) => trinkets(hero).has('alert'))
+    case 'charged':
+      return blast === 'brace' || heroes.some((hero) => classById(hero.classId).interrupt)
+    case 'silence':
+      return (supplies.clarity ?? 0) > 0 || heroes.some((hero) => trinkets(hero).has('calm'))
+    case 'paralyze':
+      return (supplies.tonic ?? 0) > 0 || heroes.some((hero) => trinkets(hero).has('steady'))
+    case 'noRest':
+      return (supplies.heal ?? 0) > 0
+    case 'swift':
+      return true
+  }
+}
+
+function NestReady({
+  save,
+  dungeonId,
+  heroes,
+  supplies,
+  blast,
+}: {
+  save: GameState
+  dungeonId: string
+  heroes: Hero[]
+  supplies: Supplies
+  blast: 'interrupt' | 'brace'
+}) {
+  const { t } = useTranslation()
+  if (!isNest(dungeonId) || !nestRevealed(save)) {
+    return null
+  }
+  const season = nestSeason(save.seed, save.calendar)
+  return (
+    <div className="nest-ready">
+      {season.affixes.map((id) => {
+        const ok = affixReady(id, heroes, supplies, blast)
+        return (
+          <p key={id} className={ok ? 'banner' : 'banner warn'}>
+            <Chip tone={ok ? 'good' : 'warn'}>{t(`affix.${id}`)}</Chip>
+            {t(`nest.check.${id}`)}
+            <span className="muted"> · {ok ? t('nest.ready') : t('nest.notReady')}</span>
+          </p>
+        )
+      })}
+    </div>
+  )
+}
+
+function affixChips(report: DungeonReport, t: TFunction) {
+  if (!report.affixes?.length) {
+    return null
+  }
+  return (
+    <>
+      {report.affixes.map((id) => (
+        <Chip key={id} tone="warn">
+          {t(`affix.${id}`)}
+        </Chip>
+      ))}
+    </>
+  )
+}
+
 function blastChips(report: DungeonReport, t: TFunction) {
   const interrupted = report.log.filter((entry) => entry.key === 'log.interrupt').length
   const blasted = report.log.filter((entry) => entry.key === 'log.blast').length
@@ -740,6 +933,7 @@ function History({ save, onOpen }: { save: GameState; onOpen: (report: DungeonRe
               {POTION_IDS.filter((id) => (report.potionsUsed?.[id] ?? 0) > 0).map((id) => (
                 <Chip key={id}>{t('battle.usedPotion', { potion: t(`potion.${id}`), count: report.potionsUsed?.[id] ?? 0 })}</Chip>
               ))}
+              {affixChips(report, t)}
               {report.traps?.disarmed ? <Chip tone="good">{t('battle.trapsDisarmed', { count: report.traps.disarmed })}</Chip> : null}
               {report.traps?.sprung ? <Chip tone="warn">{t('battle.trapsSprung', { count: report.traps.sprung })}</Chip> : null}
               {blastChips(report, t)}

@@ -806,6 +806,44 @@ button,
   background: #fbe0dc;
 }
 
+.banner.warn {
+  color: #8a4a12;
+  background: #f7e6c8;
+}
+
+.nest-card {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.nest-affix,
+.nest-floor {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.nest-actions,
+.nest-pick {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  align-items: center;
+}
+
+.nest-scout {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.nest-ready {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
 .section-title {
   display: flex;
   align-items: center;

@@ -433,7 +433,8 @@
     "warning": "경고",
     "childrenElsewhere": "아이 {{count}}명은 마을 인구 창에서 볼 수 있다.",
     "growsUp": "{{age}}살이 되면 출전할 수 있다.",
-    "afterBirth": "아이를 낳은 뒤 출전할 수 있다."
+    "afterBirth": "아이를 낳은 뒤 출전할 수 있다.",
+    "scouting": "정찰 중"
   },
   "skill": {
     "warrior": {
@@ -878,6 +879,27 @@
   "nest": {
     "hidden": "이번 계절의 위험: ?",
     "scout": "도적 정찰 (5분)",
-    "intel": "길드 정보 구매"
+    "intel": "길드 정보 구매",
+    "intelCost": "길드 정보 구매 · 골드 {{gold}}",
+    "seasonLeft": "다음 계절까지 {{time}}",
+    "affixes": "이번 계절 어픽스",
+    "floors": "층별 적 구성",
+    "floor": "{{n}}층",
+    "scouting": "정찰 중 · {{time}}",
+    "pickRogue": "정찰 보낼 도적",
+    "noRogue": "보낼 수 있는 도적이 없습니다.",
+    "cancelPick": "취소",
+    "ready": "대비됨",
+    "notReady": "대비 필요",
+    "check": {
+      "venom": "해독 물약 또는 해독의 목걸이",
+      "traps": "도적 또는 함정 감지",
+      "ambush": "경계의 부적",
+      "charged": "끊을 영웅 또는 버티기",
+      "silence": "고요의 귀걸이 또는 맑은 정신 물약",
+      "paralyze": "굳건한 팔찌 또는 각성 물약",
+      "noRest": "회복 물약",
+      "swift": "빠른 영웅·레벨"
+    }
   }
 }
