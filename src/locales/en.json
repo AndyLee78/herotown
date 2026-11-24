@@ -1,4 +1,23 @@
 {
+  "house": {
+    "beds": "Beds {{used}}/{{beds}}",
+    "free": "Free beds {{count}}",
+    "newlywedCount": "Available newlywed rooms {{empty}}/{{total}}",
+    "roomCount": "{{room}} · {{count}}",
+    "family": "Family room",
+    "parent": "Single-parent room",
+    "shared": "Shared room",
+    "familyName": "Family room · {{name}} family",
+    "overflow": "{{count}} more beds needed.",
+    "expecting": "Baby on the way",
+    "emptyBed": "Empty bed",
+    "newlywed": "Available newlywed room",
+    "newlywedHint": "A married couple can move in.",
+    "child": "Child",
+    "retired": "Retired",
+    "retirees": "Retirees",
+    "busy": "Away"
+  },
   "school": {
     "open": "Open school",
     "seats": "Seats {{used}}/{{total}}",
@@ -89,6 +108,7 @@
     "reload": "Reload"
   },
   "screen": {
+    "house": "Housing",
     "school": "School",
     "town": "Town",
     "inn": "Inn",

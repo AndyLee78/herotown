@@ -1,4 +1,23 @@
 {
+  "house": {
+    "beds": "침대 {{used}}/{{beds}}",
+    "free": "빈 침대 {{count}}개",
+    "newlywedCount": "빈 신혼방 {{empty}}/{{total}}",
+    "roomCount": "{{room}} {{count}}개",
+    "family": "가족방",
+    "parent": "한부모 방",
+    "shared": "2인실",
+    "familyName": "가족방 · {{name}} 가족",
+    "overflow": "침대가 {{count}}개 모자랍니다.",
+    "expecting": "곧 태어날 아기",
+    "emptyBed": "빈 침대",
+    "newlywed": "빈 신혼방",
+    "newlywedHint": "결혼한 부부가 들어옵니다.",
+    "child": "아이",
+    "retired": "은퇴",
+    "retirees": "은퇴자",
+    "busy": "외출 중"
+  },
   "school": {
     "open": "학교 열기",
     "seats": "자리 {{used}}/{{total}}",
@@ -89,6 +108,7 @@
     "reload": "새로고침"
   },
   "screen": {
+    "house": "집",
     "school": "학교",
     "town": "마을 운영",
     "inn": "여관",

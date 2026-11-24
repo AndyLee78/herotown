@@ -1077,6 +1077,25 @@ button,
   text-align: right;
 }
 
+.house-rooms {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 240px), 1fr));
+  gap: 10px;
+}
+
+.house-occupant {
+  width: 100%;
+  min-width: 0;
+  text-align: left;
+  overflow-wrap: anywhere;
+}
+
+.house-vacancy {
+  padding: 8px;
+  border: 1px dashed currentColor;
+  border-radius: 8px;
+}
+
 .school-effects {
   width: 100%;
   border-collapse: collapse;

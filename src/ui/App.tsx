@@ -30,7 +30,7 @@ import { BattleHub } from './game/battleScreens'
 import { Inn, Roster } from './game/heroScreens'
 import { UiIcon, TownLogo, type ResourceKind } from './game/icons'
 import { Bar, Portrait, Res, Window, needsWarning, useNow, waitLabel } from './game/kit'
-import { Absence, Alchemy, ComingOfAge, ConfirmDepart, Festival, Guild, Magic, School, Settings, Smith, Town, Training, WishButton } from './game/villageScreens'
+import { Absence, Alchemy, ComingOfAge, ConfirmDepart, Festival, Guild, House, Magic, School, Settings, Smith, Town, Training, WishButton } from './game/villageScreens'
 import { loadGame, storeGame } from './storage'
 import { registerSW } from 'virtual:pwa-register'
 import { isSoundName, play, unlockSound } from './sound'
@@ -38,7 +38,7 @@ import { isSoundName, play, unlockSound } from './sound'
 const ExpeditionPanel = lazy(() => import('./ExpeditionPanel').then((mod) => ({ default: mod.ExpeditionPanel })))
 const VillageView = lazy(() => import('./VillageView').then((mod) => ({ default: mod.VillageView })))
 
-type Screen = 'town' | 'inn' | 'roster' | 'battle' | 'smith' | 'alchemy' | 'magic' | 'training' | 'school' | 'guild' | 'settings' | 'festival'
+type Screen = 'town' | 'inn' | 'roster' | 'battle' | 'smith' | 'alchemy' | 'magic' | 'training' | 'school' | 'guild' | 'house' | 'settings' | 'festival'
 type Toast = { id: number; text: string }
 
 const DOCK: { screen: Screen; icon: ReactNode }[] = [
@@ -53,7 +53,7 @@ const DOCK: { screen: Screen; icon: ReactNode }[] = [
 const BUILDING_SCREEN: Record<BuildingId, Screen> = {
   hall: 'town',
   inn: 'inn',
-  house: 'roster',
+  house: 'house',
   guild: 'guild',
   smith: 'smith',
   temple: 'roster',
@@ -479,7 +479,7 @@ export function App() {
         <Window
           title={t(`screen.${screen}`)}
           icon={
-            screen === 'alchemy' ? <UiIcon name="alchemy" size={24} /> : screen === 'magic' ? <UiIcon name="magic" size={24} /> : screen === 'training' || screen === 'school' ? <UiIcon name="roster" size={24} /> : screen === 'guild' ? <UiIcon name="party" size={24} /> : DOCK.find((item) => item.screen === screen)?.icon ?? <UiIcon name="settings" size={24} />
+            screen === 'alchemy' ? <UiIcon name="alchemy" size={24} /> : screen === 'magic' ? <UiIcon name="magic" size={24} /> : screen === 'training' || screen === 'school' ? <UiIcon name="roster" size={24} /> : screen === 'guild' ? <UiIcon name="party" size={24} /> : screen === 'house' ? <UiIcon name="town" size={24} /> : DOCK.find((item) => item.screen === screen)?.icon ?? <UiIcon name="settings" size={24} />
           }
           onClose={() => { play('close'); setScreen(null) }}
         >
@@ -487,6 +487,7 @@ export function App() {
             <Town save={save} onAction={apply} busy={adBusy} onWatch={() => watchAd('construction')} onAlchemy={() => open('alchemy')} onMagic={() => open('magic')} onTraining={() => open('training')} onSchool={() => open('school')} onGuild={() => open('guild')} onFestival={() => open('festival')} onSelectHero={(id) => { setSelectedId(id); open('roster') }} />
           ) : null}
           {screen === 'inn' ? <Inn save={save} onAction={apply} /> : null}
+          {screen === 'house' ? <House save={save} onSelectHero={(id) => { setSelectedId(id); open('roster') }} /> : null}
           {screen === 'roster' ? (
             <Roster save={save} selectedId={selectedId} onSelect={setSelectedId} onAction={apply} busy={adBusy} onWatch={() => watchAd('temple')} />
           ) : null}

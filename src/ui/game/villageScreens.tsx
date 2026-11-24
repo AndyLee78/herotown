@@ -31,6 +31,7 @@ import {
   guildLevel,
   guildRules,
   hallOfFame,
+  houseRooms,
   magicRules,
   moraleOf,
   moraleRules,
@@ -70,6 +71,69 @@ const BattleView = lazy(() => import('../BattleView').then((mod) => ({ default: 
 
 type Act = (action: GameAction) => void
 type Workshop = keyof GameState['automation']['queues']
+
+export function House({ save, onSelectHero }: { save: GameState; onSelectHero: (id: string) => void }) {
+  const { t } = useTranslation()
+  const view = houseRooms(save)
+  const kinds = ['family', 'parent', 'shared'] as const
+  const groups = kinds.map((kind) => ({ kind, rooms: view.rooms.filter((room) => room.kind === kind) }))
+  const busy = busyHeroIds(save)
+  const retired = new Set(save.retirees.map(({ hero }) => hero.id))
+  const occupant = (hero: Hero) => (
+    <button key={hero.id} type="button" className="hero-row house-occupant" onClick={() => onSelectHero(hero.id)}>
+      <Portrait hero={hero} />
+      <span className="hero-row-body">
+        <strong>{hero.name}</strong>
+        <span className="chips">
+          <Chip>{t('hero.age', { age: hero.age })}</Chip>
+          {isChild(hero) ? <Chip>{t('house.child')}</Chip> : null}
+          {retired.has(hero.id) ? <Chip>{t('house.retired')}</Chip> : null}
+          {busy.has(hero.id) ? <Chip tone="info">{t('house.busy')}</Chip> : null}
+        </span>
+      </span>
+    </button>
+  )
+  return (
+    <div className="column">
+      <div className="card">
+        <div className="chips">
+          <Chip>{t('house.beds', { used: view.used, beds: view.beds })}</Chip>
+          <Chip>{t('house.free', { count: view.free })}</Chip>
+          <Chip>{t('house.newlywedCount', { empty: view.emptyCoupleHomes, total: view.coupleHomes })}</Chip>
+          {groups.map(({ kind, rooms }) => <Chip key={kind}>{t('house.roomCount', { room: t(`house.${kind}`), count: rooms.length })}</Chip>)}
+        </div>
+        {view.overflow > 0 ? <p className="banner bad">{t('house.overflow', { count: view.overflow })}</p> : null}
+      </div>
+      <div className="house-rooms">
+        {groups.flatMap(({ kind, rooms }) => rooms.map((room, index) => {
+          const first = room.members[0]
+          return (
+            <article key={`${kind}-${index}`} className="card">
+              <h3 className="section-title">{kind === 'family' && first
+                ? t('house.familyName', { name: first.family ?? first.name })
+                : t(`house.${kind}`)}</h3>
+              <div className="column">
+                {room.members.map(occupant)}
+                {room.expecting ? <Chip tone="info">{t('house.expecting')}</Chip> : null}
+                {Array.from({ length: room.empty }, (_, bed) => <span className="house-vacancy" key={bed}>{t('house.emptyBed')}</span>)}
+              </div>
+            </article>
+          )
+        }))}
+        {Array.from({ length: view.emptyCoupleHomes }, (_, index) => (
+          <article className="card house-vacancy" key={`newlywed-${index}`}>
+            <strong>{t('house.newlywed')}</strong>
+            <p className="muted">{t('house.newlywedHint')}</p>
+          </article>
+        ))}
+      </div>
+      {view.retirees.length > 0 ? <section>
+        <h3 className="section-title">{t('house.retirees')}</h3>
+        <div className="house-rooms">{view.retirees.map(occupant)}</div>
+      </section> : null}
+    </div>
+  )
+}
 
 function WorkshopQueue({ save, building, onAction }: { save: GameState; building: Workshop; onAction: Act }) {
   const { t } = useTranslation()
