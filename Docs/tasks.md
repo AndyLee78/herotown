@@ -108,7 +108,7 @@ Claude Code, Cursor, GPT(Codex)가 함께 쓰는 작업 목록이다. 작업 하
 | 66 | 자동화 화면(대기열·물약 유지·자동 치료·자동 훈련) | GPT (Cursor 대신) | `App.tsx`, `src/ui/game/*.tsx`, `styles.css`, `src/locales/*` | 완료 (4bbfcda) |
 | 67 | 자동화 core 코드 리뷰 (a6be730) | GPT | `Docs/reviews/a6be730.md` (새 파일만) | 완료 (f48be69) |
 | 68 | 면담·스카우팅 화면 | GPT (Cursor 대신) | `App.tsx`, `src/ui/game/*.tsx`, `styles.css`, `src/locales/*` | 대기 |
-| 69 | 면담·스카우팅 core 코드 리뷰 (커밋 해시는 아래) | GPT | `Docs/reviews/<해시>.md` (새 파일만) | 대기 (68 뒤) |
+| 69 | 면담·스카우팅 core 코드 리뷰 (8e1fa30) | GPT | `Docs/reviews/8e1fa30.md` (새 파일만) | 대기 (68 뒤) |
 
 ---
 
@@ -1633,11 +1633,11 @@ core에 이미 있는 것('../../core'에서 export):
 
 ## 69. 면담·스카우팅 core 코드 리뷰 (GPT)
 
-**작업 68 뒤에 시작한다(같은 도구라 순서대로).** core 커밋은 git log에서 "Add interviews"로 찾는다.
+**작업 68 뒤에 시작한다(같은 도구라 순서대로).** core 커밋은 **8e1fa30**이다.
 
 **전달할 내용**
 
 ```
-면담·스카우팅 core 커밋("Add interviews"로 찾는다)을 리뷰한다. 코드는 고치지 않고 Docs/reviews/<해시>.md 새 파일 하나에만 쓴다(Docs/reviews/README.md 형식).
+면담·스카우팅 core 커밋 8e1fa30를 리뷰한다. 코드는 고치지 않고 Docs/reviews/8e1fa30.md 새 파일 하나에만 쓴다(Docs/reviews/README.md 형식).
 볼 것: Docs/scouting.md와 규칙 차이, 면담 횟수의 계절 판정과 여관 레벨 변화, 깊은 면담, 숨은 인재가 기존 방문자 생성(시드 흐름)을 바꾸지 않는지, 숨은 인재의 능력치 재계산(나이·잠재력·potentials), 고용 조건과 처음 방문자, 방문자가 나이 들거나 떠날 때 필드가 유지되는지(createHero), 고용 후 영웅에 남는 필드, 세이브 17 → 18(예전 방문자를 면담한 것으로 처리).
 ```
