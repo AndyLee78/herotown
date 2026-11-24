@@ -90,7 +90,7 @@ Claude Code, Cursor, GPT(Codex)가 함께 쓰는 작업 목록이다. 작업 하
 | 48 | 3c core 코드 리뷰 (7eaca30) | GPT | `Docs/reviews/7eaca30.md` (새 파일만) | 완료 (6999c19) |
 | 49 | 마량 성채 밸런스 측정 | GPT | `tools/curve.ts`, `print-curve.ts`, `tune-curve.ts`, `first-hour.ts` | 완료 (0551f9f) |
 | 50 | 아이를 영웅·출전 목록에서 빼고 성인식 알림 | Claude Code (사용자 요청으로 직접) | `src/ui/game/*.tsx`, `App.tsx`, `styles.css`, `src/locales/*` | 완료 (다음 커밋) |
-| 51 | 용의 둥지 몬스터·던전 그림 | Cursor | `src/ui/voxel/enemies.ts`, `portrait.ts` | 대기 |
+| 51 | 용의 둥지 몬스터·던전 그림 | Cursor | `src/ui/voxel/enemies.ts`, `portrait.ts` | 완료 (ac00d51) |
 | 52 | 둥지 카드(가려진 어픽스·정찰·정보 구매)와 리포트 | Cursor | `App.tsx`, `src/ui/game/*.tsx`, `styles.css`, `src/locales/*` | 대기 |
 | 53 | 정찰 나가는 도적과 어픽스 연출 | Cursor | `BattleScene.ts`, `replay.ts`, `VillageScene.ts` | 대기 (52 뒤) |
 | 54 | 3d core 코드 리뷰 (f47daff) | GPT | `Docs/reviews/f47daff.md` (새 파일만) | 대기 |
@@ -1320,22 +1320,7 @@ core에 이미 있는 것:
 
 ## 51. 용의 둥지 몬스터·던전 그림 (Cursor)
 
-**지금 시작할 수 있다.** 설계: `Docs/depth.md` 3d.
-
-**전달할 내용**
-
-```
-Docs/depth.md의 3d를 읽고 용의 둥지의 3D 그림을 만든다. src/ui/voxel/enemies.ts, src/ui/voxel/portrait.ts만 고친다. core와 data는 고치지 않는다.
-
-몬스터 id: drake(드레이크, 날개 없는 작은 용, 앞줄), wyvern(와이번, 날개 달린 날렵한 용, 후열), kobold_mystic(코볼트 주술사, 지팡이 든 작은 도마뱀 인간, 후열), elder_dragon(보스 고룡, 크고 뿔 달린 붉은 용, 앞줄).
-던전 id: dragon_nest(용의 둥지, 티어 7).
-
-1. buildEnemy에 네 몬스터. 붉은색·주황·금색 계열, 고룡은 다른 보스보다 확실히 크게.
-2. dungeonPreviewUrl이 dragon_nest를 화산 바위산의 동굴 입구, 흩어진 금화와 뼈, 붉은 빛으로 그린다.
-3. monsterPortraitUrl이 네 몬스터를 그린다.
-
-확인: portrait 함수를 직접 불러 네 초상과 입구를 확인하고 스크린샷을 메모에. 임시 코드는 커밋하지 않는다.
-```
+**완료 (ac00d51).** 드레이크·와이번·코볼트·고룡과 화산 동굴 입구. 초상 확인함.
 
 ---
 
