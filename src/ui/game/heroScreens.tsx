@@ -30,7 +30,6 @@ import {
   scoutingRules,
   topBonds,
   trainingRules,
-  townLevel,
   visitorCap,
   visitorStay,
   type GameAction,
@@ -140,7 +139,6 @@ export function Inn({ save, onAction }: { save: GameState; onAction: Act }) {
   const korean = i18n.language.startsWith('ko')
   const free = interviewsLeft(save)
   const total = freeInterviews(save)
-  const level = townLevel(save.fame).level
   return (
     <>
       <p className="banner">
@@ -154,8 +152,6 @@ export function Inn({ save, onAction }: { save: GameState; onAction: Act }) {
           const depth = knowledge(hero)
           const deep = depth === 1 && save.buildings.inn >= scoutingRules.deepInnLevel
           const peak = depth >= 2 ? peakStats(hero) : null
-          const terms = depth > 0 ? hero.terms : undefined
-          const belowTerms = terms != null && level < terms
           const prodigy = depth > 0 && hero.prodigy
           return (
             <article key={hero.id} className="card hero-card">
@@ -177,7 +173,6 @@ export function Inn({ save, onAction }: { save: GameState; onAction: Act }) {
                   <Chip key={trait}>{t(`trait.${trait}`)}</Chip>
                 )) : <Chip>{t('interview.hiddenTraits')}</Chip>}
                 {prodigy ? <span className="prodigy-chip"><Chip tone="warn"><Sparkles size={14} aria-hidden="true" /> {t('interview.prodigy')}</Chip></span> : null}
-                {terms != null ? <Chip tone={belowTerms ? 'warn' : 'info'}>{t('interview.terms', { level: terms })}</Chip> : null}
               </span>
               <dl className="stats">
                 {STAT_KEYS.map((key) => {
@@ -200,11 +195,10 @@ export function Inn({ save, onAction }: { save: GameState; onAction: Act }) {
                     {free > 0 ? t('interview.free', { free, total }) : t('interview.paid', { gold: scoutingRules.interviewGold })}
                   </button>
                 ) : null}
-                <button type="button" className="btn primary" onClick={() => onAction({ type: 'hire', id: hero.id, now: gameNow() })} disabled={belowTerms || save.gold < progression.hireCost}>
+                <button type="button" className="btn primary" onClick={() => onAction({ type: 'hire', id: hero.id, now: gameNow() })} disabled={save.gold < progression.hireCost}>
                   {t('ui.hire')} <Res kind="gold" amount={progression.hireCost} light />
                 </button>
               </div>
-              {belowTerms ? <p className="muted">{t('interview.hireHint', { level: terms })}</p> : null}
             </article>
           )
         })}

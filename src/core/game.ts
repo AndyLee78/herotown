@@ -169,7 +169,6 @@ export type GameNotice =
   | 'tooYoung'
   | 'schoolFull'
   | 'career'
-  | 'hireTown'
   | 'drillHero'
   | 'trainingFull'
   | 'scoutBusy'
@@ -459,10 +458,6 @@ function apply(state: GameState, action: GameAction): GameState {
     }
     if (state.gold < progression.hireCost) {
       return { ...state, notice: 'poor' }
-    }
-    // Promising visitors join only a village big enough (Docs/scouting.md).
-    if (hero.terms && townLevel(state.fame).level < hero.terms) {
-      return { ...state, notice: 'hireTown' }
     }
     // Babies on the way already have a bed waiting for them.
     if (bedsTaken(state) >= bedCount(state.buildings.house)) {
@@ -1078,7 +1073,7 @@ function updateVisitors(state: GameState, now: number, arrived: string[]): GameS
       ),
       arrivedAt: now,
     }
-    // A separate stream decides prodigies and terms (Docs/scouting.md).
+    // A separate stream decides prodigies (Docs/scouting.md).
     const hero = { ...arrive(drawn, createRng(state.seed + nonce * progression.visitorNonceStride + 31), townLevel(state.fame).level), arrivedAt: now }
     visitors.push(hero)
     arrived.push(hero.name)

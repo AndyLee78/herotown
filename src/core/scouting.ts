@@ -58,7 +58,8 @@ export function peakStats(hero: Hero): Stats {
   return deriveStats(scoutingRules.primeAge, hero.training, hero.potentials)
 }
 
-// A newly arrived visitor may be a prodigy and may set terms for joining.
+// A newly arrived visitor may be a prodigy. Hiring terms were tried and
+// dropped: anyone can be hired (Docs/scouting.md, 2026-11-24).
 // It draws on its own random stream, so ordinary arrivals stay as they were.
 export function arrive(hero: Hero, rng: Rng, townLevel: number): Hero {
   let next = hero
@@ -70,6 +71,5 @@ export function arrive(hero: Hero, rng: Rng, townLevel: number): Hero {
     const age = scoutingRules.prodigyAge[0]! + Math.floor(rng.next() * (scoutingRules.prodigyAge[1]! - scoutingRules.prodigyAge[0]! + 1))
     next = { ...createHero({ ...hero, potential, potentials, age }), arrivedAt: hero.arrivedAt, prodigy: true }
   }
-  const terms = scoutingRules.terms.find((term) => next.potential >= term.potential)?.townLevel
-  return terms ? { ...next, terms } : next
+  return next
 }

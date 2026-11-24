@@ -34,8 +34,6 @@
     "hiddenPotential": "Potential ?",
     "hiddenTraits": "Traits ?",
     "prodigy": "Hidden prodigy!",
-    "terms": "Requires town Lv {{level}}",
-    "hireHint": "You can hire this visitor at town Lv {{level}}.",
     "peak": "Prime {{value}}"
   },
   "automation": {
@@ -331,7 +329,6 @@
     "festivalDone": "This season's festival has already been held.",
     "queueFull": "The queue is full. A higher building level makes room.",
     "interviewed": "You have already interviewed this visitor.",
-    "hireTown": "They will only join a bigger village. An interview shows their terms.",
     "noSchool": "There is no school yet.",
     "schoolFull": "The school is full.",
     "career": "Only girls can choose to become dancers."

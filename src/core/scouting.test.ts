@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { scoutingRules, villageRules } from './data'
+import { scoutingRules } from './data'
 import { freshState, migrate, reduce, type GameState } from './game'
 import { createHero } from './hero'
 import { createRng } from './rng'
@@ -62,18 +62,14 @@ describe('prodigies and terms', () => {
     expect(found!.potentials.str).toBeGreaterThan(plain.potentials.str)
   })
 
-  it('sets terms for promising visitors and refuses to join a small village', () => {
-    const promising = arrive(visitor('g', { potential: 75 }), createRng(1_000_003), 0)
-    const expected = scoutingRules.terms.find((term) => promising.potential >= term.potential)?.townLevel
-    expect(promising.terms).toBe(expected)
+  it('lets anyone be hired, however promising (terms were dropped)', () => {
+    const promising = arrive(visitor('g', { potential: 95 }), createRng(1_000_003), 0)
     const state = { ...town(), visitors: [promising] }
-    expect(reduce(state, { type: 'hire', id: 'g' }).notice).toBe('hireTown')
-    const fame = villageRules.levels.find((level) => level.level === expected)!.fame
-    expect(reduce({ ...state, fame }, { type: 'hire', id: 'g' }).roster.some((hero) => hero.id === 'g')).toBe(true)
+    expect(reduce(state, { type: 'hire', id: 'g' }).roster.some((hero) => hero.id === 'g')).toBe(true)
   })
 
-  it('lets the first visitors join without terms', () => {
-    expect(freshState(5, now).visitors.every((hero) => hero.terms == null && !hero.prodigy)).toBe(true)
+  it('makes none of the first visitors a prodigy', () => {
+    expect(freshState(5, now).visitors.every((hero) => !hero.prodigy)).toBe(true)
   })
 })
 
