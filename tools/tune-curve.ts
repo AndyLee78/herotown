@@ -1,6 +1,6 @@
 // Run: npx tsx tools/tune-curve.ts [samples] [--quartile|--marsh=antidote4]
 import { dungeonById, dungeons, nestRules } from '../src/core/data'
-import { BATTLES_PER_PARTY, CITADEL_ID, DEFAULT_PARTY_SAMPLES, FORT_ID, MARSH_ID, NEST_ID, citadelLoadouts, fortLoadouts, marshLoadouts, nestPairs, starterParties, starterWinRates, winRate } from './curve'
+import { BATTLES_PER_PARTY, CITADEL_ID, DEFAULT_PARTY_SAMPLES, FORT_ID, MARSH_ID, NEST_ID, citadelLoadouts, fortLoadouts, marshLoadouts, nestPairs, skillLoadout, skillModes, starterParties, starterWinRates, winRate } from './curve'
 
 const TARGET_WIN_RATE = 0.6
 const SCALE_STEPS = 20
@@ -8,6 +8,8 @@ const MAX_SCALE = 6
 const MAX_LEVEL = 18
 const args = process.argv.slice(2)
 const nest = args.includes('--nest')
+const skillArg = args.find((arg) => arg.startsWith('--skills='))?.slice(9)
+const skillMode = skillModes.find((mode) => mode === skillArg)
 const marsh = args.find((arg) => arg.startsWith('--marsh='))?.slice(8)
 const fort = args.find((arg) => arg.startsWith('--fort='))?.slice(7)
 const citadel = args.find((arg) => arg.startsWith('--citadel='))?.slice(10)
@@ -16,10 +18,21 @@ const loadout = Object.entries(citadel != null ? citadelLoadouts : fort != null 
 const quartile = args.includes('--quartile') || scenario != null
 const samples = Number(args.find((arg) => !arg.startsWith('--')) ?? DEFAULT_PARTY_SAMPLES)
 const battles = Number(args.find((arg) => arg.startsWith('--battles='))?.slice(10) ?? BATTLES_PER_PARTY)
-if ([marsh, fort, citadel, nest ? 'nest' : undefined].filter((entry) => entry != null).length > 1 || (scenario != null && !loadout) || !Number.isSafeInteger(samples) || samples < 1 || !Number.isSafeInteger(battles) || battles < 1) {
-  throw new Error('Usage: npx tsx tools/tune-curve.ts [positive samples] [--quartile|--marsh=LOADOUT|--fort=LOADOUT|--citadel=LOADOUT|--nest] [--battles=N]')
+if ([marsh, fort, citadel, nest ? 'nest' : undefined, skillArg].filter((entry) => entry != null).length > 1 || (scenario != null && !loadout) || (skillArg != null && !skillMode) || !Number.isSafeInteger(samples) || samples < 1 || !Number.isSafeInteger(battles) || battles < 1) {
+  throw new Error('Usage: npx tsx tools/tune-curve.ts [positive samples] [--quartile|--marsh=LOADOUT|--fort=LOADOUT|--citadel=LOADOUT|--nest|--skills=first/last/recommended] [--battles=N]')
 }
-if (nest) {
+if (skillMode) {
+  const parties = starterParties(samples)
+  console.log(`Skill level equivalence · ${skillMode} · P25 · ${samples} parties × ${battles} battles`)
+  console.table(dungeons.map(({ id, recommendedLevel: level }) => {
+    const p25 = (at: number, learned: boolean) => starterWinRates(parties, id, at, skillLoadout(at, learned ? skillMode : 'none'), battles).lowerQuartile
+    const learned = p25(level, true)
+    const bare = p25(level, false)
+    const next = p25(level + 1, false)
+    return { dungeon: id, level, 'bare P25': bare, 'learned P25': learned, 'bare +1 level P25': next,
+      'learned vs +1 (pp)': Math.round((learned - next) * 100) }
+  }))
+} else if (nest) {
   const parties = starterParties(samples)
   const dungeon = dungeonById(NEST_ID)
   const originalScale = dungeon.monsterScale

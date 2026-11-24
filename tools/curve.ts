@@ -5,6 +5,7 @@ import { freshState, presetById, reduce } from '../src/core/game'
 import { createHero, generateHero } from '../src/core/hero'
 import { createRng } from '../src/core/rng'
 import { AFFIX_IDS } from '../src/core/nest'
+import { skillPicks } from '../src/core/skills'
 import type { AffixId, ClassId, Hero, PartyMember, Row, Supplies, Tactics, TrinketId } from '../src/core/types'
 
 const LINEUP: [ClassId, Row][] = [
@@ -22,6 +23,34 @@ type Loadout = { supplies: Supplies; withoutHealer?: boolean; prepare?: (party: 
 export const FORT_ID = 'bandit_fort'
 export const CITADEL_ID = 'haunted_citadel'
 export const NEST_ID = 'dragon_nest'
+export const skillModes = ['first', 'last', 'recommended'] as const
+type SkillMode = typeof skillModes[number]
+const recommendedSkills: Record<ClassId, [string, string]> = {
+  warrior: ['guard', 'slam'], rogue: ['bleed', 'shadow'], archer: ['aim', 'volley'],
+  mage: ['ward', 'burst'], cleric: ['purify', 'heal'], bard: ['anthem', 'hymn'], dancer: ['veil', 'flourish'],
+}
+
+export function skillChoices(classId: ClassId, mode: SkillMode) {
+  const extras = classById(classId).skills.slice(1).map(({ id }) => id)
+  if (mode === 'first') return extras.slice(0, 2)
+  if (mode === 'last') return extras.slice(-2)
+  return recommendedSkills[classId].map((id) => `${classId}.${id}`)
+}
+
+export function skillLoadout(level: number, mode: SkillMode | 'none', single?: string): Loadout {
+  return { supplies: {}, prepare(party) {
+    const picks = skillPicks(level)
+    let carrier = false
+    return party.map((member) => {
+      const { hero } = member
+      const chosen = single
+        ? !carrier && classById(hero.classId).skills.some(({ id }) => id === single) ? [single] : []
+        : mode === 'none' ? [] : skillChoices(hero.classId, mode)
+      if (chosen.length) carrier = true
+      return { ...member, hero: { ...hero, learned: chosen.slice(0, picks) } }
+    })
+  } }
+}
 export const nestPairs = AFFIX_IDS.flatMap((a, index) => AFFIX_IDS.slice(index + 1).map((b): AffixId[] => [a, b]))
 
 export function nestPreparation(party: Hero[], affixes: readonly AffixId[]) {

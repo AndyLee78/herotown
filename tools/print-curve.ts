@@ -1,8 +1,8 @@
 // Run: npx tsx tools/print-curve.ts [samples] [maxLevel] [--fixed|--marsh]
 // Reproduce the design sample size: npx tsx tools/print-curve.ts --marsh 24 14 --battles=6
-import { alchemyRules, dungeonById, dungeons, potionById, villageRules } from '../src/core/data'
+import { alchemyRules, classList, dungeonById, dungeons, potionById, villageRules } from '../src/core/data'
 import type { PotionId } from '../src/core/types'
-import { BATTLES_PER_PARTY, CITADEL_ID, DEFAULT_PARTY_SAMPLES, FORT_ID, MARSH_ID, NEST_ID, citadelLoadouts, fortLoadouts, marshLoadouts, nestPairs, starterParties, starterWinRates, wardLoadout, winRate } from './curve'
+import { BATTLES_PER_PARTY, CITADEL_ID, DEFAULT_PARTY_SAMPLES, FORT_ID, MARSH_ID, NEST_ID, citadelLoadouts, fortLoadouts, marshLoadouts, nestPairs, skillLoadout, skillModes, starterParties, starterWinRates, wardLoadout, winRate } from './curve'
 
 const args = process.argv.slice(2)
 const fixed = args.includes('--fixed')
@@ -11,17 +11,43 @@ const fort = args.includes('--fort')
 const wards = args.includes('--wards')
 const citadel = args.includes('--citadel')
 const nest = args.includes('--nest')
+const skills = args.includes('--skills')
 const battles = Number(args.find((arg) => arg.startsWith('--battles='))?.slice(10) ?? BATTLES_PER_PARTY)
 const [sampleArg, maxLevelArg] = args.filter((arg) => !arg.startsWith('--'))
 const samples = Number(sampleArg ?? DEFAULT_PARTY_SAMPLES)
 const minLevel = nest ? 18 : citadel ? 14 : fort ? 12 : marsh ? 8 : 1
 const maxLevel = Number(maxLevelArg ?? (nest ? 22 : citadel ? 18 : fort ? 17 : marsh ? 14 : 12))
-if ([fixed, marsh, fort, wards, citadel, nest].filter(Boolean).length > 1 || !Number.isSafeInteger(samples) || samples < 1 || !Number.isSafeInteger(maxLevel) || maxLevel < minLevel || !Number.isSafeInteger(battles) || battles < 1) {
-  throw new Error('Usage: npx tsx tools/print-curve.ts [positive samples] [maxLevel] [--fixed|--marsh|--fort|--wards|--citadel|--nest] [--battles=N]')
+if ([fixed, marsh, fort, wards, citadel, nest, skills].filter(Boolean).length > 1 || !Number.isSafeInteger(samples) || samples < 1 || !Number.isSafeInteger(maxLevel) || maxLevel < minLevel || !Number.isSafeInteger(battles) || battles < 1) {
+  throw new Error('Usage: npx tsx tools/print-curve.ts [positive samples] [maxLevel] [--fixed|--marsh|--fort|--wards|--citadel|--nest|--skills] [--battles=N]')
 }
 const percent = (rate: number) => `${Math.round(rate * 100)}%`
 const parties = fixed ? [] : starterParties(samples)
-if (nest) {
+if (skills) {
+  const rating = ({ median, lowerQuartile }: ReturnType<typeof starterWinRates>) => `${percent(median)}/${percent(lowerQuartile)}`
+  const measure = (id: string, level: number, mode: typeof skillModes[number] | 'none') =>
+    starterWinRates(parties, id, level, skillLoadout(level, mode), battles)
+  console.log(`Skills · median/P25 · ${samples} starter parties × ${battles} battles; no supplies or seasonal affixes`)
+  console.table(dungeons.map(({ id, recommendedLevel: level }) => ({
+    dungeon: id, level, none: rating(measure(id, level, 'none')), 'none +1 Lv': rating(measure(id, level + 1, 'none')),
+    ...Object.fromEntries(skillModes.map((mode) => [mode, rating(measure(id, level, mode))])),
+  })))
+  console.log('Single skill on one hero · change in median/P25 (percentage points) · same parties with the class')
+  console.table(classList.flatMap(({ id: classId, skills: classSkills }) => {
+    const matching = parties.filter((party) => party.some(({ hero }) => hero.classId === classId))
+    const baselines = dungeons.map(({ id, recommendedLevel: level }) => matching.length > 0 && level >= 3
+      ? starterWinRates(matching, id, level, skillLoadout(level, 'none'), battles) : undefined)
+    return classSkills.filter(({ effect }) => effect).map(({ id: skill }) => ({
+      skill, parties: matching.length,
+      ...Object.fromEntries(dungeons.map(({ id, recommendedLevel: level }, index) => {
+        const before = baselines[index]
+        if (!before) return [id, '—']
+        const after = starterWinRates(matching, id, level, skillLoadout(level, 'none', skill), battles)
+        const delta = (value: number) => `${value > 0.005 ? '+' : ''}${Math.round(value * 100)}`
+        return [id, `${delta(after.median - before.median)}/${delta(after.lowerQuartile - before.lowerQuartile)}`]
+      })),
+    }))
+  }))
+} else if (nest) {
   const levels = Array.from({ length: maxLevel - minLevel + 1 }, (_, index) => index + minLevel)
   const measurements = nestPairs.map((affixes) => ({
     pair: affixes.join('+'),

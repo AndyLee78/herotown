@@ -7,7 +7,8 @@ import { guideStatus } from '../src/core/guide'
 import { canDeploy } from '../src/core/hero'
 import { heroTrinkets, trinketOf } from '../src/core/magic'
 import { nestRevealed, nestSeason } from '../src/core/nest'
-import { NEST_ID, nestPreparation } from './curve'
+import { NEST_ID, nestPreparation, skillChoices } from './curve'
+import { partyLevel as drillPartyLevel } from '../src/core/drill'
 import type { ClassId, Hero, PotionId, Supplies } from '../src/core/types'
 
 const isHurt = (hero: Hero) => hero.condition === 'injured' || hero.condition === 'critical'
@@ -19,9 +20,10 @@ function hasLivingRole(state: GameState, role: ClassId): boolean {
 }
 
 function fillParty(state: GameState): GameState {
+  const drilling = new Set(state.drills.map(({ heroId }) => heroId))
   for (const role of essentialRoles) {
     const current = selectedHeroes(state)
-    const recruit = state.roster.find((hero) => hero.classId === role && canDeploy(hero))
+    const recruit = state.roster.find((hero) => hero.classId === role && canDeploy(hero) && !drilling.has(hero.id))
     if (!recruit || current.some((hero) => hero.classId === role)) continue
     const slots = presetById(state, state.presetId)?.slots ?? []
     if (slots.length >= 5) {
@@ -31,7 +33,7 @@ function fillParty(state: GameState): GameState {
     }
     state = reduce(state, { type: 'add', id: recruit.id })
   }
-  for (const hero of state.roster.filter(canDeploy)) {
+  for (const hero of state.roster.filter((hero) => canDeploy(hero) && !drilling.has(hero.id))) {
     state = reduce(state, { type: 'add', id: hero.id })
   }
   return state
@@ -52,7 +54,7 @@ const difficulty = new Map(difficultyOrder.map((dungeon, index) => [dungeon.id, 
 const marshId = 'venom_marsh'
 const citadelId = 'haunted_citadel'
 
-function buildForNest(state: GameState, id: BuildingId, now: number): { state: GameState; destination?: string } {
+function buildOrGather(state: GameState, id: BuildingId, now: number): { state: GameState; destination?: string } {
   if (state.construction) return { state }
   const cost = villageRules.buildings.find((building) => building.id === id)?.levels.find(({ level }) => level === state.buildings[id] + 1)
   const built = reduce(state, { type: 'build', id, now })
@@ -65,7 +67,7 @@ function buildForNest(state: GameState, id: BuildingId, now: number): { state: G
 
 function prepareForNest(state: GameState, now: number): { state: GameState; destination?: string } {
   if (!nestRevealed(state)) {
-    if (state.buildings.guild === 0) return buildForNest(state, 'guild', now)
+    if (state.buildings.guild === 0) return buildOrGather(state, 'guild', now)
     state = reduce(state, { type: 'buyIntel' })
     if (!nestRevealed(state)) return { state, destination: 'hill_cave' }
   }
@@ -92,14 +94,14 @@ function prepareForNest(state: GameState, now: number): { state: GameState; dest
       continue
     }
     const recipe = trinketById(id)!
-    if (state.buildings.magic < recipe.magicLevel) return buildForNest(state, 'magic', now)
+    if (state.buildings.magic < recipe.magicLevel) return buildOrGather(state, 'magic', now)
     if (!state.magic) state = reduce(state, { type: 'enchant', trinketId: id, now })
     return { state, destination: state.magic ? undefined : 'sunken_crypt' }
   }
   for (const [id, count] of Object.entries(plan.supplies) as [PotionId, number][]) {
     if ((state.potions[id] ?? 0) >= count) continue
     const recipe = potionById(id)!
-    if (state.buildings.alchemy < recipe.alchemyLevel) return buildForNest(state, 'alchemy', now)
+    if (state.buildings.alchemy < recipe.alchemyLevel) return buildOrGather(state, 'alchemy', now)
     if (!state.alchemy) state = reduce(state, { type: 'brew', potionId: id, now })
     return { state, destination: state.alchemy ? undefined : state.materials.bone < recipe.bone ? 'sunken_crypt' : 'moss_path' }
   }
@@ -109,6 +111,7 @@ function prepareForNest(state: GameState, now: number): { state: GameState; dest
 }
 const marshSupplies = { antidote: 4, heal: 2 } as const
 const workshop = villageRules.buildings.find(({ id }) => id === 'alchemy')!
+const trainingGround = villageRules.buildings.find(({ id }) => id === 'training')!
 const workshopCost = workshop.levels.find(({ level }) => level === 1)!
 
 type Training = { dungeon: string; targetLevel: number }
@@ -127,7 +130,7 @@ type FountainMode = typeof fountainModes[number]
 type Income = { fountain: number; expedition: number; guide: number; jackpots: number }
 const checkpoints = [60, 180]
 
-function simulate(minutes: number, seed: number, fountain: FountainMode, keepFountainAtLevelOne = false) {
+function simulate(minutes: number, seed: number, fountain: FountainMode, keepFountainAtLevelOne = false, learnSkills = true) {
   const firstClear: Record<string, number> = {}
   const start = 1_700_000_000_000
   let state = freshState(seed, start)
@@ -135,6 +138,9 @@ function simulate(minutes: number, seed: number, fountain: FountainMode, keepFou
   let nextFountainCheck = start
   const income: Income = { fountain: 0, expedition: 0, guide: 0, jackpots: 0 }
   let marshTrips = 0
+  let drillsStarted = 0
+  let skillsLearned = 0
+  const recruits = new Set<string>()
   const incomeAt: Record<number, Income> = {}
   const log: string[] = []
   const note = (text: string) => log.push(`${String(Math.round((now - start) / 60_000)).padStart(3)}m  ${text}`)
@@ -173,7 +179,35 @@ function simulate(minutes: number, seed: number, fountain: FountainMode, keepFou
       if (state.roster.length >= 5 && !fillsGap) continue
       const before = state.roster.length
       state = reduce(state, { type: 'hire', id: visitor.id, now })
-      if (state.roster.length > before) note(`hire ${visitor.classId} (gold ${state.gold})`)
+      if (state.roster.length > before) {
+        recruits.add(visitor.id)
+        note(`hire ${visitor.classId} (gold ${state.gold})`)
+      }
+    }
+    if (learnSkills) {
+      const busy = busyHeroIds(state)
+      for (const hero of state.roster) {
+        if (!canDeploy(hero) || busy.has(hero.id)) continue
+        for (const skill of skillChoices(hero.classId, 'recommended').filter((id) => !hero.learned.includes(id)).slice(0, hero.skillPoints)) {
+          state = reduce(state, { type: 'learn', id: hero.id, skillId: skill })
+          if (!state.notice) { skillsLearned += 1; note(`learn ${skill}`) }
+        }
+      }
+      if (state.buildings.training > state.drills.length) {
+        const active = state.roster.filter((hero) => canDeploy(hero) && !isHurt(hero) && !state.drills.some(({ heroId }) => heroId === hero.id))
+        const target = drillPartyLevel(state)
+        const recruit = active.find((hero) => recruits.has(hero.id) && !busy.has(hero.id) && target - hero.level >= 2
+          && active.length > 3 && (!essentialRoles.some((role) => role === hero.classId) || active.some((other) => other.id !== hero.id && other.classId === hero.classId)))
+        if (recruit) {
+          const drilled = reduce(state, { type: 'drill', heroId: recruit.id, now })
+          if (drilled.drills.length > state.drills.length) {
+            state = drilled
+            for (const preset of state.presets) state = reduce(state, { type: 'remove', id: recruit.id, presetId: preset.id })
+            drillsStarted += 1
+            note(`drill ${recruit.name} Lv${recruit.level}`)
+          }
+        }
+      }
     }
     if (state.expeditions.length === 0) state = fillParty(state)
     // Treat anyone hurt.
@@ -198,10 +232,18 @@ function simulate(minutes: number, seed: number, fountain: FountainMode, keepFou
     }
     const prepareMarsh = dungeonUnlocked(state, marshId)
     const needsWorkshop = prepareMarsh && state.buildings.alchemy === 0 && townLevel(state.fame).level >= workshop.unlockLevel
+    let trainingMaterials: string | undefined
+    if (learnSkills && state.buildings.training === 0 && !state.construction && townLevel(state.fame).level >= trainingGround.unlockLevel) {
+      const prepared = buildOrGather(state, 'training', now)
+      state = prepared.state
+      if (state.construction) note('build training → lv1')
+      else trainingMaterials = prepared.destination
+    }
     // Reserve money and materials for the workshop once the route to the marsh is open.
-    if (!state.construction && pickDungeon(state, training) !== NEST_ID) {
+    if (!state.construction && !trainingMaterials && pickDungeon(state, training) !== NEST_ID) {
       const options = villageRules.buildings
         .filter(({ id }) => needsWorkshop ? id === 'alchemy' : id !== 'alchemy')
+        .filter(({ id }) => id !== 'training' || learnSkills)
         .filter((building) => building.id !== 'fountain' || (fountain !== 'off' && !keepFountainAtLevelOne))
         .map((building) => ({ id: building.id as BuildingId, cost: building.levels.find((entry) => entry.level === state.buildings[building.id as BuildingId] + 1) }))
         .filter((entry) => entry.cost)
@@ -227,7 +269,7 @@ function simulate(minutes: number, seed: number, fountain: FountainMode, keepFou
       training = undefined
     }
     if (state.expeditions.length === 0 && selected.length > 0 && !selected.some(isHurt)) {
-      let dungeon: string | undefined = pickDungeon(state, training)
+      let dungeon: string | undefined = trainingMaterials ?? pickDungeon(state, training)
       if (dungeon === NEST_ID) {
         const before = nestRevealed(state)
         const prepared = prepareForNest(state, now)
@@ -329,7 +371,7 @@ function simulate(minutes: number, seed: number, fountain: FountainMode, keepFou
   }
   const wins = state.history.filter((report) => report.victory).length
   const party = selectedHeroes(state)
-  return { firstClear, incomeAt, seed, state, log, wins, marshTrips, maxLosingStreak, maxLowGoldMs, partyLevel: averageLevel(party), ready: party.filter((hero) => !isHurt(hero)).length, partySize: party.length }
+  return { firstClear, incomeAt, seed, state, log, wins, marshTrips, drillsStarted, skillsLearned, maxLosingStreak, maxLowGoldMs, partyLevel: averageLevel(party), ready: party.filter((hero) => !isHurt(hero)).length, partySize: party.length }
 }
 
 function median(sorted: number[]): number {
@@ -344,15 +386,17 @@ function summarize(values: number[]): string {
 
 const args = process.argv.slice(2)
 const fountainArg = args.find((arg) => arg.startsWith('--fountain='))?.slice('--fountain='.length) ?? 'ready'
-const [minutesArg, seedsArg] = args.filter((arg) => !arg.startsWith('--fountain='))
+const skillMode = args.find((arg) => arg.startsWith('--skills='))?.slice(9) ?? 'on'
+const compareSkills = skillMode === 'compare'
+const [minutesArg, seedsArg] = args.filter((arg) => !arg.startsWith('--fountain=') && !arg.startsWith('--skills='))
 const compare = fountainArg === 'compare'
 const fountain = fountainModes.find((mode) => mode === fountainArg)
-const minutes = Number(minutesArg ?? (compare ? 180 : 60))
-const defaultSeeds = compare ? Array.from({ length: 20 }, (_, index) => index + 1).join(',') : '11'
+const minutes = Number(minutesArg ?? (compareSkills ? 720 : compare ? 180 : 60))
+const defaultSeeds = compare || compareSkills ? Array.from({ length: 20 }, (_, index) => index + 1).join(',') : '11'
 const seedArgs = (seedsArg ?? defaultSeeds).split(',').map((seed) => seed.trim())
 const seeds = seedArgs.map(Number)
-if ((!compare && !fountain) || !Number.isFinite(minutes) || minutes <= 0 || (compare && minutes < 180) || seedArgs.some((seed, index) => !/^\d+$/.test(seed) || !Number.isSafeInteger(seeds[index]))) {
-  throw new Error('Usage: npx tsx tools/first-hour.ts [positive minutes (compare: at least 180)] [seed,seed,...] [--fountain=off|ready|5min|compare]')
+if ((!compare && !fountain) || (compare && compareSkills) || !['on', 'off', 'compare'].includes(skillMode) || !Number.isFinite(minutes) || minutes <= 0 || (compare && minutes < 180) || (compareSkills && minutes < 720) || seedArgs.some((seed, index) => !/^\d+$/.test(seed) || !Number.isSafeInteger(seeds[index]))) {
+  throw new Error('Usage: npx tsx tools/first-hour.ts [positive minutes] [seed,seed,...] [--fountain=off|ready|5min|compare] [--skills=on|off|compare]')
 }
 
 type Simulation = ReturnType<typeof simulate>
@@ -382,17 +426,34 @@ function firstClearSummary(results: Simulation[], at: number) {
   }))
 }
 
-if (compare) {
-  const runs = fountainModes.map((mode) => ({ mode, results: seeds.map((seed) => simulate(minutes, seed, mode)) }))
+if (compareSkills) {
+  const bare = seeds.map((seed) => simulate(720, seed, fountain!, false, false))
+  const learned = seeds.map((seed) => simulate(720, seed, fountain!, false, true))
+  console.log('First clear minutes (cleared/total); paired minutes saved use only seeds that cleared in both runs by the cutoff.')
+  console.table([180, 720].flatMap((at) => {
+    const before = firstClearSummary(bare, at)
+    const after = firstClearSummary(learned, at)
+    return order.map((id) => {
+      const saved = bare.flatMap((run, index) => {
+        const a = run.firstClear[id]
+        const b = learned[index]!.firstClear[id]
+        return a != null && b != null && a <= at && b <= at ? [a - b] : []
+      }).sort((a, b) => a - b)
+      return { cutoff: at, dungeon: id, bare: before[id], trained: after[id], 'paired minutes saved': saved.length ? median(saved).toFixed(1) : '—', paired: saved.length }
+    })
+  }))
+  console.log(`Training grounds built: ${learned.filter(({ state }) => state.buildings.training > 0).length}/${seeds.length} · drills started: ${learned.reduce((sum, run) => sum + run.drillsStarted, 0)} · skills learned: ${learned.reduce((sum, run) => sum + run.skillsLearned, 0)}`)
+} else if (compare) {
+  const runs = fountainModes.map((mode) => ({ mode, results: seeds.map((seed) => simulate(minutes, seed, mode, false, skillMode === 'on')) }))
   console.log('Per-seed medians. Gross gold includes wishes, expeditions and guide rewards, excluding starting gold.')
   console.log('Off never taps or upgrades the fountain; the guide remains at its wish step.')
   console.table(runs.flatMap(({ mode, results }) => checkpoints.map((at) => incomeSummary(mode, at, results))))
   console.log('First clear in minutes among successful seeds (cleared/total at each cutoff)')
   console.table(runs.flatMap(({ mode, results }) => checkpoints.map((at) => ({ mode, minutes: at, ...firstClearSummary(results, at) }))))
   console.log('Level 1 control for the design target (fountain/expedition income)')
-  console.table([incomeSummary('ready, Lv1 only', 60, seeds.map((seed) => simulate(60, seed, 'ready', true)))])
+  console.table([incomeSummary('ready, Lv1 only', 60, seeds.map((seed) => simulate(60, seed, 'ready', true, skillMode === 'on')))])
 } else {
-  const results = seeds.map((seed) => simulate(minutes, seed, fountain!))
+  const results = seeds.map((seed) => simulate(minutes, seed, fountain!, false, skillMode === 'on'))
   const displayLevel = (level: number | undefined) => level?.toFixed(1) ?? 'n/a'
   if (results.length === 1) {
     const { state, log, wins, partyLevel, ready, partySize, maxLosingStreak } = results[0]!
