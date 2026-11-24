@@ -61,6 +61,30 @@ import { josa } from '../josa'
 const BattleView = lazy(() => import('../BattleView').then((mod) => ({ default: mod.BattleView })))
 
 type Act = (action: GameAction) => void
+type Workshop = keyof GameState['automation']['queues']
+
+function WorkshopQueue({ save, building, onAction }: { save: GameState; building: Workshop; onAction: Act }) {
+  const { t } = useTranslation()
+  const queue = save.automation.queues[building]
+  const prefix = { smith: 'item', alchemy: 'potion', magic: 'item.trinket' }[building]
+  const capacity = save.buildings[building]
+  if (capacity === 0) return null
+  return (
+    <section className="card workshop-queue">
+      <h3 className="section-title">{t('automation.queue', { used: queue.length, capacity })}</h3>
+      {queue.length > 0 ? (
+        <ol className="plain">
+          {queue.map((id, index) => (
+            <li key={`${id}-${index}`} className="line">
+              <span>{t('automation.order', { number: index + 1, name: t(`${prefix}.${id}`) })}</span>
+              <button type="button" className="btn small" onClick={() => onAction({ type: 'dequeue', building, index })}>{t('ui.cancel')}</button>
+            </li>
+          ))}
+        </ol>
+      ) : null}
+    </section>
+  )
+}
 
 export function Town({
   save,
@@ -207,6 +231,12 @@ export function Town({
                 <button type="button" className="btn" onClick={onGuild}>
                   {t('guild.open')}
                 </button>
+              ) : null}
+              {id === 'temple' && current > 0 ? (
+                <label className="toggle">
+                  <input type="checkbox" role="switch" checked={save.automation.care} onChange={(event) => onAction({ type: 'automation', care: event.currentTarget.checked })} />
+                  {t('automation.care')}
+                </label>
               ) : null}
             </article>
           )
@@ -439,6 +469,7 @@ export function Alchemy({ save, onAction }: { save: GameState; onAction: Act }) 
   const working = save.alchemy != null
   const now = useNow(working)
   const level = save.buildings.alchemy
+  const queueFull = save.automation.queues.alchemy.length >= level
   const job = save.alchemy
   const total = job ? Math.max(1, brewTime(save, job.potionId)) : 1
   const left = job ? Math.max(0, job.finishAt - now) : 0
@@ -453,6 +484,7 @@ export function Alchemy({ save, onAction }: { save: GameState; onAction: Act }) 
         {job ? t('alchemy.working', { name: t(`potion.${job.potionId}`), time: waitLabel(left) }) : t('alchemy.idle')}
       </p>
       {job ? <Bar value={total - left} max={total} tone="info" /> : null}
+      <WorkshopQueue save={save} building="alchemy" onAction={onAction} />
       <div className="split wide-right">
         <div>
           <h3 className="section-title">{t('alchemy.brew')}</h3>
@@ -468,10 +500,10 @@ export function Alchemy({ save, onAction }: { save: GameState; onAction: Act }) 
                   <button
                     type="button"
                     className="btn primary"
-                    disabled={locked || working || level < 1 || !affordable(potion, save)}
+                    disabled={locked || (working && queueFull) || !affordable(potion, save)}
                     onClick={() => onAction({ type: 'brew', potionId: potion.id, now: gameNow() })}
                   >
-                    {locked ? t('alchemy.locked', { level: potion.alchemyLevel }) : t('action.brew')}
+                    {locked ? t('alchemy.locked', { level: potion.alchemyLevel }) : t(working ? 'automation.enqueue' : 'action.brew')}
                   </button>
                 </article>
               )
@@ -480,13 +512,39 @@ export function Alchemy({ save, onAction }: { save: GameState; onAction: Act }) 
         </div>
         <div>
           <h3 className="section-title">{t('alchemy.stock')}</h3>
+          <p className="muted">{t('automation.stockHint')}</p>
           <ul className="plain">
-            {POTION_IDS.map((id) => (
-              <li key={id} className="line">
-                <span>{t(`potion.${id}`)}</span>
-                <Chip>{save.potions[id] ?? 0}</Chip>
-              </li>
-            ))}
+            {POTION_IDS.map((id) => {
+              const name = t(`potion.${id}`)
+              const target = save.automation.potions[id] ?? 0
+              const setTarget = (count: number) => onAction({ type: 'potionTarget', potionId: id, count })
+              return (
+                <li key={id} className="column potion-target">
+                  <div className="line">
+                    <span>{name}</span>
+                    <Chip>{t('automation.inStock', { count: save.potions[id] ?? 0 })}</Chip>
+                  </div>
+                  <div className="row">
+                    <label htmlFor={`potion-target-${id}`}>{t('automation.stockTarget')}</label>
+                    <button type="button" className="btn tiny" aria-label={t('automation.decrease', { name })} disabled={target === 0} onClick={() => setTarget(target - 1)}>−</button>
+                    <input
+                      id={`potion-target-${id}`}
+                      type="number"
+                      min={0}
+                      step={1}
+                      value={target}
+                      aria-label={t('automation.stockTargetFor', { name })}
+                      onChange={(event) => {
+                        const { value, valueAsNumber } = event.currentTarget
+                        if (value === '') setTarget(0)
+                        else if (Number.isSafeInteger(valueAsNumber) && valueAsNumber >= 0) setTarget(valueAsNumber)
+                      }}
+                    />
+                    <button type="button" className="btn tiny" aria-label={t('automation.increase', { name })} disabled={target >= Number.MAX_SAFE_INTEGER} onClick={() => setTarget(target + 1)}>+</button>
+                  </div>
+                </li>
+              )
+            })}
           </ul>
         </div>
       </div>
@@ -516,6 +574,11 @@ export function Training({ save, onAction }: { save: GameState; onAction: Act })
         {t('training.partyLevel', { level: Math.round(partyLevel(save) * 10) / 10 })}
       </p>
       <p className="muted">{t('training.time', { time: waitLabel(drillTime(save)) })}</p>
+      <label className="toggle">
+        <input type="checkbox" role="switch" checked={save.automation.drill} onChange={(event) => onAction({ type: 'automation', drill: event.currentTarget.checked })} />
+        {t('automation.drill')}
+      </label>
+      <p className="muted">{t('automation.drillHint')}</p>
       {save.drills.length === 0 ? <p className="muted">{t('training.idle')}</p> : null}
       <div className="column">
         {save.drills.map((drill) => {
@@ -694,6 +757,7 @@ export function Magic({ save, onAction }: { save: GameState; onAction: Act }) {
   const working = save.magic != null
   const now = useNow(working)
   const level = save.buildings.magic
+  const queueFull = save.automation.queues.magic.length >= level
   const job = save.magic
   const total = job ? Math.max(1, enchantTime(save, job.trinketId)) : 1
   const left = job ? Math.max(0, job.finishAt - now) : 0
@@ -706,6 +770,7 @@ export function Magic({ save, onAction }: { save: GameState; onAction: Act }) {
         {job ? t('magic.working', { name: t(`item.trinket.${job.trinketId}`), time: waitLabel(left) }) : t('magic.idle')}
       </p>
       {job ? <Bar value={total - left} max={total} tone="info" /> : null}
+      <WorkshopQueue save={save} building="magic" onAction={onAction} />
       <h3 className="section-title">{t('magic.craft')}</h3>
       <div className="grid">
         {magicRules.trinkets.map((trinket) => {
@@ -720,10 +785,10 @@ export function Magic({ save, onAction }: { save: GameState; onAction: Act }) {
               <button
                 type="button"
                 className="btn primary"
-                disabled={locked || working || level < 1 || !affordable(cost, save)}
+                disabled={locked || (working && queueFull) || !affordable(cost, save)}
                 onClick={() => onAction({ type: 'enchant', trinketId: trinket.id, now: gameNow() })}
               >
-                {locked ? t('magic.locked', { level: trinket.magicLevel }) : t('action.enchant')}
+                {locked ? t('magic.locked', { level: trinket.magicLevel }) : t(working ? 'automation.enqueue' : 'action.enchant')}
               </button>
             </article>
           )
@@ -739,6 +804,7 @@ export function Smith({ save, onAction }: { save: GameState; onAction: Act }) {
   const working = save.smith != null
   const now = useNow(working)
   const recipes = smithRules.recipes.filter((recipe) => recipe.smithLevel <= 3)
+  const queueFull = save.automation.queues.smith.length >= save.buildings.smith
   return (
     <>
       <p className="banner">
@@ -746,6 +812,7 @@ export function Smith({ save, onAction }: { save: GameState; onAction: Act }) {
         {t('smith.level', { level: save.buildings.smith })} ·{' '}
         {save.smith ? t('smith.working', { name: t(`item.${save.smith.recipeId}`), time: waitLabel(save.smith.finishAt - now) }) : t('smith.idle')}
       </p>
+      <WorkshopQueue save={save} building="smith" onAction={onAction} />
       <div className="split wide-right">
         <div>
           <h3 className="section-title">{t('label.smith')}</h3>
@@ -764,10 +831,10 @@ export function Smith({ save, onAction }: { save: GameState; onAction: Act }) {
                   <button
                     type="button"
                     className="btn primary"
-                    disabled={locked || working || !affordable(recipe, save)}
+                    disabled={locked || (working && queueFull) || !affordable(recipe, save)}
                     onClick={() => onAction({ type: 'craft', recipeId: recipe.id, now: gameNow() })}
                   >
-                    {locked ? t('smith.locked', { level: recipe.smithLevel }) : t('action.craft')}
+                    {locked ? t('smith.locked', { level: recipe.smithLevel }) : t(working ? 'automation.enqueue' : 'action.craft')}
                   </button>
                 </article>
               )

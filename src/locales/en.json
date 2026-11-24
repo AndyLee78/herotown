@@ -1,4 +1,18 @@
 {
+  "automation": {
+    "queue": "Queue {{used}}/{{capacity}}",
+    "order": "{{number}}. {{name}}",
+    "enqueue": "Add to queue",
+    "stockHint": "When the workshop and queue are empty, the workshop brews unlocked potions below their stock targets if you have the gold and materials. A target of 0 turns this off.",
+    "inStock": "In stock: {{count}}",
+    "stockTarget": "Stock target",
+    "stockTargetFor": "{{name}} stock target",
+    "decrease": "Lower {{name}} stock target",
+    "increase": "Raise {{name}} stock target",
+    "care": "Automatic treatment",
+    "drill": "Automatic training",
+    "drillHint": "Spend gold to train heroes at least 1 level behind the party. Heroes in the selected party stay available."
+  },
   "morale": {
     "value": "Morale {{value}}",
     "low": "Dispirited (attack and speed −{{percent}}%, sits out auto expeditions)",

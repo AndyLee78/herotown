@@ -1053,6 +1053,28 @@ button,
   text-align: right;
 }
 
+.workshop-queue {
+  margin-block: 10px 14px;
+}
+
+.potion-target {
+  padding-block: 6px;
+}
+
+.potion-target input {
+  width: 6ch;
+  padding: 4px;
+  font: inherit;
+  color: var(--ink);
+  background: var(--paper);
+}
+
+.toggle {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+
 .morale-meter {
   display: grid;
   gap: 4px;

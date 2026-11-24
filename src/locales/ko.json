@@ -1,4 +1,18 @@
 {
+  "automation": {
+    "queue": "대기열 {{used}}/{{capacity}}",
+    "order": "{{number}}. {{name}}",
+    "enqueue": "대기열에 넣기",
+    "stockHint": "공방과 대기열이 비면 골드와 재료를 사용해 유지 수량보다 적은 해금 물약을 만듭니다. 0으로 설정하면 자동 제작을 끕니다.",
+    "inStock": "재고 {{count}}개",
+    "stockTarget": "창고에 유지",
+    "stockTargetFor": "{{name}} 창고 유지 수량",
+    "decrease": "{{name}} 유지 수량 줄이기",
+    "increase": "{{name}} 유지 수량 늘리기",
+    "care": "자동 치료",
+    "drill": "자동 훈련",
+    "drillHint": "파티보다 1레벨 이상 뒤처진 영웅을 골드를 써서 훈련시킵니다. 선택한 파티의 영웅은 보내지 않습니다."
+  },
   "morale": {
     "value": "사기 {{value}}",
     "low": "실의 (공격·속도 −{{percent}}%, 자동 출정 제외)",
