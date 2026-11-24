@@ -190,10 +190,10 @@ export function Inn({ save, onAction }: { save: GameState; onAction: Act }) {
                   )
                 })}
               </dl>
-              <div className="card-foot">
-                <span className="muted">
-                  <Clock size={14} /> {t('hint.staying', { time: waitLabel((hero.arrivedAt ?? save.lastTickAt) + stay - now) })}
-                </span>
+              <p className="muted visitor-stay">
+                <Clock size={14} /> {t('hint.staying', { time: waitLabel((hero.arrivedAt ?? save.lastTickAt) + stay - now) })}
+              </p>
+              <div className="card-foot visitor-foot">
                 {(depth === 0 || deep) ? (
                   <button type="button" className="btn" onClick={() => onAction({ type: 'interview', id: hero.id })} disabled={free === 0 && save.gold < scoutingRules.interviewGold}>
                     {t(deep ? 'interview.deep' : 'interview.action')}{' '}

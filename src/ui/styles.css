@@ -663,6 +663,30 @@ button,
   margin-top: auto;
 }
 
+/* Inn cards: the stay time gets its own line, the two buttons share the row below. */
+.visitor-stay {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  margin: auto 0 0;
+  white-space: nowrap;
+}
+
+.visitor-foot {
+  margin-top: 6px;
+  flex-wrap: wrap;
+}
+
+/* Side by side when there is room, one under the other on a narrow card. */
+.visitor-foot .btn {
+  flex: 1 1 120px;
+  min-width: 0;
+  justify-content: center;
+  white-space: nowrap;
+  padding-left: 8px;
+  padding-right: 8px;
+}
+
 .name {
   font-size: 17px;
   font-weight: 900;
