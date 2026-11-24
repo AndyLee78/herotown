@@ -585,7 +585,8 @@ describe('economy fixes', () => {
   })
 
   it('improves a critical hero one step per recovery period', () => {
-    const start = freshState(1, now)
+    // Natural recovery only: the temple's auto care is off here (Docs/automation.md).
+    const start = { ...freshState(1, now), automation: { ...freshState(1, now).automation, care: false } }
     const hired = reduce(start, { type: 'hire', id: start.visitors[0]?.id ?? '' })
     const hero = hired.roster[0]
     if (!hero) {
@@ -639,7 +640,8 @@ describe('economy fixes', () => {
   })
 
   it('keeps a critical hero out of automatic runs', () => {
-    const start = freshState(1, now)
+    // The temple's auto care is off so the hero stays critical (Docs/automation.md).
+    const start = { ...freshState(1, now), automation: { ...freshState(1, now).automation, care: false } }
     const hired = reduce(start, { type: 'hire', id: start.visitors[0]?.id ?? '' })
     const hero = hired.roster[0]
     if (!hero) {

@@ -55,28 +55,27 @@ export function startDrill(state: GameState, heroId: string, now: number, busy: 
 
 // Auto training (Docs/automation.md): drills finish one by one in time
 // order, and each freed slot goes to the hero furthest behind.
-export function runDrills(state: GameState, from: number, until: number, busy: (state: GameState) => Set<string>): GameState {
+export function runDrills(state: GameState, from: number, until: number, busy: (state: GameState) => Set<string>, reservedFor: (state: GameState) => Set<string>): GameState {
   if (!state.automation?.drill) {
     return finishDrills(state, until)
   }
-  let next = fillDrills(finishDrills(state, from), from, busy)
+  let next = fillDrills(finishDrills(state, from), from, busy, reservedFor)
   for (let guard = 0; guard < 200; guard += 1) {
     const due = next.drills.filter((drill) => drill.finishAt <= until).sort((a, b) => a.finishAt - b.finishAt)[0]
     if (!due) {
       break
     }
     next = finishDrills(next, due.finishAt)
-    next = fillDrills(next, due.finishAt, busy)
+    next = fillDrills(next, due.finishAt, busy, reservedFor)
   }
   return next
 }
 
-function fillDrills(state: GameState, at: number, busy: (state: GameState) => Set<string>): GameState {
+function fillDrills(state: GameState, at: number, busy: (state: GameState) => Set<string>, reservedFor: (state: GameState) => Set<string>): GameState {
   let next = state
   const target = partyLevel(state)
-  // Heroes in the selected party or the fixed auto party stay free to go out.
-  const preset = state.presets.find((entry) => entry.id === state.presetId)
-  const reserved = new Set([...(preset?.slots ?? []), ...state.auto.party].map((slot) => slot.id))
+  // Heroes in the selected party and in the parties auto runs use stay free to go out.
+  const reserved = reservedFor(state)
   while (next.drills.length < next.buildings.training) {
     const away = busy(next)
     const pick = next.roster

@@ -11,7 +11,7 @@
     "increase": "Raise {{name}} stock target",
     "care": "Automatic treatment",
     "drill": "Automatic training",
-    "drillHint": "Spend gold to train heroes at least 1 level behind the party. Heroes in the selected party stay available."
+    "drillHint": "Spend gold to train heroes at least 1 level behind the party. Heroes in the selected party and the auto-run parties stay available."
   },
   "morale": {
     "value": "Morale {{value}}",

@@ -689,25 +689,37 @@ function advance(state: GameState, now: number): GameState {
   let next = state
   while (next.lastTickAt < effectiveNow) {
     const turnAt = next.lastTickAt + (timeRules.seasonMs - next.calendar.intoSeasonMs)
+    // A finished building also ends a piece, so work before it runs at the
+    // old level and work after it at the new one (review a6be730).
+    const builtAt = next.construction && next.construction.finishAt > next.lastTickAt ? next.construction.finishAt : Infinity
     // Always move forward, even if a broken save has the season overrun.
-    const until = Math.min(Math.max(turnAt, next.lastTickAt + 1), effectiveNow)
+    const until = Math.min(Math.max(Math.min(turnAt, builtAt), next.lastTickAt + 1), effectiveNow)
     const piece = until - next.lastTickAt
     const from = next.lastTickAt
     const before = next.calendar
     // Everything due within the piece settles first, in the old year, so a
     // party home just before a year turns is buried with that year's age.
-    next = finishConstruction(next, until, completed)
     // Each workshop finishes job after job, starting the next in its queue (Docs/automation.md).
     next = runWorkshop(next, 'smith', from, until, crafted)
     next = runWorkshop(next, 'alchemy', from, until, crafted)
     next = runWorkshop(next, 'magic', from, until, crafted)
+    // Training picks from heroes free at the start of the piece; scouts and
+    // parties still out come back below (review a6be730).
+    next = runDrills(next, from, until, busyHeroIds, drillReserved)
     next = finishScout(next, until, until === turnAt)
-    next = runDrills(next, from, until, busyHeroIds)
+    // The wounded at home start treatment when the piece starts (review a6be730).
+    next = autoCare(next, from)
     next = finishCare(next, until)
     next = recoverRoster(next, piece, until)
     next = updateVisitors(next, until, visitors)
+    const out = next.expeditions
     next = returnExpeditions(next, until, returned)
-    next = autoCare(next, until)
+    // The wounded who come home start treatment as they arrive.
+    for (const trip of out.filter((entry) => !next.expeditions.some((still) => still.id === entry.id))) {
+      next = autoCare(next, trip.returnAt, new Set(trip.heroIds))
+    }
+    next = finishCare(next, until)
+    next = finishConstruction(next, until, completed)
     // Auto runs settle within their season, against that season's board (review 1208be3).
     next = ensureBoard(next)
     next = runAuto(next, piece, autoTally)
@@ -2109,6 +2121,9 @@ function queueRoom(state: GameState, building: QueueBuilding): number {
 // A busy workshop takes the order into its queue, paid now. The start
 // function on an idle copy checks and charges exactly as a direct order would.
 function enqueue(state: GameState, building: QueueBuilding, id: string): GameState {
+  if (!state.automation) {
+    state = { ...state, automation: freshAutomation() }
+  }
   const queue = state.automation.queues[building]
   if (queue.length >= queueRoom(state, building)) {
     return { ...state, notice: 'queueFull' }
@@ -2207,6 +2222,10 @@ function runWorkshop(state: GameState, building: QueueBuilding, from: number, un
   if (state.buildings[building] < 1) {
     return state
   }
+  // A state that skipped loading (a hot reload in development) may lack automation.
+  if (!state.automation) {
+    state = { ...state, automation: freshAutomation() }
+  }
   let next = jobOf(state, building) ? state : startNext(state, building, from)
   for (let guard = 0; guard < 500; guard += 1) {
     const job = jobOf(next, building)
@@ -2221,13 +2240,16 @@ function runWorkshop(state: GameState, building: QueueBuilding, from: number, un
 }
 
 // The temple treats the wounded at home without being asked (treatment is free).
-function autoCare(state: GameState, at: number): GameState {
-  if (!state.automation.care || state.buildings.temple < 1) {
+function autoCare(state: GameState, at: number, only?: Set<string>): GameState {
+  if (!state.automation?.care || state.buildings.temple < 1) {
     return state
   }
   const away = busyHeroIds(state)
   let next = state
   for (const hero of state.roster) {
+    if (only && !only.has(hero.id)) {
+      continue
+    }
     if ((hero.condition === 'injured' || hero.condition === 'critical') && hero.treatAt == null && !away.has(hero.id)) {
       const treated = startTreat(next, hero.id, at)
       if (!treated.notice) {
@@ -2255,5 +2277,37 @@ function readAutomation(value: unknown): Automation {
       magic: list(record.queues?.magic).filter((id): id is TrinketId => TRINKET_IDS.includes(id as TrinketId)),
     },
   }
+}
+
+// Heroes auto training leaves alone: the selected party (for sending by
+// hand) and every party the auto runs would actually use (review a6be730).
+function drillReserved(state: GameState): Set<string> {
+  const reserved = new Set((presetById(state, state.presetId)?.slots ?? []).map((slot) => slot.id))
+  const parties = guildLevel(state.buildings.guild).autoParties
+  if (!state.auto.enabled || parties < 1) {
+    return reserved
+  }
+  if (state.auto.policy === 'fixed') {
+    for (const slot of state.auto.party) {
+      reserved.add(slot.id)
+    }
+  }
+  let taken = 0
+  const used = new Set<string>()
+  for (const presetId of autoPresetOrder(state)) {
+    if (taken >= parties) {
+      break
+    }
+    const ids = (presetById(state, presetId)?.slots ?? []).map((slot) => slot.id)
+    if (ids.length === 0 || ids.some((id) => used.has(id))) {
+      continue
+    }
+    for (const id of ids) {
+      used.add(id)
+      reserved.add(id)
+    }
+    taken += 1
+  }
+  return reserved
 }
 

@@ -90,3 +90,46 @@ describe('auto care and auto training', () => {
     expect(loaded.automation).toEqual({ care: true, drill: false, potions: {}, queues: { smith: [], alchemy: [], magic: [] } })
   })
 })
+
+describe('review a6be730 fixes', () => {
+  it('runs work before an upgrade at the old level, however the time is split', () => {
+    let state = town({ buildings: { ...town().buildings, alchemy: 1 } })
+    state = reduce(state, { type: 'brew', potionId: 'heal', now })
+    state = reduce(state, { type: 'brew', potionId: 'heal', now })
+    const firstDone = state.alchemy!.finishAt
+    const upgraded = { ...state, construction: { id: 'alchemy' as const, finishAt: firstDone + 1000 } }
+    const end = firstDone + brewTime(state, 'heal') + 5000
+    const once = reduce(upgraded, { type: 'catchUp', now: end })
+    const split = reduce(reduce(upgraded, { type: 'catchUp', now: firstDone + 500 }), { type: 'catchUp', now: end })
+    expect(once.potions.heal).toBe(split.potions.heal)
+    expect(once.potions.heal).toBe(2 * alchemyRules.batch)
+  })
+
+  it('treats a hero already home from the start of the catch-up', () => {
+    const state = town({ roster: [hero('w', 'warrior', 6, { condition: 'injured' })] })
+    const later = reduce(state, { type: 'catchUp', now: now + 3 * 60_000 + 1000 })
+    expect(later.roster[0]?.condition).toBe('fatigued')
+  })
+
+  it('leaves the second auto party alone when training', () => {
+    const base = town({ buildings: { ...town().buildings, guild: 3 }, cleared: ['hill_cave'] })
+    const veterans = ['a', 'b', 'c', 'd', 'e'].map((id) => hero(id, 'warrior', 10))
+    let state = { ...base, roster: [...veterans, hero('low', 'archer', 2)] }
+    state = reduce(state, { type: 'add', id: 'a' })
+    state = reduce(state, { type: 'add', id: 'low', presetId: 'p2' })
+    state = reduce(reduce(state, { type: 'auto', enabled: true }), { type: 'automation', drill: true })
+    const ticked = reduce(state, { type: 'catchUp', now: now + 1000 })
+    expect(ticked.drills.some((drill) => drill.heroId === 'low')).toBe(false)
+  })
+
+  it('waits for a scout to come home before training them', () => {
+    const veterans = ['a', 'b', 'c', 'd', 'e'].map((id) => hero(id, 'warrior', 10))
+    let state = town({ roster: [...veterans, hero('r', 'rogue', 3)], scout: { heroId: 'r', finishAt: now + 60_000 } })
+    state = reduce(state, { type: 'automation', drill: true })
+    const back = reduce(state, { type: 'catchUp', now: now + 120_000 })
+    expect(back.scout).toBeNull()
+    const drill = back.drills.find((entry) => entry.heroId === 'r')
+    expect(drill == null || drill.finishAt >= now + 120_000).toBe(true)
+  })
+})
+
