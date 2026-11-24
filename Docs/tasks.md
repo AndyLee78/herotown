@@ -107,8 +107,8 @@ Claude Code, Cursor, GPT(Codex)가 함께 쓰는 작업 목록이다. 작업 하
 | 65 | 사기가 진행에 주는 영향 측정 | GPT | `tools/curve.ts`, `print-curve.ts`, `tune-curve.ts`, `first-hour.ts` | 완료 (727df45) |
 | 66 | 자동화 화면(대기열·물약 유지·자동 치료·자동 훈련) | GPT (Cursor 대신) | `App.tsx`, `src/ui/game/*.tsx`, `styles.css`, `src/locales/*` | 완료 (4bbfcda) |
 | 67 | 자동화 core 코드 리뷰 (a6be730) | GPT | `Docs/reviews/a6be730.md` (새 파일만) | 완료 (f48be69) |
-| 68 | 면담·스카우팅 화면 | GPT (Cursor 대신) | `App.tsx`, `src/ui/game/*.tsx`, `styles.css`, `src/locales/*` | 대기 |
-| 69 | 면담·스카우팅 core 코드 리뷰 (8e1fa30) | GPT | `Docs/reviews/8e1fa30.md` (새 파일만) | 대기 (68 뒤) |
+| 68 | 면담·스카우팅 화면 | GPT (Cursor 대신) | `App.tsx`, `src/ui/game/*.tsx`, `styles.css`, `src/locales/*` | 완료 (a7cfe98) |
+| 69 | 면담·스카우팅 core 코드 리뷰 (8e1fa30) | GPT | `Docs/reviews/8e1fa30.md` (새 파일만) | 완료 (c5b60da) |
 
 ---
 
@@ -1629,6 +1629,11 @@ core에 이미 있는 것('../../core'에서 export):
 확인: npm run dev에서 디버그 세이브로 방문자를 면담해 보고(무료 → 골드), 여관 레벨 3에서 깊은 면담을 해 본다. 확인한 내용을 메모에.
 ```
 
+**메모**
+
+- 여관 카드에 면담 전 정보 가림, 무료·유료·깊은 면담, 전성기 능력치, 숨은 인재와 고용 조건을 표시했다.
+- Vite SSR과 리듀서로 무료→10골드 전환, 깊이 1→2, 숨은 인재 공개 및 고용 거절을 확인했다. 로컬 브라우저 접속 시간 초과로 클릭 검증은 남았다. 타입 검사·테스트 262개·빌드 통과.
+
 ---
 
 ## 69. 면담·스카우팅 core 코드 리뷰 (GPT)
@@ -1641,3 +1646,8 @@ core에 이미 있는 것('../../core'에서 export):
 면담·스카우팅 core 커밋 8e1fa30를 리뷰한다. 코드는 고치지 않고 Docs/reviews/8e1fa30.md 새 파일 하나에만 쓴다(Docs/reviews/README.md 형식).
 볼 것: Docs/scouting.md와 규칙 차이, 면담 횟수의 계절 판정과 여관 레벨 변화, 깊은 면담, 숨은 인재가 기존 방문자 생성(시드 흐름)을 바꾸지 않는지, 숨은 인재의 능력치 재계산(나이·잠재력·potentials), 고용 조건과 처음 방문자, 방문자가 나이 들거나 떠날 때 필드가 유지되는지(createHero), 고용 후 영웅에 남는 필드, 세이브 17 → 18(예전 방문자를 면담한 것으로 처리).
 ```
+
+**메모**
+
+- [리뷰](reviews/8e1fa30.md)에 유료 면담의 무료 한도 차감, Lv3 첫 면담의 깊이 적용, 잠재력 100 초과 방문자의 보정 감소, v1 세이브 이관 문제를 기록했다.
+- 계절 초기화, v17 기존 방문자의 면담 이관, 방문자 나이 변경·퇴실·고용, 숨은 인재 능력치 재계산을 확인했다.
