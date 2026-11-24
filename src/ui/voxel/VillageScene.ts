@@ -51,6 +51,10 @@ type Walker = {
   marker: THREE.Object3D | null
   // Seconds left of running off alone. Children do this between following a parent.
   solo: number
+  // Coming home: a sack of loot on the back, and a wounded hero leaning on a friend.
+  load: THREE.Object3D | null
+  leanOn: Walker | null
+  slowTo: number
 }
 
 type LotView = { key: string; group: THREE.Group; label: THREE.Sprite | null; labelText: string; top: number }
@@ -61,6 +65,8 @@ const PAN_LIMIT = 9
 const PICK_RADIUS = 28
 const PLAZA_AREA: Area = { minX: PLAZA.min, maxX: PLAZA.max, minZ: PLAZA.min, maxZ: PLAZA.max }
 const YARD_AREA: Area = INN_YARD
+// Nobody walks through the fountain basin: walkers keep this far from its middle.
+const FOUNTAIN_CLEAR = 1.75
 const PACE: Record<Hero['condition'], number> = { healthy: 1, fatigued: 0.8, injured: 0.6, critical: 0.4, dead: 0 }
 
 export class VillageScene {
@@ -503,6 +509,9 @@ export class VillageScene {
         random,
         marker: null,
         solo: 0,
+        load: null,
+        leanOn: null,
+        slowTo: 0,
       }
       walker.root.add(walker.rig.group)
       this.placeIn(walker, kind === 'visitor' ? YARD_AREA : PLAZA_AREA)
@@ -544,6 +553,7 @@ export class VillageScene {
         walker.state = 'idle'
         walker.timer = 0.8
         walker.target.set(PLAZA.min + walker.random() * (PLAZA.max - PLAZA.min), 0, walker.random() * PLAZA.max)
+        keepOffFountain(walker.target)
       }
     }
   }
@@ -553,6 +563,7 @@ export class VillageScene {
   // A lone scout (Docs/depth.md 3d) slips out the south gate without packing.
   private syncAway(away: Set<string>) {
     const leaving: Walker[] = []
+    const returning: Walker[] = []
     for (const walker of this.walkers.values()) {
       if (walker.kind === 'roster' && away.has(walker.id) && !walker.away) {
         leaving.push(walker)
@@ -567,6 +578,9 @@ export class VillageScene {
       const isAway = away.has(walker.id)
       if (isAway && !walker.away) {
         walker.away = true
+        this.setLoad(walker, false)
+        walker.leanOn = null
+        walker.slowTo = 0
         if (walker.fresh) {
           walker.state = 'gone'
           walker.root.visible = false
@@ -581,13 +595,57 @@ export class VillageScene {
         }
       } else if (!isAway && walker.away) {
         walker.away = false
-        walker.speed = 0.9 + walker.random() * 0.3
-        walker.root.visible = true
-        walker.root.position.set(GATE.x + (walker.random() - 0.5) * 1.2, 0, GATE.z)
-        walker.state = 'arrive'
-        walker.target.set(PLAZA.min + walker.random() * (PLAZA.max - PLAZA.min), 0, walker.random() * PLAZA.max)
+        returning.push(walker)
       }
       walker.fresh = false
+    }
+    this.walkHome(returning)
+  }
+
+  // The party comes back in through the south gate together: the sound carry
+  // the loot, and each wounded hero leans on one of them.
+  private walkHome(returning: Walker[]) {
+    const wounded = (walker: Walker) => (this.paces.get(walker.id) ?? 1) < PACE.fatigued
+    const sound = returning.filter((walker) => !wounded(walker))
+    returning.forEach((walker, order) => {
+      const dx = ((order % 3) - 1) * 0.75
+      const dz = Math.floor(order / 3) * 0.75
+      walker.speed = 0.9 + walker.random() * 0.3
+      walker.root.visible = true
+      walker.root.position.set(GATE.x + dx, 0, GATE.z + dz)
+      walker.root.rotation.y = Math.PI
+      walker.state = 'arrive'
+      walker.target.set(GATHER.x + dx, 0, GATHER.z + 1.2 + dz)
+      walker.leanOn = null
+      walker.slowTo = 0
+      if (!wounded(walker)) {
+        this.setLoad(walker, true)
+      }
+    })
+    returning.filter(wounded).forEach((walker, index) => {
+      const friend = sound[index % Math.max(1, sound.length)]
+      if (friend) {
+        walker.leanOn = friend
+        friend.slowTo = Math.min(friend.slowTo || 1, this.paces.get(walker.id) ?? 1)
+        walker.root.position.set(friend.root.position.x + 0.45, 0, friend.root.position.z)
+      }
+    })
+  }
+
+  private setLoad(walker: Walker, on: boolean) {
+    if (on && !walker.load) {
+      const load = new Builder()
+        .box(0.34, 0.38, 0.22, '#9c7448', 0, 0, 0)
+        .box(0.36, 0.06, 0.24, '#5d4433', 0, 0.12, 0)
+        .box(0.1, 0.08, 0.1, '#ffd84d', 0.06, 0.23, 0, { glow: true })
+        .build({ castShadow: false })
+      load.position.set(0, walker.rig.height * 0.55, -0.22)
+      walker.root.add(load)
+      walker.load = load
+    } else if (!on && walker.load) {
+      walker.root.remove(walker.load)
+      disposeTree(walker.load)
+      walker.load = null
     }
   }
 
@@ -597,6 +655,7 @@ export class VillageScene {
       0,
       area.minZ + walker.random() * (area.maxZ - area.minZ),
     )
+    keepOffFountain(walker.root.position)
     walker.state = 'idle'
   }
 
@@ -776,9 +835,20 @@ export class VillageScene {
           0,
           area.minZ + walker.random() * (area.maxZ - area.minZ),
         )
+        keepOffFountain(walker.target)
         walker.state = 'walk'
       }
       return
+    }
+    const friend = walker.leanOn
+    if (friend) {
+      if (walker.state === 'arrive' && friend.state === 'arrive') {
+        // At the friend's side, an arm over their shoulder.
+        const yaw = friend.root.rotation.y
+        walker.target.set(friend.root.position.x + Math.cos(yaw) * 0.42, 0, friend.root.position.z - Math.sin(yaw) * 0.42)
+      } else {
+        walker.leanOn = null
+      }
     }
     const position = walker.root.position
     const dx = walker.target.x - position.x
@@ -791,18 +861,44 @@ export class VillageScene {
       } else if (walker.state === 'leave') {
         walker.state = 'gone'
         walker.root.visible = false
+      } else if (walker.leanOn) {
+        // Waiting on the friend who is helping them along.
+        idlePose(walker.rig, time, walker.phase)
       } else {
+        if (walker.state === 'arrive') {
+          this.setLoad(walker, false)
+          walker.slowTo = 0
+        }
         walker.state = 'idle'
         walker.timer = 1.5 + walker.random() * 4
       }
       return
     }
     const hurry = walker.state === 'gather' || walker.state === 'leave' ? 1.4 : walker.solo > 0 ? 1.65 : 1
-    const stepLength = Math.min(distance, walker.speed * pace * hurry * delta)
+    const carrying = walker.state === 'arrive' && walker.slowTo > 0 ? walker.slowTo / pace : 1
+    const lean = walker.leanOn ? 1.6 : 1
+    const stepLength = Math.min(distance, walker.speed * pace * hurry * carrying * lean * delta)
     position.x += (dx / distance) * stepLength
     position.z += (dz / distance) * stepLength
+    // Slide around the fountain rim instead of through the basin; a little
+    // sideways nudge keeps a walker heading straight at it from sticking.
+    if (keepOffFountain(position)) {
+      const fountain = LOTS.fountain
+      const ox = position.x - fountain.x
+      const oz = position.z - fountain.z
+      const side = ox * dz - oz * dx >= 0 ? 1 : -1
+      position.x += (-oz / FOUNTAIN_CLEAR) * side * stepLength * 0.5
+      position.z += (ox / FOUNTAIN_CLEAR) * side * stepLength * 0.5
+      keepOffFountain(position)
+    }
     walker.root.rotation.y = turnToward(walker.root.rotation.y, Math.atan2(dx, dz), delta * 8)
     walkPose(walker.rig, time, walker.phase, walker.speed * pace)
+    if (walker.leanOn) {
+      // Limping, leaning in toward the friend, the near arm up on their shoulder.
+      walker.rig.group.rotation.z = 0.18 + Math.sin(time * 6 + walker.phase) * 0.05
+      walker.rig.armL.rotation.set(-0.4, 0, 1.2)
+      walker.rig.legR.rotation.x *= 0.3
+    }
   }
 
   private clampPan() {
@@ -885,6 +981,24 @@ function freeOwnMaterials(root: THREE.Object3D) {
     const materials = object.userData.materials as THREE.Material[] | undefined
     materials?.forEach((material) => material.dispose())
   })
+}
+
+// Moves a point inside the fountain's clearing out to its edge; says whether it moved.
+function keepOffFountain(point: { x: number; z: number }): boolean {
+  const fountain = LOTS.fountain
+  const dx = point.x - fountain.x
+  const dz = point.z - fountain.z
+  const distance = Math.hypot(dx, dz)
+  if (distance >= FOUNTAIN_CLEAR) {
+    return false
+  }
+  if (distance < 1e-4) {
+    point.x = fountain.x + FOUNTAIN_CLEAR
+    return true
+  }
+  point.x = fountain.x + (dx / distance) * FOUNTAIN_CLEAR
+  point.z = fountain.z + (dz / distance) * FOUNTAIN_CLEAR
+  return true
 }
 
 function turnToward(current: number, target: number, step: number): number {

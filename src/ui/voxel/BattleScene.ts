@@ -9,7 +9,7 @@ import type { Hit, ReplayStep, StatusMark } from './replay'
 // Plays a dungeon report back as a 3D auto battle. The outcome is already
 // decided by the core; this only shows the steps in order.
 
-type AnimType = 'melee' | 'cast' | 'hit' | 'shout' | 'spawn' | 'die' | 'flee' | 'cheer' | 'drink' | 'disarm' | 'ambush' | 'brace' | 'charge'
+type AnimType = 'melee' | 'cast' | 'hit' | 'shout' | 'spawn' | 'die' | 'flee' | 'cheer' | 'drink' | 'disarm' | 'ambush' | 'brace' | 'charge' | 'exit'
 
 type Anim = {
   type: AnimType
@@ -20,6 +20,10 @@ type Anim = {
   fired?: boolean
   to?: THREE.Vector3
   dir?: THREE.Vector3
+  // 'exit': seconds of cheering (or catching breath) before walking off, and
+  // whether the walk is a limp after a defeat.
+  hold?: number
+  limp?: boolean
 }
 
 type Fighter = {
@@ -36,6 +40,8 @@ type Fighter = {
   alive: boolean
   dead: boolean
   anim: Anim | null
+  // A downed hero carried out on a friend's shoulders after the fight.
+  carriedBy: Fighter | null
   phase: number
   bar: { group: THREE.Group; fill: THREE.Mesh }
   marks: THREE.Group
@@ -644,17 +650,38 @@ export class BattleScene {
         if (!instant) {
           this.callbacks.onSound?.(step.victory ? 'victory' : 'defeat')
         }
-        if (step.victory) {
+        if (step.victory && !instant) {
           for (const fighter of this.fighters.values()) {
-            if (fighter.side === 'hero' && fighter.alive && !instant) {
-              fighter.anim = { type: 'cheer', t: 0, dur: 1.6 }
+            if (fighter.side === 'hero' && fighter.alive) {
               this.burst(this.chest(fighter).setY(1.6), pickColor(this.random), 8)
             }
           }
         }
+        if (!instant) {
+          this.walkOut(step.victory)
+        }
         break
     }
     this.down(step.downs, instant)
+  }
+
+  // After the fight the party walks back out the way it came: cheering first
+  // after a win, limping after a loss, with downed friends on their shoulders.
+  private walkOut(victory: boolean) {
+    const standing = [...this.fighters.values()].filter((fighter) => fighter.side === 'hero' && fighter.alive && fighter.root.visible)
+    // A retreat already has them running off.
+    if (standing.length === 0 || standing.some((fighter) => fighter.anim?.type === 'flee')) {
+      return
+    }
+    const hold = victory ? 1.6 : 0.5
+    const walk = victory ? 3 : 4.4
+    for (const fighter of standing) {
+      fighter.anim = { type: 'exit', t: 0, dur: hold + walk, hold, limp: !victory }
+    }
+    const downed = [...this.fighters.values()].filter((fighter) => fighter.side === 'hero' && !fighter.alive && fighter.dead)
+    downed.forEach((fighter, index) => {
+      fighter.carriedBy = standing[index % standing.length] ?? null
+    })
   }
 
   private startFloor(units: ReplayUnit[], instant: boolean) {
@@ -802,6 +829,7 @@ export class BattleScene {
       alive: unit.hp > 0,
       dead: unit.hp <= 0,
       anim: null,
+      carriedBy: null,
       phase: this.random() * 10,
       bar: { group: bar, fill },
       marks,
@@ -1028,6 +1056,22 @@ export class BattleScene {
     const bar = fighter.bar
     if (fighter.dead) {
       bar.group.visible = false
+      const carrier = fighter.carriedBy
+      if (carrier && actor.kind === 'humanoid') {
+        // Across the carrier's shoulders, gone with them once they leave.
+        const stack = [...this.fighters.values()].filter((other) => other.carriedBy === carrier).indexOf(fighter)
+        root.visible = carrier.root.visible
+        root.position.copy(carrier.root.position).setY(carrier.actor.height * 0.72 + stack * 0.32)
+        root.rotation.y = carrier.root.rotation.y + Math.PI / 2
+        actor.group.rotation.set(-1.45, 0, 0)
+        actor.group.position.set(0, 0, -0.3)
+        if (!carrier.anim && !carrier.alive) {
+          fighter.home.copy(carrier.home)
+          fighter.carriedBy = null
+          root.visible = false
+        }
+        return
+      }
       if (actor.kind === 'humanoid') {
         root.position.copy(fighter.home)
         actor.group.rotation.set(-1.45, 0, 0)
@@ -1061,6 +1105,11 @@ export class BattleScene {
             actor.group.remove(bottle)
             disposeTree(bottle)
           }
+        }
+        if (anim.type === 'exit') {
+          root.visible = false
+          fighter.alive = false
+          fighter.home.x -= 12
         }
         if (anim.type === 'flee') {
           root.visible = false
@@ -1183,6 +1232,36 @@ export class BattleScene {
         actor.group.scale.setScalar(0.2 + Math.min(1, p < 0.2 ? p / 0.2 : (1 - p) / 0.2) * 0.8)
       } else {
         actor.group.scale.setScalar(1)
+      }
+    } else if (anim.type === 'exit') {
+      const hold = anim.hold ?? 0
+      if (anim.t < hold) {
+        if (!anim.limp) {
+          this.pose(fighter, { type: 'cheer', t: anim.t, dur: hold }, anim.t / hold, time)
+        } else if (humanoid) {
+          // Catching breath, hands on knees.
+          humanoid.torso.rotation.x = 0.35
+          humanoid.armL.rotation.x = -0.6
+          humanoid.armR.rotation.x = -0.6
+        }
+        return
+      }
+      const k = (anim.t - hold) / Math.max(0.01, anim.dur - hold)
+      const carrying = [...this.fighters.values()].some((other) => other.carriedBy === fighter)
+      root.rotation.y = -Math.PI / 2
+      root.position.x = fighter.home.x - easeIn(Math.min(1, k)) * 12
+      if (humanoid) {
+        walkPose(humanoid, time, fighter.phase, anim.limp ? 0.8 : 1.3)
+        if (anim.limp) {
+          // One leg dragging, the body rocking with each step.
+          humanoid.legR.rotation.x *= 0.3
+          actor.group.rotation.z = Math.sin(time * 5 + fighter.phase) * 0.12
+          actor.group.position.y = -Math.abs(Math.sin(time * 5 + fighter.phase)) * 0.06
+        }
+        if (carrying) {
+          humanoid.armL.rotation.x = -2.6
+          humanoid.armR.rotation.x = -2.6
+        }
       }
     } else if (anim.type === 'cheer') {
       actor.group.position.y = Math.abs(Math.sin(p * Math.PI * 3)) * 0.35

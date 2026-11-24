@@ -4,6 +4,7 @@ import { alchemyRules, potionById } from './data'
 import { recipeById } from './gear'
 import { freshState, migrate, reduce, type GameState } from './game'
 import { createHero } from './hero'
+import { lifeRules, timeRules, villageRules } from './data'
 import type { ClassId, Hero } from './types'
 
 // Docs/automation.md: workshop queues, standing potion stock, auto care and auto training.
@@ -130,6 +131,20 @@ describe('review a6be730 fixes', () => {
     expect(back.scout).toBeNull()
     const drill = back.drills.find((entry) => entry.heroId === 'r')
     expect(drill == null || drill.finishAt >= now + 120_000).toBe(true)
+  })
+})
+
+describe('auto runs while away', () => {
+  it('come back to a rested party after a long absence', () => {
+    const base = town({ buildings: { ...town().buildings, guild: 1 }, cleared: ['hill_cave', 'abandoned_mine', 'barrow'] })
+    let state: GameState = { ...base, roster: [hero('w', 'warrior', 9), hero('c', 'cleric', 9), hero('a', 'archer', 9)] }
+    for (const id of ['w', 'c', 'a']) state = reduce(state, { type: 'add', id })
+    state = reduce(reduce(state, { type: 'auto', enabled: true }), { type: 'autoDungeon', id: 'barrow' })
+    state = { ...state, calendar: { ...state.calendar, intoSeasonMs: 0 } }
+    const back = reduce(state, { type: 'catchUp', now: now + timeRules.maxOfflineMs })
+    expect(back.absence?.autoRuns ?? 0).toBeGreaterThan(5)
+    expect(Math.max(...back.roster.map((entry) => entry.fatigue))).toBeLessThan(lifeRules.fatigue.tiredAt)
+    expect(villageRules.auto.runMs).toBeGreaterThan(0)
   })
 })
 

@@ -1161,6 +1161,11 @@ function autoMembers(state: GameState, presetId = state.presetId): PartyMember[]
     if (lowMorale(hero)) {
       return []
     }
+    // So do tired heroes: they rest until fit, so the player comes back to a
+    // fresh party (Docs/fatigue.md).
+    if (hero.fatigue >= lifeRules.fatigue.tiredAt) {
+      return []
+    }
     return [{ hero, row: slot.row }]
   })
   const front = members.filter((member) => member.row === 'front').length
@@ -1211,6 +1216,10 @@ function runAuto(state: GameState, elapsed: number, tally: { runs: number; gold:
       break
     }
     budget -= villageRules.auto.runMs
+    // Heroes rest between runs too: a long absence is many runs with time in
+    // between, not one marathon (fatigue used to pile up offline).
+    const rest = (fatigueRecoveryRate(next) * villageRules.auto.runMs) / 3_600_000
+    next = { ...next, roster: next.roster.map((hero) => (hero.fatigue > 0 ? { ...hero, fatigue: Math.max(0, hero.fatigue - rest) } : hero)) }
   }
   // Leftover time waits for the next tick, but never more than one run's worth.
   return { ...next, auto: { ...next.auto, carryMs: Math.min(budget, villageRules.auto.runMs) } }
