@@ -242,7 +242,8 @@
     "noTraining": "훈련소가 없습니다.",
     "drillHero": "훈련할 수 없는 영웅입니다.",
     "trainingFull": "훈련소 자리가 다 찼습니다.",
-    "guildRecord": "의뢰 실적이 부족합니다. 길드 의뢰를 더 끝내세요."
+    "guildRecord": "의뢰 실적이 부족합니다. 길드 의뢰를 더 끝내세요.",
+    "festivalDone": "이번 계절의 축제는 이미 열었습니다."
   },
   "defeat": {
     "noHealer": "치유사가 없어 피해를 버티지 못했다.",

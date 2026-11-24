@@ -164,6 +164,8 @@ export type Hero = {
   xp: number
   skillPoints: number
   learned: string[]
+  // 0-100; missing means the base (Docs/morale.md).
+  morale?: number
   gear: Gear[]
   clears: string[]
   deaths: number

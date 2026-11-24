@@ -2,13 +2,14 @@ import { chargeFountain, freshFountain, makeWish, readFountain, upgradeFountain,
 import { claimGuide, guideSteps } from './guide'
 import { skillPicks } from './skills'
 import { deliver, ensureBoard, expeditionSlotsFor, guildLevel, progressClear, readBoard, type GuildBoard } from './guild'
+import { cheer, driftMorale, lowMorale, mourn, shiftMorale } from './morale'
 import { finishDrills, forgetSkill, readDrills, startDrill, type Drill } from './drill'
 import { buyIntel, finishScout, isNest, nestSeason, readScout, seasonKey, startScout, type ScoutJob } from './nest'
 import { finishEnchant, readMagicJob, startEnchant, type MagicJob } from './magic'
 import { finishBrew, readAlchemyJob, readSupplies, returnSupplies, startBrew, takeSupplies, type AlchemyJob } from './alchemy'
-import { adRules, magicRules, nestRules, classById, classList, combatRules, dungeonById, dungeons, expeditionRules, lifeRules, progression, retirementRules, smithRules, timeRules, villageRules } from './data'
+import { adRules, moraleRules, magicRules, nestRules, classById, classList, combatRules, dungeonById, dungeons, expeditionRules, lifeRules, progression, retirementRules, smithRules, timeRules, villageRules } from './data'
 import { forgeGear, normalizeGear, recipeById } from './gear'
-import { applyReport, DEFAULT_TACTICS, runDungeon } from './dungeon'
+import { applyReport, DEFAULT_TACTICS, gainXp, runDungeon } from './dungeon'
 import { canDeploy, generateHero, isChild, generateVisitors, normalizeHero, restHero, withAge } from './hero'
 import { acceptProposal, bedsTaken, bondParty, declineProposal, deliverBirths, femaleChance, graveFor, nextAge, partyBonus, passAway, readBonds, readProposals, tidyFamily, turnSeason, wageCount, type FamilyEvents } from './family'
 import { createRng } from './rng'
@@ -16,7 +17,7 @@ import type { Rng } from './rng'
 import type { Genes } from './genes'
 import type { Bond, ClassId, CombatError, DungeonReport, Gear, GearSlot, Gender, Hero, PartyMember, PotionId, Proposal, Role, Row, Supplies, Tactics, TrinketId } from './types'
 
-export const SAVE_VERSION = 15
+export const SAVE_VERSION = 16
 
 export type SeasonId = 'spring' | 'summer' | 'autumn' | 'winter'
 
@@ -159,6 +160,7 @@ export type GameNotice =
   | 'scoutHero'
   | 'noTraining'
   | 'guildRecord'
+  | 'festivalDone'
   | 'drillHero'
   | 'trainingFull'
   | 'scoutBusy'
@@ -235,7 +237,11 @@ export type GameState = {
   drills: Drill[]
   // The guild's contract board (Docs/guild.md).
   guild: GuildBoard | null
+  // The festival held this season, if any (Docs/morale.md).
+  festival: Festival | null
 }
+
+export type Festival = { season: string; kind: SeasonId }
 
 export type AdPlacement = 'absence' | 'construction' | 'temple'
 
@@ -288,6 +294,7 @@ export type GameAction =
   | { type: 'drill'; heroId: string; now: number }
   | { type: 'forget'; heroId: string; skillId: string }
   | { type: 'deliver'; contractId: string }
+  | { type: 'festival' }
   | { type: 'declineProposal'; a: string; b: string; now?: number }
   | { type: 'wish'; now: number }
   | { type: 'brew'; potionId: PotionId; now: number }
@@ -343,6 +350,7 @@ export function freshState(seed: number, now: number): GameState {
     scout: null,
     drills: [],
     guild: null,
+    festival: null,
   }
 }
 
@@ -593,6 +601,9 @@ function apply(state: GameState, action: GameAction): GameState {
   if (action.type === 'buyIntel') {
     return buyIntel(state)
   }
+  if (action.type === 'festival') {
+    return holdFestival(state)
+  }
   if (action.type === 'deliver') {
     return deliver(state, action.contractId)
   }
@@ -643,6 +654,7 @@ function advance(state: GameState, now: number): GameState {
     const until = Math.min(Math.max(turnAt, next.lastTickAt + 1), effectiveNow)
     const piece = until - next.lastTickAt
     const before = next.calendar
+    const gravesBefore = next.graveyard.length
     // Everything due within the piece settles first, in the old year, so a
     // party home just before a year turns is buried with that year's age.
     next = finishConstruction(next, until, completed)
@@ -667,6 +679,11 @@ function advance(state: GameState, now: number): GameState {
     // The old may pass away when a year turns, after everyone has aged.
     for (let years = next.calendar.year - before.year; years > 0; years -= 1) {
       next = passAway(next, family)
+    }
+    // Grief for everyone who left for good in this piece (Docs/morale.md).
+    const departed = next.graveyard.slice(gravesBefore)
+    if (departed.length) {
+      next = { ...next, roster: mourn(next.roster, departed, next.bonds) }
     }
     // Widow and unbond at the moment someone left, not when the catch-up ends.
     next = tidyFamily({ ...next, lastTickAt: until }, until)
@@ -910,10 +927,11 @@ function growOlder(state: GameState, years: number, aged: { name: string; age: n
   const roster = state.roster.map((hero) => older(hero, years, aged))
   // A child who reaches deploy age joins the hero lists with a welcome.
   const grownUp = roster.filter((hero, index) => isChild(state.roster[index]!) && !isChild(hero)).map((hero) => hero.id)
+  const proud = roster.filter((hero) => grownUp.includes(hero.id)).flatMap((hero) => hero.parents ?? [])
   return {
     ...state,
     comingOfAge: [...(state.comingOfAge ?? []), ...grownUp],
-    roster,
+    roster: cheer(roster, proud, moraleRules.joy.comingOfAge),
     visitors: state.visitors.map((hero) => older(hero, years, aged)),
     retirees: state.retirees.map((retiree) => ({ ...retiree, hero: older(retiree.hero, years, aged) })),
   }
@@ -1060,6 +1078,10 @@ function autoMembers(state: GameState, presetId = state.presetId): PartyMember[]
     if (hero.condition === 'critical' || (state.auto.policy === 'safe' && hero.condition === 'injured')) {
       return []
     }
+    // Grieving or dispirited heroes stay home from auto runs (Docs/morale.md).
+    if (lowMorale(hero)) {
+      return []
+    }
     return [{ hero, row: slot.row }]
   })
   const front = members.filter((member) => member.row === 'front').length
@@ -1177,8 +1199,14 @@ function grantVictoryRewards(state: GameState, report: DungeonReport, dungeonId:
   if (first) {
     fame += drop.fame
   }
+  // Pride for the party, more for a village first; a town level-up cheers everyone (Docs/morale.md).
+  const party = (report.party ?? []).map((member) => member.id)
+  let roster = first ? cheer(state.roster, party, moraleRules.joy.firstClear) : cheer(state.roster, party, moraleRules.pride.victory, moraleRules.pride.victoryCap)
+  if (townLevel(fame).level > townLevel(state.fame).level) {
+    roster = roster.map((hero) => shiftMorale(hero, moraleRules.pride.townLevel))
+  }
   // The old one-off cave quest gave way to the contract board (Docs/guild.md).
-  return progressClear({ ...state, materials, fame, cleared }, dungeonId)
+  return progressClear({ ...state, roster, materials, fame, cleared }, dungeonId)
 }
 
 function scheduleVisitor(state: GameState, now: number): GameState {
@@ -1241,6 +1269,8 @@ function recoverRoster(state: GameState, elapsed: number, now: number): GameStat
     ...state,
     roster: state.roster.map((hero) => {
       const until = awayUntil.get(hero.id)
+      // Morale drifts back toward its base wherever the hero is (Docs/morale.md).
+      hero = driftMorale(hero, hours)
       if (until == null) {
         return recoverHero(hero, hours, rate, now)
       }
@@ -1881,6 +1911,7 @@ function normalize(record: Record<string, unknown>, now: number): GameState {
     scout: readScout(record.scout),
     drills: readDrills(record.drills),
     guild: readBoard(record.guild),
+    festival: readFestival(record.festival),
     auto: isAuto(record.auto) ? record.auto : base.auto,
     notice: null,
   }
@@ -1989,3 +2020,43 @@ function validHeroes(value: unknown): value is Hero[] {
 function numberOr(value: unknown, fallback: number): number {
   return typeof value === 'number' && Number.isFinite(value) ? value : fallback
 }
+
+// Festivals (Docs/morale.md): once a season, a lift for everyone and a
+// seasonal gift.
+export function festivalCost(state: GameState): number {
+  return moraleRules.festival.goldBase + moraleRules.festival.goldPerTownLevel * townLevel(state.fame).level
+}
+
+function holdFestival(state: GameState): GameState {
+  const season = seasonKey(state.calendar)
+  if (state.festival?.season === season) {
+    return { ...state, notice: 'festivalDone' }
+  }
+  const cost = festivalCost(state)
+  if (state.gold < cost) {
+    return { ...state, notice: 'poor' }
+  }
+  const kind = state.calendar.season
+  const rules = moraleRules.festival
+  let roster = state.roster.map((hero) => shiftMorale(hero, rules.morale))
+  let materials = state.materials
+  if (kind === 'summer') {
+    roster = roster.map((hero) => (isChild(hero) || hero.condition === 'dead' ? hero : gainXp(hero, Math.round(hero.level * progression.xpPerLevel * rules.xpShare))))
+  }
+  if (kind === 'autumn') {
+    materials = { ...materials, wood: materials.wood + rules.harvest.wood, stone: materials.stone + rules.harvest.stone, iron: materials.iron + rules.harvest.iron }
+  }
+  if (kind === 'winter') {
+    roster = roster.map((hero) => ((hero.morale ?? moraleRules.base) < moraleRules.base + rules.morale ? shiftMorale(hero, rules.memorial) : hero))
+  }
+  return { ...state, notice: null, gold: state.gold - cost, fame: state.fame + rules.fame, roster, materials, festival: { season, kind } }
+}
+
+function readFestival(value: unknown): Festival | null {
+  if (value == null || typeof value !== 'object') {
+    return null
+  }
+  const festival = value as Festival
+  return typeof festival.season === 'string' && timeRules.seasons.includes(festival.kind) ? { season: festival.season, kind: festival.kind } : null
+}
+

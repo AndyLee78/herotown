@@ -7,6 +7,7 @@ import magicFile from '../data/magic.json'
 import nestFile from '../data/nest.json'
 import trainingFile from '../data/training.json'
 import guildFile from '../data/guild.json'
+import moraleFile from '../data/morale.json'
 import smithFile from '../data/smith.json'
 import combatFile from '../data/combat.json'
 import dungeonsFile from '../data/dungeons.json'
@@ -216,6 +217,7 @@ if (magicRules.trinkets.some((trinket) => trinket.magicLevel < 1 || trinket.ms <
   throw new Error('Every trinket needs a workshop level and a making time')
 }
 export const trainingRules = trainingFile
+export const moraleRules = moraleFile
 export const guildRules = guildFile as typeof guildFile & { deliverAmount: Record<string, number>; materialValue: Record<string, number> }
 export const nestRules = nestFile as typeof nestFile & { floors: string[][][] }
 export const fountainRules = fountainFile

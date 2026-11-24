@@ -30,6 +30,7 @@ export type HeroDraft = {
   condition?: Condition
   skillPoints?: number
   learned?: string[]
+  morale?: number
   gear?: Array<Partial<Gear>>
   clears?: string[]
   deaths?: number
@@ -75,6 +76,7 @@ export function createHero(draft: HeroDraft): Hero {
     // Points follow the level: two picks, at the levels in training.json (Docs/skills.md).
     skillPoints: skills.skillPoints,
     learned: skills.learned,
+    ...(draft.morale != null ? { morale: Math.max(0, Math.min(100, draft.morale)) } : {}),
     gear: draft.gear ? draft.gear.map((item) => normalizeGear(item, draft.classId)) : [normalizeGear(undefined, draft.classId)],
     clears: [...(draft.clears ?? [])],
     deaths: draft.deaths ?? 0,

@@ -1,6 +1,7 @@
-import { bandForAge, ageBands, classById, dungeons, familyRules, maxAge, names, timeRules, traits, villageRules } from './data'
+import { bandForAge, ageBands, classById, dungeons, familyRules, maxAge, moraleRules, names, timeRules, traits, villageRules } from './data'
 import { genesFor, inheritGenes } from './genes'
 import { createHero } from './hero'
+import { cheer, shiftMorale } from './morale'
 import { createRng, type Rng } from './rng'
 import type { GameState, Grave } from './game'
 import { STAT_KEYS, type Bond, type BondStage, type Gender, type Hero, type Proposal, type Stats, type TraitId } from './types'
@@ -209,7 +210,9 @@ function addAffinity(bonds: Bond[], a: string, b: string, amount: number): Bond[
 // Heroes who came home from the same expedition grow closer.
 export function bondParty(state: GameState, ids: string[], victory: boolean): GameState {
   const present = ids.filter((id) => state.roster.some((hero) => hero.id === id))
-  const amount = familyRules.affinityPerTrip + (victory ? familyRules.affinityWinBonus : 0)
+  // A spring festival this season doubles what a trip brings (Docs/morale.md).
+  const festive = state.festival?.kind === 'spring' && state.festival.season === `${state.calendar.year}-${state.calendar.season}`
+  const amount = (familyRules.affinityPerTrip + (victory ? familyRules.affinityWinBonus : 0)) * (festive ? moraleRules.festival.bondBoost : 1)
   let bonds = state.bonds ?? []
   for (let i = 0; i < present.length; i += 1) {
     for (let j = i + 1; j < present.length; j += 1) {
@@ -327,7 +330,9 @@ export function deliverBirths(state: GameState, now: number, events: FamilyEvent
   if (born.length === 0) {
     return state
   }
-  return { ...state, roster: [...roster, ...born], retirees }
+  // New parents are glad (Docs/morale.md).
+  const parents = born.flatMap((child) => child.parents ?? [])
+  return { ...state, roster: cheer([...roster, ...born], parents, moraleRules.joy.birth), retirees }
 }
 
 export function makeChild(rng: Rng, id: string, mother: Hero, father: Hero, bonus = 0): Hero {
@@ -395,7 +400,9 @@ export function acceptProposal(state: GameState, a: string, b: string, now: numb
     return { ...state, notice: 'noHouse' }
   }
   const wed = (hero: Hero): Hero =>
-    hero.id === first.id ? { ...hero, spouseId: second.id, widowedAt: undefined } : hero.id === second.id ? { ...hero, spouseId: first.id, widowedAt: undefined } : hero
+    hero.id === first.id || hero.id === second.id
+      ? shiftMorale({ ...hero, spouseId: hero.id === first.id ? second.id : first.id, widowedAt: undefined }, moraleRules.joy.marriage)
+      : hero
   return {
     ...state,
     notice: null,

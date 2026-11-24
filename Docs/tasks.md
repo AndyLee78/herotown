@@ -102,6 +102,9 @@ Claude Code, Cursor, GPT(Codex)가 함께 쓰는 작업 목록이다. 작업 하
 | 60 | 길드 화면(의뢰 게시판·레벨·감정) | Cursor | `App.tsx`, `src/ui/game/*.tsx`, `styles.css`, `src/locales/*` | 완료 (7ff969a) |
 | 61 | 길드 core 코드 리뷰 (1208be3) | GPT | `Docs/reviews/1208be3.md` (새 파일만) | 완료 (48656ea) |
 | 62 | 의뢰 보상·자동 파티 측정 | GPT | `tools/curve.ts`, `print-curve.ts`, `tune-curve.ts`, `first-hour.ts` | 완료 (d48a304) |
+| 63 | 사기·감정·축제 화면 | GPT (Cursor 대신) | `App.tsx`, `src/ui/game/*.tsx`, `styles.css`, `src/locales/*` | 대기 |
+| 64 | 사기·축제 core 코드 리뷰 (커밋 해시는 아래) | GPT | `Docs/reviews/<해시>.md` (새 파일만) | 대기 (63 뒤) |
+| 65 | 사기가 진행에 주는 영향 측정 | GPT | `tools/curve.ts`, `print-curve.ts`, `tune-curve.ts`, `first-hour.ts` | 대기 |
 
 ---
 
@@ -1477,3 +1480,55 @@ tools/curve.ts, tools/print-curve.ts, tools/tune-curve.ts, tools/first-hour.ts�
 - `npx tsx tools/first-hour.ts --guild=compare`로 시드 1–20을 비교했다. 전체 수입 중 의뢰 비중 중앙값은 3시간 15.4%(의뢰 골드 중앙값 811), 12시간 14.3%(3,177)였다. 비교군은 두 시점 모두 의뢰 수입 중앙값 0이었다.
 - 실적 3/8/16의 도달 중앙값은 28/66/122분, 길드 Lv1/2/3/4 완공은 15/96/195/341분이며 모두 20/20 시드에서 달성했다. 길드 Lv3 이상에서 2파티 자동 출정 구간 177회, 4파티 동시 출정은 15/20 시드였다. 12시간 기준 짝지은 첫 클리어 중앙값은 독늪 298분, 산적 요새 248분, 유령 성채 126분 느려졌다. 용의 둥지는 5/20 대 12/20으로, 두 조건 모두 성공한 시드는 2개였다.
 - `Docs/guild.md`의 `clearGold 0.6`, `deliverGold 2`, `repeatShare 0.3`은 12시간 내 비중이 안정적이므로 유지하고, 실적 3/8/16도 유지한다. Lv3 자동 파티를 3시간 안에 열고 싶다면 Lv3 공사 90→60분을 먼저 비교한다. 이 비교의 길드 운영은 의뢰·증원·길드 건설 우선순위·매시간 20분 오프라인을 함께 적용하므로 첫 클리어 차이는 보상 배율 하나의 효과로 해석할 수 없다.
+
+---
+
+## 63. 사기·감정·축제 화면 (GPT, Cursor 대신)
+
+**지금 시작할 수 있다.** 설계: `Docs/morale.md`. Cursor가 사용량을 다 써서 이번 화면은 GPT가 만든다. 끝나면 Claude Code가 화면을 직접 확인한다.
+
+**전달할 내용**
+
+```
+Docs/morale.md를 읽고 화면을 만든다. src/ui/App.tsx, src/ui/game/*.tsx, src/ui/styles.css, src/locales/*만 고친다. core는 고치지 않는다. 기존 화면의 구조와 kit.tsx의 Window, Chip, Bar 같은 공용 조각을 그대로 쓴다.
+
+core에 이미 있는 것('../../core'에서 export):
+- moraleOf(hero)(0–100, 기본 60), lowMorale(hero), moraleScale(hero), moraleRules(base, high 80, low 30, festival 등).
+- 동작 { type: 'festival' }: 계절마다 한 번, 골드 festivalCost(state)(game.ts에서 export). state.festival: { season, kind } | null. 결과 notice: festivalDone, poor.
+- 감정은 core가 자동으로 바꾼다: 영구 사망(슬픔), 결혼·출산·성인식·첫 클리어(기쁨), 승리·마을 레벨업(자부심).
+
+1. 영웅 목록·상세·출전 목록: 사기 막대와 상태 칩. 80 이상 "의욕 넘침(공격 +5%)", 30 이하 "실의(공격·속도 −20%, 자동 출정 제외)", 그 사이는 숫자만. 상세에는 "사기는 시간이 지나면 60으로 돌아온다" 안내.
+2. 마을 운영 화면: "마을 사기" 칩(어른 영웅 평균)과 [축제 열기] 버튼. 축제 창에 이번 계절 축제 이름(봄 파종제·여름 무술 대회·가을 수확제·겨울 추모제)과 효과, 비용, 이번 계절에 이미 열었는지.
+3. 슬픔 알림: 영구 사망 토스트(이미 있음)에 "가족과 친구가 슬퍼한다" 한 줄을 더한다. 사기 30 이하인 영웅이 있으면 영웅 탭 배지.
+4. 문구 ko/en 같은 키.
+
+확인: npm run dev에서 디버그 세이브로 축제를 계절마다 열어 보고(디버그의 계절 넘기기), 사기 표시가 바뀌는지 본다. 확인한 내용을 메모에.
+```
+
+---
+
+## 64. 사기·축제 core 코드 리뷰 (GPT)
+
+**작업 63 뒤에 시작한다(같은 도구라 순서대로).** core 커밋은 git log에서 "Add morale"로 찾는다.
+
+**전달할 내용**
+
+```
+사기·축제 core 커밋("Add morale"로 찾는다)을 리뷰한다. 코드는 고치지 않고 Docs/reviews/<해시>.md 새 파일 하나에만 쓴다(Docs/reviews/README.md 형식).
+볼 것: Docs/morale.md와 수치·규칙 차이, 슬픔이 일어나는 경로(전사 두 번째 죽음, 노환, 은퇴자, 원정 중 사망, 계절 경계)와 여러 명이 한꺼번에 떠날 때, 기쁨(결혼·출산·성인식·첫 클리어)과 자부심(승리 75 상한, 마을 레벨업)이 빠지거나 두 번 들어가는 경로, 사기 회복이 원정·정찰·훈련 중에도 도는지, 자동 출정 제외, 축제의 계절 판정과 봄 호감도 2배가 끝나는 시점, 세이브 15 → 16, 기존 전투 결과(사기 60 영웅)가 바뀌지 않았는지.
+```
+
+---
+
+## 65. 사기가 진행에 주는 영향 측정 (GPT)
+
+**지금 시작할 수 있다(작업 63과 파일이 겹치지 않는다).**
+
+**전달할 내용**
+
+```
+tools/curve.ts, tools/print-curve.ts, tools/tune-curve.ts, tools/first-hour.ts만 고친다. 게임 코드와 data는 고치지 않는다(제안만).
+1. first-hour.ts의 흉내 플레이어가 계절마다 축제를 연다(골드가 있으면). 12시간 동안 영웅 사기 분포(80 이상/31–79/30 이하 비율), 실의(30 이하)로 자동 출정에서 빠진 시간, 축제 비용이 골드 수입의 몇 %인지 출력한다.
+2. 축제 있음/없음으로 첫 클리어 시각과 파티 레벨을 비교한다.
+3. Docs/morale.md와 비교해, 슬픔이 너무 오래가거나 사기 80이 너무 쉽게/어렵게 닿는지 메모에 적고 고칠 수치를 제안한다.
+```

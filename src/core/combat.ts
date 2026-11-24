@@ -2,6 +2,7 @@ import { alchemyRules, classById, combatRules, lifeRules, magicRules, monsterByI
 import { heroGearMods } from './gear'
 import { heroTrinkets } from './magic'
 import { heroSkillEffects } from './skills'
+import { moraleScale } from './morale'
 import type { Rng } from './rng'
 import type { AffixId, BossPhase, LogEntry, MonsterDef, PartyMember, PotionId, ReplayUnit, Row, Supplies, Tactics, UnitReport } from './types'
 
@@ -174,6 +175,7 @@ export function createHeroUnit(member: PartyMember, index: number): BattleUnit {
   const maxHp = Math.max(1, Math.round(baseHp * injuryScale))
   const trinkets = heroTrinkets(hero)
   const learned = heroSkillEffects(hero)
+  const spirit = moraleScale(hero)
   return {
     id: hero.id,
     refId: hero.id,
@@ -190,10 +192,10 @@ export function createHeroUnit(member: PartyMember, index: number): BattleUnit {
     hasDebuff: skills.has('debuff'),
     hp: maxHp,
     maxHp,
-    attack: (hero.stats[klass.attackStat] * klass.attackScale + gear.attack) * fatigueScale * injuryScale * bondScale * (1 + learned.attack),
+    attack: (hero.stats[klass.attackStat] * klass.attackScale + gear.attack) * fatigueScale * injuryScale * bondScale * (1 + learned.attack) * spirit.attack,
     defense: hero.stats.vit * klass.defenseScale + gear.defense,
     heal: hero.stats.wis * klass.healScale * bondScale * (1 + learned.heal),
-    speed: Math.max(1, (hero.stats.agi + (hero.traitIds.includes('nocturnal') ? combatRules.nocturnalSpeed : 0)) * fatigueScale * (1 + learned.speed)),
+    speed: Math.max(1, (hero.stats.agi + (hero.traitIds.includes('nocturnal') ? combatRules.nocturnalSpeed : 0)) * fatigueScale * (1 + learned.speed) * spirit.speed),
     gauge: 0,
     threat: (klass.role === 'tank' ? combatRules.tankThreat : combatRules.baseThreat) + learned.threat,
     dot: 0,

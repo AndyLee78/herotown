@@ -1,0 +1,39 @@
+{
+  "base": 60,
+  "driftPerHour": 2.5,
+  "high": 80,
+  "highAttack": 0.05,
+  "low": 30,
+  "lowPenalty": 0.2,
+  "grief": {
+    "spouse": 50,
+    "parentChild": 40,
+    "friend": 25,
+    "friendAffinity": 40
+  },
+  "joy": {
+    "marriage": 25,
+    "birth": 30,
+    "comingOfAge": 20,
+    "firstClear": 15
+  },
+  "pride": {
+    "victory": 3,
+    "townLevel": 10,
+    "victoryCap": 75
+  },
+  "festival": {
+    "goldBase": 50,
+    "goldPerTownLevel": 25,
+    "morale": 20,
+    "fame": 5,
+    "xpShare": 0.3,
+    "harvest": {
+      "wood": 30,
+      "stone": 30,
+      "iron": 12
+    },
+    "memorial": 30,
+    "bondBoost": 2
+  }
+}
