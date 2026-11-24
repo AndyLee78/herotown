@@ -109,8 +109,8 @@ Claude Code, Cursor, GPT(Codex)가 함께 쓰는 작업 목록이다. 작업 하
 | 67 | 자동화 core 코드 리뷰 (a6be730) | GPT | `Docs/reviews/a6be730.md` (새 파일만) | 완료 (f48be69) |
 | 68 | 면담·스카우팅 화면 | GPT (Cursor 대신) | `App.tsx`, `src/ui/game/*.tsx`, `styles.css`, `src/locales/*` | 완료 (a7cfe98) |
 | 69 | 면담·스카우팅 core 코드 리뷰 (8e1fa30) | GPT | `Docs/reviews/8e1fa30.md` (새 파일만) | 완료 (c5b60da) |
-| 70 | 학교 화면 | GPT (Cursor 대신) | `App.tsx`, `src/ui/game/*.tsx`, `styles.css`, `src/locales/*` | 대기 |
-| 71 | 학교 core 코드 리뷰 (62e7837) | GPT | `Docs/reviews/62e7837.md` (새 파일만) | 대기 (70 뒤) |
+| 70 | 학교 화면 | GPT (Cursor 대신) | `App.tsx`, `src/ui/game/*.tsx`, `styles.css`, `src/locales/*` | 완료 (0b09ec7) |
+| 71 | 학교 core 코드 리뷰 (62e7837) | GPT | `Docs/reviews/62e7837.md` (새 파일만) | 완료 (798bfcc) |
 
 ---
 
@@ -1680,6 +1680,11 @@ core에 이미 있는 것('../../core'에서 export):
 확인: npm run dev에서 디버그 세이브로 아이를 입학시키고 계절을 넘겨 수업료·잠재력 변화를 본다. 확인한 내용을 메모에.
 ```
 
+**메모**
+
+- 학교 창의 정원·수업료·효과 표, 입학·계획 변경·퇴학, 인구 창과 아이 상세의 학교 정보를 연결했다.
+- Vite 개발 서버의 SSR과 리듀서로 입학, 계절 경계 수업료 15골드·잠재력 +1, 계획 변경 및 퇴학을 검증했다. 브라우저 클릭 검증은 남았다. 타입 검사·테스트 273개·빌드 통과.
+
 ---
 
 ## 71. 학교 core 코드 리뷰 (GPT)
@@ -1692,3 +1697,8 @@ core에 이미 있는 것('../../core'에서 export):
 학교 core 커밋 62e7837를 리뷰한다. 코드는 고치지 않고 Docs/reviews/62e7837.md 새 파일 하나에만 쓴다(Docs/reviews/README.md 형식).
 볼 것: Docs/school.md와 수치·규칙 차이, 수업료 지불 순서와 골드 부족, 계절 경계·오프라인에서 여러 계절이 지날 때, 잠재력 상한과 집중 능력치 소수점 누적, 진로 변경(성별·장비·스킬·직업 바꿈 뒤 createHero), 성인식과 졸업 시점(나이 듦·사망·해고·부모 은퇴), 자리 수와 학교 레벨 변화, 세이브 18 → 19.
 ```
+
+**메모**
+
+- [리뷰](reviews/62e7837.md)에 진로 변경 졸업의 장비 소실, 집중 과목 사이 소수점 이전, 겨울 경계의 졸업·수업 순서를 기록했다.
+- 수업료 부족 시 지불 순서, 잠재력 상한, 은퇴자 할인의 반올림과 v18 세이브 이관을 확인했다.
