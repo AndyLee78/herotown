@@ -1,4 +1,12 @@
 {
+  "prep": {
+    "fatigue": "피로 {{value}}",
+    "recovering": "{{condition}} · 회복까지 {{time}}",
+    "returning": "{{dungeon}} · {{time}} 뒤 귀환",
+    "scout": "정찰 중 · {{time}} 남음",
+    "drill": "훈련 중 · {{time}} 남음",
+    "auto": "자동 출정"
+  },
   "house": {
     "beds": "침대 {{used}}/{{beds}}",
     "free": "빈 침대 {{count}}개",

@@ -1,4 +1,12 @@
 {
+  "prep": {
+    "fatigue": "Fatigue {{value}}",
+    "recovering": "{{condition}} · recovers in {{time}}",
+    "returning": "{{dungeon}} · returns in {{time}}",
+    "scout": "Scouting · {{time}} left",
+    "drill": "Training · {{time}} left",
+    "auto": "Auto expedition"
+  },
   "house": {
     "beds": "Beds {{used}}/{{beds}}",
     "free": "Free beds {{count}}",

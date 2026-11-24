@@ -22,6 +22,7 @@ import {
   nestRevealed,
   nestRules,
   nestSeason,
+  readiness,
   timeRules,
   villageRules,
   type AffixId,
@@ -37,7 +38,7 @@ import {
 import { gameNow } from '../clock'
 import { josa } from '../josa'
 import { ResourceIcon, type ResourceKind } from './icons'
-import { Bar, Chip, MoraleBar, Portrait, Res, clampPercent, fatigueTone, needsWarning, useNow, waitLabel } from './kit'
+import { Bar, Chip, Portrait, Res, clampPercent, needsWarning, useNow, waitLabel } from './kit'
 import { Report } from './villageScreens'
 import { dungeonPreviewUrl, monsterPortraitUrl } from '../voxel/portrait'
 
@@ -366,7 +367,38 @@ function PartyNotes({ heroes }: { heroes: Hero[] }) {
   )
 }
 
-function Prep({
+function HeroStatus({ save, hero, presetId, now }: { save: GameState; hero: Hero; presetId: string; now: number }) {
+  const { t } = useTranslation()
+  const status = readiness(save, hero)
+  const { busy, condition } = status
+  const recovery = hero.treatAt ?? status.recoverAt
+  const injured = condition === 'injured' || condition === 'critical'
+  return (
+    <span className="prep-status">
+      <span className="prep-meter">
+        <Bar value={status.fatigue} max={100} tone={status.fatigueLevel === 'fresh' ? 'good' : status.fatigueLevel === 'tired' ? 'warn' : 'bad'} />
+        <span>{t('prep.fatigue', { value: Math.round(status.fatigue) })}</span>
+      </span>
+      <span className="prep-meter">
+        <Bar value={status.morale} max={100} tone={status.moraleLevel === 'low' ? 'bad' : status.moraleLevel === 'high' ? 'warn' : 'info'} />
+        <span>{t('morale.value', { value: Math.floor(status.morale) })}</span>
+      </span>
+      <span className="chips">
+        {injured || condition === 'dead' ? <Chip tone="bad">{injured && recovery != null
+          ? t('prep.recovering', { condition: t(`condition.${condition}`), time: waitLabel(recovery - now) })
+          : t(`condition.${condition}`)}</Chip> : null}
+        {busy ? <Chip tone="info">{busy.kind === 'expedition'
+          ? t('prep.returning', { dungeon: t(`dungeon.${busy.dungeonId}.name`), time: waitLabel(busy.until - now) })
+          : t(`prep.${busy.kind}`, { time: waitLabel(busy.until - now) })}</Chip> : null}
+        {status.parties.filter((id) => id !== presetId).map((id) => (
+          <Chip key={id}>{id === 'auto' ? t('prep.auto') : t('battle.preset', { number: save.presets.findIndex((preset) => preset.id === id) + 1 })}</Chip>
+        ))}
+      </span>
+    </span>
+  )
+}
+
+export function Prep({
   save,
   onAction,
   onEdit,
@@ -381,7 +413,7 @@ function Prep({
 }) {
   const { t, i18n } = useTranslation()
   const korean = i18n.language.startsWith('ko')
-  const now = useNow(save.expeditions.length > 0 || save.scout != null || save.drills.length > 0)
+  const now = useNow(true)
   const dungeon = dungeonById(save.dungeonId)
   const slots = expeditionSlots(save.buildings.guild)
   const preset = save.presets.find((entry) => entry.id === save.presetId) ?? save.presets[0]
@@ -454,6 +486,20 @@ function Prep({
               </span>
             </button>
           )
+        })}
+      </div>
+      <div className="hero-list">
+        {preset.slots.map(({ id }) => {
+          const hero = save.roster.find((entry) => entry.id === id)
+          return hero ? (
+            <div key={id} className={away.has(id) || hero.condition === 'dead' ? 'hero-row prep-unavailable' : 'hero-row'}>
+              <Portrait hero={hero} />
+              <span className="hero-row-body">
+                <strong>{hero.name}</strong>
+                <HeroStatus save={save} hero={hero} presetId={preset.id} now={now} />
+              </span>
+            </div>
+          ) : null
         })}
       </div>
       <button type="button" className="btn" onClick={onEdit}>
@@ -614,10 +660,11 @@ function AutoSettings({ save, onAction }: { save: GameState; onAction: Act }) {
   )
 }
 
-function PartyEditor({ save, onAction, onBack }: { save: GameState; onAction: Act; onBack: () => void }) {
+export function PartyEditor({ save, onAction, onBack }: { save: GameState; onAction: Act; onBack: () => void }) {
   const { t } = useTranslation()
   const [role, setRole] = useState<Role>('all')
   const [sort, setSort] = useState<Sort>('power')
+  const now = useNow(true)
   const preset = save.presets.find((entry) => entry.id === save.presetId) ?? save.presets[0]
   if (!preset) {
     return null
@@ -660,13 +707,11 @@ function PartyEditor({ save, onAction, onBack }: { save: GameState; onAction: Ac
           {listed.map(({ hero, power }) => {
             const chosen = inPreset.has(hero.id)
             const unavailable = away.has(hero.id) || !canDeploy(hero)
-            const scouting = save.scout?.heroId === hero.id
-            const drilling = save.drills.some((drill) => drill.heroId === hero.id)
             return (
               <button
                 key={hero.id}
                 type="button"
-                className={chosen ? 'hero-row selected' : 'hero-row'}
+                className={`hero-row${chosen ? ' selected' : ''}${away.has(hero.id) || hero.condition === 'dead' ? ' prep-unavailable' : ''}`}
                 disabled={unavailable || (!chosen && full)}
                 onClick={() => onAction(chosen ? { type: 'remove', id: hero.id, presetId: preset.id } : { type: 'add', id: hero.id, presetId: preset.id })}
               >
@@ -678,15 +723,9 @@ function PartyEditor({ save, onAction, onBack }: { save: GameState; onAction: Ac
                   <span className="chips">
                     <Chip tone="info">{t(`class.${hero.classId}`)}</Chip>
                     <Chip>{t('ui.level', { level: hero.level })}</Chip>
-                    {drilling ? <Chip tone="info">{t('hero.drilling')}</Chip> : scouting ? <Chip tone="info">{t('hero.scouting')}</Chip> : away.has(hero.id) ? <Chip tone="info">{t('battle.onTrip')}</Chip> : null}
-                    {needsWarning(hero) || hero.condition === 'dead' ? <Chip tone="bad">{t(`condition.${hero.condition}`)}</Chip> : null}
                     {hero.expecting ? <Chip tone="info">{t('battle.expecting')}</Chip> : null}
                   </span>
-                  <span className="fatigue">
-                    <Bar value={hero.fatigue} max={100} tone={fatigueTone(hero)} />
-                    <span className="muted">{Math.round(hero.fatigue)}</span>
-                  </span>
-                  <MoraleBar hero={hero} />
+                  <HeroStatus save={save} hero={hero} presetId={preset.id} now={now} />
                 </span>
               </button>
             )
@@ -710,11 +749,11 @@ function PartyEditor({ save, onAction, onBack }: { save: GameState; onAction: Ac
                   )
                 }
                 return (
-                  <div key={slot.id} className="slot">
+                  <div key={slot.id} className={away.has(hero.id) || hero.condition === 'dead' ? 'slot prep-unavailable' : 'slot'}>
                     <Portrait hero={hero} />
                     <span className="slot-body">
                       <strong>{hero.name}</strong>
-                      <MoraleBar hero={hero} />
+                      <HeroStatus save={save} hero={hero} presetId={preset.id} now={now} />
                       <span className="row">
                         <button
                           type="button"
