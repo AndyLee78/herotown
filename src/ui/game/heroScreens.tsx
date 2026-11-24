@@ -52,6 +52,7 @@ import {
   Bar,
   Chip,
   MoraleBar,
+  SchoolInfo,
   Portrait,
   Res,
   Window,
@@ -359,6 +360,7 @@ function HeroDetail({
       {recovery ? <p className="muted">{recovery}</p> : null}
       {careAt != null ? <p className="banner">{t(hero.resurrectAt != null ? 'hero.reviving' : 'hero.treating', { time: waitLabel(careAt - now) })}</p> : null}
 
+      {isChild(hero) ? <p><SchoolInfo hero={hero} /></p> : null}
       <FamilyPanel hero={hero} save={save} now={now} onSelect={onSelect} onOpenTree={onOpenTree} />
 
       <h3 className="section-title">{t('ui.stats')}</h3>

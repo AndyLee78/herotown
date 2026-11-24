@@ -35,6 +35,15 @@ export function MoraleBar({ hero }: { hero: Hero }) {
   )
 }
 
+export function SchoolInfo({ hero }: { hero: Hero }) {
+  const { t } = useTranslation()
+  const plan = hero.school
+  return <span className="muted">{plan ? t('school.plan', {
+    focus: plan.focus ? t(`stat.${plan.focus}`) : t('school.noFocus'),
+    career: plan.career ? t(`class.${plan.career}`) : t('school.noCareer'),
+  }) : t('school.notEnrolled')}</span>
+}
+
 // A framed game window: wooden title bar, close button, scrolling body.
 export function Window({ title, icon, onClose, children, small = false }: { title: string; icon?: ReactNode; onClose?: () => void; children: ReactNode; small?: boolean }) {
   const { t } = useTranslation()

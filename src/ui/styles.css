@@ -1053,6 +1053,20 @@ button,
   text-align: right;
 }
 
+.school-effects {
+  width: 100%;
+  border-collapse: collapse;
+}
+
+.school-effects :is(th, td) {
+  padding: 6px;
+  text-align: left;
+}
+
+.school-effects tr[aria-current] {
+  background: var(--paper-2);
+}
+
 .peak-stat {
   display: block;
 }

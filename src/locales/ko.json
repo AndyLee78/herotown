@@ -1,4 +1,30 @@
 {
+  "school": {
+    "open": "학교 열기",
+    "seats": "자리 {{used}}/{{total}}",
+    "tuition": "한 명당 계절 수업료",
+    "level": "학교 레벨",
+    "potential": "계절당 잠재력",
+    "focusGain": "계절당 집중 능력치",
+    "students": "다니는 아이",
+    "eligible": "입학할 수 있는 {{age}}살 이상 아이",
+    "empty": "해당하는 아이가 없습니다.",
+    "attended_one": "{{count}}계절 다님",
+    "attended_other": "{{count}}계절 다님",
+    "remaining_one": "진로 적용까지 {{count}}계절 더",
+    "remaining_other": "진로 적용까지 {{count}}계절 더",
+    "careerHint": "{{count}}계절 이상 다니면 성인식 때 선택한 직업이 됩니다.",
+    "enroll": "입학",
+    "edit": "계획 바꾸기",
+    "leave": "그만두기",
+    "focus": "집중 능력치",
+    "career": "진로",
+    "noFocus": "없음",
+    "noCareer": "그대로",
+    "plan": "집중 {{focus}} · 진로 {{career}}",
+    "notEnrolled": "학교에 다니지 않습니다.",
+    "save": "계획 저장"
+  },
   "interview": {
     "allowance": "이번 계절 무료 면담 {{free}}/{{total}}",
     "action": "면담",
@@ -65,6 +91,7 @@
     "reload": "새로고침"
   },
   "screen": {
+    "school": "학교",
     "town": "마을 운영",
     "inn": "여관",
     "roster": "영웅",

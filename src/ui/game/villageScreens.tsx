@@ -5,6 +5,7 @@ import { lazy, Suspense, useEffect, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import {
   POTION_IDS,
+  STAT_KEYS,
   adRules,
   alchemyRules,
   brewTime,
@@ -13,6 +14,7 @@ import {
   bedCount,
   busyHeroIds,
   canDeploy,
+  classList,
   deployAge,
   isChild,
   nextAge,
@@ -35,19 +37,25 @@ import {
   partyLevel,
   population,
   progression,
+  pupils,
+  schoolRules,
+  schoolSeats,
   seasonKey,
   smithRules,
   timeRules,
   townLevel,
+  tuition,
   villageRules,
   visitorCap,
   type BuildingId,
+  type ClassId,
   type Contract,
   type DungeonReport,
   type GameAction,
   type GameState,
   type Grave,
   type Hero,
+  type StatKey,
 } from '../../core'
 import { festivalCost } from '../../core/game'
 import { gameNow, gameOffset, offsetParts, subscribeGameClock } from '../clock'
@@ -55,7 +63,7 @@ import { loadSoundPrefs, saveSoundPrefs, SOUND_NAMES } from '../sound'
 import { canReplay } from '../voxel/replay'
 import { dungeonPreviewUrl } from '../voxel/portrait'
 import { GraveFace, bonusValue } from './heroScreens'
-import { Bar, Chip, CostList, Portrait, Res, Window, affordable, formatEntry, itemLabel, useNow, waitLabel } from './kit'
+import { Bar, Chip, CostList, Portrait, Res, SchoolInfo, Window, affordable, formatEntry, itemLabel, useNow, waitLabel } from './kit'
 import { josa } from '../josa'
 
 const BattleView = lazy(() => import('../BattleView').then((mod) => ({ default: mod.BattleView })))
@@ -94,6 +102,7 @@ export function Town({
   onAlchemy,
   onMagic,
   onTraining,
+  onSchool,
   onGuild,
   onFestival,
   onSelectHero,
@@ -105,6 +114,7 @@ export function Town({
   onAlchemy: () => void
   onMagic: () => void
   onTraining: () => void
+  onSchool: () => void
   onGuild: () => void
   onFestival: () => void
   onSelectHero: (id: string) => void
@@ -227,6 +237,9 @@ export function Town({
                   {t('training.open')}
                 </button>
               ) : null}
+              {id === 'school' && current > 0 ? (
+                <button type="button" className="btn" onClick={onSchool}>{t('school.open')}</button>
+              ) : null}
               {id === 'guild' && current > 0 ? (
                 <button type="button" className="btn" onClick={onGuild}>
                   {t('guild.open')}
@@ -284,6 +297,7 @@ export function Town({
                         <Chip tone="info">{t('family.kidYears', { years: yearsUntilGrown(kid.age) })}</Chip>
                       </span>
                       {parentNames(save, kid) ? <span className="muted">{t('family.kidParents', { names: parentNames(save, kid) })}</span> : null}
+                      <SchoolInfo hero={kid} />
                     </span>
                   </button>
                 ))}
@@ -294,6 +308,103 @@ export function Town({
       ) : null}
       {hall ? <Hall save={save} onClose={() => setHall(false)} /> : null}
     </>
+  )
+}
+
+export function School({ save, onAction }: { save: GameState; onAction: Act }) {
+  const { t } = useTranslation()
+  const [editing, setEditing] = useState<string | null>(null)
+  const level = save.buildings.school
+  const children = save.roster.filter((hero) => isChild(hero) && hero.age >= schoolRules.minAge && hero.condition !== 'dead')
+  const students = pupils(save)
+  const available = children.filter((hero) => !hero.school)
+  const full = students.length >= schoolSeats(save)
+  return (
+    <>
+      <div className="banner">
+        <Chip>{t('school.seats', { used: students.length, total: schoolSeats(save) })}</Chip>
+        <span>{t('school.tuition')}</span>
+        <Res kind="gold" amount={tuition(save)} />
+      </div>
+      {level === 0 ? <p className="muted">{t('result.noSchool')}</p> : null}
+      <table className="school-effects">
+        <thead><tr><th scope="col">{t('school.level')}</th><th scope="col">{t('school.potential')}</th><th scope="col">{t('school.focusGain')}</th></tr></thead>
+        <tbody>{schoolRules.potentialPerSeason.map((gain, index) => (
+          <tr key={index} aria-current={level === index + 1 ? 'true' : undefined}>
+            <th scope="row">{t('ui.level', { level: index + 1 })}</th>
+            <td>+{gain}</td><td>+{schoolRules.focusPerSeason[index]}</td>
+          </tr>
+        ))}</tbody>
+      </table>
+      <p className="muted">{t('school.careerHint', { count: schoolRules.careerSeasons })}</p>
+      {([['school.students', students], ['school.eligible', available]] as const).map(([title, kids]) => (
+        <section key={title}>
+          <h3 className="section-title">{t(title, { age: schoolRules.minAge })}</h3>
+          {kids.length === 0 ? <p className="muted">{t('school.empty')}</p> : null}
+          <div className="column">{kids.map((hero) => {
+            const seasons = hero.school?.seasons ?? 0
+            const remaining = schoolRules.careerSeasons - seasons
+            const canEdit = level > 0 && (hero.school != null || !full)
+            return (
+              <article key={hero.id} className="card">
+                <div className="card-top">
+                  <Portrait hero={hero} />
+                  <div>
+                    <strong>{hero.name}</strong>
+                    <div className="chips">
+                      <Chip>{t('hero.age', { age: hero.age })}</Chip>
+                      <Chip>{t('family.kidYears', { years: yearsUntilGrown(hero.age) })}</Chip>
+                      {hero.school ? <Chip>{t('school.attended', { count: seasons })}</Chip> : null}
+                    </div>
+                    {hero.school ? <SchoolInfo hero={hero} /> : null}
+                  </div>
+                </div>
+                {hero.school && remaining > 0 ? <p className="muted">{t('school.remaining', { count: remaining })}</p> : null}
+                <div className="row">
+                  <button type="button" className="btn small" disabled={!canEdit} onClick={() => setEditing(hero.id)}>
+                    {t(hero.school ? 'school.edit' : 'school.enroll')}
+                  </button>
+                  {hero.school ? <button type="button" className="btn small" onClick={() => {
+                    onAction({ type: 'unenroll', heroId: hero.id })
+                    setEditing(null)
+                  }}>{t('school.leave')}</button> : null}
+                </div>
+                {editing === hero.id && canEdit ? <SchoolPlan key={hero.id} hero={hero} onCancel={() => setEditing(null)} onSave={(focus, career) => {
+                  onAction({ type: 'enroll', heroId: hero.id, focus, career })
+                  setEditing(null)
+                }} /> : null}
+              </article>
+            )
+          })}</div>
+        </section>
+      ))}
+    </>
+  )
+}
+
+function SchoolPlan({ hero, onSave, onCancel }: { hero: Hero; onSave: (focus: StatKey | null, career: ClassId | null) => void; onCancel: () => void }) {
+  const { t } = useTranslation()
+  const [focus, setFocus] = useState<StatKey | ''>(hero.school?.focus ?? '')
+  const [career, setCareer] = useState<ClassId | ''>(hero.school?.career ?? '')
+  return (
+    <div className="column">
+      <label className="field">{t('school.focus')}
+        <select value={focus} onChange={(event) => setFocus(event.target.value as StatKey | '')}>
+          <option value="">{t('school.noFocus')}</option>
+          {STAT_KEYS.map((stat) => <option key={stat} value={stat}>{t(`stat.${stat}`)}</option>)}
+        </select>
+      </label>
+      <label className="field">{t('school.career')}
+        <select value={career} onChange={(event) => setCareer(event.target.value as ClassId | '')}>
+          <option value="">{t('school.noCareer')}</option>
+          {classList.filter((klass) => !klass.femaleOnly || hero.gender === 'female').map(({ id }) => <option key={id} value={id}>{t(`class.${id}`)}</option>)}
+        </select>
+      </label>
+      <div className="row">
+        <button type="button" className="btn primary small" onClick={() => onSave(focus || null, career || null)}>{t('school.save')}</button>
+        <button type="button" className="btn small" onClick={onCancel}>{t('ui.cancel')}</button>
+      </div>
+    </div>
   )
 }
 

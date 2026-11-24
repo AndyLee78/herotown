@@ -1,4 +1,30 @@
 {
+  "school": {
+    "open": "Open school",
+    "seats": "Seats {{used}}/{{total}}",
+    "tuition": "Tuition per child each season",
+    "level": "School level",
+    "potential": "Potential per season",
+    "focusGain": "Focus gain per season",
+    "students": "Enrolled children",
+    "eligible": "Eligible children aged {{age}} and up",
+    "empty": "No children to show.",
+    "attended_one": "{{count}} season attended",
+    "attended_other": "{{count}} seasons attended",
+    "remaining_one": "{{count}} more season for the chosen career",
+    "remaining_other": "{{count}} more seasons for the chosen career",
+    "careerHint": "After at least {{count}} seasons, the child takes the chosen class at their coming of age.",
+    "enroll": "Enroll",
+    "edit": "Change plan",
+    "leave": "Leave school",
+    "focus": "Focus stat",
+    "career": "Career",
+    "noFocus": "No focus",
+    "noCareer": "Keep current class",
+    "plan": "Focus: {{focus}} · Career: {{career}}",
+    "notEnrolled": "Does not attend school.",
+    "save": "Save plan"
+  },
   "interview": {
     "allowance": "Free interviews this season {{free}}/{{total}}",
     "action": "Interview",
@@ -65,6 +91,7 @@
     "reload": "Reload"
   },
   "screen": {
+    "school": "School",
     "town": "Town",
     "inn": "Inn",
     "roster": "Heroes",
