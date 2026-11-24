@@ -1,4 +1,17 @@
 {
+  "interview": {
+    "allowance": "Free interviews this season {{free}}/{{total}}",
+    "action": "Interview",
+    "deep": "Interview in depth",
+    "free": "(free {{free}}/{{total}})",
+    "paid": "{{gold}} gold",
+    "hiddenPotential": "Potential ?",
+    "hiddenTraits": "Traits ?",
+    "prodigy": "Hidden prodigy!",
+    "terms": "Requires town Lv {{level}}",
+    "hireHint": "You can hire this visitor at town Lv {{level}}.",
+    "peak": "Prime {{value}}"
+  },
   "automation": {
     "queue": "Queue {{used}}/{{capacity}}",
     "order": "{{number}}. {{name}}",

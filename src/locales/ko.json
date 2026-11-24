@@ -1,4 +1,17 @@
 {
+  "interview": {
+    "allowance": "이번 계절 무료 면담 {{free}}/{{total}}",
+    "action": "면담",
+    "deep": "더 깊이 면담",
+    "free": "(무료 {{free}}/{{total}})",
+    "paid": "골드 {{gold}}",
+    "hiddenPotential": "잠재력 ?",
+    "hiddenTraits": "특성 ?",
+    "prodigy": "숨은 인재!",
+    "terms": "마을 Lv {{level}} 필요",
+    "hireHint": "마을이 Lv {{level}}이 되면 고용할 수 있습니다.",
+    "peak": "전성기 {{value}}"
+  },
   "automation": {
     "queue": "대기열 {{used}}/{{capacity}}",
     "order": "{{number}}. {{name}}",

@@ -1053,6 +1053,25 @@ button,
   text-align: right;
 }
 
+.peak-stat {
+  display: block;
+}
+
+.prodigy-chip .chip {
+  color: #70420b;
+  background: #ffe394;
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  .prodigy-chip svg {
+    animation: prodigy-sparkle 1.2s ease-in-out 2;
+  }
+}
+
+@keyframes prodigy-sparkle {
+  50% { transform: scale(1.3); opacity: 0.65; }
+}
+
 .workshop-queue {
   margin-block: 10px 14px;
 }

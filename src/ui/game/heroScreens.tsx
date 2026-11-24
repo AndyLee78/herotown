@@ -1,4 +1,4 @@
-import { ChevronLeft, Clock, Hourglass, Swords } from 'lucide-react'
+import { ChevronLeft, Clock, Hourglass, Sparkles, Swords } from 'lucide-react'
 import { useMemo, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import type { TFunction } from 'i18next'
@@ -13,18 +13,24 @@ import {
   isChild,
   familyLegends,
   familyOf,
+  freeInterviews,
   guildLevel,
+  interviewsLeft,
+  knowledge,
   legendBonus,
   lifeRules,
   maxExtraSkills,
   moraleRules,
   potentialBand,
+  peakStats,
   progression,
   residents,
   starterSkill,
   statRange,
+  scoutingRules,
   topBonds,
   trainingRules,
+  townLevel,
   visitorCap,
   visitorStay,
   type GameAction,
@@ -123,7 +129,7 @@ function describeSkillEffect(effect: SkillEffect | undefined, t: TFunction): str
   return t('skill.innate')
 }
 
-export function Inn({ save, onHire }: { save: GameState; onHire: (id: string) => void }) {
+export function Inn({ save, onAction }: { save: GameState; onAction: Act }) {
   const { t, i18n } = useTranslation()
   const cap = visitorCap(save.buildings.inn)
   const stay = visitorStay(save.buildings.inn)
@@ -131,55 +137,76 @@ export function Inn({ save, onHire }: { save: GameState; onHire: (id: string) =>
   const waiting = save.visitors.length < cap
   const nextLeave = save.visitors.reduce((soon, hero) => Math.min(soon, (hero.arrivedAt ?? save.lastTickAt) + stay), Number.POSITIVE_INFINITY)
   const korean = i18n.language.startsWith('ko')
+  const free = interviewsLeft(save)
+  const total = freeInterviews(save)
+  const level = townLevel(save.fame).level
   return (
     <>
       <p className="banner">
         <Clock size={18} />
         {waiting ? t('hint.nextVisitor', { time: waitLabel(save.nextVisitorAt - now) }) : t('hint.innFull', { count: cap, time: waitLabel(nextLeave - now) })}
       </p>
+      <p className="muted">{t('interview.allowance', { free, total })}</p>
       {save.visitors.length === 0 ? <p className="empty">{t('hint.innEmpty')}</p> : null}
       <div className="grid">
-        {save.visitors.map((hero) => (
-          <article key={hero.id} className="card hero-card">
-            <div className="card-top">
-              <Portrait hero={hero} large />
-              <div>
-                <strong className="name">{hero.name}</strong>
-                <span className="chips">
-                  <Chip tone="info">{t(`class.${hero.classId}`)}</Chip>
-                  <Chip>{t(`gender.${hero.gender}`)}</Chip>
-                  <Chip>{t('hero.age', { age: hero.age })}</Chip>
-                </span>
-                <span className="muted">{korean ? t('hint.inn', { name: josa(hero.name, '이') }) : t('hint.inn', { name: hero.name })}</span>
+        {save.visitors.map((hero) => {
+          const depth = knowledge(hero)
+          const deep = depth === 1 && save.buildings.inn >= scoutingRules.deepInnLevel
+          const peak = depth >= 2 ? peakStats(hero) : null
+          const terms = depth > 0 ? hero.terms : undefined
+          const belowTerms = terms != null && level < terms
+          const prodigy = depth > 0 && hero.prodigy
+          return (
+            <article key={hero.id} className="card hero-card">
+              <div className="card-top">
+                <Portrait hero={hero} large />
+                <div>
+                  <strong className="name">{hero.name}</strong>
+                  <span className="chips">
+                    <Chip tone="info">{t(`class.${hero.classId}`)}</Chip>
+                    <Chip>{t(`gender.${hero.gender}`)}</Chip>
+                    <Chip>{t('hero.age', { age: hero.age })}</Chip>
+                  </span>
+                  <span className="muted">{korean ? t('hint.inn', { name: josa(hero.name, '이') }) : t('hint.inn', { name: hero.name })}</span>
+                </div>
               </div>
-            </div>
-            <span className="chips">
-              <Chip tone="good">{t(`potential.${potentialBand(hero.potential)}`)}</Chip>
-              {hero.traitIds.map((trait) => (
-                <Chip key={trait}>{t(`trait.${trait}`)}</Chip>
-              ))}
-            </span>
-            <dl className="stats">
-              {STAT_KEYS.map((key) => {
-                const range = statRange(hero.stats[key], guildLevel(save.buildings.guild).appraisal)
-                return (
-                  <div key={key}>
-                    <dt>{t(`stat.${key}`)}</dt>
-                    <dd>{t('hero.range', range)}</dd>
-                  </div>
-                )
-              })}
-            </dl>
-            <div className="card-foot">
-              <span className="muted">
-                <Clock size={14} /> {t('hint.staying', { time: waitLabel((hero.arrivedAt ?? save.lastTickAt) + stay - now) })}
+              <span className="chips">
+                <Chip tone={depth > 0 ? 'good' : undefined}>{depth > 0 ? t(`potential.${potentialBand(hero.potential)}`) : t('interview.hiddenPotential')}</Chip>
+                {depth > 0 ? hero.traitIds.map((trait) => (
+                  <Chip key={trait}>{t(`trait.${trait}`)}</Chip>
+                )) : <Chip>{t('interview.hiddenTraits')}</Chip>}
+                {prodigy ? <span className="prodigy-chip"><Chip tone="warn"><Sparkles size={14} aria-hidden="true" /> {t('interview.prodigy')}</Chip></span> : null}
+                {terms != null ? <Chip tone={belowTerms ? 'warn' : 'info'}>{t('interview.terms', { level: terms })}</Chip> : null}
               </span>
-              <button type="button" className="btn primary" onClick={() => onHire(hero.id)} disabled={save.gold < progression.hireCost}>
-                {t('ui.hire')} <Res kind="gold" amount={progression.hireCost} light />
-              </button>
-            </div>
-          </article>
-        ))}
+              <dl className="stats">
+                {STAT_KEYS.map((key) => {
+                  const range = statRange(hero.stats[key], guildLevel(save.buildings.guild).appraisal)
+                  return (
+                    <div key={key}>
+                      <dt>{t(`stat.${key}`)}</dt>
+                      <dd>{t('hero.range', range)}{peak ? <small className="muted peak-stat">{t('interview.peak', { value: peak[key] })}</small> : null}</dd>
+                    </div>
+                  )
+                })}
+              </dl>
+              <div className="card-foot">
+                <span className="muted">
+                  <Clock size={14} /> {t('hint.staying', { time: waitLabel((hero.arrivedAt ?? save.lastTickAt) + stay - now) })}
+                </span>
+                {(depth === 0 || deep) ? (
+                  <button type="button" className="btn" onClick={() => onAction({ type: 'interview', id: hero.id })} disabled={free === 0 && save.gold < scoutingRules.interviewGold}>
+                    {t(deep ? 'interview.deep' : 'interview.action')}{' '}
+                    {free > 0 ? t('interview.free', { free, total }) : t('interview.paid', { gold: scoutingRules.interviewGold })}
+                  </button>
+                ) : null}
+                <button type="button" className="btn primary" onClick={() => onAction({ type: 'hire', id: hero.id, now: gameNow() })} disabled={belowTerms || save.gold < progression.hireCost}>
+                  {t('ui.hire')} <Res kind="gold" amount={progression.hireCost} light />
+                </button>
+              </div>
+              {belowTerms ? <p className="muted">{t('interview.hireHint', { level: terms })}</p> : null}
+            </article>
+          )
+        })}
       </div>
     </>
   )
