@@ -253,7 +253,7 @@ if (retirementRules.minAge > retirementRules.adviseAge) {
   throw new Error('Retirement must be allowed before it is advised')
 }
 
-for (const key of ['travelMs', 'msPerTick', 'presets', 'history'] as const) {
+for (const key of ['travelMs', 'returnMs', 'msPerTick', 'presets', 'history'] as const) {
   if (!Number.isInteger(expeditionRules[key]) || expeditionRules[key] < 1) {
     throw new Error(`Expedition rule ${key} must be a positive integer`)
   }

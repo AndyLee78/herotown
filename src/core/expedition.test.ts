@@ -26,7 +26,7 @@ describe('timed expeditions', () => {
     if (!trip) return
     expect(trip.battleAt).toBe(now + expeditionRules.travelMs)
     expect(trip.battleEndAt).toBe(trip.battleAt + trip.report.ticks * expeditionRules.msPerTick)
-    expect(trip.returnAt).toBe(trip.battleEndAt + expeditionRules.travelMs)
+    expect(trip.returnAt).toBe(trip.battleEndAt + expeditionRules.returnMs)
     expect(out.gold).toBe(ready.gold)
     expect(out.cleared).toEqual([])
 

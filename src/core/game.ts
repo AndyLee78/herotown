@@ -1661,7 +1661,9 @@ function startExpedition(state: GameState, presetId: string, confirm: boolean, n
     departAt: now,
     battleAt,
     battleEndAt,
-    returnAt: battleEndAt + expeditionRules.travelMs,
+    // Home as soon as the party has walked out of the dungeon: no empty wait
+    // after the fight (the walk out takes about five seconds).
+    returnAt: battleEndAt + expeditionRules.returnMs,
     ...(Object.keys(carry.taken).length > 0 ? { supplies: carry.taken } : {}),
     ...(isNest(state.dungeonId) ? { nestKey: seasonKey(state.calendar) } : {}),
   }

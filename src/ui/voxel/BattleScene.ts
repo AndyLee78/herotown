@@ -357,9 +357,9 @@ export class BattleScene {
       }
     }
     for (const fighter of this.fighters.values()) {
-      // The walk out runs on the wall clock (at most twice as fast), so it
-      // still shows when the replay is sped up or paused at the end.
-      this.animate(fighter, fighter.anim?.type === 'exit' ? raw * Math.min(2, Math.max(1, this.speed)) : dt, time)
+      // The walk out runs on the wall clock, so it still shows when the replay
+      // is sped up or paused at the end, and fits the trip's return time.
+      this.animate(fighter, fighter.anim?.type === 'exit' ? raw : dt, time)
     }
     this.updateEffects(dt)
     this.updateEmbers(time)
