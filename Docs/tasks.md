@@ -103,7 +103,7 @@ Claude Code, Cursor, GPT(Codex)가 함께 쓰는 작업 목록이다. 작업 하
 | 61 | 길드 core 코드 리뷰 (1208be3) | GPT | `Docs/reviews/1208be3.md` (새 파일만) | 완료 (48656ea) |
 | 62 | 의뢰 보상·자동 파티 측정 | GPT | `tools/curve.ts`, `print-curve.ts`, `tune-curve.ts`, `first-hour.ts` | 완료 (d48a304) |
 | 63 | 사기·감정·축제 화면 | GPT (Cursor 대신) | `App.tsx`, `src/ui/game/*.tsx`, `styles.css`, `src/locales/*` | 대기 |
-| 64 | 사기·축제 core 코드 리뷰 (커밋 해시는 아래) | GPT | `Docs/reviews/<해시>.md` (새 파일만) | 대기 (63 뒤) |
+| 64 | 사기·축제 core 코드 리뷰 (b9036a0) | GPT | `Docs/reviews/b9036a0.md` (새 파일만) | 대기 (63 뒤) |
 | 65 | 사기가 진행에 주는 영향 측정 | GPT | `tools/curve.ts`, `print-curve.ts`, `tune-curve.ts`, `first-hour.ts` | 대기 |
 
 ---
@@ -1509,12 +1509,12 @@ core에 이미 있는 것('../../core'에서 export):
 
 ## 64. 사기·축제 core 코드 리뷰 (GPT)
 
-**작업 63 뒤에 시작한다(같은 도구라 순서대로).** core 커밋은 git log에서 "Add morale"로 찾는다.
+**작업 63 뒤에 시작한다(같은 도구라 순서대로).** core 커밋은 **b9036a0**이다.
 
 **전달할 내용**
 
 ```
-사기·축제 core 커밋("Add morale"로 찾는다)을 리뷰한다. 코드는 고치지 않고 Docs/reviews/<해시>.md 새 파일 하나에만 쓴다(Docs/reviews/README.md 형식).
+사기·축제 core 커밋 b9036a0를 리뷰한다. 코드는 고치지 않고 Docs/reviews/b9036a0.md 새 파일 하나에만 쓴다(Docs/reviews/README.md 형식).
 볼 것: Docs/morale.md와 수치·규칙 차이, 슬픔이 일어나는 경로(전사 두 번째 죽음, 노환, 은퇴자, 원정 중 사망, 계절 경계)와 여러 명이 한꺼번에 떠날 때, 기쁨(결혼·출산·성인식·첫 클리어)과 자부심(승리 75 상한, 마을 레벨업)이 빠지거나 두 번 들어가는 경로, 사기 회복이 원정·정찰·훈련 중에도 도는지, 자동 출정 제외, 축제의 계절 판정과 봄 호감도 2배가 끝나는 시점, 세이브 15 → 16, 기존 전투 결과(사기 60 영웅)가 바뀌지 않았는지.
 ```
 
