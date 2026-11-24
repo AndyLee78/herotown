@@ -8,21 +8,26 @@ import { mixHex, seeded } from './look'
 
 export type Lot = { x: number; z: number; w: number; d: number }
 
+// The camera looks from the south-east, so a building north-west of a taller
+// one hides behind it. Each side keeps its doors (and stepping stones, south
+// of each lot) clear of the next lot, and the south road (|x| <= 1) stays open.
 export const LOTS: Record<BuildingId, Lot> = {
+  // North row.
   hall: { x: -8.5, z: -8.5, w: 5, d: 4 },
+  temple: { x: -1.5, z: -10.5, w: 4, d: 3.2 },
   inn: { x: 8.5, z: -8.5, w: 4, d: 3 },
-  house: { x: -9, z: 5.5, w: 3, d: 2.6 },
+  // West column, north to south.
+  alchemy: { x: -10.5, z: -4, w: 3, d: 2.6 },
+  magic: { x: -10.5, z: 1, w: 3, d: 2.6 },
+  house: { x: -9, z: 5.8, w: 3, d: 2.6 },
+  school: { x: -10.5, z: 10.6, w: 3.2, d: 2.6 },
+  // South-west of the square: the training yard, in plain view.
+  training: { x: -5.6, z: 8.4, w: 3.6, d: 3.2 },
+  // East and south-east.
   guild: { x: 9.5, z: 4, w: 3.4, d: 2.8 },
   smith: { x: 5.5, z: 9.5, w: 3, d: 2.6 },
-  temple: { x: -1.5, z: -10.5, w: 4, d: 3.2 },
   // The lucky fountain stands in the middle of the square (Docs/fountain.md).
   fountain: { x: 0, z: 0, w: 2.2, d: 2.2 },
-  alchemy: { x: -10.5, z: -1.5, w: 3, d: 2.6 },
-  // West of the smith, open sand yard facing the plaza (Docs/skills.md).
-  training: { x: -6.5, z: 9.2, w: 3.6, d: 3.2 },
-  // Placeholder spot for the school until it gets a model (Docs/school.md).
-  school: { x: -1.5, z: 10.5, w: 3.2, d: 2.6 },
-  magic: { x: 5.2, z: -10.2, w: 3, d: 2.6 },
 }
 
 // Where a drilling hero stands to hit the scarecrow.
@@ -63,8 +68,8 @@ export function buildTerrain(): THREE.Group {
   }
 
   const trees: [number, number, number][] = [
-    [-13.5, -2, 1], [-12.5, 2, 0.8], [-13.5, 10, 1.1], [-4.5, -13.5, 0.9], [4.5, -13.5, 1], [13.5, -1, 1], [13.5, 8.5, 0.9],
-    [11, 12.5, 1.1], [-11, 13, 0.9], [13, -12.5, 1], [-13, -13, 1.1], [3, 13.5, 0.8], [-11, -3, 0.7], [12, -11.5, 0.8], [-2.6, 13.5, 1],
+    [-13.5, -2, 1], [-13.6, 3.6, 0.8], [-13.5, 10, 1.1], [-4.5, -13.5, 0.9], [4.5, -13.5, 1], [13.5, -1, 1], [13.5, 8.5, 0.9],
+    [13, 13, 1.1], [-13.4, 13.2, 0.9], [13, -12.5, 1], [-13, -13, 1.1], [3, 13.5, 0.8], [-13.4, -7, 0.7], [12, -11.5, 0.8], [-2.6, 13.5, 1],
   ]
   for (const [x, z, s] of trees) {
     const y = groundTop(x, z)
@@ -83,8 +88,9 @@ export function buildTerrain(): THREE.Group {
       .box(0.3, 0.05, 0.3, '#3a3a3a', x, 1.76, z)
   }
 
-  // Wheat field with a fence.
-  b.within(-6, 0, 11, 0, 0, 0, () => {
+  // Wheat field with a fence, between the temple and the inn (it is low, so
+  // nothing behind it hides).
+  b.within(4.4, 0, -10.5, 0, 0, 0, () => {
     b.box(3.6, 0.08, 2.4, '#7a5a3a', 0, 0.04, 0)
     for (let ix = 0; ix < 7; ix += 1) {
       for (let iz = 0; iz < 4; iz += 1) {
@@ -564,7 +570,8 @@ export function buildCemetery(graves: { legend?: boolean }[]): THREE.Group {
     b.box(0.12, 0.08, 0.1, trim, x, 0.62, z)
   })
   const group = b.build()
-  group.position.set(-5.2, 0, 9.2)
+  // The quiet south-east corner, clear of every lot.
+  group.position.set(10.2, 0, 9.4)
   return group
 }
 
