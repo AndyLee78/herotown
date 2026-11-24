@@ -109,6 +109,8 @@ Claude Code, Cursor, GPT(Codex)가 함께 쓰는 작업 목록이다. 작업 하
 | 67 | 자동화 core 코드 리뷰 (a6be730) | GPT | `Docs/reviews/a6be730.md` (새 파일만) | 완료 (f48be69) |
 | 68 | 면담·스카우팅 화면 | GPT (Cursor 대신) | `App.tsx`, `src/ui/game/*.tsx`, `styles.css`, `src/locales/*` | 완료 (a7cfe98) |
 | 69 | 면담·스카우팅 core 코드 리뷰 (8e1fa30) | GPT | `Docs/reviews/8e1fa30.md` (새 파일만) | 완료 (c5b60da) |
+| 70 | 학교 화면 | GPT (Cursor 대신) | `App.tsx`, `src/ui/game/*.tsx`, `styles.css`, `src/locales/*` | 대기 |
+| 71 | 학교 core 코드 리뷰 (커밋 해시는 아래) | GPT | `Docs/reviews/<해시>.md` (새 파일만) | 대기 (70 뒤) |
 
 ---
 
@@ -1651,3 +1653,42 @@ core에 이미 있는 것('../../core'에서 export):
 
 - [리뷰](reviews/8e1fa30.md)에 유료 면담의 무료 한도 차감, Lv3 첫 면담의 깊이 적용, 잠재력 100 초과 방문자의 보정 감소, v1 세이브 이관 문제를 기록했다.
 - 계절 초기화, v17 기존 방문자의 면담 이관, 방문자 나이 변경·퇴실·고용, 숨은 인재 능력치 재계산을 확인했다.
+
+---
+
+## 70. 학교 화면 (GPT, Cursor 대신)
+
+**지금 시작할 수 있다.** 설계: `Docs/school.md`. 끝나면 Claude Code가 화면을 직접 확인한다.
+
+**전달할 내용**
+
+```
+Docs/school.md를 읽고 화면을 만든다. src/ui/App.tsx, src/ui/game/*.tsx, src/ui/styles.css, src/locales/*만 고친다. core는 고치지 않는다. 기존 창 구조와 kit.tsx 공용 조각을 그대로 쓴다.
+
+core에 이미 있는 것('../../core'에서 export):
+- 건물 id 'school'(마을 Lv4, 레벨 1–3). schoolSeats(state), tuition(state), pupils(state), schoolRules(minAge 5, potentialPerSeason, focusPerSeason, careerSeasons 3).
+- hero.school: { focus?: StatKey, career?: ClassId, seasons, carry } (다니는 아이만).
+- 동작 { type: 'enroll', heroId, focus: StatKey | null, career: ClassId | null }(다니는 아이에게 다시 보내면 계획만 바뀌고 다닌 계절은 유지), { type: 'unenroll', heroId }. 결과 notice: noSchool, tooYoung, schoolFull, career.
+- 아이(isChild)는 영웅 목록에 없고 마을 인구 창의 "아이들" 칸에 있다.
+
+1. 학교 창(App.tsx BUILDING_SCREEN의 school을 새 화면으로): 자리 n/m, 계절마다 수업료(한 명당), 학교 레벨별 효과 표, 다니는 아이 목록(이름·나이·다닌 계절·집중 능력치·진로·"성인식까지 n년").
+2. 입학: 5살 이상 아이 목록에서 [입학] → 집중 능력치(6개 + 없음)와 진로(7개 직업 + 그대로, 무희는 여자아이만) 고르기. 다니는 아이는 [계획 바꾸기]와 [그만두기].
+3. 진로 안내: "3계절 이상 다니면 성인식 때 이 직업이 된다"와 지금 다닌 계절. 3계절 미만이면 "아직 n계절 더".
+4. 마을 인구 창의 아이들 칸과 아이 상세에 학교 정보 한 줄(다니면 집중·진로, 아니면 "학교에 다니지 않는다").
+5. 문구 ko/en 같은 키.
+
+확인: npm run dev에서 디버그 세이브로 아이를 입학시키고 계절을 넘겨 수업료·잠재력 변화를 본다. 확인한 내용을 메모에.
+```
+
+---
+
+## 71. 학교 core 코드 리뷰 (GPT)
+
+**작업 70 뒤에 시작한다(같은 도구라 순서대로).** core 커밋은 git log에서 "Add the school"로 찾는다.
+
+**전달할 내용**
+
+```
+학교 core 커밋("Add the school"로 찾는다)을 리뷰한다. 코드는 고치지 않고 Docs/reviews/<해시>.md 새 파일 하나에만 쓴다(Docs/reviews/README.md 형식).
+볼 것: Docs/school.md와 수치·규칙 차이, 수업료 지불 순서와 골드 부족, 계절 경계·오프라인에서 여러 계절이 지날 때, 잠재력 상한과 집중 능력치 소수점 누적, 진로 변경(성별·장비·스킬·직업 바꿈 뒤 createHero), 성인식과 졸업 시점(나이 듦·사망·해고·부모 은퇴), 자리 수와 학교 레벨 변화, 세이브 18 → 19.
+```

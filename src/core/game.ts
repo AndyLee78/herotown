@@ -4,6 +4,7 @@ import { skillPicks } from './skills'
 import { deliver, ensureBoard, expeditionSlotsFor, guildLevel, progressClear, readBoard, type GuildBoard } from './guild'
 import { cheer, driftMorale, lowMorale, mourn, shiftMorale } from './morale'
 import { arrive, interview, type Interviews } from './scouting'
+import { enroll, graduate, teachSeason, unenroll } from './school'
 import { forgetSkill, readDrills, runDrills, startDrill, type Drill } from './drill'
 import { buyIntel, finishScout, isNest, nestSeason, readScout, seasonKey, startScout, type ScoutJob } from './nest'
 import { TRINKET_IDS, enchantTime, finishEnchant, readMagicJob, startEnchant, type MagicJob } from './magic'
@@ -16,9 +17,9 @@ import { acceptProposal, bedsTaken, bondParty, declineProposal, deliverBirths, f
 import { createRng } from './rng'
 import type { Rng } from './rng'
 import type { Genes } from './genes'
-import type { Bond, ClassId, CombatError, DungeonReport, Gear, GearSlot, Gender, Hero, PartyMember, PotionId, Proposal, Role, Row, Supplies, Tactics, TrinketId } from './types'
+import type { Bond, ClassId, CombatError, DungeonReport, Gear, GearSlot, Gender, Hero, PartyMember, PotionId, Proposal, Role, Row, Supplies, Tactics, TrinketId , StatKey } from './types'
 
-export const SAVE_VERSION = 18
+export const SAVE_VERSION = 19
 
 export type SeasonId = 'spring' | 'summer' | 'autumn' | 'winter'
 
@@ -57,7 +58,7 @@ export type SmithJob = {
   finishAt: number
 }
 
-export type BuildingId = 'hall' | 'inn' | 'house' | 'guild' | 'smith' | 'temple' | 'fountain' | 'alchemy' | 'magic' | 'training'
+export type BuildingId = 'hall' | 'inn' | 'house' | 'guild' | 'smith' | 'temple' | 'fountain' | 'alchemy' | 'magic' | 'training' | 'school'
 export type MaterialName = 'wood' | 'stone' | 'iron' | 'bone' | 'herb' | 'crystal'
 
 export type AutoPolicy = 'material' | 'safe' | 'fixed'
@@ -164,6 +165,10 @@ export type GameNotice =
   | 'festivalDone'
   | 'queueFull'
   | 'interviewed'
+  | 'noSchool'
+  | 'tooYoung'
+  | 'schoolFull'
+  | 'career'
   | 'hireTown'
   | 'drillHero'
   | 'trainingFull'
@@ -319,6 +324,8 @@ export type GameAction =
   | { type: 'automation'; care?: boolean; drill?: boolean }
   | { type: 'potionTarget'; potionId: PotionId; count: number }
   | { type: 'interview'; id: string }
+  | { type: 'enroll'; heroId: string; focus: StatKey | null; career: ClassId | null }
+  | { type: 'unenroll'; heroId: string }
   | { type: 'declineProposal'; a: string; b: string; now?: number }
   | { type: 'wish'; now: number }
   | { type: 'brew'; potionId: PotionId; now: number }
@@ -642,6 +649,12 @@ function apply(state: GameState, action: GameAction): GameState {
   if (action.type === 'buyIntel') {
     return buyIntel(state)
   }
+  if (action.type === 'enroll') {
+    return enroll(state, action.heroId, action.focus, action.career)
+  }
+  if (action.type === 'unenroll') {
+    return unenroll(state, action.heroId)
+  }
   if (action.type === 'interview') {
     return interview(state, action.id)
   }
@@ -742,6 +755,8 @@ function advance(state: GameState, now: number): GameState {
     next = deliverBirths(next, until, family)
     for (let turned = seasonsBetween(before, next.calendar); turned > 0; turned -= 1) {
       next = turnSeason(next, until, family)
+      // A season of lessons at the school (Docs/school.md).
+      next = teachSeason(next)
     }
     // The old may pass away when a year turns, after everyone has aged.
     for (let years = next.calendar.year - before.year; years > 0; years -= 1) {
@@ -986,9 +1001,11 @@ function moveCalendar(state: GameState, elapsed: number, wages: { paid: number }
 }
 
 function growOlder(state: GameState, years: number, aged: { name: string; age: number }[]): GameState {
-  const roster = state.roster.map((hero) => older(hero, years, aged))
+  let roster = state.roster.map((hero) => older(hero, years, aged))
   // A child who reaches deploy age joins the hero lists with a welcome.
   const grownUp = roster.filter((hero, index) => isChild(state.roster[index]!) && !isChild(hero)).map((hero) => hero.id)
+  // Pupils come of age and leave school, maybe for the career they chose (Docs/school.md).
+  roster = roster.map((hero) => (grownUp.includes(hero.id) ? graduate(hero) : hero))
   const proud = roster.filter((hero) => grownUp.includes(hero.id)).flatMap((hero) => hero.parents ?? [])
   return {
     ...state,

@@ -20,6 +20,8 @@ export const LOTS: Record<BuildingId, Lot> = {
   alchemy: { x: -10.5, z: -1.5, w: 3, d: 2.6 },
   // West of the smith, open sand yard facing the plaza (Docs/skills.md).
   training: { x: -6.5, z: 9.2, w: 3.6, d: 3.2 },
+  // Placeholder spot for the school until it gets a model (Docs/school.md).
+  school: { x: -1.5, z: 10.5, w: 3.2, d: 2.6 },
   magic: { x: 5.2, z: -10.2, w: 3, d: 2.6 },
 }
 

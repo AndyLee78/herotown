@@ -171,6 +171,8 @@ export type Hero = {
   interviewed?: number
   prodigy?: boolean
   terms?: number
+  // A child at school (Docs/school.md).
+  school?: { focus?: StatKey; career?: ClassId; seasons: number; carry: number }
   gear: Gear[]
   clears: string[]
   deaths: number

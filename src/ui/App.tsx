@@ -60,6 +60,8 @@ const BUILDING_SCREEN: Record<BuildingId, Screen> = {
   fountain: 'town',
   alchemy: 'alchemy',
   magic: 'magic',
+  // The school screen comes with task 70; until then it opens the town.
+  school: 'town',
   training: 'training',
 }
 

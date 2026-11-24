@@ -34,6 +34,7 @@ export type HeroDraft = {
   interviewed?: number
   prodigy?: boolean
   terms?: number
+  school?: Hero['school']
   gear?: Array<Partial<Gear>>
   clears?: string[]
   deaths?: number
@@ -83,6 +84,7 @@ export function createHero(draft: HeroDraft): Hero {
     ...(draft.interviewed ? { interviewed: draft.interviewed } : {}),
     ...(draft.prodigy ? { prodigy: true } : {}),
     ...(draft.terms ? { terms: draft.terms } : {}),
+    ...(draft.school ? { school: draft.school } : {}),
     gear: draft.gear ? draft.gear.map((item) => normalizeGear(item, draft.classId)) : [normalizeGear(undefined, draft.classId)],
     clears: [...(draft.clears ?? [])],
     deaths: draft.deaths ?? 0,

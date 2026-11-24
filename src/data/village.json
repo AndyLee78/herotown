@@ -444,6 +444,37 @@
           "ms": 2400000
         }
       ]
+    },
+    {
+      "id": "school",
+      "unlockLevel": 4,
+      "startLevel": 0,
+      "levels": [
+        {
+          "level": 1,
+          "gold": 120,
+          "wood": 40,
+          "stone": 30,
+          "iron": 5,
+          "ms": 1200000
+        },
+        {
+          "level": 2,
+          "gold": 200,
+          "wood": 50,
+          "stone": 45,
+          "iron": 10,
+          "ms": 2400000
+        },
+        {
+          "level": 3,
+          "gold": 300,
+          "wood": 60,
+          "stone": 60,
+          "iron": 15,
+          "ms": 3600000
+        }
+      ]
     }
   ]
 }

@@ -178,7 +178,8 @@
     "fountain": "Lucky Fountain",
     "alchemy": "Alchemy Workshop",
     "magic": "Magic Workshop",
-    "training": "Training Ground"
+    "training": "Training Ground",
+    "school": "School"
   },
   "buildingHint": {
     "hall": "See your village level and next goal.",
@@ -190,7 +191,8 @@
     "fountain": "Tap it when a wish is ready for a few coins. Now and then, a jackpot.",
     "alchemy": "Brews potions. They go into the village stock, and parties carry them out.",
     "magic": "Makes trinkets. Each hero can wear two.",
-    "training": "Brings heroes who fall behind up to speed. Learned skills can be swapped here."
+    "training": "Brings heroes who fall behind up to speed. Learned skills can be swapped here.",
+    "school": "Teaches children: grows a stat and their potential, and lets them pick the class they take when they come of age."
   },
   "resource": {
     "wood": "Wood {{amount}}",
@@ -284,7 +286,7 @@
     "busyHero": "A hero in this party is already away.",
     "slotsFull": "All expedition slots are full. Upgrade the guild for more.",
     "lockedDungeon": "This dungeon is still locked.",
-    "tooYoung": "This hero is too young to retire.",
+    "tooYoung": "Children can start school at 5.",
     "postTaken": "Another retiree already runs that building.",
     "noWish": "No wish is ready yet.",
     "noAlchemy": "There is no alchemy workshop yet.",
@@ -302,7 +304,10 @@
     "festivalDone": "This season's festival has already been held.",
     "queueFull": "The queue is full. A higher building level makes room.",
     "interviewed": "You have already interviewed this visitor.",
-    "hireTown": "They will only join a bigger village. An interview shows their terms."
+    "hireTown": "They will only join a bigger village. An interview shows their terms.",
+    "noSchool": "There is no school yet.",
+    "schoolFull": "The school is full.",
+    "career": "Only girls can choose to become dancers."
   },
   "defeat": {
     "noHealer": "Bring a healer to keep the party going.",
@@ -970,7 +975,8 @@
       "fountain": "Fountain jackpot chance +{{value}}%p",
       "alchemy": "Brewing time −{{value}}%",
       "magic": "Trinket making time −{{value}}%",
-      "training": "Training time −{{value}}%"
+      "training": "Training time −{{value}}%",
+      "school": "Tuition −{{value}}%"
     }
   },
   "trinket": {

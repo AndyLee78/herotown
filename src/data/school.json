@@ -1,0 +1,16 @@
+{
+  "minAge": 5,
+  "seatsPerLevel": 2,
+  "tuition": 15,
+  "potentialPerSeason": [
+    1,
+    1.5,
+    2
+  ],
+  "focusPerSeason": [
+    0.5,
+    0.75,
+    1
+  ],
+  "careerSeasons": 3
+}
