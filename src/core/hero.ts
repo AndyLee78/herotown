@@ -145,8 +145,12 @@ export function train(hero: Hero): Hero {
   return createHero({ ...hero, training: hero.training + 1 })
 }
 
-export function statRange(value: number): { min: number; max: number } {
-  const spread = Math.max(2, Math.round(value * 0.25))
+// How sure the village is of a visitor's stats: the guild narrows it (Docs/guild.md).
+export function statRange(value: number, share = 0.25): { min: number; max: number } {
+  if (share <= 0) {
+    return { min: value, max: value }
+  }
+  const spread = Math.max(1, Math.round(value * share))
   return { min: Math.max(1, value - spread), max: value + spread }
 }
 

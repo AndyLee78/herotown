@@ -99,6 +99,9 @@ Claude Code, Cursor, GPT(Codex)가 함께 쓰는 작업 목록이다. 작업 하
 | 57 | 훈련소 건물·스킬 연출 3D | Cursor | `world.ts`, `VillageScene.ts`, `BattleScene.ts`, `replay.ts` | 완료 (b13376f) |
 | 58 | 스킬·훈련소 core 코드 리뷰 (8e25753) | GPT | `Docs/reviews/8e25753.md` (새 파일만) | 완료 (226ee9b) |
 | 59 | 스킬을 배우는 곡선·시뮬레이터 | GPT | `tools/curve.ts`, `print-curve.ts`, `tune-curve.ts`, `first-hour.ts` | 완료 (52b4cfd) |
+| 60 | 길드 화면(의뢰 게시판·레벨·감정) | Cursor | `App.tsx`, `src/ui/game/*.tsx`, `styles.css`, `src/locales/*` | 대기 |
+| 61 | 길드 core 코드 리뷰 (커밋 해시는 아래) | GPT | `Docs/reviews/<해시>.md` (새 파일만) | 대기 |
+| 62 | 의뢰 보상·자동 파티 측정 | GPT | `tools/curve.ts`, `print-curve.ts`, `tune-curve.ts`, `first-hour.ts` | 대기 |
 
 ---
 
@@ -1424,3 +1427,60 @@ tools/curve.ts, tools/print-curve.ts, tools/tune-curve.ts, tools/first-hour.ts�
 - 40파티×6전에서 추천 두 스킬은 독늪 Lv12 P25 83%, 요새 Lv14 P25 83%로 둘 다 무스킬 +1레벨과 같았다. 독늪의 뒤 두 스킬은 100%, 정화 단독은 0→83%였다. 정화 후 중독 잔량 50→65% 실험은 정화 단독 P25 50%, 추천 조합 67%로 재검증 후보로 남겼다.
 - 시드 20개 중 3시간 내 요새 클리어는 7→10개, 공통 성공 시드 첫 클리어 중앙값 9.1분 단축. 12시간 짝비교는 요새 11.6분, 성채 31.9분, 둥지 16.6분 단축이며 둥지 클리어는 12→14개였다. 훈련소 20/20, 훈련 548회 시작, 스킬 341개 학습.
 - 프로젝트·도구 타입 검사, 테스트 218개, 프로덕션 빌드 통과.
+
+---
+
+## 60. 길드 화면(의뢰 게시판·레벨·감정) (Cursor)
+
+**지금 시작할 수 있다.** 설계: `Docs/guild.md`.
+
+**전달할 내용**
+
+```
+Docs/guild.md를 읽고 화면을 만든다. src/ui/App.tsx, src/ui/game/*.tsx, src/ui/styles.css, src/locales/*만 고친다. core는 고치지 않는다.
+
+core에 이미 있는 것('../../core'에서 export):
+- guildLevel(level): { expeditions, autoParties, contracts, appraisal, record }. guildRules.
+- state.guild: { season, seasonal: Contract[], repeat: Contract | null, record, repeatNonce } | null. Contract: { id, kind: 'clear' | 'deliver', dungeonId?, material?, need, progress, gold, fame, done }.
+- 동작: { type: 'deliver', contractId }(재료 납품). 토벌 의뢰는 승리할 때 저절로 오른다(자동 출정 포함). 끝나면 보상이 바로 들어온다.
+- 길드 업그레이드는 state.guild.record ≥ guildLevel(다음 레벨).record가 필요하다(notice 'guildRecord'). 자동 출정은 길드 Lv1부터(notice 'noGuild').
+- statRange(value, share): 여관 방문자 능력치 범위. share는 guildLevel(state.buildings.guild).appraisal(0이면 정확한 값).
+
+1. 길드 창(App.tsx BUILDING_SCREEN의 guild를 새 화면으로): 길드 레벨 효과 표(동시 출정, 자동 파티, 계절 의뢰 수, 감정), 의뢰 실적과 다음 레벨까지 필요한 실적.
+2. 의뢰 게시판: 계절 의뢰 카드(던전/재료 이름, 진행 막대 progress/need, 보상 골드·명성, 완료 표시), 다음 계절까지 남은 시간. 계절 의뢰를 다 끝내면 반복 의뢰 카드 하나(보상 낮음 표시). 납품 의뢰는 [납품] 버튼(재료가 모자라면 비활성).
+3. 의뢰가 끝나면 토스트("의뢰 완료: 골드 +N").
+4. 마을 운영 화면의 예전 "동굴 의뢰" 칩(town.quest, questProgress, villageRules.guild.questCount)을 지우고 "의뢰 n/m" 칩으로 바꾼다.
+5. 여관 방문자 능력치 범위에 statRange(value, guildLevel(...).appraisal)를 쓴다. 길드가 없으면 지금처럼 넓게, Lv3부터 정확한 값.
+6. 자동 출정 설정: 길드가 없으면 잠김 안내("길드를 지으면 자동 출정을 쓸 수 있다"). 자동 파티가 2개면 두 번째 파티 프리셋이 함께 돈다는 안내.
+7. 문구 ko/en 같은 키.
+
+확인: npm run dev에서 디버그로 길드를 짓고 의뢰를 끝내 본다(토벌·납품 각각). 스크린샷을 메모에.
+```
+
+---
+
+## 61. 길드 core 코드 리뷰 (GPT)
+
+**길드 core 커밋 뒤에 시작한다.** 커밋은 git log에서 "Rework the guild"로 찾는다.
+
+**전달할 내용**
+
+```
+길드 core 커밋("Rework the guild"로 찾는다)을 리뷰한다. 코드는 고치지 않고 Docs/reviews/<해시>.md 새 파일 하나에만 쓴다(Docs/reviews/README.md 형식).
+볼 것: Docs/guild.md와 수치·규칙 차이, 의뢰판 생성의 결정성(계절·시드)과 계절이 바뀌는 순간, 길드 레벨이 계절 중에 오를 때, 반복 의뢰가 끝나자마자 새로 걸리는 경로, 토벌 진행이 직접 원정·자동 출정·패배에서 어떻게 세어지는지, 자동 출정 여러 파티(겹치는 영웅, 프리셋 물약, 시드), 자동 출정이 길드를 요구하게 된 뒤 예전 세이브(자동 출정이 켜져 있지만 길드가 없는 경우), 길잡이 순서 변경, 세이브 14 → 15.
+```
+
+---
+
+## 62. 의뢰 보상·자동 파티 측정 (GPT)
+
+**지금 시작할 수 있다(작업 61과 파일이 겹치지 않는다).**
+
+**전달할 내용**
+
+```
+tools/curve.ts, tools/print-curve.ts, tools/tune-curve.ts, tools/first-hour.ts만 고친다. 게임 코드와 data는 고치지 않는다(제안만).
+1. first-hour.ts의 흉내 플레이어가 길드 의뢰를 하게 한다: 토벌 의뢰 던전을 우선 고르고, 납품 의뢰는 재료가 있으면 낸다. 동시 출정 슬롯을 다 쓰고, 길드 Lv3부터 자동 파티 2개를 쓴다.
+2. 3시간·12시간에서 의뢰가 전체 골드 수입의 몇 %인지, 길드 레벨이 언제 오르는지(의뢰 실적 기준 3/8/16이 적당한지), 첫 클리어 시각이 얼마나 바뀌는지 출력한다.
+3. Docs/guild.md와 비교해 의뢰 보상(clearGold 0.6, deliverGold 2, repeatShare 0.3)과 실적 기준이 적당한지 메모에 적고, 고칠 수치를 제안한다.
+```

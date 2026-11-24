@@ -35,7 +35,8 @@ describe('first-play guide', () => {
     const start = { ...freshState(3, now), guideStep: 4 }
     expect(guideStatus(start).done).toBe(false)
     expect(guideStatus(reduce(start, { type: 'build', id: 'house', now })).done).toBe(true)
-    const auto = { ...start, guideStep: 5 }
+    // The guild comes before auto runs now (Docs/guild.md).
+    const auto = { ...start, guideStep: 6, buildings: { ...start.buildings, guild: 1 } }
     expect(guideStatus(reduce(auto, { type: 'auto', enabled: true })).done).toBe(true)
     const cave = { ...start, guideStep: 3, cleared: ['hill_cave'] }
     expect(guideStatus(cave).done).toBe(true)

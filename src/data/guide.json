@@ -52,16 +52,6 @@
       }
     },
     {
-      "id": "auto",
-      "goal": {
-        "type": "auto"
-      },
-      "screen": "battle",
-      "reward": {
-        "gold": 20
-      }
-    },
-    {
       "id": "guild",
       "goal": {
         "type": "building",
@@ -71,6 +61,16 @@
       "screen": "town",
       "reward": {
         "iron": 5
+      }
+    },
+    {
+      "id": "auto",
+      "goal": {
+        "type": "auto"
+      },
+      "screen": "battle",
+      "reward": {
+        "gold": 20
       }
     },
     {

@@ -1,6 +1,7 @@
 import { chargeFountain, freshFountain, makeWish, readFountain, upgradeFountain, type FountainState } from './fountain'
 import { claimGuide, guideSteps } from './guide'
 import { skillPicks } from './skills'
+import { deliver, ensureBoard, expeditionSlotsFor, guildLevel, progressClear, readBoard, type GuildBoard } from './guild'
 import { finishDrills, forgetSkill, readDrills, startDrill, type Drill } from './drill'
 import { buyIntel, finishScout, isNest, nestSeason, readScout, seasonKey, startScout, type ScoutJob } from './nest'
 import { finishEnchant, readMagicJob, startEnchant, type MagicJob } from './magic'
@@ -15,7 +16,7 @@ import type { Rng } from './rng'
 import type { Genes } from './genes'
 import type { Bond, ClassId, CombatError, DungeonReport, Gear, GearSlot, Gender, Hero, PartyMember, PotionId, Proposal, Role, Row, Supplies, Tactics, TrinketId } from './types'
 
-export const SAVE_VERSION = 14
+export const SAVE_VERSION = 15
 
 export type SeasonId = 'spring' | 'summer' | 'autumn' | 'winter'
 
@@ -153,6 +154,7 @@ export type GameNotice =
   | 'noMagic'
   | 'scoutHero'
   | 'noTraining'
+  | 'guildRecord'
   | 'drillHero'
   | 'trainingFull'
   | 'scoutBusy'
@@ -227,6 +229,8 @@ export type GameState = {
   scout: ScoutJob | null
   // Heroes at the training ground (Docs/skills.md).
   drills: Drill[]
+  // The guild's contract board (Docs/guild.md).
+  guild: GuildBoard | null
 }
 
 export type AdPlacement = 'absence' | 'construction' | 'temple'
@@ -279,6 +283,7 @@ export type GameAction =
   | { type: 'buyIntel' }
   | { type: 'drill'; heroId: string; now: number }
   | { type: 'forget'; heroId: string; skillId: string }
+  | { type: 'deliver'; contractId: string }
   | { type: 'declineProposal'; a: string; b: string; now?: number }
   | { type: 'wish'; now: number }
   | { type: 'brew'; potionId: PotionId; now: number }
@@ -333,6 +338,7 @@ export function freshState(seed: number, now: number): GameState {
     nestSeen: null,
     scout: null,
     drills: [],
+    guild: null,
   }
 }
 
@@ -457,6 +463,10 @@ function apply(state: GameState, action: GameAction): GameState {
     return finishConstruction(state, Math.max(action.now, state.construction?.finishAt ?? action.now), [])
   }
   if (action.type === 'auto') {
+    // Auto runs come with the guild (Docs/guild.md).
+    if (action.enabled && state.buildings.guild < 1) {
+      return { ...state, notice: 'noGuild' }
+    }
     return { ...state, notice: null, auto: { ...state.auto, enabled: action.enabled } }
   }
   if (action.type === 'autoPolicy') {
@@ -579,6 +589,9 @@ function apply(state: GameState, action: GameAction): GameState {
   if (action.type === 'buyIntel') {
     return buyIntel(state)
   }
+  if (action.type === 'deliver') {
+    return deliver(state, action.contractId)
+  }
   if (action.type === 'drill') {
     return startDrill(state, action.heroId, action.now, busyHeroIds(state))
   }
@@ -654,6 +667,8 @@ function advance(state: GameState, now: number): GameState {
   }
   const autoTally = { runs: 0, gold: 0 }
   next = runAuto(next, elapsed, autoTally)
+  // A new season (or a new guild) puts up a fresh contract board.
+  next = ensureBoard(next)
   next = { ...next, lastTickAt: effectiveNow }
   if (rawElapsed < timeRules.reportAfterMs) {
     return next
@@ -705,8 +720,8 @@ export function bedCount(houseLevel: number): number {
   return houseLevel * villageRules.house.bedsPerLevel
 }
 
-export function expeditionSlots(guildLevel: number): number {
-  return 1 + Math.max(0, guildLevel - 1)
+export function expeditionSlots(level: number): number {
+  return expeditionSlotsFor(level)
 }
 
 export function restBonus(houseLevel: number): number {
@@ -984,6 +999,10 @@ function startBuild(state: GameState, id: BuildingId, now: number): GameState {
   if (!def) {
     return { ...state, notice: 'missing' }
   }
+  // A bigger guild needs a record of finished contracts (Docs/guild.md).
+  if (id === 'guild' && (state.guild?.record ?? 0) < guildLevel(state.buildings.guild + 1).record) {
+    return { ...state, notice: 'guildRecord' }
+  }
   if (townLevel(state.fame).level < def.unlockLevel) {
     return { ...state, notice: 'locked' }
   }
@@ -1023,8 +1042,9 @@ function dungeonForMaterial(state: GameState): string | null {
   )
 }
 
-function autoMembers(state: GameState): PartyMember[] {
-  const slots = state.auto.policy === 'fixed' ? state.auto.party : (presetById(state, state.presetId)?.slots ?? [])
+function autoMembers(state: GameState, presetId = state.presetId): PartyMember[] {
+  // The fixed policy's own party stands in for the selected preset only.
+  const slots = state.auto.policy === 'fixed' && presetId === state.presetId ? state.auto.party : (presetById(state, presetId)?.slots ?? [])
   const away = busyHeroIds(state)
   const members = slots.flatMap((slot) => {
     const hero = state.roster.find((entry) => entry.id === slot.id)
@@ -1050,44 +1070,70 @@ function withBonds(state: GameState, members: PartyMember[]): PartyMember[] {
 }
 
 function runAuto(state: GameState, elapsed: number, tally: { runs: number; gold: number }): GameState {
-  if (!state.auto.enabled) {
+  // Auto runs need the guild, which also sets how many parties go (Docs/guild.md).
+  const parties = guildLevel(state.buildings.guild).autoParties
+  if (!state.auto.enabled || parties < 1) {
     return state
   }
   let next = state
   let budget = elapsed
-  while (budget >= villageRules.auto.runMs && tally.runs < 36) {
+  while (budget >= villageRules.auto.runMs && tally.runs < 36 * parties) {
     const dungeonId = next.auto.policy === 'material' ? dungeonForMaterial(next) : next.auto.dungeonId
-    const members = autoMembers(next)
-    if (!dungeonId || !next.cleared.includes(dungeonId) || members.length === 0) {
+    if (!dungeonId || !next.cleared.includes(dungeonId)) {
       break
     }
-    const battleSeed = next.seed + 9000 + tally.runs + next.day
-    // Auto runs carry the selected preset's potions too, and bring back the rest.
-    const carry = takeSupplies(next.potions, presetById(next, next.presetId)?.supplies)
-    const result = runDungeon(members, dungeonId, presetById(next, next.presetId)?.tactics ?? DEFAULT_TACTICS, battleSeed, carry.taken, nestVariant(next, dungeonId))
-    if (result.ok) {
-      next = { ...next, potions: returnSupplies(carry.stock, carry.taken, result.report.potionsUsed) }
+    let ran = 0
+    const used = new Set<string>()
+    for (const presetId of autoPresetOrder(next).slice(0, parties)) {
+      const members = autoMembers(next, presetId).filter((member) => !used.has(member.hero.id))
+      if (members.length === 0) {
+        continue
+      }
+      for (const member of members) {
+        used.add(member.hero.id)
+      }
+      next = autoRun(next, members, presetId, dungeonId, tally)
+      ran += 1
     }
-    // Auto runs only repeat cleared dungeons, so they earn a share of the
-    // repeat reward and always less than sending the party by hand.
-    const scale = villageRules.repeatReward * villageRules.auto.rewardScale * (1 + retireeBonus(next, 'guild'))
-    if (!result.ok) {
+    if (ran === 0) {
       break
     }
-    const report = {
-      ...result.report,
-      conditions: result.report.conditions.map((entry) =>
-        entry.condition === 'dead' ? { ...entry, condition: 'critical' as const } : entry,
-      ),
-    }
-    const heroIds = members.map((member) => member.hero.id)
-    const settled = settleParty(next, report, battleSeed, next.lastTickAt, heroIds, dungeonId)
-    const goldGain = report.victory ? Math.floor(result.report.gold * scale) : 0
-    next = dropFromPresets(grantVictoryRewards(bondParty({ ...next, ...settled, gold: next.gold + goldGain }, heroIds, report.victory), report, dungeonId, scale))
     budget -= villageRules.auto.runMs
-    tally.runs += 1
-    tally.gold += goldGain
   }
+  return next
+}
+
+// The selected preset goes first, then the others in order.
+function autoPresetOrder(state: GameState): string[] {
+  return [state.presetId, ...state.presets.map((preset) => preset.id).filter((id) => id !== state.presetId)]
+}
+
+function autoRun(state: GameState, members: PartyMember[], presetId: string, dungeonId: string, tally: { runs: number; gold: number }): GameState {
+  let next = state
+  const preset = presetById(next, presetId)
+  const battleSeed = next.seed + 9000 + tally.runs + next.day
+  // Auto runs carry the preset's potions too, and bring back the rest.
+  const carry = takeSupplies(next.potions, preset?.supplies)
+  const result = runDungeon(members, dungeonId, preset?.tactics ?? DEFAULT_TACTICS, battleSeed, carry.taken, nestVariant(next, dungeonId))
+  if (!result.ok) {
+    return next
+  }
+  next = { ...next, potions: returnSupplies(carry.stock, carry.taken, result.report.potionsUsed) }
+  // Auto runs only repeat cleared dungeons, so they earn a share of the
+  // repeat reward and always less than sending the party by hand.
+  const scale = villageRules.repeatReward * villageRules.auto.rewardScale * (1 + retireeBonus(next, 'guild'))
+  const report = {
+    ...result.report,
+    conditions: result.report.conditions.map((entry) =>
+      entry.condition === 'dead' ? { ...entry, condition: 'critical' as const } : entry,
+    ),
+  }
+  const heroIds = members.map((member) => member.hero.id)
+  const settled = settleParty(next, report, battleSeed, next.lastTickAt, heroIds, dungeonId)
+  const goldGain = report.victory ? Math.floor(result.report.gold * scale) : 0
+  next = dropFromPresets(grantVictoryRewards(bondParty({ ...next, ...settled, gold: next.gold + goldGain }, heroIds, report.victory), report, dungeonId, scale))
+  tally.runs += 1
+  tally.gold += goldGain
   return next
 }
 
@@ -1116,18 +1162,8 @@ function grantVictoryRewards(state: GameState, report: DungeonReport, dungeonId:
   if (first) {
     fame += drop.fame
   }
-  let questProgress = state.questProgress
-  let questClaimed = state.questClaimed
-  let gold = state.gold
-  if (state.buildings.guild > 0 && dungeonId === villageRules.guild.questDungeon && !questClaimed) {
-    questProgress += gained
-    if (questProgress >= villageRules.guild.questCount) {
-      questClaimed = true
-      gold += villageRules.guild.rewardGold
-      fame += villageRules.guild.rewardFame
-    }
-  }
-  return { ...state, materials, fame, cleared, questProgress, questClaimed, gold }
+  // The old one-off cave quest gave way to the contract board (Docs/guild.md).
+  return progressClear({ ...state, materials, fame, cleared }, dungeonId)
 }
 
 function scheduleVisitor(state: GameState, now: number): GameState {
@@ -1829,6 +1865,7 @@ function normalize(record: Record<string, unknown>, now: number): GameState {
     nestSeen: typeof record.nestSeen === 'string' ? record.nestSeen : null,
     scout: readScout(record.scout),
     drills: readDrills(record.drills),
+    guild: readBoard(record.guild),
     auto: isAuto(record.auto) ? record.auto : base.auto,
     notice: null,
   }

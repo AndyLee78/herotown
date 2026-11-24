@@ -67,6 +67,7 @@ describe('early game flow', () => {
       ...state,
       roster: state.roster.map((hero) => ({ ...hero, fatigue: 100 })),
       cleared: ['hill_cave'],
+      buildings: { ...state.buildings, guild: 1 },
     }, { type: 'remove', id: staying.id })
     const sent = reduce(ready, { type: 'depart', now, confirm: true })
     const trip = sent.expeditions[0]!

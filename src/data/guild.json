@@ -1,0 +1,70 @@
+{
+  "levels": [
+    {
+      "level": 0,
+      "expeditions": 1,
+      "autoParties": 0,
+      "contracts": 0,
+      "appraisal": 0.25,
+      "record": 0
+    },
+    {
+      "level": 1,
+      "expeditions": 2,
+      "autoParties": 1,
+      "contracts": 2,
+      "appraisal": 0.15,
+      "record": 0
+    },
+    {
+      "level": 2,
+      "expeditions": 3,
+      "autoParties": 1,
+      "contracts": 3,
+      "appraisal": 0.08,
+      "record": 3
+    },
+    {
+      "level": 3,
+      "expeditions": 3,
+      "autoParties": 2,
+      "contracts": 3,
+      "appraisal": 0,
+      "record": 8
+    },
+    {
+      "level": 4,
+      "expeditions": 4,
+      "autoParties": 2,
+      "contracts": 4,
+      "appraisal": 0,
+      "record": 16
+    }
+  ],
+  "deliverChance": 0.35,
+  "clearCount": [
+    2,
+    3
+  ],
+  "clearGold": 0.6,
+  "deliverGold": 2,
+  "repeatShare": 0.3,
+  "fame": 4,
+  "famePerTier": 2,
+  "deliverAmount": {
+    "wood": 20,
+    "stone": 20,
+    "iron": 10,
+    "bone": 12,
+    "herb": 12,
+    "crystal": 8
+  },
+  "materialValue": {
+    "wood": 2,
+    "stone": 2,
+    "iron": 4,
+    "bone": 3,
+    "herb": 4,
+    "crystal": 8
+  }
+}

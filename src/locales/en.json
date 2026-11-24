@@ -126,7 +126,7 @@
     "hall": "See your village level and next goal.",
     "inn": "Upgrade to host more visitors and extend their stay.",
     "house": "More beds mean more heroes and better rest.",
-    "guild": "Send more parties at once and take on the cave wood request.",
+    "guild": "Contract board, more parties and auto runs, and visitor appraisal.",
     "smith": "Craft and enhance gear. Upgrade to unlock better gear.",
     "temple": "Treat wounds or revive a hero after their first death.",
     "fountain": "Tap it when a wish is ready for a few coins. Now and then, a jackpot.",
@@ -211,7 +211,8 @@
     "noGuild": "There is no guild yet.",
     "noTraining": "There is no training ground yet.",
     "drillHero": "This hero cannot train now.",
-    "trainingFull": "The training ground is full."
+    "trainingFull": "The training ground is full.",
+    "guildRecord": "Not enough finished contracts. Complete more guild contracts."
   },
   "defeat": {
     "noHealer": "Bring a healer to keep the party going.",

@@ -319,6 +319,8 @@ describe('game state', () => {
         ...start,
         cleared: ['hill_cave'],
         fame: 12,
+        // Auto runs come with the guild (Docs/guild.md).
+        buildings: { ...start.buildings, guild: 1 },
         materials: { ...start.materials, wood: 0 },
         roster: [hero, cleric],
       },
@@ -374,7 +376,8 @@ describe('game state', () => {
 describe('economy fixes', () => {
   // Hire every visitor, field them all and clear the cave once by hand.
   function clearedCave(seed: number) {
-    let state = freshState(seed, now)
+    // Auto runs come with the guild (Docs/guild.md).
+    let state = { ...freshState(seed, now), buildings: { ...freshState(seed, now).buildings, guild: 1 } }
     for (const visitor of [...state.visitors]) {
       state = reduce(state, { type: 'hire', id: visitor.id, now })
     }
@@ -410,7 +413,8 @@ describe('economy fixes', () => {
     const report = later.absence
     expect(report).not.toBeNull()
     expect(report?.wagesPaid).toBe(state.roster.length * progression.wage)
-    expect(report?.goldGained).toBe(report?.autoGold)
+    // Guild contracts finished by the auto runs add to the income (Docs/guild.md).
+    expect(report?.goldGained).toBeGreaterThanOrEqual(report?.autoGold ?? 0)
     expect(report?.goldGained).toBeGreaterThan(0)
     expect(later.gold - state.gold).toBe((report?.goldGained ?? 0) - (report?.wagesPaid ?? 0))
   })
