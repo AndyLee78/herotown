@@ -111,6 +111,9 @@ Claude Code, Cursor, GPT(Codex)가 함께 쓰는 작업 목록이다. 작업 하
 | 69 | 면담·스카우팅 core 코드 리뷰 (8e1fa30) | GPT | `Docs/reviews/8e1fa30.md` (새 파일만) | 완료 (c5b60da) |
 | 70 | 학교 화면 | GPT (Cursor 대신) | `App.tsx`, `src/ui/game/*.tsx`, `styles.css`, `src/locales/*` | 완료 (0b09ec7) |
 | 71 | 학교 core 코드 리뷰 (62e7837) | GPT | `Docs/reviews/62e7837.md` (새 파일만) | 완료 (798bfcc) |
+| 72 | 집 화면: 방으로 묶어 보기 | GPT | `src/ui/App.tsx`, `src/ui/game/*.tsx`, `src/ui/styles.css`, `src/locales/*` | 대기 |
+| 73 | 파티 구성·전투 준비 화면의 영웅 상태와 소속 | GPT | `src/ui/game/battleScreens.tsx`, `src/ui/App.tsx`, `src/ui/styles.css`, `src/locales/*` | 대기 (72 뒤) |
+| 74 | 집·준비 상태 core 코드 리뷰 (7995eb2, b1261a7) | GPT | `Docs/reviews/b1261a7.md` (새 파일만) | 대기 (73 뒤) |
 
 ---
 
