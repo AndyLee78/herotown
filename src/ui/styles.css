@@ -1088,12 +1088,71 @@ button,
   white-space: normal;
 }
 
+.prep-meters {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px 12px;
+}
+
 .prep-meter {
-  display: grid;
-  grid-template-columns: minmax(16px, 1fr) auto;
+  display: inline-flex;
   align-items: center;
-  gap: 5px;
-  font-size: 0.8rem;
+  gap: 4px;
+  font-size: 0.75rem;
+  color: var(--muted);
+}
+
+.prep-meter .bar {
+  width: 42px;
+  height: 5px;
+}
+
+.prep-meter b {
+  min-width: 2ch;
+  color: var(--ink);
+  font-weight: 700;
+}
+
+/* The selected party as small tiles, several to a row. */
+.prep-party {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(min(100%, 170px), 1fr));
+  gap: 6px;
+}
+
+.prep-member {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
+  padding: 6px 8px;
+  background: #fff;
+  border: 2px solid var(--line);
+  border-radius: 12px;
+  box-shadow: 0 2px 0 var(--line);
+}
+
+.prep-member .portrait {
+  width: 36px;
+  height: 36px;
+  flex: none;
+}
+
+.prep-member .hero-row-body {
+  display: grid;
+  gap: 2px;
+  min-width: 0;
+}
+
+.prep-member strong {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-size: 0.9rem;
+}
+
+.prep-status .chips:empty {
+  display: none;
 }
 
 .prep-unavailable {

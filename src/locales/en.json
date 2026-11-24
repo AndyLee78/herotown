@@ -5,7 +5,9 @@
     "returning": "{{dungeon}} · returns in {{time}}",
     "scout": "Scouting · {{time}} left",
     "drill": "Training · {{time}} left",
-    "auto": "Auto expedition"
+    "auto": "Auto expedition",
+    "fatigueShort": "Fatigue",
+    "moraleShort": "Morale"
   },
   "house": {
     "beds": "Beds {{used}}/{{beds}}",

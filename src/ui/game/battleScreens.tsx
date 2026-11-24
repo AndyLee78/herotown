@@ -375,13 +375,18 @@ function HeroStatus({ save, hero, presetId, now }: { save: GameState; hero: Hero
   const injured = condition === 'injured' || condition === 'critical'
   return (
     <span className="prep-status">
-      <span className="prep-meter">
-        <Bar value={status.fatigue} max={100} tone={status.fatigueLevel === 'fresh' ? 'good' : status.fatigueLevel === 'tired' ? 'warn' : 'bad'} />
-        <span>{t('prep.fatigue', { value: Math.round(status.fatigue) })}</span>
-      </span>
-      <span className="prep-meter">
-        <Bar value={status.morale} max={100} tone={status.moraleLevel === 'low' ? 'bad' : status.moraleLevel === 'high' ? 'warn' : 'info'} />
-        <span>{t('morale.value', { value: Math.floor(status.morale) })}</span>
+      {/* Two small meters on one line: fatigue and morale. */}
+      <span className="prep-meters">
+        <span className="prep-meter" title={t('prep.fatigue', { value: Math.round(status.fatigue) })}>
+          <span className="prep-meter-label">{t('prep.fatigueShort')}</span>
+          <Bar value={status.fatigue} max={100} tone={status.fatigueLevel === 'fresh' ? 'good' : status.fatigueLevel === 'tired' ? 'warn' : 'bad'} />
+          <b>{Math.round(status.fatigue)}</b>
+        </span>
+        <span className="prep-meter" title={t('morale.value', { value: Math.floor(status.morale) })}>
+          <span className="prep-meter-label">{t('prep.moraleShort')}</span>
+          <Bar value={status.morale} max={100} tone={status.moraleLevel === 'low' ? 'bad' : status.moraleLevel === 'high' ? 'warn' : 'info'} />
+          <b>{Math.floor(status.morale)}</b>
+        </span>
       </span>
       <span className="chips">
         {injured || condition === 'dead' ? <Chip tone="bad">{injured && recovery != null
@@ -488,11 +493,11 @@ export function Prep({
           )
         })}
       </div>
-      <div className="hero-list">
+      <div className="prep-party">
         {preset.slots.map(({ id }) => {
           const hero = save.roster.find((entry) => entry.id === id)
           return hero ? (
-            <div key={id} className={away.has(id) || hero.condition === 'dead' ? 'hero-row prep-unavailable' : 'hero-row'}>
+            <div key={id} className={away.has(id) || hero.condition === 'dead' ? 'prep-member prep-unavailable' : 'prep-member'}>
               <Portrait hero={hero} />
               <span className="hero-row-body">
                 <strong>{hero.name}</strong>
