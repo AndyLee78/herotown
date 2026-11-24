@@ -3,11 +3,11 @@ import { claimGuide, guideSteps } from './guide'
 import { skillPicks } from './skills'
 import { deliver, ensureBoard, expeditionSlotsFor, guildLevel, progressClear, readBoard, type GuildBoard } from './guild'
 import { cheer, driftMorale, lowMorale, mourn, shiftMorale } from './morale'
-import { finishDrills, forgetSkill, readDrills, startDrill, type Drill } from './drill'
+import { forgetSkill, readDrills, runDrills, startDrill, type Drill } from './drill'
 import { buyIntel, finishScout, isNest, nestSeason, readScout, seasonKey, startScout, type ScoutJob } from './nest'
-import { finishEnchant, readMagicJob, startEnchant, type MagicJob } from './magic'
-import { finishBrew, readAlchemyJob, readSupplies, returnSupplies, startBrew, takeSupplies, type AlchemyJob } from './alchemy'
-import { adRules, moraleRules, magicRules, nestRules, classById, classList, combatRules, dungeonById, dungeons, expeditionRules, lifeRules, progression, retirementRules, smithRules, timeRules, villageRules } from './data'
+import { TRINKET_IDS, enchantTime, finishEnchant, readMagicJob, startEnchant, type MagicJob } from './magic'
+import { POTION_IDS, brewTime, finishBrew, readAlchemyJob, readSupplies, returnSupplies, startBrew, takeSupplies, type AlchemyJob } from './alchemy'
+import { adRules, automationRules, potionById, trinketById, moraleRules, magicRules, nestRules, classById, classList, combatRules, dungeonById, dungeons, expeditionRules, lifeRules, progression, retirementRules, smithRules, timeRules, villageRules } from './data'
 import { forgeGear, normalizeGear, recipeById } from './gear'
 import { applyReport, DEFAULT_TACTICS, gainXp, runDungeon } from './dungeon'
 import { canDeploy, generateHero, isChild, generateVisitors, normalizeHero, restHero, withAge } from './hero'
@@ -17,7 +17,7 @@ import type { Rng } from './rng'
 import type { Genes } from './genes'
 import type { Bond, ClassId, CombatError, DungeonReport, Gear, GearSlot, Gender, Hero, PartyMember, PotionId, Proposal, Role, Row, Supplies, Tactics, TrinketId } from './types'
 
-export const SAVE_VERSION = 16
+export const SAVE_VERSION = 17
 
 export type SeasonId = 'spring' | 'summer' | 'autumn' | 'winter'
 
@@ -161,6 +161,7 @@ export type GameNotice =
   | 'noTraining'
   | 'guildRecord'
   | 'festivalDone'
+  | 'queueFull'
   | 'drillHero'
   | 'trainingFull'
   | 'scoutBusy'
@@ -239,6 +240,20 @@ export type GameState = {
   guild: GuildBoard | null
   // The festival held this season, if any (Docs/morale.md).
   festival: Festival | null
+  // Workshop queues and standing orders (Docs/automation.md).
+  automation: Automation
+}
+
+export type QueueBuilding = 'smith' | 'alchemy' | 'magic'
+export type Automation = {
+  care: boolean
+  drill: boolean
+  potions: Supplies
+  queues: { smith: string[]; alchemy: PotionId[]; magic: TrinketId[] }
+}
+
+export function freshAutomation(): Automation {
+  return { care: automationRules.carePerDefault, drill: false, potions: {}, queues: { smith: [], alchemy: [], magic: [] } }
 }
 
 export type Festival = { season: string; kind: SeasonId }
@@ -295,6 +310,9 @@ export type GameAction =
   | { type: 'forget'; heroId: string; skillId: string }
   | { type: 'deliver'; contractId: string }
   | { type: 'festival' }
+  | { type: 'dequeue'; building: QueueBuilding; index: number }
+  | { type: 'automation'; care?: boolean; drill?: boolean }
+  | { type: 'potionTarget'; potionId: PotionId; count: number }
   | { type: 'declineProposal'; a: string; b: string; now?: number }
   | { type: 'wish'; now: number }
   | { type: 'brew'; potionId: PotionId; now: number }
@@ -351,6 +369,7 @@ export function freshState(seed: number, now: number): GameState {
     drills: [],
     guild: null,
     festival: null,
+    automation: freshAutomation(),
   }
 }
 
@@ -468,7 +487,7 @@ function apply(state: GameState, action: GameAction): GameState {
     return dropFromPresets({ ...state, notice: null, roster: state.roster.filter((hero) => hero.id !== action.id) })
   }
   if (action.type === 'craft') {
-    return startCraft(state, action.recipeId, action.now)
+    return state.smith ? enqueue(state, 'smith', action.recipeId) : startCraft(state, action.recipeId, action.now)
   }
   if (action.type === 'enhance') {
     return startEnhance(state, action.gearId, action.now)
@@ -594,10 +613,10 @@ function apply(state: GameState, action: GameAction): GameState {
     return makeWish(state, action.now)
   }
   if (action.type === 'enchant') {
-    return startEnchant(state, action.trinketId, action.now)
+    return state.magic ? enqueue(state, 'magic', action.trinketId) : startEnchant(state, action.trinketId, action.now)
   }
   if (action.type === 'brew') {
-    return startBrew(state, action.potionId, action.now)
+    return state.alchemy ? enqueue(state, 'alchemy', action.potionId) : startBrew(state, action.potionId, action.now)
   }
   if (action.type === 'supplies') {
     const count = Math.max(0, Math.floor(action.count))
@@ -611,6 +630,15 @@ function apply(state: GameState, action: GameAction): GameState {
   }
   if (action.type === 'buyIntel') {
     return buyIntel(state)
+  }
+  if (action.type === 'dequeue') {
+    return dequeue(state, action.building, action.index)
+  }
+  if (action.type === 'automation') {
+    return { ...state, notice: null, automation: { ...state.automation, ...(action.care != null ? { care: action.care } : {}), ...(action.drill != null ? { drill: action.drill } : {}) } }
+  }
+  if (action.type === 'potionTarget') {
+    return { ...state, notice: null, automation: { ...state.automation, potions: { ...state.automation.potions, [action.potionId]: Math.max(0, Math.floor(action.count)) } } }
   }
   if (action.type === 'festival') {
     return holdFestival(state)
@@ -664,19 +692,22 @@ function advance(state: GameState, now: number): GameState {
     // Always move forward, even if a broken save has the season overrun.
     const until = Math.min(Math.max(turnAt, next.lastTickAt + 1), effectiveNow)
     const piece = until - next.lastTickAt
+    const from = next.lastTickAt
     const before = next.calendar
     // Everything due within the piece settles first, in the old year, so a
     // party home just before a year turns is buried with that year's age.
     next = finishConstruction(next, until, completed)
-    next = finishSmith(next, until, crafted)
-    next = finishBrew(next, until, crafted)
-    next = finishEnchant(next, until, crafted)
+    // Each workshop finishes job after job, starting the next in its queue (Docs/automation.md).
+    next = runWorkshop(next, 'smith', from, until, crafted)
+    next = runWorkshop(next, 'alchemy', from, until, crafted)
+    next = runWorkshop(next, 'magic', from, until, crafted)
     next = finishScout(next, until, until === turnAt)
-    next = finishDrills(next, until)
+    next = runDrills(next, from, until, busyHeroIds)
     next = finishCare(next, until)
     next = recoverRoster(next, piece, until)
     next = updateVisitors(next, until, visitors)
     next = returnExpeditions(next, until, returned)
+    next = autoCare(next, until)
     // Auto runs settle within their season, against that season's board (review 1208be3).
     next = ensureBoard(next)
     next = runAuto(next, piece, autoTally)
@@ -1920,6 +1951,7 @@ function normalize(record: Record<string, unknown>, now: number): GameState {
     drills: readDrills(record.drills),
     guild: readBoard(record.guild),
     festival: readFestival(record.festival),
+    automation: readAutomation(record.automation),
     auto: isAuto(record.auto) ? record.auto : base.auto,
     notice: null,
   }
@@ -2066,5 +2098,162 @@ function readFestival(value: unknown): Festival | null {
   }
   const festival = value as Festival
   return typeof festival.season === 'string' && timeRules.seasons.includes(festival.kind) ? { season: festival.season, kind: festival.kind } : null
+}
+
+// ---------- automation (Docs/automation.md) ----------
+
+function queueRoom(state: GameState, building: QueueBuilding): number {
+  return state.buildings[building] * automationRules.queuePerLevel
+}
+
+// A busy workshop takes the order into its queue, paid now. The start
+// function on an idle copy checks and charges exactly as a direct order would.
+function enqueue(state: GameState, building: QueueBuilding, id: string): GameState {
+  const queue = state.automation.queues[building]
+  if (queue.length >= queueRoom(state, building)) {
+    return { ...state, notice: 'queueFull' }
+  }
+  const probe =
+    building === 'smith'
+      ? startCraft({ ...state, smith: null }, id, 0)
+      : building === 'alchemy'
+        ? startBrew({ ...state, alchemy: null }, id as PotionId, 0)
+        : startEnchant({ ...state, magic: null }, id as TrinketId, 0)
+  if (probe.notice) {
+    return { ...state, notice: probe.notice }
+  }
+  return {
+    ...state,
+    notice: null,
+    gold: probe.gold,
+    materials: probe.materials,
+    automation: { ...state.automation, queues: { ...state.automation.queues, [building]: [...queue, id] } },
+  }
+}
+
+function dequeue(state: GameState, building: QueueBuilding, index: number): GameState {
+  const queue = state.automation.queues[building]
+  const id = queue[index]
+  if (id == null) {
+    return { ...state, notice: 'missing' }
+  }
+  const refund = orderCost(building, id)
+  return {
+    ...state,
+    notice: null,
+    gold: state.gold + refund.gold,
+    materials: {
+      ...state.materials,
+      wood: state.materials.wood + refund.wood,
+      stone: state.materials.stone + refund.stone,
+      iron: state.materials.iron + refund.iron,
+      herb: state.materials.herb + refund.herb,
+      bone: state.materials.bone + refund.bone,
+      crystal: state.materials.crystal + refund.crystal,
+    },
+    automation: { ...state.automation, queues: { ...state.automation.queues, [building]: queue.filter((_, at) => at !== index) } },
+  }
+}
+
+function orderCost(building: QueueBuilding, id: string) {
+  const none = { gold: 0, wood: 0, stone: 0, iron: 0, herb: 0, bone: 0, crystal: 0 }
+  if (building === 'smith') {
+    const recipe = recipeById(id)
+    return recipe ? { ...none, gold: recipe.gold, wood: recipe.wood, stone: recipe.stone, iron: recipe.iron } : none
+  }
+  if (building === 'alchemy') {
+    const potion = potionById(id)
+    return potion ? { ...none, gold: potion.gold, herb: potion.herb, bone: potion.bone } : none
+  }
+  const trinket = trinketById(id)
+  return trinket ? { ...none, gold: trinket.gold, crystal: trinket.crystal } : none
+}
+
+// Starts the next paid order, or for the alchemy workshop a potion that has
+// fallen below its standing stock, at the moment the workshop is free.
+function startNext(state: GameState, building: QueueBuilding, at: number): GameState {
+  const queue = state.automation.queues[building]
+  const [id, ...rest] = queue
+  if (id != null) {
+    const queues = { ...state.automation.queues, [building]: rest }
+    const automation = { ...state.automation, queues }
+    if (building === 'smith') {
+      return { ...state, automation, smith: { kind: 'craft', recipeId: id, gear: null, finishAt: at + (recipeById(id)?.ms ?? 0) } }
+    }
+    if (building === 'alchemy') {
+      return { ...state, automation, alchemy: { potionId: id as PotionId, finishAt: at + brewTime(state, id as PotionId) } }
+    }
+    return { ...state, automation, magic: { trinketId: id as TrinketId, finishAt: at + enchantTime(state, id as TrinketId) } }
+  }
+  if (building === 'alchemy') {
+    for (const potionId of automationRules.potionOrder as PotionId[]) {
+      const want = state.automation.potions[potionId] ?? 0
+      if (want > 0 && (state.potions[potionId] ?? 0) < want) {
+        const started = startBrew(state, potionId, at)
+        if (!started.notice) {
+          return started
+        }
+      }
+    }
+  }
+  return state
+}
+
+function jobOf(state: GameState, building: QueueBuilding): { finishAt: number } | null {
+  return building === 'smith' ? state.smith : building === 'alchemy' ? state.alchemy : state.magic
+}
+
+function runWorkshop(state: GameState, building: QueueBuilding, from: number, until: number, crafted: string[]): GameState {
+  if (state.buildings[building] < 1) {
+    return state
+  }
+  let next = jobOf(state, building) ? state : startNext(state, building, from)
+  for (let guard = 0; guard < 500; guard += 1) {
+    const job = jobOf(next, building)
+    if (!job || job.finishAt > until) {
+      break
+    }
+    const at = job.finishAt
+    next = building === 'smith' ? finishSmith(next, at, crafted) : building === 'alchemy' ? finishBrew(next, at, crafted) : finishEnchant(next, at, crafted)
+    next = startNext(next, building, at)
+  }
+  return next
+}
+
+// The temple treats the wounded at home without being asked (treatment is free).
+function autoCare(state: GameState, at: number): GameState {
+  if (!state.automation.care || state.buildings.temple < 1) {
+    return state
+  }
+  const away = busyHeroIds(state)
+  let next = state
+  for (const hero of state.roster) {
+    if ((hero.condition === 'injured' || hero.condition === 'critical') && hero.treatAt == null && !away.has(hero.id)) {
+      const treated = startTreat(next, hero.id, at)
+      if (!treated.notice) {
+        next = { ...treated, notice: state.notice }
+      }
+    }
+  }
+  return next
+}
+
+function readAutomation(value: unknown): Automation {
+  const base = freshAutomation()
+  if (value == null || typeof value !== 'object') {
+    return base
+  }
+  const record = value as Partial<Automation>
+  const list = (entries: unknown) => (Array.isArray(entries) ? entries.filter((entry): entry is string => typeof entry === 'string') : [])
+  return {
+    care: typeof record.care === 'boolean' ? record.care : base.care,
+    drill: typeof record.drill === 'boolean' ? record.drill : base.drill,
+    potions: readSupplies(record.potions),
+    queues: {
+      smith: list(record.queues?.smith),
+      alchemy: list(record.queues?.alchemy).filter((id): id is PotionId => POTION_IDS.includes(id as PotionId)),
+      magic: list(record.queues?.magic).filter((id): id is TrinketId => TRINKET_IDS.includes(id as TrinketId)),
+    },
+  }
 }
 

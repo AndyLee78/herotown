@@ -148,7 +148,8 @@ describe('trinkets and the magic workshop', () => {
     const started = reduce(state, { type: 'enchant', trinketId: 'alert', now })
     expect(started.notice).toBeNull()
     expect(started.materials.crystal).toBe(20 - 4)
-    expect(reduce(started, { type: 'enchant', trinketId: 'trapSense', now }).notice).toBe('magicBusy')
+    // A busy workshop queues the order instead (Docs/automation.md).
+    expect(reduce(started, { type: 'enchant', trinketId: 'trapSense', now }).automation.queues.magic).toEqual(['trapSense'])
     const done = reduce(started, { type: 'catchUp', now: now + enchantTime(state, 'alert') + 1 })
     expect(done.magic).toBeNull()
     expect(done.stash.at(-1)).toMatchObject({ slot: 'trinket', recipeId: 'trinket.alert' })

@@ -105,6 +105,8 @@ Claude Code, Cursor, GPT(Codex)가 함께 쓰는 작업 목록이다. 작업 하
 | 63 | 사기·감정·축제 화면 | GPT (Cursor 대신) | `App.tsx`, `src/ui/game/*.tsx`, `styles.css`, `src/locales/*` | 완료 (3068fbd) |
 | 64 | 사기·축제 core 코드 리뷰 (b9036a0) | GPT | `Docs/reviews/b9036a0.md` (새 파일만) | 완료 (65a731f) |
 | 65 | 사기가 진행에 주는 영향 측정 | GPT | `tools/curve.ts`, `print-curve.ts`, `tune-curve.ts`, `first-hour.ts` | 완료 (727df45) |
+| 66 | 자동화 화면(대기열·물약 유지·자동 치료·자동 훈련) | GPT (Cursor 대신) | `App.tsx`, `src/ui/game/*.tsx`, `styles.css`, `src/locales/*` | 대기 |
+| 67 | 자동화 core 코드 리뷰 (커밋 해시는 아래) | GPT | `Docs/reviews/<해시>.md` (새 파일만) | 대기 (66 뒤) |
 
 ---
 
@@ -1548,3 +1550,42 @@ tools/curve.ts, tools/print-curve.ts, tools/tune-curve.ts, tools/first-hour.ts�
 - `npx tsx tools/first-hour.ts --festival=compare`로 시드 1–20의 첫 12시간(봄)을 비교했다. 성인 영웅 누적 시간의 사기 상/중/하 비율은 축제 없음 69.38/30.62/0.00%, 축제 있음 73.44/26.44/0.12%였다. 사기만으로 자동 출정에서 제외된 시간은 각각 0/1.44 영웅·시간, 실제 구간의 제외는 0/3건이었다. 축제 비용은 총수입 대비 중앙값 0.46%였다.
 - 짝지은 첫 클리어 시각은 동굴·숲 0분, 지하묘지 1.94분 단축, 독늪 0.86분 지연이었다. 12시간 파티 레벨 중앙값은 40.50→41.00, 같은 시드의 레벨 차이 중앙값은 0이었다.
 - 사기 80 이상이 봄의 대부분을 차지해 `high` 80→85를 우선 비교한다. 기본 사기에서 배우자/부모·자녀를 잃으면 전투 없이 실의가 약 8/4시간 지속된다. 너무 길다면 `driftPerHour` 2.5→3을 별도로 비교한다(약 6시간 40분/3시간 20분). 실의 관측이 적어 슬픔 감소 폭은 유지한다.
+
+---
+
+## 66. 자동화 화면(대기열·물약 유지·자동 치료·자동 훈련) (GPT, Cursor 대신)
+
+**지금 시작할 수 있다.** 설계: `Docs/automation.md`. 끝나면 Claude Code가 화면을 직접 확인한다.
+
+**전달할 내용**
+
+```
+Docs/automation.md를 읽고 화면을 만든다. src/ui/App.tsx, src/ui/game/*.tsx, src/ui/styles.css, src/locales/*만 고친다. core는 고치지 않는다. 기존 화면의 구조와 kit.tsx의 공용 조각을 그대로 쓴다.
+
+core에 이미 있는 것:
+- state.automation: { care, drill, potions: { [potionId]: 유지 수량 }, queues: { smith: recipeId[], alchemy: PotionId[], magic: TrinketId[] } }.
+- 공방이 작업 중일 때 { type: 'craft' | 'brew' | 'enchant' }를 보내면 대기열에 들어간다(비용은 그때 낸다). 대기열 칸 = 건물 레벨. 가득 차면 notice 'queueFull'. 대장간 강화는 대기열에 들어가지 않는다(지금처럼 'smithBusy').
+- { type: 'dequeue', building: 'smith' | 'alchemy' | 'magic', index }: 취소하고 비용을 돌려받는다.
+- { type: 'potionTarget', potionId, count }: 물약 유지 수량(0이면 끔).
+- { type: 'automation', care?: boolean, drill?: boolean }: 신전 자동 치료(기본 켬), 훈련소 자동 훈련(기본 끔).
+
+1. 대장간·연금술 공방·마법 공방 창: 지금 작업 아래에 "대기열 n/m" 목록(이름, 예상 시작 시각 또는 순서)과 각 줄의 [취소]. 작업 중이면 만들기 버튼 글자를 "대기열에 넣기"로 바꾼다. 가득 차면 비활성.
+2. 연금술 공방 창: 물약마다 "창고에 n개 유지" 숫자 입력(−/+ 버튼)과 지금 재고. 유지 수량이 있고 공방이 비어 있으면 알아서 만든다는 안내.
+3. 신전(영웅 상세의 치료 부분 또는 마을 운영의 신전 카드)에 "자동 치료" 스위치. 훈련소 창에 "자동 훈련" 스위치와 "파티보다 1레벨 이상 뒤처진 영웅을 골드를 써서 보낸다. 선택한 파티의 영웅은 보내지 않는다" 안내.
+4. 문구 ko/en 같은 키.
+
+확인: npm run dev에서 디버그 세이브로 공방 세 곳에 대기열을 걸고, 시간 넘기기로 차례대로 끝나는지, 취소하면 자원이 돌아오는지 본다. 확인한 내용을 메모에.
+```
+
+---
+
+## 67. 자동화 core 코드 리뷰 (GPT)
+
+**작업 66 뒤에 시작한다(같은 도구라 순서대로).** core 커밋은 git log에서 "Add workshop queues"로 찾는다.
+
+**전달할 내용**
+
+```
+자동화 core 커밋("Add workshop queues"로 찾는다)을 리뷰한다. 코드는 고치지 않고 Docs/reviews/<해시>.md 새 파일 하나에만 쓴다(Docs/reviews/README.md 형식).
+볼 것: Docs/automation.md와 규칙 차이, 대기열의 비용 계산과 환불이 직접 주문과 같은지(은퇴자 보너스·공방 레벨·대기 중 레벨업), 대기열 작업이 이전 작업이 끝난 시각에 이어 시작하는지(오프라인 12시간, 계절 경계), 물약 유지가 과하게 만들거나 원정에 들고 간 물약을 어떻게 세는지, 자동 치료와 원정·훈련·정찰·사망의 관계, 자동 훈련이 선택한 파티·자동 파티·바쁜 영웅을 빼는지와 골드가 모자랄 때, 세이브 16 → 17.
+```

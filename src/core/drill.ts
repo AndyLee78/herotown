@@ -1,4 +1,4 @@
-import { progression, retirementRules, trainingRules } from './data'
+import { automationRules, progression, retirementRules, trainingRules } from './data'
 import { gainXp } from './dungeon'
 import type { GameState } from './game'
 import { canDeploy, isChild } from './hero'
@@ -51,6 +51,48 @@ export function startDrill(state: GameState, heroId: string, now: number, busy: 
     return { ...state, notice: 'resources' }
   }
   return { ...state, notice: null, gold: state.gold - gold, drills: [...state.drills, { heroId, finishAt: now + drillTime(state), xp: drillXp(state, hero) }] }
+}
+
+// Auto training (Docs/automation.md): drills finish one by one in time
+// order, and each freed slot goes to the hero furthest behind.
+export function runDrills(state: GameState, from: number, until: number, busy: (state: GameState) => Set<string>): GameState {
+  if (!state.automation?.drill) {
+    return finishDrills(state, until)
+  }
+  let next = fillDrills(finishDrills(state, from), from, busy)
+  for (let guard = 0; guard < 200; guard += 1) {
+    const due = next.drills.filter((drill) => drill.finishAt <= until).sort((a, b) => a.finishAt - b.finishAt)[0]
+    if (!due) {
+      break
+    }
+    next = finishDrills(next, due.finishAt)
+    next = fillDrills(next, due.finishAt, busy)
+  }
+  return next
+}
+
+function fillDrills(state: GameState, at: number, busy: (state: GameState) => Set<string>): GameState {
+  let next = state
+  const target = partyLevel(state)
+  // Heroes in the selected party or the fixed auto party stay free to go out.
+  const preset = state.presets.find((entry) => entry.id === state.presetId)
+  const reserved = new Set([...(preset?.slots ?? []), ...state.auto.party].map((slot) => slot.id))
+  while (next.drills.length < next.buildings.training) {
+    const away = busy(next)
+    const pick = next.roster
+      .filter((hero) => !reserved.has(hero.id) && !away.has(hero.id) && !isChild(hero) && canDeploy(hero) && hero.condition !== 'injured' && hero.condition !== 'critical')
+      .filter((hero) => target - hero.level >= automationRules.drillGap && next.gold >= drillGold(hero))
+      .sort((a, b) => a.level - b.level || a.id.localeCompare(b.id))[0]
+    if (!pick) {
+      break
+    }
+    const started = startDrill(next, pick.id, at, away)
+    if (started.notice) {
+      break
+    }
+    next = started
+  }
+  return next
 }
 
 export function finishDrills(state: GameState, until: number): GameState {

@@ -215,7 +215,8 @@ describe('game state', () => {
     const job = reduce(ready, { type: 'craft', recipeId: 'iron.blade', now })
     expect(job.smith?.recipeId).toBe('iron.blade')
     expect(job.materials.iron).toBe(16)
-    expect(reduce(job, { type: 'craft', recipeId: 'iron.mail', now }).notice).toBe('smithBusy')
+    // A busy smith queues the order instead (Docs/automation.md).
+    expect(reduce(job, { type: 'craft', recipeId: 'iron.mail', now }).automation.queues.smith).toEqual(['iron.mail'])
     const done = reduce(job, { type: 'catchUp', now: now + smithRules.recipes[1].ms })
     expect(done.stash).toHaveLength(1)
     expect(done.smith).toBeNull()

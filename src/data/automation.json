@@ -1,0 +1,11 @@
+{
+  "queuePerLevel": 1,
+  "carePerDefault": true,
+  "drillGap": 1,
+  "potionOrder": [
+    "heal",
+    "antidote",
+    "tonic",
+    "clarity"
+  ]
+}

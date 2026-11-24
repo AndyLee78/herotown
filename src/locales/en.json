@@ -272,7 +272,8 @@
     "drillHero": "This hero cannot train now.",
     "trainingFull": "The training ground is full.",
     "guildRecord": "Not enough finished contracts. Complete more guild contracts.",
-    "festivalDone": "This season's festival has already been held."
+    "festivalDone": "This season's festival has already been held.",
+    "queueFull": "The queue is full. A higher building level makes room."
   },
   "defeat": {
     "noHealer": "Bring a healer to keep the party going.",

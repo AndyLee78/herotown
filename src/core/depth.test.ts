@@ -124,7 +124,8 @@ describe('alchemy workshop and potion stock', () => {
     expect(reduce(freshState(5, now), { type: 'brew', potionId: 'heal', now }).notice).toBe('noAlchemy')
     const started = reduce(workshop(), { type: 'brew', potionId: 'antidote', now })
     expect(started.alchemy?.potionId).toBe('antidote')
-    expect(reduce(started, { type: 'brew', potionId: 'heal', now }).notice).toBe('alchemyBusy')
+    // A busy workshop queues the order instead (Docs/automation.md).
+    expect(reduce(started, { type: 'brew', potionId: 'heal', now }).automation.queues.alchemy).toEqual(['heal'])
     expect(reduce(workshop(), { type: 'brew', potionId: 'tonic', now }).notice).toBe('locked')
     const done = reduce(started, { type: 'catchUp', now: now + (potionById('antidote')?.ms ?? 0) })
     expect(done.alchemy).toBeNull()
