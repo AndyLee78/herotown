@@ -64,10 +64,12 @@ describe('emotions', () => {
   })
 
   it('caps everyday cheer below the high mark', () => {
-    const [proud] = cheer([hero('a', 'warrior', { morale: 74 })], ['a'], 3, moraleRules.pride.victoryCap)
-    expect(moraleOf(proud!)).toBe(moraleRules.pride.victoryCap)
-    const [still] = cheer([hero('a', 'warrior', { morale: 78 })], ['a'], 3, moraleRules.pride.victoryCap)
-    expect(moraleOf(still!)).toBe(78)
+    const cap = moraleRules.pride.victoryCap
+    const [proud] = cheer([hero('a', 'warrior', { morale: cap - 1 })], ['a'], 3, cap)
+    expect(moraleOf(proud!)).toBe(cap)
+    const [still] = cheer([hero('a', 'warrior', { morale: cap + 3 })], ['a'], 3, cap)
+    expect(moraleOf(still!)).toBe(cap + 3)
+    expect(cap).toBeLessThan(moraleRules.high)
   })
 
   it('is glad at a wedding', () => {
@@ -108,3 +110,24 @@ describe('festivals', () => {
     expect(migrate(JSON.parse(JSON.stringify(old)), now).festival).toBeNull()
   })
 })
+
+describe('review b9036a0 fixes', () => {
+  it('cheers everyone when a festival lifts the town a level', () => {
+    const state = { ...town([hero('a')]), fame: 11 }
+    const held = reduce(state, { type: 'festival' })
+    expect(moraleOf(held.roster[0]!)).toBe(moraleRules.base + moraleRules.festival.morale + moraleRules.pride.townLevel)
+  })
+
+  it("adds a first clear's joy on top of the victory's pride", () => {
+    const party = [hero('w', 'warrior', { morale: 40 }), hero('c', 'cleric', { morale: 40 })]
+    let state = { ...town(party), fame: 0 }
+    state = reduce(reduce(state, { type: 'add', id: 'w' }), { type: 'add', id: 'c' })
+    const sent = reduce(state, { type: 'depart', now, confirm: true })
+    const home = reduce(sent, { type: 'catchUp', now: sent.expeditions[0]!.returnAt + 1 })
+    if (home.cleared.includes('hill_cave')) {
+      const morale = moraleOf(home.roster.find((entry) => entry.id === 'w')!)
+      expect(morale).toBeGreaterThanOrEqual(40 + moraleRules.pride.victory + moraleRules.joy.firstClear - 1)
+    }
+  })
+})
+

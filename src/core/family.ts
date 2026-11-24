@@ -1,7 +1,7 @@
 import { bandForAge, ageBands, classById, dungeons, familyRules, maxAge, moraleRules, names, timeRules, traits, villageRules } from './data'
 import { genesFor, inheritGenes } from './genes'
 import { createHero } from './hero'
-import { cheer, shiftMorale } from './morale'
+import { cheer, mourn, shiftMorale } from './morale'
 import { createRng, type Rng } from './rng'
 import type { GameState, Grave } from './game'
 import { STAT_KEYS, type Bond, type BondStage, type Gender, type Hero, type Proposal, type Stats, type TraitId } from './types'
@@ -514,7 +514,8 @@ export function passAway(state: GameState, events: FamilyEvents): GameState {
   const gone = new Set(graves.map((grave) => grave.id))
   const presets = state.presets.map((preset) => ({ ...preset, slots: preset.slots.filter((slot) => !gone.has(slot.id)) }))
   const auto = { ...state.auto, party: state.auto.party.filter((slot) => !gone.has(slot.id)) }
-  return { ...state, roster, retirees, presets, auto, graveyard: [...state.graveyard, ...graves] }
+  // The family grieves as the year turns (Docs/morale.md).
+  return { ...state, roster: mourn(roster, graves, state.bonds), retirees, presets, auto, graveyard: [...state.graveyard, ...graves] }
 }
 
 export function hallOfFame(state: GameState): Grave[] {

@@ -1,7 +1,7 @@
 {
   "base": 60,
   "driftPerHour": 2.5,
-  "high": 80,
+  "high": 85,
   "highAttack": 0.05,
   "low": 30,
   "lowPenalty": 0.2,
@@ -20,7 +20,7 @@
   "pride": {
     "victory": 3,
     "townLevel": 10,
-    "victoryCap": 75
+    "victoryCap": 80
   },
   "festival": {
     "goldBase": 50,

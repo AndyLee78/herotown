@@ -355,6 +355,17 @@ export function freshState(seed: number, now: number): GameState {
 }
 
 export function reduce(state: GameState, action: GameAction): GameState {
+  const next = applyAction(state, action)
+  // A town level-up cheers everyone, whatever raised the fame: a first clear,
+  // a building, a festival or a contract (Docs/morale.md, review b9036a0).
+  const gained = townLevel(next.fame).level - townLevel(state.fame).level
+  if (gained > 0 && next !== state) {
+    return { ...next, roster: next.roster.map((hero) => shiftMorale(hero, moraleRules.pride.townLevel * gained)) }
+  }
+  return next
+}
+
+function applyAction(state: GameState, action: GameAction): GameState {
   const now = 'now' in action && typeof action.now === 'number' ? action.now : state.lastTickAt
   const next = tidyFamily(apply(state, action), now)
   return action.type === 'catchUp' ? next : { ...next, notice: next.notice }
@@ -654,7 +665,6 @@ function advance(state: GameState, now: number): GameState {
     const until = Math.min(Math.max(turnAt, next.lastTickAt + 1), effectiveNow)
     const piece = until - next.lastTickAt
     const before = next.calendar
-    const gravesBefore = next.graveyard.length
     // Everything due within the piece settles first, in the old year, so a
     // party home just before a year turns is buried with that year's age.
     next = finishConstruction(next, until, completed)
@@ -679,11 +689,6 @@ function advance(state: GameState, now: number): GameState {
     // The old may pass away when a year turns, after everyone has aged.
     for (let years = next.calendar.year - before.year; years > 0; years -= 1) {
       next = passAway(next, family)
-    }
-    // Grief for everyone who left for good in this piece (Docs/morale.md).
-    const departed = next.graveyard.slice(gravesBefore)
-    if (departed.length) {
-      next = { ...next, roster: mourn(next.roster, departed, next.bonds) }
     }
     // Widow and unbond at the moment someone left, not when the catch-up ends.
     next = tidyFamily({ ...next, lastTickAt: until }, until)
@@ -1199,11 +1204,11 @@ function grantVictoryRewards(state: GameState, report: DungeonReport, dungeonId:
   if (first) {
     fame += drop.fame
   }
-  // Pride for the party, more for a village first; a town level-up cheers everyone (Docs/morale.md).
   const party = (report.party ?? []).map((member) => member.id)
-  let roster = first ? cheer(state.roster, party, moraleRules.joy.firstClear) : cheer(state.roster, party, moraleRules.pride.victory, moraleRules.pride.victoryCap)
-  if (townLevel(fame).level > townLevel(state.fame).level) {
-    roster = roster.map((hero) => shiftMorale(hero, moraleRules.pride.townLevel))
+  // Pride (up to the everyday cap), then joy on top for a village first (review b9036a0).
+  let roster = cheer(state.roster, party, moraleRules.pride.victory, moraleRules.pride.victoryCap)
+  if (first) {
+    roster = cheer(roster, party, moraleRules.joy.firstClear)
   }
   // The old one-off cave quest gave way to the contract board (Docs/guild.md).
   return progressClear({ ...state, roster, materials, fame, cleared }, dungeonId)
@@ -1366,7 +1371,10 @@ function settleParty(
       graveyard.push(outcome.grave)
     }
   }
-  return { roster, graveyard }
+  // Grief lands when the party comes home with the news; several losses on
+  // one trip count as the deepest one (Docs/morale.md, review b9036a0).
+  const lost = graveyard.slice(state.graveyard.length)
+  return { roster: lost.length ? mourn(roster, lost, state.bonds) : roster, graveyard }
 }
 
 // ---------- retirement ----------
