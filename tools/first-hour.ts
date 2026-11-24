@@ -1,13 +1,14 @@
 // Plays the first hours like a simple player would, to catch dead ends in
-// the early flow. Run: npx tsx tools/first-hour.ts [minutes] [seed,seed,...] [--guild=off|on|compare]
-import { classById, dungeons, guildRules, potionById, progression, trinketById, villageRules } from '../src/core/data'
+// the early flow. Run: npx tsx tools/first-hour.ts [minutes] [seed,seed,...] [--festival=off|on|compare]
+import { classById, dungeons, guildRules, moraleRules, potionById, progression, timeRules, trinketById, villageRules } from '../src/core/data'
 import { fountainWishes } from '../src/core/fountain'
-import { busyHeroIds, dungeonUnlocked, freshState, presetById, reduce, townLevel, type BuildingId, type GameState } from '../src/core/game'
+import { busyHeroIds, dungeonUnlocked, festivalCost, freshState, presetById, reduce, townLevel, type BuildingId, type GameState } from '../src/core/game'
 import { guideStatus } from '../src/core/guide'
 import { guildLevel, type Contract } from '../src/core/guild'
-import { canDeploy } from '../src/core/hero'
+import { canDeploy, isChild } from '../src/core/hero'
 import { heroTrinkets, trinketOf } from '../src/core/magic'
-import { nestRevealed, nestSeason } from '../src/core/nest'
+import { driftMorale, lowMorale, moraleOf } from '../src/core/morale'
+import { nestRevealed, nestSeason, seasonKey } from '../src/core/nest'
 import { NEST_ID, nestPreparation, skillChoices } from './curve'
 import { partyLevel as drillPartyLevel } from '../src/core/drill'
 import type { ClassId, Hero, PotionId, Supplies } from '../src/core/types'
@@ -130,6 +131,31 @@ const fountainModes = ['off', 'ready', '5min'] as const
 type FountainMode = typeof fountainModes[number]
 type Income = { fountain: number; expedition: number; guide: number; jackpots: number; contracts: number }
 const checkpoints = [60, 180]
+const hourMs = 3_600_000
+const grossIncome = ({ fountain, expedition, guide, contracts }: Income) => fountain + expedition + guide + contracts
+
+function moraleTime(state: GameState, hours: number, autoWindow: boolean) {
+  const busy = busyHeroIds(state)
+  const presets = [presetById(state, state.presetId), ...state.presets.filter(({ id }) => id !== state.presetId)]
+  const autoSlots = state.auto.enabled && state.cleared.includes(state.auto.dungeonId)
+    ? new Set(presets.slice(0, guildLevel(state.buildings.guild).autoParties).flatMap((preset) => preset?.slots.map(({ id }) => id) ?? []))
+    : new Set<string>()
+  const sample = { heroHours: 0, highHours: 0, lowHours: 0, blockedHours: 0, blockedDepartures: 0 }
+  for (const hero of state.roster) {
+    if (isChild(hero) || hero.condition === 'dead') continue
+    const morale = moraleOf(hero)
+    const high = morale >= moraleRules.high ? Math.min(hours, (morale - moraleRules.high) / moraleRules.driftPerHour) : 0
+    const low = lowMorale(hero) ? Math.min(hours, (moraleRules.low - morale) / moraleRules.driftPerHour) : 0
+    sample.heroHours += hours
+    sample.highHours += high
+    sample.lowHours += low
+    if (autoSlots.has(hero.id) && canDeploy(hero) && !isHurt(hero) && !busy.has(hero.id)) {
+      sample.blockedHours += low
+      if (autoWindow && lowMorale(driftMorale(hero, hours))) sample.blockedDepartures += 1
+    }
+  }
+  return sample
+}
 
 function openContracts(state: GameState) {
   return [...(state.guild?.seasonal ?? []), state.guild?.repeat].filter((contract): contract is Contract => contract != null && !contract.done)
@@ -169,7 +195,7 @@ function catchUpWithoutContractGold(state: GameState, now: number) {
   }
 }
 
-function simulate(minutes: number, seed: number, fountain: FountainMode, keepFountainAtLevelOne = false, learnSkills = true, manageGuild = false, measureGuild = false) {
+function simulate(minutes: number, seed: number, fountain: FountainMode, keepFountainAtLevelOne = false, learnSkills = true, manageGuild = false, measureGuild = false, festivals?: boolean) {
   const firstClear: Record<string, number> = {}
   const start = 1_700_000_000_000
   let state = freshState(seed, start)
@@ -178,6 +204,7 @@ function simulate(minutes: number, seed: number, fountain: FountainMode, keepFou
   const income: Income = { fountain: 0, expedition: 0, guide: 0, jackpots: 0, contracts: 0 }
   const guildAt: Record<number, number> = {}
   const recordAt: Record<number, number> = {}
+  const morale = { heroHours: 0, highHours: 0, lowHours: 0, blockedHours: 0, blockedDepartures: 0, festivalGold: 0, festivalsHeld: 0 }
   let autoWindows = 0
   let peakExpeditions = 0
   let nextAuto = start
@@ -290,6 +317,13 @@ function simulate(minutes: number, seed: number, fountain: FountainMode, keepFou
       const goldBefore = state.gold
       state = reduce(state, { type: 'claimGuide' })
       income.guide += state.gold - goldBefore
+    }
+    if (festivals && state.festival?.season !== seasonKey(state.calendar) && state.gold >= festivalCost(state)) {
+      const celebrated = reduce(state, { type: 'festival' })
+      morale.festivalGold += state.gold - celebrated.gold
+      morale.festivalsHeld += 1
+      state = celebrated
+      note(`festival: ${state.calendar.season}`)
     }
     const prepareMarsh = dungeonUnlocked(state, marshId)
     const needsWorkshop = prepareMarsh && state.buildings.alchemy === 0 && townLevel(state.fame).level >= workshop.unlockLevel
@@ -434,6 +468,14 @@ function simulate(minutes: number, seed: number, fountain: FountainMode, keepFou
     const previous = state
     // Five seconds divides every fountain interval, so all modes use the same clock.
     now = Math.min(now + (autoWindow ? villageRules.auto.runMs : 5_000), horizon)
+    if (festivals != null) {
+      const sample = moraleTime(previous, (now - previous.lastTickAt) / hourMs, autoWindow)
+      morale.heroHours += sample.heroHours
+      morale.highHours += sample.highHours
+      morale.lowHours += sample.lowHours
+      morale.blockedHours += sample.blockedHours
+      morale.blockedDepartures += sample.blockedDepartures
+    }
     state = reduce(state, { type: 'catchUp', now })
     const contractGold = measureGuild && (autoWindow || previous.expeditions.some(({ returnAt }) => returnAt <= now))
       && (state.guild?.record ?? 0) > (previous.guild?.record ?? 0)
@@ -486,7 +528,7 @@ function simulate(minutes: number, seed: number, fountain: FountainMode, keepFou
   }
   const wins = state.history.filter((report) => report.victory).length
   const party = selectedHeroes(state)
-  return { firstClear, incomeAt, guildAt, recordAt, autoWindows, peakExpeditions, seed, state, log, wins, marshTrips, drillsStarted, skillsLearned, maxLosingStreak, maxLowGoldMs, partyLevel: averageLevel(party), ready: party.filter((hero) => !isHurt(hero)).length, partySize: party.length }
+  return { firstClear, incomeAt, guildAt, recordAt, morale, autoWindows, peakExpeditions, seed, state, log, wins, marshTrips, drillsStarted, skillsLearned, maxLosingStreak, maxLowGoldMs, partyLevel: averageLevel(party), ready: party.filter((hero) => !isHurt(hero)).length, partySize: party.length }
 }
 
 function median(sorted: number[]): number {
@@ -503,17 +545,26 @@ const args = process.argv.slice(2)
 const fountainArg = args.find((arg) => arg.startsWith('--fountain='))?.slice('--fountain='.length) ?? 'ready'
 const skillMode = args.find((arg) => arg.startsWith('--skills='))?.slice(9) ?? 'on'
 const compareSkills = skillMode === 'compare'
-const guildMode = args.find((arg) => arg.startsWith('--guild='))?.slice(8) ?? 'off'
+const festivalMode = args.find((arg) => arg.startsWith('--festival='))?.slice('--festival='.length) ?? 'off'
+const compareFestivals = festivalMode === 'compare'
+const guildMode = args.find((arg) => arg.startsWith('--guild='))?.slice(8) ?? (festivalMode === 'off' ? 'off' : 'on')
 const compareGuild = guildMode === 'compare'
-const [minutesArg, seedsArg] = args.filter((arg) => !arg.startsWith('--fountain=') && !arg.startsWith('--skills=') && !arg.startsWith('--guild='))
+const modes = ['on', 'off', 'compare']
+const longComparison = compareSkills || compareGuild || compareFestivals
+const [minutesArg, seedsArg] = args.filter((arg) => !arg.startsWith('--'))
 const compare = fountainArg === 'compare'
 const fountain = fountainModes.find((mode) => mode === fountainArg)
-const minutes = Number(minutesArg ?? (compareSkills || compareGuild ? 720 : compare ? 180 : 60))
-const defaultSeeds = compare || compareSkills || compareGuild ? Array.from({ length: 20 }, (_, index) => index + 1).join(',') : '11'
+const minutes = Number(minutesArg ?? (longComparison || festivalMode === 'on' ? 720 : compare ? 180 : 60))
+const defaultSeeds = compare || longComparison ? Array.from({ length: 20 }, (_, index) => index + 1).join(',') : '11'
 const seedArgs = (seedsArg ?? defaultSeeds).split(',').map((seed) => seed.trim())
 const seeds = seedArgs.map(Number)
-if ((!compare && !fountain) || [compare, compareSkills, compareGuild].filter(Boolean).length > 1 || !['on', 'off', 'compare'].includes(skillMode) || !['on', 'off', 'compare'].includes(guildMode) || !Number.isFinite(minutes) || minutes <= 0 || (compare && minutes < 180) || ((compareSkills || compareGuild) && minutes < 720) || seedArgs.some((seed, index) => !/^\d+$/.test(seed) || !Number.isSafeInteger(seeds[index]))) {
-  throw new Error('Usage: npx tsx tools/first-hour.ts [positive minutes] [seed,seed,...] [--fountain=off|ready|5min|compare] [--skills=on|off|compare] [--guild=off|on|compare]')
+if ((!compare && !fountain) || [compare, compareSkills, compareGuild, compareFestivals].filter(Boolean).length > 1
+  || (festivalMode === 'on' && (compare || compareSkills || compareGuild))
+  || ![skillMode, guildMode, festivalMode].every((mode) => modes.includes(mode))
+  || args.some((arg) => arg.startsWith('--') && !/^--(fountain|skills|guild|festival)=/.test(arg))
+  || !Number.isFinite(minutes) || minutes <= 0 || (compare && minutes < 180) || (longComparison && minutes < 720)
+  || seedArgs.some((seed, index) => !/^\d+$/.test(seed) || !Number.isSafeInteger(seeds[index]))) {
+  throw new Error('Usage: npx tsx tools/first-hour.ts [positive minutes] [seed,seed,...] [--fountain=off|ready|5min|compare] [--skills=on|off|compare] [--guild=off|on|compare] [--festival=off|on|compare]')
 }
 
 type Simulation = ReturnType<typeof simulate>
@@ -521,16 +572,15 @@ type Simulation = ReturnType<typeof simulate>
 function incomeSummary(mode: string, at: number, results: Simulation[], measureGuild = false) {
   const samples = results.map(({ incomeAt }) => incomeAt[at]!)
   const mid = (values: number[]) => values.length ? Number(median(values.sort((a, b) => a - b)).toFixed(1)) : '—'
-  const gross = ({ fountain, expedition, guide, contracts }: Income) => fountain + expedition + guide + contracts
   return {
-    mode, minutes: at, 'gross gold': mid(samples.map(gross)),
+    mode, minutes: at, 'gross gold': mid(samples.map(grossIncome)),
     'fountain gold': mid(samples.map((sample) => sample.fountain)),
     'expedition gold': mid(samples.map((sample) => sample.expedition)),
     ...(measureGuild && {
       'contract gold': mid(samples.map((sample) => sample.contracts)),
-      'contract % of gross': mid(samples.filter((sample) => gross(sample) > 0).map((sample) => 100 * sample.contracts / gross(sample))),
+      'contract % of gross': mid(samples.filter((sample) => grossIncome(sample) > 0).map((sample) => 100 * sample.contracts / grossIncome(sample))),
     }),
-    'fountain % of gross': mid(samples.filter((sample) => gross(sample) > 0).map((sample) => 100 * sample.fountain / gross(sample))),
+    'fountain % of gross': mid(samples.filter((sample) => grossIncome(sample) > 0).map((sample) => 100 * sample.fountain / grossIncome(sample))),
     'fountain % of expedition': mid(samples.filter((sample) => sample.expedition > 0).map((sample) => 100 * sample.fountain / sample.expedition)),
     jackpots: mid(samples.map((sample) => sample.jackpots)),
   }
@@ -547,7 +597,59 @@ function firstClearSummary(results: Simulation[], at: number) {
   }))
 }
 
-if (compareGuild) {
+function festivalSummary(mode: string, results: Simulation[], at: number) {
+  const total = (key: keyof Simulation['morale']) => results.reduce((sum, run) => sum + run.morale[key], 0)
+  const heroHours = total('heroHours')
+  const percentage = (hours: number) => heroHours > 0 ? (100 * hours / heroHours).toFixed(2) : '—'
+  const costShares = results.flatMap((run) => {
+    const gold = grossIncome(run.incomeAt[at]!)
+    return gold > 0 ? [100 * run.morale.festivalGold / gold] : []
+  }).sort((a, b) => a - b)
+  return {
+    mode,
+    'high %': percentage(total('highHours')),
+    'neutral %': percentage(heroHours - total('highHours') - total('lowHours')),
+    'low %': percentage(total('lowHours')),
+    'auto blocked hero-hours': total('blockedHours').toFixed(2),
+    'auto exclusions': total('blockedDepartures'),
+    'auto windows': results.reduce((sum, run) => sum + run.autoWindows, 0),
+    festivals: total('festivalsHeld'),
+    'festival gold': total('festivalGold'),
+    'median cost % of gross': costShares.length > 0 ? median(costShares).toFixed(2) : '—',
+    'final party level': summarize(results.flatMap(({ partyLevel }) => partyLevel == null ? [] : [partyLevel])),
+  }
+}
+
+if (compareFestivals) {
+  const at = 720
+  const run = (enabled: boolean) => seeds.map((seed) => simulate(at, seed, fountain!, false, skillMode === 'on', guildMode === 'on', true, enabled))
+  const without = run(false)
+  const withFestival = run(true)
+  console.log(`Morale shares pool living adult hero-hours. A new village spends its first 12h in spring (season length: ${timeRules.seasonMs / hourMs}h).`)
+  console.log('Auto blocked hero-hours count rostered, ready auto-preset members who would qualify except for morale. Auto exclusions count members still dispirited at actual auto windows.')
+  console.table([festivalSummary('without festival', without, at), festivalSummary('with festival', withFestival, at)])
+  const partyDeltas = without.flatMap((run, index) => {
+    const after = withFestival[index]!.partyLevel
+    return run.partyLevel != null && after != null ? [after - run.partyLevel] : []
+  })
+  console.log(`Paired party level change: ${summarize(partyDeltas)} (${partyDeltas.length}/${seeds.length} seeds)`)
+  const before = firstClearSummary(without, at)
+  const after = firstClearSummary(withFestival, at)
+  console.table(order.map((dungeon) => {
+    const saved = without.flatMap((run, index) => {
+      const a = run.firstClear[dungeon]
+      const b = withFestival[index]!.firstClear[dungeon]
+      return a != null && b != null ? [a - b] : []
+    })
+    return { dungeon, without: before[dungeon], festival: after[dungeon], 'paired minutes saved': summarize(saved), paired: saved.length }
+  }))
+  console.log('Grief sensitivity at base morale, with passive recovery and no combat:')
+  console.table(Object.entries({ spouse: moraleRules.grief.spouse, parentChild: moraleRules.grief.parentChild, friend: moraleRules.grief.friend }).map(([loss, amount]) => {
+    const morale = moraleRules.base - amount
+    const lowHours = (value: number) => Math.max(0, (moraleRules.low - value) / moraleRules.driftPerHour)
+    return { loss, morale, 'hours at low morale': lowHours(morale), 'hours after festival': lowHours(morale + moraleRules.festival.morale) }
+  }))
+} else if (compareGuild) {
   const passive = seeds.map((seed) => simulate(720, seed, fountain!, false, skillMode === 'on', false, true))
   const managed = seeds.map((seed) => simulate(720, seed, fountain!, false, skillMode === 'on', true, true))
   const cutoffs = [180, 720]
@@ -605,7 +707,8 @@ if (compareGuild) {
   console.log('Level 1 control for the design target (fountain/expedition income)')
   console.table([incomeSummary('ready, Lv1 only', 60, seeds.map((seed) => simulate(60, seed, 'ready', true, skillMode === 'on')))])
 } else {
-  const results = seeds.map((seed) => simulate(minutes, seed, fountain!, false, skillMode === 'on', guildMode === 'on', guildMode === 'on'))
+  const festivals = festivalMode === 'on' ? true : undefined
+  const results = seeds.map((seed) => simulate(minutes, seed, fountain!, false, skillMode === 'on', guildMode === 'on', guildMode === 'on' || festivals === true, festivals))
   const displayLevel = (level: number | undefined) => level?.toFixed(1) ?? 'n/a'
   if (results.length === 1) {
     const { state, log, wins, partyLevel, ready, partySize, maxLosingStreak } = results[0]!
@@ -628,4 +731,5 @@ if (compareGuild) {
   console.log('first clear (minutes): ' + Object.entries(firstClearSummary(results, minutes)).map(([id, value]) => `${id} ${value}`).join(' · '))
   console.log(`workshop built: ${results.filter(({ state }) => state.buildings.alchemy > 0).length}/${results.length} · marsh trips: ${results.reduce((sum, result) => sum + result.marshTrips, 0)}`)
   console.table([incomeSummary(fountain!, minutes, results, guildMode === 'on')])
+  if (festivals) console.table([festivalSummary('with festival', results, minutes)])
 }
