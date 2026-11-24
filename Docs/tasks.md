@@ -90,6 +90,11 @@ Claude Code, Cursor, GPT(Codex)가 함께 쓰는 작업 목록이다. 작업 하
 | 48 | 3c core 코드 리뷰 (7eaca30) | GPT | `Docs/reviews/7eaca30.md` (새 파일만) | 완료 (6999c19) |
 | 49 | 마량 성채 밸런스 측정 | GPT | `tools/curve.ts`, `print-curve.ts`, `tune-curve.ts`, `first-hour.ts` | 완료 (0551f9f) |
 | 50 | 아이를 영웅·출전 목록에서 빼고 성인식 알림 | Claude Code (사용자 요청으로 직접) | `src/ui/game/*.tsx`, `App.tsx`, `styles.css`, `src/locales/*` | 완료 (다음 커밋) |
+| 51 | 용의 둥지 몬스터·던전 그림 | Cursor | `src/ui/voxel/enemies.ts`, `portrait.ts` | 대기 |
+| 52 | 둥지 카드(가려진 어픽스·정찰·정보 구매)와 리포트 | Cursor | `App.tsx`, `src/ui/game/*.tsx`, `styles.css`, `src/locales/*` | 대기 |
+| 53 | 정찰 나가는 도적과 어픽스 연출 | Cursor | `BattleScene.ts`, `replay.ts`, `VillageScene.ts` | 대기 (52 뒤) |
+| 54 | 3d core 코드 리뷰 (커밋 해시는 아래) | GPT | `Docs/reviews/<해시>.md` (새 파일만) | 대기 |
+| 55 | 용의 둥지 밸런스 측정 | GPT | `tools/curve.ts`, `print-curve.ts`, `tune-curve.ts`, `first-hour.ts` | 대기 |
 
 ---
 
@@ -1310,3 +1315,96 @@ core에 이미 있는 것:
 ```
 
 메모: 사용자 요청으로 Claude Code가 직접 했다. 영웅 목록·출전 목록에서 아이를 빼고 "아이 n명은 마을 인구 창에서" 한 줄을 남겼다. 출전 목록은 출산 예정·사망 칩을 붙인다. 인구 창에 아이들 칸(나이·출전까지 남은 해·부모, 누르면 상세), 침상 칸에 "아이 n명 포함". 아이 상세는 "14살이 되면 출전할 수 있다", 출산 예정은 "아이를 낳은 뒤". 해가 바뀌어 14살이 되면 성인식 창이 뜨고 [영웅 보기]로 상세가 열린다. 개발 화면에서 13살·5살 아이 세이브로 확인했다.
+
+---
+
+## 51. 용의 둥지 몬스터·던전 그림 (Cursor)
+
+**지금 시작할 수 있다.** 설계: `Docs/depth.md` 3d.
+
+**전달할 내용**
+
+```
+Docs/depth.md의 3d를 읽고 용의 둥지의 3D 그림을 만든다. src/ui/voxel/enemies.ts, src/ui/voxel/portrait.ts만 고친다. core와 data는 고치지 않는다.
+
+몬스터 id: drake(드레이크, 날개 없는 작은 용, 앞줄), wyvern(와이번, 날개 달린 날렵한 용, 후열), kobold_mystic(코볼트 주술사, 지팡이 든 작은 도마뱀 인간, 후열), elder_dragon(보스 고룡, 크고 뿔 달린 붉은 용, 앞줄).
+던전 id: dragon_nest(용의 둥지, 티어 7).
+
+1. buildEnemy에 네 몬스터. 붉은색·주황·금색 계열, 고룡은 다른 보스보다 확실히 크게.
+2. dungeonPreviewUrl이 dragon_nest를 화산 바위산의 동굴 입구, 흩어진 금화와 뼈, 붉은 빛으로 그린다.
+3. monsterPortraitUrl이 네 몬스터를 그린다.
+
+확인: portrait 함수를 직접 불러 네 초상과 입구를 확인하고 스크린샷을 메모에. 임시 코드는 커밋하지 않는다.
+```
+
+---
+
+## 52. 둥지 카드(가려진 어픽스·정찰·정보 구매)와 리포트 (Cursor)
+
+**지금 시작할 수 있다(작업 51과 파일이 겹치지 않는다).**
+
+**전달할 내용**
+
+```
+Docs/depth.md 3d를 읽고 화면을 만든다. src/ui/App.tsx, src/ui/game/*.tsx, src/ui/styles.css, src/locales/*만 고친다. core는 고치지 않는다.
+
+core에 이미 있는 것(src/core/nest.ts, '../../core'에서 export한다):
+- nestSeason(state.seed, state.calendar): { key, affixes: AffixId[], floors: { monsters }[] }. nestRevealed(state): 이번 계절을 알고 있는지. isNest(dungeonId).
+- 동작: { type: 'scout', heroId, now }(다치지 않은 도적, 5분, 그동안 원정 중으로 표시됨), { type: 'buyIntel' }(길드 Lv1+, 골드 nestRules.intelGold). state.scout: { heroId, finishAt } | null.
+- 리포트 report.affixes. 결과 notice: scoutHero, scoutBusy, nestKnown, noGuild.
+- 문구 키: dungeon.dragon_nest, enemy.drake/wyvern/kobold_mystic/elder_dragon, affix.<id>, affix.hint.<id>, nest.hidden, nest.scout, nest.intel, result.*.
+
+1. 던전 목록·상세에서 용의 둥지: 알기 전에는 어픽스와 적 구성을 "?"로 가린다(nest.hidden). 알고 나면 이번 계절의 어픽스 두 개(이름 + 대응 한 줄 affix.hint)와 층별 적 구성(nestSeason의 floors)을 보여 준다. "다음 계절까지 남은 시간"도 보여 준다.
+2. 가려져 있을 때 버튼 두 개: [도적 정찰](도적 고르기, 정찰 중이면 남은 시간 막대), [길드 정보 구매 골드 N].
+3. 출발 준비(Prep): 둥지를 고르면 이번 계절 어픽스(알 때만)와, 파티가 각 어픽스에 대비했는지 한 줄씩 보여 준다(venom: 해독 물약 또는 해독의 목걸이, traps: 도적 또는 함정 감지, ambush: 경계, charged: 끊을 영웅 또는 버티기, silence: 고요 또는 맑은 정신 물약, paralyze: 굳건 또는 각성 물약, noRest: 회복 물약). 대비 안 된 줄은 경고 색.
+4. 원정 기록·리포트: 그 원정의 어픽스(report.affixes) 칩.
+5. 영웅 목록·출전 목록: 정찰 중인 도적은 "정찰 중" 칩.
+6. 문구 ko/en 같은 키.
+
+확인: npm run dev에서 디버그로 성채까지 클리어한 세이브를 만들어 정보 구매와 정찰로 각각 공개해 본다. 확인 못 한 부분은 메모에.
+```
+
+---
+
+## 53. 정찰 나가는 도적과 어픽스 연출 (Cursor)
+
+**작업 52 뒤에 시작한다.**
+
+**전달할 내용**
+
+```
+src/ui/voxel/BattleScene.ts, src/ui/voxel/replay.ts, src/ui/voxel/VillageScene.ts만 고친다.
+1. 마을: state.scout가 있으면 그 도적이 남쪽 문으로 몰래 나갔다가 finishAt에 돌아온다(원정 파티와 같은 길).
+2. 전투 다시 보기: report.affixes가 있으면 층 시작에 어픽스 아이콘 두 개를 잠깐 띄운다. 매복은 기존 log.ambush, 함정은 log.trap, 숨결은 log.charge/log.blast 연출을 그대로 쓴다.
+3. 둥지 전투 배경에 붉은 빛과 떠다니는 불씨.
+확인: 스크린샷을 메모에.
+```
+
+---
+
+## 54. 3d core 코드 리뷰 (GPT)
+
+**3d core 커밋 뒤에 시작한다.** 커밋 해시는 작업 보드 표의 "3d core" 커밋(Add the dragon's nest...)이다.
+
+**전달할 내용**
+
+```
+3d core 커밋(git log에서 "Add the dragon's nest"로 찾는다)을 리뷰한다. 코드는 고치지 않고 Docs/reviews/<해시>.md 새 파일 하나에만 쓴다(Docs/reviews/README.md 형식).
+볼 것: Docs/depth.md 3d와 수치·규칙 차이, nestSeason의 결정성(같은 계절은 같고, 계절마다 바뀌는지), 정찰의 오프라인 진행과 계절이 바뀌는 순간(정찰 중 계절이 바뀌면 어느 계절이 공개되는지), 원정 귀환 시 공개 조건(sameAffixes), 자동 출정이 둥지에 갈 때의 어픽스, 정찰 중인 도적과 busyHeroIds·출산·사망·은퇴의 관계, 어픽스가 소환 유닛(advancePhases)에도 붙는지, 기존 던전 결과가 바뀌지 않았는지(부모 커밋과 시드 전투 비교), 세이브 12 → 13.
+```
+
+---
+
+## 55. 용의 둥지 밸런스 측정 (GPT)
+
+**지금 시작할 수 있다(작업 54와 파일이 겹치지 않는다).**
+
+**전달할 내용**
+
+```
+tools/curve.ts, tools/print-curve.ts, tools/tune-curve.ts, tools/first-hour.ts만 고친다. 게임 코드와 data는 고치지 않는다(제안만).
+1. 곡선 도구에 둥지 조건을 추가한다: 어픽스 조합 28가지 × (대비 없음 / 그 조합에 대비함). 대비는 Docs/depth.md 3d 표의 대응(장신구·물약·작전)을 갖춘 것이다. runDungeon(..., supplies, { floors, affixes })로 돌린다. dragon_nest Lv18–22 승률(중앙값/하위 25%)을 조합별과 평균으로 출력한다.
+2. 특히 매복(ambush)이 대비 없이 0%인 문제를 본다. Docs/depth.md 3d 1차 측정에 적혀 있다. 매복을 남기면서 "대비 없음"이 0이 아니게 하는 수치(nest.json의 ambushPower, 던전 배수, 기습 대상)를 제안한다.
+3. first-hour.ts를 12시간까지 돌릴 수 있게 하고, 흉내 플레이어가 둥지 전에 정보를 사서 어픽스에 맞게 장신구·물약·작전을 고르게 한다. 둥지 첫 클리어 시각을 출력한다.
+4. Docs/depth.md 3d "밸런스 기준"과 비교해 메모에 적는다.
+```

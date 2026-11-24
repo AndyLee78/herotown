@@ -1,8 +1,8 @@
-import { alchemyRules, classById, combatRules, lifeRules, magicRules, monsterById, potionById } from './data'
+import { alchemyRules, classById, combatRules, lifeRules, magicRules, monsterById, nestRules, potionById } from './data'
 import { heroGearMods } from './gear'
 import { heroTrinkets } from './magic'
 import type { Rng } from './rng'
-import type { BossPhase, LogEntry, MonsterDef, PartyMember, PotionId, ReplayUnit, Row, Supplies, Tactics, UnitReport } from './types'
+import type { AffixId, BossPhase, LogEntry, MonsterDef, PartyMember, PotionId, ReplayUnit, Row, Supplies, Tactics, UnitReport } from './types'
 
 export type BattleUnit = {
   id: string
@@ -82,6 +82,10 @@ export type BattleUnit = {
   blastAt: number
   braced: boolean
   blastTaken: number
+  // Natural silencers hunt healers first; the nest's silence affix does not.
+  huntsCasters: boolean
+  // How hard the opening ambush strikes (the nest's affix is gentler, 3d).
+  ambushPower: number
 }
 
 // Potions a party carries into a fight and what it has drunk.
@@ -122,6 +126,8 @@ const STATUS_FREE = {
   blastAt: 0,
   braced: false,
   blastTaken: 0,
+  huntsCasters: false,
+  ambushPower: 1,
 }
 
 export type FloorOutcome = 'victory' | 'wipe' | 'retreat' | 'timeout'
@@ -212,8 +218,10 @@ export function simulateFloor(
   monsterScale = 1,
   kit?: Kit,
   trapChance = 0,
+  affixes: AffixId[] = [],
 ): { outcome: FloorOutcome; ticks: number; trap: TrapResult } {
   const enemies = monsterIds.map((id, index) => enemyUnit(monsterById(id), index, monsterScale))
+  applyAffixes(enemies, affixes)
   floors?.push([...heroes, ...enemies].map(replayUnit))
   push(log, 0, 'log.floor', { floor: floorNumber })
   for (const hero of heroes) {
@@ -542,7 +550,7 @@ function enemyAct(actor: BattleUnit, heroes: BattleUnit[], rng: Rng, tick: numbe
     const victim = lowestHp(back.length ? back : living(heroes))
     push(log, tick, 'log.ambush', { ...actorParams(actor), ...targetParams(victim) })
     const before = victim.taken
-    strike(actor, victim, rng, tick, log, magicRules.ambushPower)
+    strike(actor, victim, rng, tick, log, actor.ambushPower)
     victim.ambushTaken += victim.taken - before
     return
   }
@@ -555,7 +563,7 @@ function enemyAct(actor: BattleUnit, heroes: BattleUnit[], rng: Rng, tick: numbe
     return
   }
   // Silencers go for the healers and supporters they can reach first.
-  const casters = actor.silenceOnHit > 0 ? pool.filter((unit) => unit.role === 'healer' || unit.role === 'support') : []
+  const casters = actor.huntsCasters ? pool.filter((unit) => unit.role === 'healer' || unit.role === 'support') : []
   const targets = casters.length ? casters : pool
   const target = [...targets].sort((a, b) => b.threat - a.threat || a.hp - b.hp || a.index - b.index)[0]
   if (!target) {
@@ -712,6 +720,48 @@ function enemyUnit(monster: MonsterDef, index: number, scale: number): BattleUni
     blastEvery: monster.blastEvery ?? 0,
     blastPower: monster.blastPower ?? 1,
     phases: monster.phases ?? [],
+    huntsCasters: (monster.silence ?? 0) > 0,
+    ambushPower: magicRules.ambushPower,
+  }
+}
+
+// The nest's affixes change its monsters (Docs/depth.md 3d). Older dungeons
+// pass none, so nothing here touches them.
+function applyAffixes(enemies: BattleUnit[], affixes: AffixId[]) {
+  if (!affixes.length) {
+    return
+  }
+  const has = (id: AffixId) => affixes.includes(id)
+  // The ambush comes from the floor's weakest hitter, so it stings without one-shotting.
+  const ambusher = has('ambush') ? [...enemies].filter((enemy) => !enemy.boss).sort((a, b) => a.attack - b.attack || a.index - b.index)[0] : undefined
+  if (ambusher) {
+    ambusher.ambush = true
+    ambusher.ambushPower = nestRules.ambushPower
+  }
+  // One silencer per floor, the fastest in the back: silencers hunt healers,
+  // so a whole back row of them would just be a focus fire.
+  const silencer = has('silence') ? [...enemies].filter((enemy) => !enemy.boss && enemy.row === 'back').sort((a, b) => b.speed - a.speed || a.index - b.index)[0] : undefined
+  if (silencer) {
+    silencer.silenceOnHit = Math.max(silencer.silenceOnHit, nestRules.silenceChance)
+  }
+  for (const enemy of enemies) {
+    if (has('swift')) {
+      enemy.speed *= nestRules.swiftSpeed
+    }
+    if (enemy.boss) {
+      if (has('charged') && enemy.blastEvery === 0) {
+        enemy.blastEvery = nestRules.chargedEvery
+        enemy.blastPower = nestRules.chargedPower
+      }
+      continue
+    }
+    if (has('venom')) {
+      enemy.dotOnHit += nestRules.venomDot
+      enemy.poisonCap = Math.max(enemy.poisonCap, nestRules.venomCap)
+    }
+    if (has('paralyze') && enemy.row === 'front') {
+      enemy.paralyzeOnHit = Math.max(enemy.paralyzeOnHit, nestRules.paralyzeChance)
+    }
   }
 }
 

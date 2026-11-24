@@ -1,0 +1,68 @@
+{
+  "dungeonId": "dragon_nest",
+  "affixesPerSeason": 2,
+  "scoutMs": 300000,
+  "intelGold": 60,
+  "venomDot": 10,
+  "venomCap": 40,
+  "trapChance": 0.6,
+  "chargedEvery": 4,
+  "chargedPower": 2.5,
+  "silenceChance": 0.25,
+  "paralyzeChance": 0.25,
+  "swiftSpeed": 1.12,
+  "floors": [
+    [
+      [
+        "drake",
+        "wyvern",
+        "kobold_mystic"
+      ],
+      [
+        "drake",
+        "drake",
+        "wyvern"
+      ],
+      [
+        "drake",
+        "kobold_mystic",
+        "kobold_mystic"
+      ]
+    ],
+    [
+      [
+        "drake",
+        "drake",
+        "wyvern",
+        "kobold_mystic"
+      ],
+      [
+        "drake",
+        "wyvern",
+        "wyvern",
+        "kobold_mystic"
+      ],
+      [
+        "drake",
+        "drake",
+        "kobold_mystic",
+        "kobold_mystic"
+      ]
+    ],
+    [
+      [
+        "elder_dragon",
+        "wyvern"
+      ],
+      [
+        "elder_dragon",
+        "kobold_mystic"
+      ],
+      [
+        "elder_dragon",
+        "drake"
+      ]
+    ]
+  ],
+  "ambushPower": 1
+}

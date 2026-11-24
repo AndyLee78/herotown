@@ -47,6 +47,12 @@
       "fame": 200,
       "visitorPotential": 35,
       "maxBuildingLevel": 4
+    },
+    {
+      "level": 7,
+      "fame": 270,
+      "visitorPotential": 40,
+      "maxBuildingLevel": 4
     }
   ],
   "inn": {
@@ -120,6 +126,12 @@
       "amount": 14,
       "fame": 52,
       "crystal": 4
+    },
+    "dragon_nest": {
+      "material": "crystal",
+      "amount": 12,
+      "fame": 60,
+      "iron": 6
     }
   },
   "buildings": [

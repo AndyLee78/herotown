@@ -270,6 +270,38 @@
           ]
         }
       ]
+    },
+    {
+      "id": "dragon_nest",
+      "tier": 7,
+      "recommendedLevel": 20,
+      "monsterScale": 9.5,
+      "betweenHeal": 0.25,
+      "gold": 200,
+      "xp": 200,
+      "floors": [
+        {
+          "monsters": [
+            "drake",
+            "wyvern",
+            "kobold_mystic"
+          ]
+        },
+        {
+          "monsters": [
+            "drake",
+            "drake",
+            "wyvern",
+            "kobold_mystic"
+          ]
+        },
+        {
+          "monsters": [
+            "elder_dragon",
+            "wyvern"
+          ]
+        }
+      ]
     }
   ]
 }

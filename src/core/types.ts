@@ -16,6 +16,8 @@ export type TargetPriority = 'lowestHp' | 'backRow' | 'boss'
 export type DefeatReason = 'noTank' | 'noHealer' | 'retreated' | 'wiped' | 'outmatched' | 'tooWeak' | 'poisoned' | 'paralyzed' | 'silenced' | 'trapped' | 'ambushed' | 'blasted'
 export type PotionId = 'heal' | 'antidote' | 'tonic' | 'clarity'
 // Trinkets from the magic workshop (Docs/depth.md 3b).
+// Seasonal dungeon modifiers in the dragon's nest (Docs/depth.md 3d).
+export type AffixId = 'venom' | 'traps' | 'ambush' | 'charged' | 'silence' | 'paralyze' | 'swift' | 'noRest'
 export type TrinketId = 'alert' | 'trapSense' | 'poisonWard' | 'steady' | 'calm'
 // Potions by kind: the village stock, what a party carries, or what it used.
 export type Supplies = Partial<Record<PotionId, number>>
@@ -60,7 +62,7 @@ export type TraitDef = {
 
 export type MonsterDef = {
   id: string
-  tier: 1 | 2 | 3 | 4 | 5 | 6
+  tier: 1 | 2 | 3 | 4 | 5 | 6 | 7
   boss: boolean
   row: Row
   reach: Reach
@@ -105,7 +107,7 @@ export type DungeonFloor = {
 
 export type DungeonDef = {
   id: string
-  tier: 1 | 2 | 3 | 4 | 5 | 6
+  tier: 1 | 2 | 3 | 4 | 5 | 6 | 7
   recommendedLevel: number
   // Multiplies monster health and attack in this dungeon (1 = as listed).
   monsterScale?: number
@@ -248,6 +250,8 @@ export type DungeonReport = {
   potionsUsed?: Supplies
   // Traps met on the way, in dungeons that have them.
   traps?: { sprung: number; disarmed: number }
+  // The nest's affixes on this trip (Docs/depth.md 3d).
+  affixes?: AffixId[]
   victory: boolean
   defeatReason: DefeatReason | null
   ticks: number

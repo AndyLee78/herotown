@@ -1,5 +1,6 @@
 import { chargeFountain, freshFountain, makeWish, readFountain, upgradeFountain, type FountainState } from './fountain'
 import { claimGuide, guideSteps } from './guide'
+import { buyIntel, finishScout, isNest, nestSeason, readScout, seasonKey, startScout, type ScoutJob } from './nest'
 import { finishEnchant, readMagicJob, startEnchant, type MagicJob } from './magic'
 import { finishBrew, readAlchemyJob, readSupplies, returnSupplies, startBrew, takeSupplies, type AlchemyJob } from './alchemy'
 import { adRules, magicRules, classById, classList, combatRules, dungeonById, dungeons, expeditionRules, lifeRules, progression, retirementRules, smithRules, timeRules, villageRules } from './data'
@@ -12,7 +13,7 @@ import type { Rng } from './rng'
 import type { Genes } from './genes'
 import type { Bond, ClassId, CombatError, DungeonReport, Gear, GearSlot, Gender, Hero, PartyMember, PotionId, Proposal, Role, Row, Supplies, Tactics, TrinketId } from './types'
 
-export const SAVE_VERSION = 12
+export const SAVE_VERSION = 13
 
 export type SeasonId = 'spring' | 'summer' | 'autumn' | 'winter'
 
@@ -146,6 +147,10 @@ export type GameNotice =
   | 'noAlchemy'
   | 'alchemyBusy'
   | 'noMagic'
+  | 'scoutHero'
+  | 'scoutBusy'
+  | 'nestKnown'
+  | 'noGuild'
   | 'magicBusy'
   | 'recipe'
   | 'enhanceFail'
@@ -210,6 +215,9 @@ export type GameState = {
   alchemy: AlchemyJob | null
   potions: Supplies
   magic: MagicJob | null
+  // The nest season revealed by scouting, intel or a trip (Docs/depth.md 3d).
+  nestSeen: string | null
+  scout: ScoutJob | null
 }
 
 export type AdPlacement = 'absence' | 'construction' | 'temple'
@@ -258,6 +266,8 @@ export type GameAction =
   | { type: 'assignRetiree'; id: string; building: BuildingId | null }
   | { type: 'acceptProposal'; a: string; b: string; now?: number }
   | { type: 'seenAdults' }
+  | { type: 'scout'; heroId: string; now: number }
+  | { type: 'buyIntel' }
   | { type: 'declineProposal'; a: string; b: string; now?: number }
   | { type: 'wish'; now: number }
   | { type: 'brew'; potionId: PotionId; now: number }
@@ -309,6 +319,8 @@ export function freshState(seed: number, now: number): GameState {
     alchemy: null,
     potions: {},
     magic: null,
+    nestSeen: null,
+    scout: null,
   }
 }
 
@@ -546,6 +558,12 @@ function apply(state: GameState, action: GameAction): GameState {
     const count = Math.max(0, Math.floor(action.count))
     return editPreset(state, action.presetId, (preset) => ({ ...preset, supplies: { ...(preset.supplies ?? {}), [action.potionId]: count } }))
   }
+  if (action.type === 'scout') {
+    return startScout(state, action.heroId, action.now, busyHeroIds(state))
+  }
+  if (action.type === 'buyIntel') {
+    return buyIntel(state)
+  }
   if (action.type === 'seenAdults') {
     return { ...state, comingOfAge: [] }
   }
@@ -592,6 +610,7 @@ function advance(state: GameState, now: number): GameState {
     next = finishSmith(next, until, crafted)
     next = finishBrew(next, until, crafted)
     next = finishEnchant(next, until, crafted)
+    next = finishScout(next, until)
     next = finishCare(next, until)
     next = recoverRoster(next, piece, until)
     next = updateVisitors(next, until, visitors)
@@ -1023,7 +1042,7 @@ function runAuto(state: GameState, elapsed: number, tally: { runs: number; gold:
     const battleSeed = next.seed + 9000 + tally.runs + next.day
     // Auto runs carry the selected preset's potions too, and bring back the rest.
     const carry = takeSupplies(next.potions, presetById(next, next.presetId)?.supplies)
-    const result = runDungeon(members, dungeonId, presetById(next, next.presetId)?.tactics ?? DEFAULT_TACTICS, battleSeed, carry.taken)
+    const result = runDungeon(members, dungeonId, presetById(next, next.presetId)?.tactics ?? DEFAULT_TACTICS, battleSeed, carry.taken, nestVariant(next, dungeonId))
     if (result.ok) {
       next = { ...next, potions: returnSupplies(carry.stock, carry.taken, result.report.potionsUsed) }
     }
@@ -1311,8 +1330,26 @@ export function presetById(state: GameState, id: string): PartyPreset | undefine
 }
 
 // Heroes out of town on an expedition.
+function sameAffixes(a: string[] = [], b: string[] = []): boolean {
+  return a.length === b.length && a.every((id, index) => id === b[index])
+}
+
+// This season's lineup and affixes when the dungeon is the nest.
+export function nestVariant(state: GameState, dungeonId: string) {
+  if (!isNest(dungeonId)) {
+    return {}
+  }
+  const season = nestSeason(state.seed, state.calendar)
+  return { floors: season.floors, affixes: season.affixes }
+}
+
 export function busyHeroIds(state: GameState): Set<string> {
-  return new Set(state.expeditions.flatMap((expedition) => expedition.heroIds))
+  const away = new Set(state.expeditions.flatMap((expedition) => expedition.heroIds))
+  // A scouting rogue is out too (Docs/depth.md 3d).
+  if (state.scout) {
+    away.add(state.scout.heroId)
+  }
+  return away
 }
 
 // Tier 1 is open from the start; each later tier opens once any dungeon of
@@ -1386,7 +1423,7 @@ function startExpedition(state: GameState, presetId: string, confirm: boolean, n
   // The first expedition of a day keeps the old seed so earlier results replay.
   const battleSeed = state.seedLocked ? state.seed : state.seed + state.day + state.expeditionNonce * 7919
   const carry = takeSupplies(state.potions, preset.supplies)
-  const result = runDungeon(party, state.dungeonId, preset.tactics, battleSeed, carry.taken)
+  const result = runDungeon(party, state.dungeonId, preset.tactics, battleSeed, carry.taken, nestVariant(state, state.dungeonId))
   if (!result.ok) {
     return { ...state, notice: result.error }
   }
@@ -1421,6 +1458,10 @@ function returnExpeditions(state: GameState, now: number, returned: AbsenceRepor
         roster: next.roster.map((hero) => (returning.has(hero.id) ? recoverHero(hero, hoursAtHome, rate, now) : hero)),
       }
       returned.push({ dungeonId: expedition.dungeonId, victory: expedition.report.victory })
+      // A party back from the nest has seen this season's affixes (Docs/depth.md 3d).
+      if (isNest(expedition.dungeonId) && sameAffixes(expedition.report.affixes, nestSeason(next.seed, next.calendar).affixes)) {
+        next = { ...next, nestSeen: seasonKey(next.calendar) }
+      }
     }
   }
   return next
@@ -1760,6 +1801,8 @@ function normalize(record: Record<string, unknown>, now: number): GameState {
     alchemy: readAlchemyJob(record.alchemy),
     potions: readSupplies(record.potions),
     magic: readMagicJob(record.magic),
+    nestSeen: typeof record.nestSeen === 'string' ? record.nestSeen : null,
+    scout: readScout(record.scout),
     auto: isAuto(record.auto) ? record.auto : base.auto,
     notice: null,
   }

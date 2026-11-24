@@ -199,7 +199,11 @@
     "noAlchemy": "There is no alchemy workshop yet.",
     "alchemyBusy": "The workshop is already brewing.",
     "noMagic": "There is no magic workshop yet.",
-    "magicBusy": "The workshop is already making a trinket."
+    "magicBusy": "The workshop is already making a trinket.",
+    "scoutHero": "Only an unhurt rogue can scout.",
+    "scoutBusy": "A scout is already out.",
+    "nestKnown": "You already know this season's nest.",
+    "noGuild": "There is no guild yet."
   },
   "defeat": {
     "noHealer": "Bring a healer to keep the party going.",
@@ -253,6 +257,10 @@
     "haunted_citadel": {
       "name": "Haunted Citadel",
       "hint": "The Citadel Lord gathers power, then blasts the party. Break it with a warrior, rogue or archer, or brace."
+    },
+    "dragon_nest": {
+      "name": "Dragon's Nest",
+      "hint": "Its dangers change every season. Scout it or buy guild intel, then prepare."
     }
   },
   "policy": {
@@ -604,7 +612,11 @@
     "grave_knight": "Grave Knight",
     "bone_archer": "Bone Archer",
     "citadel_lord": "Citadel Lord",
-    "specter": "Specter"
+    "specter": "Specter",
+    "drake": "Drake",
+    "wyvern": "Wyvern",
+    "kobold_mystic": "Kobold Mystic",
+    "elder_dragon": "Elder Dragon"
   },
   "battle": {
     "label": "Battle replay",
@@ -842,5 +854,30 @@
       "interrupt": "Warriors, rogues and archers break a charged blast.",
       "brace": "When a blast is coming, heroes brace to take less of it."
     }
+  },
+  "affix": {
+    "venom": "Venom",
+    "traps": "Traps",
+    "ambush": "Ambush",
+    "charged": "Dragon's Breath",
+    "silence": "Silent Fog",
+    "paralyze": "Numbing Venom",
+    "swift": "Gale",
+    "noRest": "No Rest",
+    "hint": {
+      "venom": "Enemies poison on hit. Antidotes or an Antidote Amulet.",
+      "traps": "Each floor is trapped. A rogue or a Trap Sense Ring.",
+      "ambush": "One enemy per floor ambushes the back row. A Watchful Charm.",
+      "charged": "The Elder Dragon gathers power for a blast. Break it or brace.",
+      "silence": "One back-row enemy silences. A Calm Earring or clarity draughts.",
+      "paralyze": "Front-row enemies paralyse. A Steady Bracelet or tonics.",
+      "swift": "Enemies are faster.",
+      "noRest": "No healing between floors. Healing potions."
+    }
+  },
+  "nest": {
+    "hidden": "This season's dangers: ?",
+    "scout": "Send a rogue to scout (5 min)",
+    "intel": "Buy guild intel"
   }
 }

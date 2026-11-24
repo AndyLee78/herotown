@@ -1,8 +1,8 @@
-import { classById, combatRules, dungeonById, lifeRules, magicRules, progression } from './data'
+import { classById, combatRules, dungeonById, lifeRules, magicRules, nestRules, progression } from './data'
 import { createHeroUnit, heroUnitsToReport, simulateFloor, type BattleUnit, type Kit } from './combat'
 import { canDeploy, createHero } from './hero'
 import { createRng } from './rng'
-import type { Condition, DungeonReport, DungeonResult, Hero, PartyMember, Supplies, Tactics } from './types'
+import type { AffixId, Condition, DungeonFloor, DungeonReport, DungeonResult, Hero, PartyMember, Supplies, Tactics } from './types'
 
 export const DEFAULT_TACTICS: Tactics = {
   target: 'lowestHp',
@@ -11,7 +11,10 @@ export const DEFAULT_TACTICS: Tactics = {
   potionBelow: 40,
 }
 
-export function runDungeon(party: PartyMember[], dungeonId: string, tactics: Tactics, seed: number, supplies: Supplies = {}): DungeonResult {
+// The nest passes this season's lineup and affixes (Docs/depth.md 3d).
+export type DungeonVariant = { floors?: DungeonFloor[]; affixes?: AffixId[] }
+
+export function runDungeon(party: PartyMember[], dungeonId: string, tactics: Tactics, seed: number, supplies: Supplies = {}, variant: DungeonVariant = {}): DungeonResult {
   if (party.length === 0) {
     return { ok: false, error: 'emptyParty' }
   }
@@ -27,7 +30,15 @@ export function runDungeon(party: PartyMember[], dungeonId: string, tactics: Tac
     return { ok: false, error: 'badFormation' }
   }
 
-  const dungeon = dungeonById(dungeonId)
+  const base = dungeonById(dungeonId)
+  const affixes = variant.affixes ?? []
+  const dungeon = {
+    ...base,
+    floors: (variant.floors ?? base.floors).map((floor, index, all) =>
+      affixes.includes('traps') && index < all.length - 1 ? { ...floor, trapChance: Math.max(floor.trapChance ?? 0, nestRules.trapChance) } : floor,
+    ),
+    betweenHeal: affixes.includes('noRest') ? 0 : base.betweenHeal,
+  }
   const rng = createRng(seed)
   const heroes = party.map((member, index) => createHeroUnit(member, index))
   const kit: Kit = { stock: { ...supplies }, used: {} }
@@ -45,7 +56,7 @@ export function runDungeon(party: PartyMember[], dungeonId: string, tactics: Tac
     if (!floorDef) {
       break
     }
-    const result = simulateFloor(heroes, floorDef.monsters, tactics, rng, log, floor + 1, floors, dungeon.monsterScale ?? 1, carried ? kit : undefined, floorDef.trapChance ?? 0)
+    const result = simulateFloor(heroes, floorDef.monsters, tactics, rng, log, floor + 1, floors, dungeon.monsterScale ?? 1, carried ? kit : undefined, floorDef.trapChance ?? 0, affixes)
     ticks += result.ticks
     if (result.trap !== 'none') {
       traps[result.trap] += 1
@@ -98,6 +109,7 @@ export function runDungeon(party: PartyMember[], dungeonId: string, tactics: Tac
     xp,
     ...(carried ? { potionsUsed: kit.used } : {}),
     ...(hasTraps ? { traps } : {}),
+    ...(affixes.length ? { affixes } : {}),
     units: heroUnitsToReport(heroes),
     log,
     conditions: heroes.map((hero) => ({
@@ -160,7 +172,7 @@ function statusToll(heroes: BattleUnit[]): StatusToll {
 
 export function defeatReason(
   outcome: 'wipe' | 'retreat' | 'timeout' | 'victory',
-  tier: 1 | 2 | 3 | 4 | 5 | 6,
+  tier: 1 | 2 | 3 | 4 | 5 | 6 | 7,
   hadTank: boolean,
   hadHealer: boolean,
   averageLevel: number,

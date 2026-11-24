@@ -1,4 +1,4 @@
-export { adRules, alchemyRules, potionById, magicRules, trinketById, expeditionRules, familyRules, fountainRules, retirementRules, ageBands, classById, classList, combatRules, dungeonById, dungeons, lifeRules, maxAge, monsterById, monsters, progression, smithRules, timeRules, traits, validateGameData, villageRules } from './data'
+export { adRules, alchemyRules, potionById, magicRules, nestRules, trinketById, expeditionRules, familyRules, fountainRules, retirementRules, ageBands, classById, classList, combatRules, dungeonById, dungeons, lifeRules, maxAge, monsterById, monsters, progression, smithRules, timeRules, traits, validateGameData, villageRules } from './data'
 export { SAVE_VERSION, adsRemaining, bedCount, busyHeroIds, retireeBonus, retirementAdvised, dungeonUnlocked, presetById, catchUp, expeditionSlots, exportSave, freshState, importSave, localDateKey, migrate, reduce, restBonus, townLevel, visitorCap, visitorStay } from './game'
 export { DEFAULT_TACTICS, applyReport, heroPower, runDungeon } from './dungeon'
 export { ageUp, canDeploy, deployAge, isChild, createHero, deriveStats, generateVisitors, grantXp, hireCost, potentialBand, restHero, statRange, train, withAge } from './hero'
@@ -6,6 +6,8 @@ export { guideStatus, guideSteps } from './guide'
 export { fountainLevel, fountainNextAt, fountainWishes, jackpotChance } from './fountain'
 export { POTION_IDS, brewTime } from './alchemy'
 export { TRINKET_IDS, enchantTime, heroTrinkets, trinketOf } from './magic'
+export { AFFIX_IDS, isNest, nestRevealed, nestSeason, seasonKey } from './nest'
+export type { NestSeason, ScoutJob } from './nest'
 export type { MagicJob } from './magic'
 export type { AlchemyJob } from './alchemy'
 export type { FountainLevel, FountainState } from './fountain'
@@ -31,6 +33,7 @@ export type {
   SeasonId,
 } from './game'
 export type {
+  AffixId,
   PotionId,
   TrinketId,
   Supplies,
