@@ -231,12 +231,17 @@ export class BattleScene {
       this.callbacks.onStep(last.log)
     }
     if (this.index >= this.steps.length) {
+      this.exitAfterJump()
       this.callbacks.onDone()
     }
   }
 
   // Jumps to the final state without animation.
   skip() {
+    // Already at the end: let whatever is playing (the walk out) finish.
+    if (this.index >= this.steps.length && this.projectiles.length === 0) {
+      return
+    }
     this.quiet = true
     for (const projectile of this.projectiles.splice(0)) {
       this.scene.remove(projectile.mesh)
@@ -258,7 +263,18 @@ export class BattleScene {
     if (last) {
       this.callbacks.onStep(last.log)
     }
+    this.exitAfterJump()
     this.callbacks.onDone()
+  }
+
+  // A jump to the end still lets the party walk out: the live view jumps there
+  // the moment the fight's time is up, which used to cut the exit off.
+  private exitAfterJump() {
+    const last = this.steps[this.steps.length - 1]
+    const fled = this.steps.some((step) => step.type === 'retreat')
+    if (last?.type === 'end' && !fled && ![...this.fighters.values()].some((fighter) => fighter.anim?.type === 'exit')) {
+      this.walkOut(last.victory)
+    }
   }
 
   dispose() {
@@ -341,7 +357,9 @@ export class BattleScene {
       }
     }
     for (const fighter of this.fighters.values()) {
-      this.animate(fighter, dt, time)
+      // The walk out runs on the wall clock (at most twice as fast), so it
+      // still shows when the replay is sped up or paused at the end.
+      this.animate(fighter, fighter.anim?.type === 'exit' ? raw * Math.min(2, Math.max(1, this.speed)) : dt, time)
     }
     this.updateEffects(dt)
     this.updateEmbers(time)
