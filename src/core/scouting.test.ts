@@ -38,7 +38,9 @@ describe('interviews', () => {
 
   it('goes deeper at a big inn, showing the stats at the prime', () => {
     const base = town()
-    const state = reduce({ ...base, buildings: { ...base.buildings, inn: scoutingRules.deepInnLevel } }, { type: 'interview', id: 'v1' })
+    const once = reduce({ ...base, buildings: { ...base.buildings, inn: scoutingRules.deepInnLevel } }, { type: 'interview', id: 'v1' })
+    expect(knowledge(once.visitors[0]!)).toBe(1)
+    const state = reduce(once, { type: 'interview', id: 'v1' })
     expect(knowledge(state.visitors[0]!)).toBe(2)
     const young = state.visitors[0]!
     expect(peakStats(young).str).toBeGreaterThan(young.stats.str)
@@ -84,3 +86,32 @@ describe('saves', () => {
     expect(loaded.visitors.every((hero) => knowledge(hero) === 1)).toBe(true)
   })
 })
+
+describe('review 8e1fa30 fixes', () => {
+  it('counts only free interviews, so a bigger inn opens more at once', () => {
+    let state = town()
+    state = reduce(state, { type: 'interview', id: 'v1' })
+    state = reduce(state, { type: 'interview', id: 'v2' })
+    expect(state.gold).toBe(500 - scoutingRules.interviewGold)
+    const bigger = { ...state, buildings: { ...state.buildings, inn: state.buildings.inn + 1 } }
+    expect(interviewsLeft(bigger)).toBe(1)
+    expect(reduce(bigger, { type: 'interview', id: 'v3' }).gold).toBe(bigger.gold)
+  })
+
+  it('never lowers the potential of a visitor already past 100', () => {
+    let found: Hero | null = null
+    for (let seed = 1; seed < 500 && !found; seed += 1) {
+      const made = arrive(visitor('x', { potential: 110 }), createRng(seed), 1)
+      if (made.prodigy) found = made
+    }
+    expect(found?.potential).toBe(110)
+  })
+
+  it('keeps the visitors of a version 1 save known', () => {
+    const old = { ...town(), version: 1 } as Record<string, unknown>
+    const loaded = migrate(JSON.parse(JSON.stringify(old)), now)
+    expect(loaded.visitors.length).toBeGreaterThan(0)
+    expect(loaded.visitors.every((hero) => knowledge(hero) >= 1)).toBe(true)
+  })
+})
+

@@ -1913,7 +1913,9 @@ function fromLegacy(record: Record<string, unknown>, now: number): GameState {
   if (!validHeroes(record.visitors) || !validHeroes(record.roster)) {
     return base
   }
-  return normalize({ ...base, ...record, version: SAVE_VERSION, calendar: base.calendar, lastTickAt: now, absence: null, notice: null }, now)
+  // Visitors of a version 1 save were already looked over (review 8e1fa30).
+  const visitors = Array.isArray(record.visitors) ? (record.visitors as Hero[]).map((hero) => ({ ...hero, interviewed: hero.interviewed || 1 })) : record.visitors
+  return normalize({ ...base, ...record, visitors, version: SAVE_VERSION, calendar: base.calendar, lastTickAt: now, absence: null, notice: null }, now)
 }
 
 function withRecovery(hero: Hero, now: number): Hero {

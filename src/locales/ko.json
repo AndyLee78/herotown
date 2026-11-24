@@ -9,7 +9,7 @@
     "hiddenTraits": "특성 ?",
     "prodigy": "숨은 인재!",
     "terms": "마을 Lv {{level}} 필요",
-    "hireHint": "마을이 Lv {{level}}이 되면 고용할 수 있습니다.",
+    "hireHint": "마을 Lv {{level}}부터 고용할 수 있습니다.",
     "peak": "전성기 {{value}}"
   },
   "automation": {

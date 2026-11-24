@@ -31,10 +31,12 @@ export function interview(state: GameState, id: string): GameState {
   if (!visitor) {
     return { ...state, notice: 'missing' }
   }
-  const depth = state.buildings.inn >= scoutingRules.deepInnLevel ? 2 : 1
-  if (knowledge(visitor) >= depth) {
+  // Each interview goes one step deeper; the second step needs a big inn (review 8e1fa30).
+  const most = state.buildings.inn >= scoutingRules.deepInnLevel ? 2 : 1
+  if (knowledge(visitor) >= most) {
     return { ...state, notice: 'interviewed' }
   }
+  const depth = knowledge(visitor) + 1
   const season = seasonKey(state.calendar)
   const used = state.interviews?.season === season ? state.interviews.used : 0
   const free = used < freeInterviews(state)
@@ -45,7 +47,8 @@ export function interview(state: GameState, id: string): GameState {
     ...state,
     notice: null,
     gold: free ? state.gold : state.gold - scoutingRules.interviewGold,
-    interviews: { season, used: used + 1 },
+    // Only free interviews count against the allowance (review 8e1fa30).
+    interviews: { season, used: free ? used + 1 : used },
     visitors: state.visitors.map((hero) => (hero.id === id ? { ...hero, interviewed: depth } : hero)),
   }
 }
@@ -60,7 +63,8 @@ export function peakStats(hero: Hero): Stats {
 export function arrive(hero: Hero, rng: Rng, townLevel: number): Hero {
   let next = hero
   if (rng.next() < scoutingRules.prodigyChance + scoutingRules.prodigyPerTownLevel * townLevel) {
-    const potential = Math.min(100, hero.potential + scoutingRules.prodigyBoost)
+    // Up to 100, but never below what the visitor already had (review 8e1fa30).
+    const potential = Math.max(hero.potential, Math.min(100, hero.potential + scoutingRules.prodigyBoost))
     const lift = (0.75 + potential / 200) / (0.75 + hero.potential / 200)
     const potentials = Object.fromEntries(Object.entries(hero.potentials).map(([key, value]) => [key, Math.max(1, Math.round(value * lift))])) as Stats
     const age = scoutingRules.prodigyAge[0]! + Math.floor(rng.next() * (scoutingRules.prodigyAge[1]! - scoutingRules.prodigyAge[0]! + 1))
