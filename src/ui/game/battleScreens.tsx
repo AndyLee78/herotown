@@ -15,6 +15,7 @@ import {
   expeditionSlots,
   heroPower,
   heroTrinkets,
+  busyHeroIds,
   isNest,
   monsterById,
   nestRevealed,
@@ -379,17 +380,14 @@ function Prep({
 }) {
   const { t, i18n } = useTranslation()
   const korean = i18n.language.startsWith('ko')
-  const now = useNow(save.expeditions.length > 0 || save.scout != null)
+  const now = useNow(save.expeditions.length > 0 || save.scout != null || save.drills.length > 0)
   const dungeon = dungeonById(save.dungeonId)
   const slots = expeditionSlots(save.buildings.guild)
   const preset = save.presets.find((entry) => entry.id === save.presetId) ?? save.presets[0]
   if (!preset) {
     return null
   }
-  const away = new Set(save.expeditions.flatMap((expedition) => expedition.heroIds))
-  if (save.scout) {
-    away.add(save.scout.heroId)
-  }
+  const away = busyHeroIds(save)
   const heroes = presetHeroes(save, preset)
   const busy = heroes.some((hero) => away.has(hero.id))
   const full = save.expeditions.length >= slots
@@ -613,10 +611,7 @@ function PartyEditor({ save, onAction, onBack }: { save: GameState; onAction: Ac
   if (!preset) {
     return null
   }
-  const away = new Set(save.expeditions.flatMap((expedition) => expedition.heroIds))
-  if (save.scout) {
-    away.add(save.scout.heroId)
-  }
+  const away = busyHeroIds(save)
   const inPreset = new Set(preset.slots.map((slot) => slot.id))
   const full = preset.slots.length >= combatRules.maxParty
   // Children stay off this list until they come of age (Docs/tasks.md 50).
@@ -655,6 +650,7 @@ function PartyEditor({ save, onAction, onBack }: { save: GameState; onAction: Ac
             const chosen = inPreset.has(hero.id)
             const unavailable = away.has(hero.id) || !canDeploy(hero)
             const scouting = save.scout?.heroId === hero.id
+            const drilling = save.drills.some((drill) => drill.heroId === hero.id)
             return (
               <button
                 key={hero.id}
@@ -671,7 +667,7 @@ function PartyEditor({ save, onAction, onBack }: { save: GameState; onAction: Ac
                   <span className="chips">
                     <Chip tone="info">{t(`class.${hero.classId}`)}</Chip>
                     <Chip>{t('ui.level', { level: hero.level })}</Chip>
-                    {scouting ? <Chip tone="info">{t('hero.scouting')}</Chip> : away.has(hero.id) ? <Chip tone="info">{t('battle.onTrip')}</Chip> : null}
+                    {drilling ? <Chip tone="info">{t('hero.drilling')}</Chip> : scouting ? <Chip tone="info">{t('hero.scouting')}</Chip> : away.has(hero.id) ? <Chip tone="info">{t('battle.onTrip')}</Chip> : null}
                     {needsWarning(hero) || hero.condition === 'dead' ? <Chip tone="bad">{t(`condition.${hero.condition}`)}</Chip> : null}
                     {hero.expecting ? <Chip tone="info">{t('battle.expecting')}</Chip> : null}
                   </span>

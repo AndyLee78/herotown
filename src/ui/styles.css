@@ -844,6 +844,48 @@ button,
   gap: 6px;
 }
 
+.skill-list {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.skill-row {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 10px;
+  padding: 10px 12px;
+  background: var(--paper-2);
+  border-radius: 12px;
+}
+
+.skill-row.locked {
+  opacity: 0.55;
+}
+
+.skill-row-body {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+}
+
+.skill-row-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  align-items: center;
+  justify-content: flex-end;
+  flex-shrink: 0;
+}
+
+.training-job {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
 .section-title {
   display: flex;
   align-items: center;

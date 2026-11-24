@@ -10,9 +10,14 @@ import {
   adsRemaining,
   ageBands,
   bedCount,
+  busyHeroIds,
+  canDeploy,
   deployAge,
   isChild,
   nextAge,
+  drillGold,
+  drillTime,
+  drillXp,
   dungeons,
   enchantTime,
   expeditionSlots,
@@ -22,7 +27,9 @@ import {
   fountainWishes,
   hallOfFame,
   magicRules,
+  partyLevel,
   population,
+  progression,
   smithRules,
   timeRules,
   townLevel,
@@ -54,6 +61,7 @@ export function Town({
   onWatch,
   onAlchemy,
   onMagic,
+  onTraining,
   onSelectHero,
 }: {
   save: GameState
@@ -62,6 +70,7 @@ export function Town({
   onWatch: () => void
   onAlchemy: () => void
   onMagic: () => void
+  onTraining: () => void
   onSelectHero: (id: string) => void
 }) {
   const { t } = useTranslation()
@@ -168,6 +177,11 @@ export function Town({
               {id === 'magic' && current > 0 ? (
                 <button type="button" className="btn" onClick={onMagic}>
                   {t('magic.open')}
+                </button>
+              ) : null}
+              {id === 'training' && current > 0 ? (
+                <button type="button" className="btn" onClick={onTraining}>
+                  {t('training.open')}
                 </button>
               ) : null}
             </article>
@@ -423,6 +437,85 @@ export function Alchemy({ save, onAction }: { save: GameState; onAction: Act }) 
             ))}
           </ul>
         </div>
+      </div>
+    </>
+  )
+}
+
+export function Training({ save, onAction }: { save: GameState; onAction: Act }) {
+  const { t } = useTranslation()
+  const level = save.buildings.training
+  const active = save.drills.length > 0
+  const now = useNow(active)
+  const busy = busyHeroIds(save)
+  const total = Math.max(1, drillTime(save))
+  const listed = save.roster
+    .filter((hero) => !isChild(hero) && hero.condition !== 'dead')
+    .map((hero) => ({ hero, xp: drillXp(save, hero), gold: drillGold(hero) }))
+    .sort((a, b) => a.hero.level - b.hero.level || a.hero.name.localeCompare(b.hero.name))
+  return (
+    <>
+      <p className="banner">
+        <UiIcon name="roster" size={18} />
+        {level < 1 ? t('training.unbuilt') : t('training.level', { level })}
+        {' · '}
+        {t('training.slots', { used: save.drills.length, count: Math.max(1, level) })}
+        {' · '}
+        {t('training.partyLevel', { level: Math.round(partyLevel(save) * 10) / 10 })}
+      </p>
+      <p className="muted">{t('training.time', { time: waitLabel(drillTime(save)) })}</p>
+      {save.drills.length === 0 ? <p className="muted">{t('training.idle')}</p> : null}
+      <div className="column">
+        {save.drills.map((drill) => {
+          const hero = save.roster.find((entry) => entry.id === drill.heroId)
+          const left = Math.max(0, drill.finishAt - now)
+          return (
+            <div key={drill.heroId} className="card training-job">
+              <div className="card-top">
+                {hero ? <Portrait hero={hero} /> : null}
+                <div className="grow">
+                  <strong>{hero?.name ?? drill.heroId}</strong>
+                  <span className="muted">{t('training.working', { name: hero?.name ?? drill.heroId, time: waitLabel(left) })}</span>
+                </div>
+                <Chip>+{drill.xp} XP</Chip>
+              </div>
+              <Bar value={total - left} max={total} tone="info" />
+            </div>
+          )
+        })}
+      </div>
+      <h3 className="section-title">{t('training.roster')}</h3>
+      <div className="hero-list">
+        {listed.map(({ hero, xp, gold }) => {
+          const drilling = busy.has(hero.id)
+          const levels = Math.round((xp / Math.max(1, hero.level * progression.xpPerLevel)) * 10) / 10
+          const canSend =
+            level >= 1 &&
+            !drilling &&
+            canDeploy(hero) &&
+            hero.condition !== 'injured' &&
+            hero.condition !== 'critical' &&
+            save.drills.length < level &&
+            save.gold >= gold
+          return (
+            <div key={hero.id} className="hero-row">
+              <Portrait hero={hero} />
+              <span className="hero-row-body">
+                <strong>
+                  {hero.name} · {t('ui.level', { level: hero.level })}
+                </strong>
+                <span className="chips">
+                  <Chip tone="info">{t(`class.${hero.classId}`)}</Chip>
+                  {drilling ? <Chip tone="info">{t('hero.drilling')}</Chip> : null}
+                </span>
+                <span className="muted">{t('training.gain', { xp, levels })}</span>
+              </span>
+              <button type="button" className="btn primary small" disabled={!canSend} onClick={() => onAction({ type: 'drill', heroId: hero.id, now: gameNow() })}>
+                {t('action.drill')} <Res kind="gold" amount={gold} light />
+              </button>
+            </div>
+          )
+        })}
       </div>
     </>
   )

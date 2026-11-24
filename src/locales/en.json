@@ -21,7 +21,8 @@
     "magic": "Magic Workshop",
     "debug": "Debug",
     "settings": "Settings",
-    "battle": "Battle"
+    "battle": "Battle",
+    "training": "Training Ground"
   },
   "action": {
     "hire": "Hire ({{cost}})",
@@ -43,6 +44,8 @@
     "en": "English",
     "ko": "한국어",
     "learn": "Learn",
+    "forget": "Forget",
+    "drill": "Train",
     "treat": "Treat",
     "revive": "Revive ({{cost}})",
     "dismiss": "Dismiss",
@@ -439,9 +442,27 @@
     "childrenElsewhere": "{{count}} children are listed in the census window.",
     "growsUp": "Can go out at age {{age}}.",
     "afterBirth": "Can go out after the birth.",
-    "scouting": "Scouting"
+    "scouting": "Scouting",
+    "drilling": "Training"
   },
   "skill": {
+    "innate": "Innate",
+    "pickHint": "One at Lv{{a}}, one at Lv{{b}}. Pick two of the three.",
+    "locked": "Locked",
+    "effect": {
+      "threat": "Threat +{{value}}. Enemies focus this hero more.",
+      "guard": "Damage taken −{{percent}}%",
+      "attack": "Attack +{{percent}}%",
+      "speed": "Speed +{{percent}}%",
+      "heal": "Healing +{{percent}}%",
+      "bleed": "Attacks add +{{value}} poison",
+      "weaken": "{{percent}}% chance to weaken a foe on hit",
+      "regen": "Each turn heals the party for {{percent}}% of max HP",
+      "partyGuard": "Party damage taken −{{percent}}%",
+      "partyAttack": "Party attack +{{percent}}%",
+      "volley": "Every {{every}}th action hits all foes",
+      "cleanse": "Healing also halves poison"
+    },
     "warrior": {
       "strike": "Strike",
       "taunt": "Taunt",
@@ -577,6 +598,19 @@
     "craft": "Trinkets",
     "locked": "Opens at workshop level {{level}}.",
     "stashHint": "{{count}} trinkets in storage"
+  },
+  "training": {
+    "open": "Open training ground",
+    "level": "Training ground level {{level}}",
+    "unbuilt": "No training ground yet.",
+    "slots": "Training slots {{used}}/{{count}}",
+    "partyLevel": "Party level {{level}}",
+    "idle": "Nobody is training.",
+    "working": "{{name}} training · {{time}}",
+    "gain": "Train for +{{xp}} XP (about {{levels}} levels)",
+    "cost": "Cost",
+    "roster": "Send a hero",
+    "time": "Session {{time}}"
   },
   "smith": {
     "level": "Smithy level {{level}}",

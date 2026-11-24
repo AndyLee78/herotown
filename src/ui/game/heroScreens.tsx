@@ -1,6 +1,7 @@
 import { ChevronLeft, Clock, Hourglass, Swords } from 'lucide-react'
 import { useMemo, useState } from 'react'
 import { useTranslation } from 'react-i18next'
+import type { TFunction } from 'i18next'
 import {
   STAT_KEYS,
   adRules,
@@ -14,11 +15,14 @@ import {
   familyOf,
   legendBonus,
   lifeRules,
+  maxExtraSkills,
   potentialBand,
   progression,
   residents,
+  starterSkill,
   statRange,
   topBonds,
+  trainingRules,
   visitorCap,
   visitorStay,
   type GameAction,
@@ -28,6 +32,7 @@ import {
   magicRules,
   retirementAdvised,
   retirementRules,
+  type SkillEffect,
   trinketOf,
   villageRules,
   type BuildingId,
@@ -56,7 +61,7 @@ type Act = (action: GameAction) => void
 // Stats never go far past 30 in stage 1; bars are scaled to that.
 const STAT_SCALE = 30
 
-function HeroChips({ hero, scouting = false }: { hero: Hero; scouting?: boolean }) {
+function HeroChips({ hero, scouting = false, drilling = false }: { hero: Hero; scouting?: boolean; drilling?: boolean }) {
   const { t } = useTranslation()
   return (
     <span className="chips">
@@ -65,10 +70,54 @@ function HeroChips({ hero, scouting = false }: { hero: Hero; scouting?: boolean 
       <Chip>{t('hero.age', { age: hero.age })}</Chip>
       <Chip tone={conditionTone(hero)}>{t(`condition.${hero.condition}`)}</Chip>
       {scouting ? <Chip tone="info">{t('hero.scouting')}</Chip> : null}
+      {drilling ? <Chip tone="info">{t('hero.drilling')}</Chip> : null}
       {hero.deaths > 0 ? <Chip tone="bad">{t('hero.seenDeath')}</Chip> : null}
       {retirementAdvised(hero) ? <Chip tone="warn">{t('retire.advised')}</Chip> : null}
     </span>
   )
+}
+
+function describeSkillEffect(effect: SkillEffect | undefined, t: TFunction): string {
+  if (!effect) {
+    return ''
+  }
+  if (effect.threat != null) {
+    return t('skill.effect.threat', { value: effect.threat })
+  }
+  if (effect.guard != null) {
+    return t('skill.effect.guard', { percent: Math.round(effect.guard * 100) })
+  }
+  if (effect.attack != null) {
+    return t('skill.effect.attack', { percent: Math.round(effect.attack * 100) })
+  }
+  if (effect.speed != null) {
+    return t('skill.effect.speed', { percent: Math.round(effect.speed * 100) })
+  }
+  if (effect.heal != null) {
+    return t('skill.effect.heal', { percent: Math.round(effect.heal * 100) })
+  }
+  if (effect.bleed != null) {
+    return t('skill.effect.bleed', { value: effect.bleed })
+  }
+  if (effect.weaken != null) {
+    return t('skill.effect.weaken', { percent: Math.round(effect.weaken * 100) })
+  }
+  if (effect.regen != null) {
+    return t('skill.effect.regen', { percent: Math.round(effect.regen * 100) })
+  }
+  if (effect.partyGuard != null) {
+    return t('skill.effect.partyGuard', { percent: Math.round(effect.partyGuard * 100) })
+  }
+  if (effect.partyAttack != null) {
+    return t('skill.effect.partyAttack', { percent: Math.round(effect.partyAttack * 100) })
+  }
+  if (effect.volleyEvery != null) {
+    return t('skill.effect.volley', { every: effect.volleyEvery })
+  }
+  if (effect.cleanse) {
+    return t('skill.effect.cleanse')
+  }
+  return t('skill.innate')
 }
 
 export function Inn({ save, onHire }: { save: GameState; onHire: (id: string) => void }) {
@@ -162,7 +211,11 @@ export function Roster({
               <Portrait hero={hero} />
               <span className="hero-row-body">
                 <strong>{hero.name}</strong>
-                <HeroChips hero={hero} scouting={save.scout?.heroId === hero.id} />
+                <HeroChips
+                  hero={hero}
+                  scouting={save.scout?.heroId === hero.id}
+                  drilling={save.drills.some((drill) => drill.heroId === hero.id)}
+                />
                 <span className="fatigue">
                   <Bar value={hero.fatigue} max={100} tone={fatigueTone(hero)} />
                   <span className="muted">{fatigueText(t, hero)}</span>
@@ -254,7 +307,11 @@ function HeroDetail({
         <Portrait hero={hero} large />
         <div>
           <strong className="name">{hero.family ? `${hero.name} · ${hero.family}` : hero.name}</strong>
-          <HeroChips hero={hero} scouting={save.scout?.heroId === hero.id} />
+          <HeroChips
+            hero={hero}
+            scouting={save.scout?.heroId === hero.id}
+            drilling={save.drills.some((drill) => drill.heroId === hero.id)}
+          />
           <span className="chips">
             {hero.traitIds.map((trait) => (
               <Chip key={trait}>{t(`trait.${trait}`)}</Chip>
@@ -287,19 +344,42 @@ function HeroDetail({
       <h3 className="section-title">
         {t('label.skills')} <Chip>{t('hero.points', { count: hero.skillPoints })}</Chip>
       </h3>
-      <ul className="plain">
-        {skills.map((skill) => (
-          <li key={skill.id} className="line">
-            <span>{t(`skill.${skill.id}`)}</span>
-            {hero.learned.includes(skill.id) ? (
-              <Chip tone="good">{t('hero.learned')}</Chip>
-            ) : (
-              <button type="button" className="btn small" disabled={hero.skillPoints < 1} onClick={() => onAction({ type: 'learn', id: hero.id, skillId: skill.id })}>
-                {t('action.learn')}
-              </button>
-            )}
-          </li>
-        ))}
+      <p className="muted">
+        {t('skill.pickHint', { a: trainingRules.pickLevels[0], b: trainingRules.pickLevels[1] })}
+      </p>
+      <ul className="plain skill-list">
+        {skills.map((skill, index) => {
+          const innate = index === 0 || skill.id === starterSkill(hero.classId)
+          const learned = hero.learned.includes(skill.id)
+          const extras = hero.learned.filter((id) => id !== starterSkill(hero.classId)).length
+          const full = extras >= maxExtraSkills()
+          const canLearn = !innate && !learned && hero.skillPoints > 0 && !full && inRoster
+          const locked = !innate && !learned && full
+          const canForget = !innate && learned && save.buildings.training >= 1 && inRoster
+          return (
+            <li key={skill.id} className={locked ? 'skill-row locked' : 'skill-row'}>
+              <div className="skill-row-body">
+                <strong>{t(`skill.${skill.id}`)}</strong>
+                <span className="muted">{describeSkillEffect(skill.effect, t)}</span>
+              </div>
+              <span className="skill-row-actions">
+                {innate ? <Chip tone="info">{t('skill.innate')}</Chip> : null}
+                {learned && !innate ? <Chip tone="good">{t('hero.learned')}</Chip> : null}
+                {locked ? <Chip>{t('skill.locked')}</Chip> : null}
+                {canLearn ? (
+                  <button type="button" className="btn small" onClick={() => onAction({ type: 'learn', id: hero.id, skillId: skill.id })}>
+                    {t('action.learn')}
+                  </button>
+                ) : null}
+                {canForget ? (
+                  <button type="button" className="btn small" disabled={save.gold < trainingRules.forgetGold} onClick={() => onAction({ type: 'forget', heroId: hero.id, skillId: skill.id })}>
+                    {t('action.forget')} <Res kind="gold" amount={trainingRules.forgetGold} light />
+                  </button>
+                ) : null}
+              </span>
+            </li>
+          )
+        })}
       </ul>
 
       <h3 className="section-title">{t('ui.gear')}</h3>

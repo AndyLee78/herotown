@@ -21,7 +21,8 @@
     "magic": "마법 공방",
     "debug": "디버그",
     "settings": "설정",
-    "battle": "전투"
+    "battle": "전투",
+    "training": "훈련소"
   },
   "action": {
     "hire": "고용 ({{cost}})",
@@ -43,6 +44,8 @@
     "en": "English",
     "ko": "한국어",
     "learn": "배우기",
+    "forget": "잊기",
+    "drill": "훈련",
     "treat": "신전 치료",
     "revive": "되살리기 ({{cost}})",
     "dismiss": "해고",
@@ -439,9 +442,27 @@
     "childrenElsewhere": "아이 {{count}}명은 마을 인구 창에서 볼 수 있다.",
     "growsUp": "{{age}}살이 되면 출전할 수 있다.",
     "afterBirth": "아이를 낳은 뒤 출전할 수 있다.",
-    "scouting": "정찰 중"
+    "scouting": "정찰 중",
+    "drilling": "훈련 중"
   },
   "skill": {
+    "innate": "기본기",
+    "pickHint": "Lv{{a}}에 하나, Lv{{b}}에 하나. 세 개 중 두 개만 배운다.",
+    "locked": "잠김",
+    "effect": {
+      "threat": "위협 +{{value}}. 적이 더 확실히 이 영웅을 노린다.",
+      "guard": "받는 피해 −{{percent}}%",
+      "attack": "공격 +{{percent}}%",
+      "speed": "속도 +{{percent}}%",
+      "heal": "회복량 +{{percent}}%",
+      "bleed": "공격에 지속 피해 +{{value}}",
+      "weaken": "공격한 적이 {{percent}}% 확률로 약화된다",
+      "regen": "자기 차례마다 파티를 최대 체력의 {{percent}}%씩 회복",
+      "partyGuard": "파티 전원 받는 피해 −{{percent}}%",
+      "partyAttack": "파티 전원 공격 +{{percent}}%",
+      "volley": "{{every}}번째 행동마다 적 모두를 친다",
+      "cleanse": "회복할 때 중독을 절반으로 줄인다"
+    },
     "warrior": {
       "strike": "강타",
       "taunt": "도발",
@@ -577,6 +598,19 @@
     "craft": "장신구",
     "locked": "공방 레벨 {{level}}에 열린다.",
     "stashHint": "창고에 장신구 {{count}}개"
+  },
+  "training": {
+    "open": "훈련소 열기",
+    "level": "훈련소 레벨 {{level}}",
+    "unbuilt": "훈련소가 아직 없다.",
+    "slots": "훈련 자리 {{used}}/{{count}}",
+    "partyLevel": "파티 기준 레벨 {{level}}",
+    "idle": "훈련 중인 영웅이 없다.",
+    "working": "{{name}} 훈련 중 · {{time}}",
+    "gain": "훈련하면 +{{xp}} XP (약 {{levels}}레벨)",
+    "cost": "비용",
+    "roster": "보낼 영웅",
+    "time": "훈련 시간 {{time}}"
   },
   "smith": {
     "level": "대장간 레벨 {{level}}",
