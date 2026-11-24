@@ -106,7 +106,7 @@ Claude Code, Cursor, GPT(Codex)가 함께 쓰는 작업 목록이다. 작업 하
 | 64 | 사기·축제 core 코드 리뷰 (b9036a0) | GPT | `Docs/reviews/b9036a0.md` (새 파일만) | 완료 (65a731f) |
 | 65 | 사기가 진행에 주는 영향 측정 | GPT | `tools/curve.ts`, `print-curve.ts`, `tune-curve.ts`, `first-hour.ts` | 완료 (727df45) |
 | 66 | 자동화 화면(대기열·물약 유지·자동 치료·자동 훈련) | GPT (Cursor 대신) | `App.tsx`, `src/ui/game/*.tsx`, `styles.css`, `src/locales/*` | 대기 |
-| 67 | 자동화 core 코드 리뷰 (커밋 해시는 아래) | GPT | `Docs/reviews/<해시>.md` (새 파일만) | 대기 (66 뒤) |
+| 67 | 자동화 core 코드 리뷰 (a6be730) | GPT | `Docs/reviews/a6be730.md` (새 파일만) | 대기 (66 뒤) |
 
 ---
 
@@ -1581,11 +1581,11 @@ core에 이미 있는 것:
 
 ## 67. 자동화 core 코드 리뷰 (GPT)
 
-**작업 66 뒤에 시작한다(같은 도구라 순서대로).** core 커밋은 git log에서 "Add workshop queues"로 찾는다.
+**작업 66 뒤에 시작한다(같은 도구라 순서대로).** core 커밋은 **a6be730**이다.
 
 **전달할 내용**
 
 ```
-자동화 core 커밋("Add workshop queues"로 찾는다)을 리뷰한다. 코드는 고치지 않고 Docs/reviews/<해시>.md 새 파일 하나에만 쓴다(Docs/reviews/README.md 형식).
+자동화 core 커밋 a6be730를 리뷰한다. 코드는 고치지 않고 Docs/reviews/a6be730.md 새 파일 하나에만 쓴다(Docs/reviews/README.md 형식).
 볼 것: Docs/automation.md와 규칙 차이, 대기열의 비용 계산과 환불이 직접 주문과 같은지(은퇴자 보너스·공방 레벨·대기 중 레벨업), 대기열 작업이 이전 작업이 끝난 시각에 이어 시작하는지(오프라인 12시간, 계절 경계), 물약 유지가 과하게 만들거나 원정에 들고 간 물약을 어떻게 세는지, 자동 치료와 원정·훈련·정찰·사망의 관계, 자동 훈련이 선택한 파티·자동 파티·바쁜 영웅을 빼는지와 골드가 모자랄 때, 세이브 16 → 17.
 ```
