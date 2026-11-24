@@ -110,7 +110,7 @@ Claude Code, Cursor, GPT(Codex)가 함께 쓰는 작업 목록이다. 작업 하
 | 68 | 면담·스카우팅 화면 | GPT (Cursor 대신) | `App.tsx`, `src/ui/game/*.tsx`, `styles.css`, `src/locales/*` | 완료 (a7cfe98) |
 | 69 | 면담·스카우팅 core 코드 리뷰 (8e1fa30) | GPT | `Docs/reviews/8e1fa30.md` (새 파일만) | 완료 (c5b60da) |
 | 70 | 학교 화면 | GPT (Cursor 대신) | `App.tsx`, `src/ui/game/*.tsx`, `styles.css`, `src/locales/*` | 대기 |
-| 71 | 학교 core 코드 리뷰 (커밋 해시는 아래) | GPT | `Docs/reviews/<해시>.md` (새 파일만) | 대기 (70 뒤) |
+| 71 | 학교 core 코드 리뷰 (62e7837) | GPT | `Docs/reviews/62e7837.md` (새 파일만) | 대기 (70 뒤) |
 
 ---
 
@@ -1684,11 +1684,11 @@ core에 이미 있는 것('../../core'에서 export):
 
 ## 71. 학교 core 코드 리뷰 (GPT)
 
-**작업 70 뒤에 시작한다(같은 도구라 순서대로).** core 커밋은 git log에서 "Add the school"로 찾는다.
+**작업 70 뒤에 시작한다(같은 도구라 순서대로).** core 커밋은 **62e7837**이다.
 
 **전달할 내용**
 
 ```
-학교 core 커밋("Add the school"로 찾는다)을 리뷰한다. 코드는 고치지 않고 Docs/reviews/<해시>.md 새 파일 하나에만 쓴다(Docs/reviews/README.md 형식).
+학교 core 커밋 62e7837를 리뷰한다. 코드는 고치지 않고 Docs/reviews/62e7837.md 새 파일 하나에만 쓴다(Docs/reviews/README.md 형식).
 볼 것: Docs/school.md와 수치·규칙 차이, 수업료 지불 순서와 골드 부족, 계절 경계·오프라인에서 여러 계절이 지날 때, 잠재력 상한과 집중 능력치 소수점 누적, 진로 변경(성별·장비·스킬·직업 바꿈 뒤 createHero), 성인식과 졸업 시점(나이 듦·사망·해고·부모 은퇴), 자리 수와 학교 레벨 변화, 세이브 18 → 19.
 ```
