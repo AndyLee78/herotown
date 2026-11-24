@@ -880,6 +880,14 @@ button,
   flex-shrink: 0;
 }
 
+.guild-record {
+  margin: 0.6rem 0 1rem;
+}
+
+.card.contract.done {
+  opacity: 0.72;
+}
+
 .training-job {
   display: flex;
   flex-direction: column;

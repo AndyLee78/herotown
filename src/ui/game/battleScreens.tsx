@@ -13,6 +13,7 @@ import {
   dungeonUnlocked,
   dungeons,
   expeditionSlots,
+  guildLevel,
   heroPower,
   heroTrinkets,
   busyHeroIds,
@@ -549,56 +550,66 @@ function Prep({
 
 function AutoSettings({ save, onAction }: { save: GameState; onAction: Act }) {
   const { t } = useTranslation()
+  const guildBuilt = save.buildings.guild >= 1
+  const autoParties = guildLevel(save.buildings.guild).autoParties
   return (
     <details className="fold">
       <summary>
         {t('label.auto')} {save.auto.enabled ? <Chip tone="good">ON</Chip> : <Chip>OFF</Chip>}
+        {!guildBuilt ? <Chip tone="warn"><Lock size={12} /></Chip> : null}
       </summary>
-      <button type="button" className={save.auto.enabled ? 'btn primary' : 'btn'} onClick={() => onAction({ type: 'auto', enabled: !save.auto.enabled })}>
-        {t('action.auto')} {save.auto.enabled ? 'ON' : 'OFF'}
-      </button>
-      <label className="field">
-        <span>{t('label.policy')}</span>
-        <select value={save.auto.policy} onChange={(event) => onAction({ type: 'autoPolicy', policy: event.target.value as 'material' | 'safe' | 'fixed' })}>
-          {(['safe', 'material', 'fixed'] as const).map((policy) => (
-            <option key={policy} value={policy}>
-              {t(`policy.${policy}`)}
-            </option>
-          ))}
-        </select>
-      </label>
-      {save.auto.policy === 'material' ? (
-        <label className="field">
-          <span>{t('label.material')}</span>
-          <select
-            value={save.auto.material}
-            onChange={(event) => onAction({ type: 'autoMaterial', material: event.target.value as 'wood' | 'stone' | 'iron' | 'bone' | 'herb' | 'crystal' })}
-          >
-            {(['wood', 'stone', 'iron', 'bone', 'herb', 'crystal'] as const).map((material) => (
-              <option key={material} value={material}>
-                {t(`material.${material}`)}
-              </option>
-            ))}
-          </select>
-        </label>
+      {!guildBuilt ? (
+        <p className="banner">{t('guild.autoLocked')}</p>
       ) : (
-        <label className="field">
-          <span>{t('label.autoDungeon')}</span>
-          <select value={save.auto.dungeonId} onChange={(event) => onAction({ type: 'autoDungeon', id: event.target.value })}>
-            {dungeons
-              .filter((entry) => save.cleared.includes(entry.id))
-              .map((entry) => (
-                <option key={entry.id} value={entry.id}>
-                  {t(`dungeon.${entry.id}.name`)}
+        <>
+          <button type="button" className={save.auto.enabled ? 'btn primary' : 'btn'} onClick={() => onAction({ type: 'auto', enabled: !save.auto.enabled })}>
+            {t('action.auto')} {save.auto.enabled ? 'ON' : 'OFF'}
+          </button>
+          <label className="field">
+            <span>{t('label.policy')}</span>
+            <select value={save.auto.policy} onChange={(event) => onAction({ type: 'autoPolicy', policy: event.target.value as 'material' | 'safe' | 'fixed' })}>
+              {(['safe', 'material', 'fixed'] as const).map((policy) => (
+                <option key={policy} value={policy}>
+                  {t(`policy.${policy}`)}
                 </option>
               ))}
-          </select>
-        </label>
+            </select>
+          </label>
+          {save.auto.policy === 'material' ? (
+            <label className="field">
+              <span>{t('label.material')}</span>
+              <select
+                value={save.auto.material}
+                onChange={(event) => onAction({ type: 'autoMaterial', material: event.target.value as 'wood' | 'stone' | 'iron' | 'bone' | 'herb' | 'crystal' })}
+              >
+                {(['wood', 'stone', 'iron', 'bone', 'herb', 'crystal'] as const).map((material) => (
+                  <option key={material} value={material}>
+                    {t(`material.${material}`)}
+                  </option>
+                ))}
+              </select>
+            </label>
+          ) : (
+            <label className="field">
+              <span>{t('label.autoDungeon')}</span>
+              <select value={save.auto.dungeonId} onChange={(event) => onAction({ type: 'autoDungeon', id: event.target.value })}>
+                {dungeons
+                  .filter((entry) => save.cleared.includes(entry.id))
+                  .map((entry) => (
+                    <option key={entry.id} value={entry.id}>
+                      {t(`dungeon.${entry.id}.name`)}
+                    </option>
+                  ))}
+              </select>
+            </label>
+          )}
+          <button type="button" className="btn small" onClick={() => onAction({ type: 'autoParty' })}>
+            {t('action.autoParty')}
+          </button>
+          <p className="muted">{t('hint.auto')}</p>
+          {autoParties >= 2 ? <p className="muted">{t('guild.autoPartiesHint')}</p> : null}
+        </>
       )}
-      <button type="button" className="btn small" onClick={() => onAction({ type: 'autoParty' })}>
-        {t('action.autoParty')}
-      </button>
-      <p className="muted">{t('hint.auto')}</p>
     </details>
   )
 }

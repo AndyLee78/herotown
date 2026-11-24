@@ -1,4 +1,5 @@
 import { Lock } from 'lucide-react'
+import type { TFunction } from 'i18next'
 import { IconSheet, UiIcon } from './icons'
 import { lazy, Suspense, useEffect, useState } from 'react'
 import { useTranslation } from 'react-i18next'
@@ -25,6 +26,8 @@ import {
   fountainNextAt,
   fountainRules,
   fountainWishes,
+  guildLevel,
+  guildRules,
   hallOfFame,
   magicRules,
   partyLevel,
@@ -36,6 +39,7 @@ import {
   villageRules,
   visitorCap,
   type BuildingId,
+  type Contract,
   type DungeonReport,
   type GameAction,
   type GameState,
@@ -62,6 +66,7 @@ export function Town({
   onAlchemy,
   onMagic,
   onTraining,
+  onGuild,
   onSelectHero,
 }: {
   save: GameState
@@ -71,6 +76,7 @@ export function Town({
   onAlchemy: () => void
   onMagic: () => void
   onTraining: () => void
+  onGuild: () => void
   onSelectHero: (id: string) => void
 }) {
   const { t } = useTranslation()
@@ -106,8 +112,11 @@ export function Town({
           <Chip>{t('town.parties', { count: expeditionSlots(save.buildings.guild) })}</Chip>
           <Chip>{t('town.visitors', { count: visitorCap(save.buildings.inn) })}</Chip>
           {save.buildings.guild > 0 ? (
-            <Chip tone={save.questClaimed ? 'good' : 'info'}>
-              {save.questClaimed ? t('town.questDone') : t('town.quest', { progress: save.questProgress, count: villageRules.guild.questCount })}
+            <Chip tone={save.guild && save.guild.seasonal.length > 0 && save.guild.seasonal.every((c) => c.done) ? 'good' : 'info'}>
+              {t('town.contracts', {
+                done: save.guild?.seasonal.filter((c) => c.done).length ?? 0,
+                count: save.guild?.seasonal.length || guildLevel(save.buildings.guild).contracts,
+              })}
             </Chip>
           ) : null}
         </span>
@@ -182,6 +191,11 @@ export function Town({
               {id === 'training' && current > 0 ? (
                 <button type="button" className="btn" onClick={onTraining}>
                   {t('training.open')}
+                </button>
+              ) : null}
+              {id === 'guild' && current > 0 ? (
+                <button type="button" className="btn" onClick={onGuild}>
+                  {t('guild.open')}
                 </button>
               ) : null}
             </article>
@@ -517,6 +531,122 @@ export function Training({ save, onAction }: { save: GameState; onAction: Act })
           )
         })}
       </div>
+    </>
+  )
+}
+
+function appraisalLabel(share: number, t: TFunction): string {
+  if (share <= 0) {
+    return t('guild.appraisalExact')
+  }
+  return t('guild.appraisalRange', { percent: Math.round(share * 100) })
+}
+
+function ContractCard({
+  save,
+  contract,
+  repeat,
+  onAction,
+}: {
+  save: GameState
+  contract: Contract
+  repeat?: boolean
+  onAction: Act
+}) {
+  const { t } = useTranslation()
+  const title =
+    contract.kind === 'clear'
+      ? t('guild.clear', { dungeon: t(`dungeon.${contract.dungeonId}.name`), need: contract.need })
+      : t('guild.deliver', { material: t(`material.${contract.material}`), need: contract.need })
+  const canDeliver =
+    contract.kind === 'deliver' &&
+    !contract.done &&
+    !!contract.material &&
+    save.materials[contract.material] >= contract.need - contract.progress
+  return (
+    <article className={contract.done ? 'card contract done' : 'card contract'}>
+      <div className="card-top">
+        <strong className="name">{title}</strong>
+        {repeat ? <Chip tone="warn">{t('guild.repeat')}</Chip> : null}
+        {contract.done ? <Chip tone="good">{t('guild.done')}</Chip> : null}
+      </div>
+      {repeat && !contract.done ? <p className="muted">{t('guild.repeatHint')}</p> : null}
+      <Bar value={contract.progress} max={contract.need} tone={contract.done ? 'good' : 'info'} />
+      <p className="muted">{t('guild.progress', { progress: contract.progress, need: contract.need })}</p>
+      <span className="chips">
+        <Chip tone="good">
+          {t('guild.reward')} <Res kind="gold" amount={contract.gold} light />
+        </Chip>
+        {contract.fame > 0 ? (
+          <Chip tone="warn">
+            <Res kind="fame" amount={contract.fame} light />
+          </Chip>
+        ) : null}
+      </span>
+      {contract.kind === 'deliver' && !contract.done ? (
+        <button type="button" className="btn primary" disabled={!canDeliver} onClick={() => onAction({ type: 'deliver', contractId: contract.id })}>
+          {t('action.deliver')}
+          {contract.material ? <Res kind={contract.material} amount={contract.need - contract.progress} light /> : null}
+        </button>
+      ) : null}
+    </article>
+  )
+}
+
+export function Guild({ save, onAction }: { save: GameState; onAction: Act }) {
+  const { t } = useTranslation()
+  const level = save.buildings.guild
+  const effects = guildLevel(level)
+  const board = save.guild
+  const left = Math.max(0, timeRules.seasonMs - save.calendar.intoSeasonMs)
+  const record = board?.record ?? 0
+  const nextLevel = level >= guildRules.levels.length - 1 ? null : guildLevel(level + 1)
+  const seasonalDone = board?.seasonal.every((c) => c.done) ?? false
+  return (
+    <>
+      <p className="banner">
+        <UiIcon name="party" size={18} />
+        {level < 1 ? t('guild.unbuilt') : t('guild.level', { level })}
+      </p>
+      {level < 1 ? null : (
+        <>
+          <h3 className="section-title">{t('guild.effects')}</h3>
+          <span className="chips">
+            <Chip>{t('guild.expeditions', { count: effects.expeditions })}</Chip>
+            <Chip>{t('guild.autoParties', { count: effects.autoParties })}</Chip>
+            <Chip>{t('guild.seasonalCount', { count: effects.contracts })}</Chip>
+            <Chip>{t('guild.appraisal', { label: appraisalLabel(effects.appraisal, t) })}</Chip>
+          </span>
+          <div className="card guild-record">
+            <strong>{t('guild.record', { count: record })}</strong>
+            {nextLevel ? (
+              <>
+                <p className="muted">{t('guild.recordNext', { have: record, need: nextLevel.record })}</p>
+                <Bar value={Math.min(record, nextLevel.record)} max={Math.max(1, nextLevel.record)} tone="warn" />
+              </>
+            ) : (
+              <p className="muted">{t('guild.recordMax')}</p>
+            )}
+          </div>
+          <h3 className="section-title">{t('guild.board')}</h3>
+          <p className="muted">{t('guild.seasonLeft', { time: waitLabel(left) })}</p>
+          {!board || board.seasonal.length === 0 ? (
+            <p className="banner">{t(save.cleared.length === 0 ? 'guild.empty' : 'guild.boardEmpty')}</p>
+          ) : (
+            <div className="grid">
+              {board.seasonal.map((contract) => (
+                <ContractCard key={contract.id} save={save} contract={contract} onAction={onAction} />
+              ))}
+            </div>
+          )}
+          {seasonalDone && board?.repeat ? (
+            <>
+              <h3 className="section-title">{t('guild.repeat')}</h3>
+              <ContractCard save={save} contract={board.repeat} repeat onAction={onAction} />
+            </>
+          ) : null}
+        </>
+      )}
     </>
   )
 }

@@ -28,7 +28,7 @@ import { BattleHub } from './game/battleScreens'
 import { Inn, Roster } from './game/heroScreens'
 import { UiIcon, TownLogo, type ResourceKind } from './game/icons'
 import { Bar, Portrait, Res, Window, needsWarning, useNow, waitLabel } from './game/kit'
-import { Absence, Alchemy, ComingOfAge, ConfirmDepart, Magic, Settings, Smith, Town, Training, WishButton } from './game/villageScreens'
+import { Absence, Alchemy, ComingOfAge, ConfirmDepart, Guild, Magic, Settings, Smith, Town, Training, WishButton } from './game/villageScreens'
 import { loadGame, storeGame } from './storage'
 import { registerSW } from 'virtual:pwa-register'
 import { isSoundName, play, unlockSound } from './sound'
@@ -36,7 +36,7 @@ import { isSoundName, play, unlockSound } from './sound'
 const ExpeditionPanel = lazy(() => import('./ExpeditionPanel').then((mod) => ({ default: mod.ExpeditionPanel })))
 const VillageView = lazy(() => import('./VillageView').then((mod) => ({ default: mod.VillageView })))
 
-type Screen = 'town' | 'inn' | 'roster' | 'battle' | 'smith' | 'alchemy' | 'magic' | 'training' | 'settings'
+type Screen = 'town' | 'inn' | 'roster' | 'battle' | 'smith' | 'alchemy' | 'magic' | 'training' | 'guild' | 'settings'
 type Toast = { id: number; text: string }
 
 const DOCK: { screen: Screen; icon: ReactNode }[] = [
@@ -52,7 +52,7 @@ const BUILDING_SCREEN: Record<BuildingId, Screen> = {
   hall: 'town',
   inn: 'inn',
   house: 'roster',
-  guild: 'battle',
+  guild: 'guild',
   smith: 'smith',
   temple: 'roster',
   fountain: 'town',
@@ -62,6 +62,32 @@ const BUILDING_SCREEN: Record<BuildingId, Screen> = {
 }
 
 const CONFIRM_NOTICES = new Set<GameNotice>(['seenDeath', 'wornParty'])
+
+// Gold paid when contracts finish (seasonal or repeat). Core has no notice for this.
+function finishedContractGold(before: GameState, after: GameState): number {
+  const prev = before.guild
+  const next = after.guild
+  if (!prev || !next || next.record <= prev.record) {
+    return 0
+  }
+  let gold = 0
+  for (const contract of prev.seasonal) {
+    if (contract.done) {
+      continue
+    }
+    const updated = next.seasonal.find((entry) => entry.id === contract.id)
+    if (updated?.done) {
+      gold += contract.gold
+    }
+  }
+  if (prev.repeat && !prev.repeat.done) {
+    const sameOpen = next.repeat?.id === prev.repeat.id && !next.repeat.done
+    if (!sameOpen) {
+      gold += prev.repeat.gold
+    }
+  }
+  return gold
+}
 
 export function App() {
   const { t, i18n } = useTranslation()
@@ -222,6 +248,10 @@ export function App() {
     const next = reduce(current, action)
     saveRef.current = next
     setSave(next)
+    const contractGold = finishedContractGold(current, next)
+    if (contractGold > 0) {
+      pushToast(t('guild.contractDone', { gold: contractGold }))
+    }
     if (action.type !== 'catchUp' && action.type !== 'wish' && next.gold > current.gold) {
       play('coin')
     }
@@ -450,12 +480,12 @@ export function App() {
         <Window
           title={t(`screen.${screen}`)}
           icon={
-            screen === 'alchemy' ? <UiIcon name="alchemy" size={24} /> : screen === 'magic' ? <UiIcon name="magic" size={24} /> : screen === 'training' ? <UiIcon name="roster" size={24} /> : DOCK.find((item) => item.screen === screen)?.icon ?? <UiIcon name="settings" size={24} />
+            screen === 'alchemy' ? <UiIcon name="alchemy" size={24} /> : screen === 'magic' ? <UiIcon name="magic" size={24} /> : screen === 'training' ? <UiIcon name="roster" size={24} /> : screen === 'guild' ? <UiIcon name="party" size={24} /> : DOCK.find((item) => item.screen === screen)?.icon ?? <UiIcon name="settings" size={24} />
           }
           onClose={() => { play('close'); setScreen(null) }}
         >
           {screen === 'town' ? (
-            <Town save={save} onAction={apply} busy={adBusy} onWatch={() => watchAd('construction')} onAlchemy={() => open('alchemy')} onMagic={() => open('magic')} onTraining={() => open('training')} onSelectHero={(id) => { setSelectedId(id); open('roster') }} />
+            <Town save={save} onAction={apply} busy={adBusy} onWatch={() => watchAd('construction')} onAlchemy={() => open('alchemy')} onMagic={() => open('magic')} onTraining={() => open('training')} onGuild={() => open('guild')} onSelectHero={(id) => { setSelectedId(id); open('roster') }} />
           ) : null}
           {screen === 'inn' ? <Inn save={save} onHire={(id) => apply({ type: 'hire', id, now: gameNow() })} /> : null}
           {screen === 'roster' ? (
@@ -466,6 +496,7 @@ export function App() {
           {screen === 'alchemy' ? <Alchemy save={save} onAction={apply} /> : null}
           {screen === 'magic' ? <Magic save={save} onAction={apply} /> : null}
           {screen === 'training' ? <Training save={save} onAction={apply} /> : null}
+          {screen === 'guild' ? <Guild save={save} onAction={apply} /> : null}
           {screen === 'settings' ? (
             <Settings
               save={save}

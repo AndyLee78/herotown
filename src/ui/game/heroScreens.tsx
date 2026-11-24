@@ -13,6 +13,7 @@ import {
   isChild,
   familyLegends,
   familyOf,
+  guildLevel,
   legendBonus,
   lifeRules,
   maxExtraSkills,
@@ -158,7 +159,7 @@ export function Inn({ save, onHire }: { save: GameState; onHire: (id: string) =>
             </span>
             <dl className="stats">
               {STAT_KEYS.map((key) => {
-                const range = statRange(hero.stats[key])
+                const range = statRange(hero.stats[key], guildLevel(save.buildings.guild).appraisal)
                 return (
                   <div key={key}>
                     <dt>{t(`stat.${key}`)}</dt>

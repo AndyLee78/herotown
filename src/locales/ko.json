@@ -22,7 +22,8 @@
     "debug": "디버그",
     "settings": "설정",
     "battle": "전투",
-    "training": "훈련소"
+    "training": "훈련소",
+    "guild": "길드"
   },
   "action": {
     "hire": "고용 ({{cost}})",
@@ -46,6 +47,7 @@
     "learn": "배우기",
     "forget": "잊기",
     "drill": "훈련",
+    "deliver": "납품",
     "treat": "신전 치료",
     "revive": "되살리기 ({{cost}})",
     "dismiss": "해고",
@@ -155,8 +157,36 @@
     "cost": "골드 {{gold}} · 목재 {{wood}} · 석재 {{stone}} · 철 {{iron}}",
     "maxed": "지금은 더 올릴 수 없다.",
     "locked": "마을 레벨 {{level}}에 열린다.",
-    "quest": "동굴 목재 {{progress}}/{{count}}",
-    "questDone": "길드 의뢰를 마쳤다."
+    "contracts": "의뢰 {{done}}/{{count}}"
+  },
+  "guild": {
+    "open": "길드 열기",
+    "level": "길드 레벨 {{level}}",
+    "unbuilt": "길드가 아직 없다.",
+    "effects": "길드 효과",
+    "expeditions": "동시 출정 {{count}}",
+    "autoParties": "자동 출정 파티 {{count}}",
+    "seasonalCount": "계절 의뢰 {{count}}개",
+    "appraisal": "감정 {{label}}",
+    "appraisalExact": "정확",
+    "appraisalRange": "±{{percent}}%",
+    "record": "의뢰 실적 {{count}}",
+    "recordNext": "다음 레벨까지 실적 {{have}}/{{need}}",
+    "recordMax": "최고 레벨이다.",
+    "board": "의뢰 게시판",
+    "seasonLeft": "다음 계절까지 {{time}}",
+    "clear": "{{dungeon}} {{need}}회 클리어",
+    "deliver": "{{material}} {{need}}개 납품",
+    "progress": "{{progress}}/{{need}}",
+    "done": "완료",
+    "repeat": "반복 의뢰",
+    "repeatHint": "보상이 계절 의뢰의 30%이고 명성은 없다.",
+    "empty": "이번 계절 의뢰가 없다. 던전을 클리어하면 걸린다.",
+    "boardEmpty": "계절 의뢰를 기다리는 중…",
+    "reward": "보상",
+    "contractDone": "의뢰 완료: 골드 +{{gold}}",
+    "autoLocked": "길드를 지으면 자동 출정을 쓸 수 있다.",
+    "autoPartiesHint": "자동 파티가 2개면 선택한 파티와, 영웅이 겹치지 않는 다음 프리셋이 함께 돈다."
   },
   "result": {
     "victory": "승리",

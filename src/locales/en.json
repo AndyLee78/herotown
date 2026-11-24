@@ -22,7 +22,8 @@
     "debug": "Debug",
     "settings": "Settings",
     "battle": "Battle",
-    "training": "Training Ground"
+    "training": "Training Ground",
+    "guild": "Guild"
   },
   "action": {
     "hire": "Hire ({{cost}})",
@@ -46,6 +47,7 @@
     "learn": "Learn",
     "forget": "Forget",
     "drill": "Train",
+    "deliver": "Deliver",
     "treat": "Treat",
     "revive": "Revive ({{cost}})",
     "dismiss": "Dismiss",
@@ -155,8 +157,36 @@
     "cost": "Gold {{gold}} · Wood {{wood}} · Stone {{stone}} · Iron {{iron}}",
     "maxed": "Max level for now.",
     "locked": "Unlocks at village Lv {{level}}.",
-    "quest": "Cave wood {{progress}}/{{count}}",
-    "questDone": "Guild request complete!"
+    "contracts": "Contracts {{done}}/{{count}}"
+  },
+  "guild": {
+    "open": "Open guild",
+    "level": "Guild level {{level}}",
+    "unbuilt": "The guild is not built yet.",
+    "effects": "Guild effects",
+    "expeditions": "Expeditions {{count}}",
+    "autoParties": "Auto parties {{count}}",
+    "seasonalCount": "Seasonal contracts {{count}}",
+    "appraisal": "Appraisal {{label}}",
+    "appraisalExact": "exact",
+    "appraisalRange": "±{{percent}}%",
+    "record": "Contract record {{count}}",
+    "recordNext": "Record to next level {{have}}/{{need}}",
+    "recordMax": "Max guild level.",
+    "board": "Contract board",
+    "seasonLeft": "{{time}} until next season",
+    "clear": "Clear {{dungeon}} {{need}} times",
+    "deliver": "Deliver {{need}} {{material}}",
+    "progress": "{{progress}}/{{need}}",
+    "done": "Done",
+    "repeat": "Repeat contract",
+    "repeatHint": "Pays 30% of a seasonal contract and no fame.",
+    "empty": "No seasonal contracts yet. Clear a dungeon to start one.",
+    "boardEmpty": "Waiting for seasonal contracts…",
+    "reward": "Reward",
+    "contractDone": "Contract done: +{{gold}} gold",
+    "autoLocked": "Build the guild to unlock auto expeditions.",
+    "autoPartiesHint": "With two auto parties, the chosen preset and the next non-overlapping preset both run."
   },
   "result": {
     "victory": "Victory",
