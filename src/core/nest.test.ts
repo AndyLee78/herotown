@@ -4,6 +4,7 @@ import { dungeonById, nestRules, villageRules } from './data'
 import { DEFAULT_TACTICS, runDungeon } from './dungeon'
 import { busyHeroIds, dungeonUnlocked, freshState, migrate, reduce, type GameState } from './game'
 import { createHero } from './hero'
+import { timeRules } from './data'
 import { AFFIX_IDS, nestRevealed, nestSeason, seasonKey } from './nest'
 import { createRng } from './rng'
 import type { ClassId, LogEntry, PartyMember } from './types'
@@ -21,7 +22,8 @@ function town(extra: Partial<GameState> = {}): GameState {
   const base = freshState(5, now)
   const rogue = member('r', 'rogue').hero
   const mage = member('m', 'mage').hero
-  return { ...base, roster: [rogue, mage], gold: 500, buildings: { ...base.buildings, guild: 1 }, ...extra }
+  const cleared = ['hill_cave', 'abandoned_mine', 'barrow', 'sunken_crypt', 'venom_marsh', 'bandit_fort', 'haunted_citadel']
+  return { ...base, roster: [rogue, mage], gold: 500, cleared, buildings: { ...base.buildings, guild: 1 }, ...extra }
 }
 
 describe('nest seasons', () => {
@@ -131,3 +133,37 @@ describe('affixes in battle', () => {
     expect(nestRevealed(home)).toBe(true)
   })
 })
+
+describe('review f47daff fixes', () => {
+  it('sells no intel and sends no scout while the nest is locked', () => {
+    const locked = town({ cleared: ['hill_cave'] })
+    expect(reduce(locked, { type: 'buyIntel' }).notice).toBe('lockedDungeon')
+    expect(reduce(locked, { type: 'scout', heroId: 'r', now }).notice).toBe('lockedDungeon')
+  })
+
+  it('reveals only the season a trip went into', () => {
+    let state = town({ dungeonId: 'dragon_nest' })
+    state = { ...state, calendar: { ...state.calendar, intoSeasonMs: timeRules.seasonMs - 1000 } }
+    state = reduce(reduce(state, { type: 'add', id: 'r' }), { type: 'add', id: 'm' })
+    const sent = reduce(state, { type: 'depart', now, confirm: true })
+    expect(sent.expeditions[0]?.nestKey).toBe(seasonKey(state.calendar))
+    const home = reduce(sent, { type: 'catchUp', now: sent.expeditions[0]!.returnAt + 1 })
+    expect(seasonKey(home.calendar)).not.toBe(seasonKey(state.calendar))
+    expect(nestRevealed(home)).toBe(false)
+  })
+
+  it('reports on the new season when a scout is due right at the turn, and on nothing if the scout is gone', () => {
+    const base = town()
+    // Five seconds before the season turns (the offline cap would swallow a whole season).
+    const late = { ...base, calendar: { ...base.calendar, intoSeasonMs: timeRules.seasonMs - 5000 } }
+    const left = 5000
+    const due = { ...late, scout: { heroId: 'r', finishAt: now + left } }
+    const turned = reduce(due, { type: 'catchUp', now: now + left + 1 })
+    expect(turned.scout).toBeNull()
+    expect(turned.nestSeen).toBe(seasonKey(turned.calendar))
+    const lost = reduce({ ...late, roster: late.roster.filter((hero) => hero.id !== 'r'), scout: { heroId: 'r', finishAt: now + 1000 } }, { type: 'catchUp', now: now + 2000 })
+    expect(lost.scout).toBeNull()
+    expect(nestRevealed(lost)).toBe(false)
+  })
+})
+

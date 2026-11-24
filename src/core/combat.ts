@@ -265,7 +265,7 @@ export function simulateFloor(
     if (blaster) {
       enemyAct(blaster, heroes, rng, tick, log)
       endTurn(blaster, false)
-      advancePhases(enemies, monsterScale, tick, log)
+      advancePhases(enemies, monsterScale, tick, log, affixes)
       continue
     }
     const actor = ready[0]
@@ -277,7 +277,7 @@ export function simulateFloor(
       const dotDamage = Math.max(1, Math.round(actor.dot * (actor.ironWill ? combatRules.ironWillDot : 1) * actor.poisonWard))
       actor.poisonTaken += dotDamage
       hurt(actor, dotDamage, tick, log, 'log.dot')
-      advancePhases(enemies, monsterScale, tick, log)
+      advancePhases(enemies, monsterScale, tick, log, affixes)
       if (actor.hp <= 0) {
         continue
       }
@@ -323,7 +323,7 @@ export function simulateFloor(
       }
     }
     endTurn(actor, false)
-    advancePhases(enemies, monsterScale, tick, log)
+    advancePhases(enemies, monsterScale, tick, log, affixes)
   }
   push(log, tick, 'log.defeat')
   return { outcome: 'timeout', ticks: tick, trap }
@@ -745,29 +745,35 @@ function applyAffixes(enemies: BattleUnit[], affixes: AffixId[]) {
     silencer.silenceOnHit = Math.max(silencer.silenceOnHit, nestRules.silenceChance)
   }
   for (const enemy of enemies) {
-    if (has('swift')) {
-      enemy.speed *= nestRules.swiftSpeed
+    applyLasting(enemy, affixes)
+  }
+}
+
+// The affixes every enemy carries, summoned ones too (review f47daff).
+function applyLasting(enemy: BattleUnit, affixes: AffixId[]) {
+  const has = (id: AffixId) => affixes.includes(id)
+  if (has('swift')) {
+    enemy.speed *= nestRules.swiftSpeed
+  }
+  if (enemy.boss) {
+    if (has('charged') && enemy.blastEvery === 0) {
+      enemy.blastEvery = nestRules.chargedEvery
+      enemy.blastPower = nestRules.chargedPower
     }
-    if (enemy.boss) {
-      if (has('charged') && enemy.blastEvery === 0) {
-        enemy.blastEvery = nestRules.chargedEvery
-        enemy.blastPower = nestRules.chargedPower
-      }
-      continue
-    }
-    if (has('venom')) {
-      enemy.dotOnHit += nestRules.venomDot
-      enemy.poisonCap = Math.max(enemy.poisonCap, nestRules.venomCap)
-    }
-    if (has('paralyze') && enemy.row === 'front') {
-      enemy.paralyzeOnHit = Math.max(enemy.paralyzeOnHit, nestRules.paralyzeChance)
-    }
+    return
+  }
+  if (has('venom')) {
+    enemy.dotOnHit += nestRules.venomDot
+    enemy.poisonCap = Math.max(enemy.poisonCap, nestRules.venomCap)
+  }
+  if (has('paralyze') && enemy.row === 'front') {
+    enemy.paralyzeOnHit = Math.max(enemy.paralyzeOnHit, nestRules.paralyzeChance)
   }
 }
 
 // A boss crossing a health line moves to its next phase: it may call help,
 // blast more often, or hit harder. Two lines at once run in order.
-function advancePhases(enemies: BattleUnit[], scale: number, tick: number, log: LogEntry[]) {
+function advancePhases(enemies: BattleUnit[], scale: number, tick: number, log: LogEntry[], affixes: AffixId[] = []) {
   for (const boss of [...enemies]) {
     while (boss.hp > 0 && boss.phase < boss.phases.length && boss.hp / boss.maxHp <= boss.phases[boss.phase]!.at) {
       const phase = boss.phases[boss.phase]!
@@ -784,6 +790,7 @@ function advancePhases(enemies: BattleUnit[], scale: number, tick: number, log: 
         for (const unit of called) {
           unit.index = enemies.length
           unit.id = `${unit.refId}-${unit.index + 1}`
+          applyLasting(unit, affixes)
           enemies.push(unit)
         }
         push(log, tick, 'log.summon', { ...actorParams(boss), units: called.map((unit) => unit.id).join(','), refs: called.map((unit) => unit.refId).join(','), hps: called.map((unit) => unit.maxHp).join(',') })

@@ -275,7 +275,7 @@
       "id": "dragon_nest",
       "tier": 7,
       "recommendedLevel": 20,
-      "monsterScale": 9.5,
+      "monsterScale": 10,
       "betweenHeal": 0.25,
       "gold": 200,
       "xp": 200,

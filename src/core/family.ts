@@ -266,8 +266,17 @@ function raiseProposals(state: GameState, rng: Rng, now: number, events: FamilyE
   return { ...state, proposals }
 }
 
-function conceive(state: GameState, rng: Rng, now: number): GameState {
+// Heroes out of the village: on an expedition or scouting the nest (review f47daff).
+function awayIds(state: GameState): Set<string> {
   const away = new Set(state.expeditions.flatMap((expedition) => expedition.heroIds))
+  if (state.scout) {
+    away.add(state.scout.heroId)
+  }
+  return away
+}
+
+function conceive(state: GameState, rng: Rng, now: number): GameState {
+  const away = awayIds(state)
   const beds = state.buildings.house * villageRules.house.bedsPerLevel
   let taken = bedsTaken(state)
   let nonce = state.familyNonce
@@ -472,7 +481,7 @@ export function oldAgeChance(age: number): number {
 // Run when a year turns: the old at home (not on an expedition) may pass away.
 export function passAway(state: GameState, events: FamilyEvents): GameState {
   const rng = createRng(state.seed + 9_100_019 + state.calendar.year * 7907)
-  const away = new Set(state.expeditions.flatMap((expedition) => expedition.heroIds))
+  const away = awayIds(state)
   const graves: Grave[] = []
   const dies = (hero: Hero) => {
     const chance = oldAgeChance(hero.age)

@@ -3,7 +3,7 @@ import { claimGuide, guideSteps } from './guide'
 import { buyIntel, finishScout, isNest, nestSeason, readScout, seasonKey, startScout, type ScoutJob } from './nest'
 import { finishEnchant, readMagicJob, startEnchant, type MagicJob } from './magic'
 import { finishBrew, readAlchemyJob, readSupplies, returnSupplies, startBrew, takeSupplies, type AlchemyJob } from './alchemy'
-import { adRules, magicRules, classById, classList, combatRules, dungeonById, dungeons, expeditionRules, lifeRules, progression, retirementRules, smithRules, timeRules, villageRules } from './data'
+import { adRules, magicRules, nestRules, classById, classList, combatRules, dungeonById, dungeons, expeditionRules, lifeRules, progression, retirementRules, smithRules, timeRules, villageRules } from './data'
 import { forgeGear, normalizeGear, recipeById } from './gear'
 import { applyReport, DEFAULT_TACTICS, runDungeon } from './dungeon'
 import { canDeploy, generateHero, isChild, generateVisitors, normalizeHero, restHero, withAge } from './hero'
@@ -100,6 +100,8 @@ export type Expedition = {
   returnAt: number
   // Potions taken from the stock; what is left comes back.
   supplies?: Supplies
+  // The nest season this trip went into (Docs/depth.md 3d).
+  nestKey?: string
 }
 
 // A hero who has hung up their sword. They stay in town, cost no wages,
@@ -558,6 +560,9 @@ function apply(state: GameState, action: GameAction): GameState {
     const count = Math.max(0, Math.floor(action.count))
     return editPreset(state, action.presetId, (preset) => ({ ...preset, supplies: { ...(preset.supplies ?? {}), [action.potionId]: count } }))
   }
+  if ((action.type === 'scout' || action.type === 'buyIntel') && !dungeonUnlocked(state, nestRules.dungeonId)) {
+    return { ...state, notice: 'lockedDungeon' }
+  }
   if (action.type === 'scout') {
     return startScout(state, action.heroId, action.now, busyHeroIds(state))
   }
@@ -610,7 +615,7 @@ function advance(state: GameState, now: number): GameState {
     next = finishSmith(next, until, crafted)
     next = finishBrew(next, until, crafted)
     next = finishEnchant(next, until, crafted)
-    next = finishScout(next, until)
+    next = finishScout(next, until, until === turnAt)
     next = finishCare(next, until)
     next = recoverRoster(next, piece, until)
     next = updateVisitors(next, until, visitors)
@@ -1330,10 +1335,6 @@ export function presetById(state: GameState, id: string): PartyPreset | undefine
 }
 
 // Heroes out of town on an expedition.
-function sameAffixes(a: string[] = [], b: string[] = []): boolean {
-  return a.length === b.length && a.every((id, index) => id === b[index])
-}
-
 // This season's lineup and affixes when the dungeon is the nest.
 export function nestVariant(state: GameState, dungeonId: string) {
   if (!isNest(dungeonId)) {
@@ -1441,6 +1442,7 @@ function startExpedition(state: GameState, presetId: string, confirm: boolean, n
     battleEndAt,
     returnAt: battleEndAt + expeditionRules.travelMs,
     ...(Object.keys(carry.taken).length > 0 ? { supplies: carry.taken } : {}),
+    ...(isNest(state.dungeonId) ? { nestKey: seasonKey(state.calendar) } : {}),
   }
   return { ...state, notice: null, potions: carry.stock, expeditionNonce: state.expeditionNonce + 1, expeditions: [...state.expeditions, expedition] }
 }
@@ -1459,7 +1461,7 @@ function returnExpeditions(state: GameState, now: number, returned: AbsenceRepor
       }
       returned.push({ dungeonId: expedition.dungeonId, victory: expedition.report.victory })
       // A party back from the nest has seen this season's affixes (Docs/depth.md 3d).
-      if (isNest(expedition.dungeonId) && sameAffixes(expedition.report.affixes, nestSeason(next.seed, next.calendar).affixes)) {
+      if (isNest(expedition.dungeonId) && expedition.nestKey === seasonKey(next.calendar)) {
         next = { ...next, nestSeen: seasonKey(next.calendar) }
       }
     }

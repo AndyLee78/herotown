@@ -60,9 +60,14 @@ export function startScout(state: GameState, heroId: string, now: number, busy: 
   return { ...state, notice: null, scout: { heroId, finishAt: now + nestRules.scoutMs } }
 }
 
-export function finishScout(state: GameState, until: number): GameState {
-  if (!state.scout || state.scout.finishAt > until) {
+export function finishScout(state: GameState, until: number, seasonEnds = false): GameState {
+  // A scout due exactly as the season turns reports on the new season (review f47daff).
+  if (!state.scout || state.scout.finishAt > until || (seasonEnds && state.scout.finishAt === until)) {
     return state
+  }
+  const scout = state.roster.find((hero) => hero.id === state.scout?.heroId)
+  if (!scout || scout.condition === 'dead') {
+    return { ...state, scout: null }
   }
   return { ...state, scout: null, nestSeen: seasonKey(state.calendar) }
 }
