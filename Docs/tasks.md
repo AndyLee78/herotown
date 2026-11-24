@@ -99,7 +99,7 @@ Claude Code, Cursor, GPT(Codex)가 함께 쓰는 작업 목록이다. 작업 하
 | 57 | 훈련소 건물·스킬 연출 3D | Cursor | `world.ts`, `VillageScene.ts`, `BattleScene.ts`, `replay.ts` | 완료 (b13376f) |
 | 58 | 스킬·훈련소 core 코드 리뷰 (8e25753) | GPT | `Docs/reviews/8e25753.md` (새 파일만) | 완료 (226ee9b) |
 | 59 | 스킬을 배우는 곡선·시뮬레이터 | GPT | `tools/curve.ts`, `print-curve.ts`, `tune-curve.ts`, `first-hour.ts` | 완료 (52b4cfd) |
-| 60 | 길드 화면(의뢰 게시판·레벨·감정) | Cursor | `App.tsx`, `src/ui/game/*.tsx`, `styles.css`, `src/locales/*` | 대기 |
+| 60 | 길드 화면(의뢰 게시판·레벨·감정) | Cursor | `App.tsx`, `src/ui/game/*.tsx`, `styles.css`, `src/locales/*` | 완료 (7ff969a) |
 | 61 | 길드 core 코드 리뷰 (1208be3) | GPT | `Docs/reviews/1208be3.md` (새 파일만) | 대기 |
 | 62 | 의뢰 보상·자동 파티 측정 | GPT | `tools/curve.ts`, `print-curve.ts`, `tune-curve.ts`, `first-hour.ts` | 대기 |
 
@@ -1432,30 +1432,12 @@ tools/curve.ts, tools/print-curve.ts, tools/tune-curve.ts, tools/first-hour.ts�
 
 ## 60. 길드 화면(의뢰 게시판·레벨·감정) (Cursor)
 
-**지금 시작할 수 있다.** 설계: `Docs/guild.md`.
+**완료 (7ff969a).** 설계: `Docs/guild.md`.
 
-**전달할 내용**
-
-```
-Docs/guild.md를 읽고 화면을 만든다. src/ui/App.tsx, src/ui/game/*.tsx, src/ui/styles.css, src/locales/*만 고친다. core는 고치지 않는다.
-
-core에 이미 있는 것('../../core'에서 export):
-- guildLevel(level): { expeditions, autoParties, contracts, appraisal, record }. guildRules.
-- state.guild: { season, seasonal: Contract[], repeat: Contract | null, record, repeatNonce } | null. Contract: { id, kind: 'clear' | 'deliver', dungeonId?, material?, need, progress, gold, fame, done }.
-- 동작: { type: 'deliver', contractId }(재료 납품). 토벌 의뢰는 승리할 때 저절로 오른다(자동 출정 포함). 끝나면 보상이 바로 들어온다.
-- 길드 업그레이드는 state.guild.record ≥ guildLevel(다음 레벨).record가 필요하다(notice 'guildRecord'). 자동 출정은 길드 Lv1부터(notice 'noGuild').
-- statRange(value, share): 여관 방문자 능력치 범위. share는 guildLevel(state.buildings.guild).appraisal(0이면 정확한 값).
-
-1. 길드 창(App.tsx BUILDING_SCREEN의 guild를 새 화면으로): 길드 레벨 효과 표(동시 출정, 자동 파티, 계절 의뢰 수, 감정), 의뢰 실적과 다음 레벨까지 필요한 실적.
-2. 의뢰 게시판: 계절 의뢰 카드(던전/재료 이름, 진행 막대 progress/need, 보상 골드·명성, 완료 표시), 다음 계절까지 남은 시간. 계절 의뢰를 다 끝내면 반복 의뢰 카드 하나(보상 낮음 표시). 납품 의뢰는 [납품] 버튼(재료가 모자라면 비활성).
-3. 의뢰가 끝나면 토스트("의뢰 완료: 골드 +N").
-4. 마을 운영 화면의 예전 "동굴 의뢰" 칩(town.quest, questProgress, villageRules.guild.questCount)을 지우고 "의뢰 n/m" 칩으로 바꾼다.
-5. 여관 방문자 능력치 범위에 statRange(value, guildLevel(...).appraisal)를 쓴다. 길드가 없으면 지금처럼 넓게, Lv3부터 정확한 값.
-6. 자동 출정 설정: 길드가 없으면 잠김 안내("길드를 지으면 자동 출정을 쓸 수 있다"). 자동 파티가 2개면 두 번째 파티 프리셋이 함께 돈다는 안내.
-7. 문구 ko/en 같은 키.
-
-확인: npm run dev에서 디버그로 길드를 짓고 의뢰를 끝내 본다(토벌·납품 각각). 스크린샷을 메모에.
-```
+메모:
+- 길드 창(BUILDING_SCREEN.guild)·의뢰 게시판·실적 막대, 마을 "의뢰 n/m" 칩, 여관 감정(Lv1 ±15%), 길드 없으면 자동 출정 잠김을 127.0.0.1:5174에서 확인. 납품으로 골드+40·실적 1·토스트 경로 확인.
+- 토벌 진행은 원정 승리 시 core가 올리므로 UI만 반영. 반복 의뢰 카드는 계절 의뢰를 다 끝낸 뒤 나타난다.
+- tsc·테스트 230·빌드 통과.
 
 ---
 
