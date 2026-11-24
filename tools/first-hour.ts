@@ -1,9 +1,10 @@
 // Plays the first hours like a simple player would, to catch dead ends in
-// the early flow. Run: npx tsx tools/first-hour.ts [minutes] [seed,seed,...] [--fountain=off|ready|5min|compare]
-import { classById, dungeons, potionById, progression, trinketById, villageRules } from '../src/core/data'
+// the early flow. Run: npx tsx tools/first-hour.ts [minutes] [seed,seed,...] [--guild=off|on|compare]
+import { classById, dungeons, guildRules, potionById, progression, trinketById, villageRules } from '../src/core/data'
 import { fountainWishes } from '../src/core/fountain'
 import { busyHeroIds, dungeonUnlocked, freshState, presetById, reduce, townLevel, type BuildingId, type GameState } from '../src/core/game'
 import { guideStatus } from '../src/core/guide'
+import { guildLevel, type Contract } from '../src/core/guild'
 import { canDeploy } from '../src/core/hero'
 import { heroTrinkets, trinketOf } from '../src/core/magic'
 import { nestRevealed, nestSeason } from '../src/core/nest'
@@ -20,10 +21,10 @@ function hasLivingRole(state: GameState, role: ClassId): boolean {
 }
 
 function fillParty(state: GameState): GameState {
-  const drilling = new Set(state.drills.map(({ heroId }) => heroId))
+  const busy = busyHeroIds(state)
   for (const role of essentialRoles) {
     const current = selectedHeroes(state)
-    const recruit = state.roster.find((hero) => hero.classId === role && canDeploy(hero) && !drilling.has(hero.id))
+    const recruit = state.roster.find((hero) => hero.classId === role && canDeploy(hero) && !busy.has(hero.id))
     if (!recruit || current.some((hero) => hero.classId === role)) continue
     const slots = presetById(state, state.presetId)?.slots ?? []
     if (slots.length >= 5) {
@@ -33,7 +34,7 @@ function fillParty(state: GameState): GameState {
     }
     state = reduce(state, { type: 'add', id: recruit.id })
   }
-  for (const hero of state.roster.filter((hero) => canDeploy(hero) && !drilling.has(hero.id))) {
+  for (const hero of state.roster.filter((hero) => canDeploy(hero) && !busy.has(hero.id))) {
     state = reduce(state, { type: 'add', id: hero.id })
   }
   return state
@@ -127,16 +128,60 @@ function pickDungeon(state: GameState, training: Training | undefined): string {
 
 const fountainModes = ['off', 'ready', '5min'] as const
 type FountainMode = typeof fountainModes[number]
-type Income = { fountain: number; expedition: number; guide: number; jackpots: number }
+type Income = { fountain: number; expedition: number; guide: number; jackpots: number; contracts: number }
 const checkpoints = [60, 180]
 
-function simulate(minutes: number, seed: number, fountain: FountainMode, keepFountainAtLevelOne = false, learnSkills = true) {
+function openContracts(state: GameState) {
+  return [...(state.guild?.seasonal ?? []), state.guild?.repeat].filter((contract): contract is Contract => contract != null && !contract.done)
+}
+
+function contractDungeon(state: GameState, heroes: Hero[], maxTier = Infinity) {
+  const level = averageLevel(heroes) ?? 0
+  return openContracts(state).find(({ dungeonId }) => dungeonId && dungeons.some((dungeon) =>
+    dungeon.id === dungeonId && dungeon.recommendedLevel <= level && dungeon.tier <= maxTier))?.dungeonId
+}
+
+function prepareParty(state: GameState, presetId: string, excluded: Set<string>, size: number) {
+  const busy = busyHeroIds(state)
+  const candidates = state.roster.filter((hero) => canDeploy(hero) && !isHurt(hero) && !busy.has(hero.id) && !excluded.has(hero.id))
+    .sort((a, b) => b.level - a.level)
+  for (const { id } of presetById(state, presetId)?.slots ?? []) state = reduce(state, { type: 'remove', presetId, id })
+  const chosen = candidates.slice(0, size)
+  for (const { id } of chosen) state = reduce(state, { type: 'add', presetId, id })
+  return { state, chosen }
+}
+
+function catchUpWithoutContractGold(state: GameState, now: number) {
+  const { clearGold, deliverGold } = guildRules
+  const guild = state.guild && {
+    ...state.guild,
+    seasonal: state.guild.seasonal.map((contract) => ({ ...contract, gold: 0 })),
+    repeat: state.guild.repeat && { ...state.guild.repeat, gold: 0 },
+  }
+  try {
+    // A replay can also generate and then finish a new repeat contract.
+    guildRules.clearGold = 0
+    guildRules.deliverGold = 0
+    return reduce({ ...state, guild }, { type: 'catchUp', now })
+  } finally {
+    guildRules.clearGold = clearGold
+    guildRules.deliverGold = deliverGold
+  }
+}
+
+function simulate(minutes: number, seed: number, fountain: FountainMode, keepFountainAtLevelOne = false, learnSkills = true, manageGuild = false, measureGuild = false) {
   const firstClear: Record<string, number> = {}
   const start = 1_700_000_000_000
   let state = freshState(seed, start)
   let now = start
   let nextFountainCheck = start
-  const income: Income = { fountain: 0, expedition: 0, guide: 0, jackpots: 0 }
+  const income: Income = { fountain: 0, expedition: 0, guide: 0, jackpots: 0, contracts: 0 }
+  const guildAt: Record<number, number> = {}
+  const recordAt: Record<number, number> = {}
+  let autoWindows = 0
+  let peakExpeditions = 0
+  let nextAuto = start
+  let mainTrips = 0
   let marshTrips = 0
   let drillsStarted = 0
   let skillsLearned = 0
@@ -176,7 +221,9 @@ function simulate(minutes: number, seed: number, fountain: FountainMode, keepFou
     )
     for (const visitor of wanted) {
       const fillsGap = essentialRoles.some((role) => visitor.classId === role && !hasLivingRole(state, role))
-      if (state.roster.length >= 5 && !fillsGap) continue
+      const rosterTarget = manageGuild && state.buildings.guild > 0 ? Math.min(12, state.buildings.house * villageRules.house.bedsPerLevel) : 5
+      const rosterSize = manageGuild ? state.roster.filter(({ condition }) => condition !== 'dead').length : state.roster.length
+      if (rosterSize >= rosterTarget && !fillsGap) continue
       const before = state.roster.length
       state = reduce(state, { type: 'hire', id: visitor.id, now })
       if (state.roster.length > before) {
@@ -209,7 +256,7 @@ function simulate(minutes: number, seed: number, fountain: FountainMode, keepFou
         }
       }
     }
-    if (state.expeditions.length === 0) state = fillParty(state)
+    if (!state.expeditions.some(({ presetId }) => presetId === state.presetId)) state = fillParty(state)
     // Treat anyone hurt.
     for (const hero of state.roster) {
       if (isHurt(hero) && hero.treatAt == null && !busyHeroIds(state).has(hero.id)) {
@@ -221,6 +268,20 @@ function simulate(minutes: number, seed: number, fountain: FountainMode, keepFou
       if (hero.condition === 'dead' && hero.resurrectAt == null) {
         const revived = reduce(state, { type: 'revive', id: hero.id, now })
         if (!revived.notice) { state = revived; note('revive ' + hero.classId) }
+      }
+    }
+    if (manageGuild && state.buildings.guild > 0) {
+      if (!state.auto.enabled) state = reduce(state, { type: 'auto', enabled: true })
+      // Repeats can replace themselves immediately. Bound this pass so town
+      // upkeep and departures also get a turn.
+      for (let attempt = 0; attempt < 4; attempt += 1) {
+        const contract = openContracts(state).find(({ kind, material, need, progress }) =>
+          kind === 'deliver' && material && state.materials[material] >= need - progress)
+        if (!contract) break
+        const delivered = reduce(state, { type: 'deliver', contractId: contract.id })
+        if (delivered.notice) break
+        income.contracts += delivered.gold - state.gold
+        state = delivered
       }
     }
     // Claim guide rewards.
@@ -240,7 +301,15 @@ function simulate(minutes: number, seed: number, fountain: FountainMode, keepFou
       else trainingMaterials = prepared.destination
     }
     // Reserve money and materials for the workshop once the route to the marsh is open.
-    if (!state.construction && !trainingMaterials && pickDungeon(state, training) !== NEST_ID) {
+    let guildMaterials: string | undefined
+    if (manageGuild && !state.construction && state.buildings.guild < 4
+      && townLevel(state.fame).level >= villageRules.buildings.find(({ id }) => id === 'guild')!.unlockLevel
+      && (state.guild?.record ?? 0) >= guildLevel(state.buildings.guild + 1).record) {
+      const prepared = buildOrGather(state, 'guild', now)
+      state = prepared.state
+      guildMaterials = prepared.destination
+    }
+    if (!state.construction && !guildMaterials && !trainingMaterials && pickDungeon(state, training) !== NEST_ID) {
       const options = villageRules.buildings
         .filter(({ id }) => needsWorkshop ? id === 'alchemy' : id !== 'alchemy')
         .filter(({ id }) => id !== 'training' || learnSkills)
@@ -268,8 +337,28 @@ function simulate(minutes: number, seed: number, fountain: FountainMode, keepFou
       note(`training complete at ${training.dungeon}`)
       training = undefined
     }
-    if (state.expeditions.length === 0 && selected.length > 0 && !selected.some(isHurt)) {
-      let dungeon: string | undefined = trainingMaterials ?? pickDungeon(state, training)
+    const horizon = start + minutes * 60_000
+    const nextCheckpoint = [start + 180 * 60_000, start + 720 * 60_000, horizon].find((time) => time > now) ?? horizon
+    const reserved = new Set(presetById(state, state.presetId)?.slots.map(({ id }) => id))
+    let autoWindow = false
+    const autoDue = manageGuild && state.buildings.guild >= 3 && now >= nextAuto
+      && now + villageRules.auto.runMs <= Math.min(nextCheckpoint, horizon)
+      && state.roster.filter((hero) => canDeploy(hero) && !isHurt(hero) && !reserved.has(hero.id)).length >= 2
+    if (autoDue && state.expeditions.length === 0 && selected.length > 0 && !selected.some(isHurt)) {
+      const second = prepareParty(state, 'p2', reserved, 3)
+      if (second.chosen.length >= 2) {
+        const target = contractDungeon(state, second.chosen, 1) ?? 'hill_cave'
+        state = reduce(second.state, { type: 'autoDungeon', id: target })
+        autoWindow = true
+        autoWindows += 1
+        nextAuto = now + 60 * 60_000
+      }
+    }
+    if (!(autoDue && state.expeditions.length > 0) && !autoWindow
+      && !state.expeditions.some(({ presetId }) => presetId === state.presetId) && selected.length > 0 && !selected.some(isHurt)) {
+      // Keep the main party opening new routes between contract runs.
+      const contract = manageGuild && mainTrips % 3 !== 2 ? contractDungeon(state, selected) : undefined
+      let dungeon: string | undefined = guildMaterials ?? trainingMaterials ?? contract ?? pickDungeon(state, training)
       if (dungeon === NEST_ID) {
         const before = nestRevealed(state)
         const prepared = prepareForNest(state, now)
@@ -311,6 +400,7 @@ function simulate(minutes: number, seed: number, fountain: FountainMode, keepFou
         const sent = reduce(state, { type: 'depart', presetId: state.presetId, confirm: true, now })
         if (sent.expeditions.length > state.expeditions.length) {
           state = sent
+          mainTrips += 1
           if (dungeon === marshId) {
             marshTrips += 1
             note(`marsh departure · supplies ${JSON.stringify(sent.expeditions.at(-1)?.supplies)}`)
@@ -324,18 +414,44 @@ function simulate(minutes: number, seed: number, fountain: FountainMode, keepFou
         }
       }
     }
+    if (manageGuild && !autoDue && state.cleared.includes('hill_cave')) {
+      while (state.expeditions.length < guildLevel(state.buildings.guild).expeditions) {
+        const extraPresets = state.presets.filter(({ id }) => id !== state.presetId)
+        // A departure snapshots its members, so the fourth slot can reuse a
+        // preset with fresh heroes when all three presets are already out.
+        const preset = extraPresets.find(({ id }) => !state.expeditions.some((trip) => trip.presetId === id)) ?? extraPresets.at(-1)
+        if (!preset) break
+        const extra = prepareParty(state, preset.id, reserved, 2)
+        if (extra.chosen.length === 0) break
+        state = reduce(extra.state, { type: 'dungeon', id: contractDungeon(state, extra.chosen, 1) ?? 'hill_cave' })
+        const sent = reduce(state, { type: 'depart', presetId: preset.id, confirm: true, now })
+        if (sent.expeditions.length === state.expeditions.length) break
+        state = sent
+      }
+    }
+    peakExpeditions = Math.max(peakExpeditions, state.expeditions.length)
     recordGold()
-    const clearedBefore = state.cleared.length
-    const lastReturn = state.history[0]?.finishedAt
+    const previous = state
     // Five seconds divides every fountain interval, so all modes use the same clock.
-    now = Math.min(now + 5_000, start + minutes * 60_000)
+    now = Math.min(now + (autoWindow ? villageRules.auto.runMs : 5_000), horizon)
     state = reduce(state, { type: 'catchUp', now })
+    const contractGold = measureGuild && (autoWindow || previous.expeditions.some(({ returnAt }) => returnAt <= now))
+      && (state.guild?.record ?? 0) > (previous.guild?.record ?? 0)
+      ? state.gold - catchUpWithoutContractGold(previous, now).gold : 0
+    income.contracts += contractGold
+    if (measureGuild) income.expedition += state.gold - previous.gold + (state.absence !== previous.absence ? state.absence?.wagesPaid ?? 0 : 0) - contractGold
+    const elapsedMinutes = (now - start) / 60_000
+    if (state.buildings.guild > previous.buildings.guild) guildAt[state.buildings.guild] = elapsedMinutes
+    for (const { record } of guildRules.levels.slice(2)) {
+      if (recordAt[record] == null && (state.guild?.record ?? 0) >= record) recordAt[record] = elapsedMinutes
+    }
     recordGold()
-    const report = state.history[0]
-    if (report && report.finishedAt !== lastReturn) {
-      income.expedition += report.gained?.gold ?? 0
+    const returns = state.history.filter(({ finishedAt }) => finishedAt != null && finishedAt > previous.lastTickAt).reverse()
+    for (const report of returns) {
+      if (!measureGuild) income.expedition += report.gained?.gold ?? 0
       const dungeonId = report.dungeonId ?? state.dungeonId
-      for (const id of state.cleared.slice(clearedBefore)) firstClear[id] = ((report.finishedAt ?? now) - start) / 60_000
+      if (report.victory && state.cleared.includes(dungeonId)) firstClear[dungeonId] ??= ((report.finishedAt ?? now) - start) / 60_000
+      if (manageGuild && report.presetId !== state.presetId) continue
       if (report.victory) {
         recentWins.unshift(dungeonId)
         losingStreak = 0
@@ -356,8 +472,7 @@ function simulate(minutes: number, seed: number, fountain: FountainMode, keepFou
         }
       }
     }
-    const elapsedMinutes = (now - start) / 60_000
-    if (checkpoints.includes(elapsedMinutes) || elapsedMinutes === minutes) incomeAt[elapsedMinutes] = { ...income }
+    if (checkpoints.includes(elapsedMinutes) || elapsedMinutes === 720 || elapsedMinutes === minutes) incomeAt[elapsedMinutes] = { ...income }
     const level = townLevel(state.fame).level
     if (level > lastTown) {
       note(`town level ${level}`)
@@ -371,7 +486,7 @@ function simulate(minutes: number, seed: number, fountain: FountainMode, keepFou
   }
   const wins = state.history.filter((report) => report.victory).length
   const party = selectedHeroes(state)
-  return { firstClear, incomeAt, seed, state, log, wins, marshTrips, drillsStarted, skillsLearned, maxLosingStreak, maxLowGoldMs, partyLevel: averageLevel(party), ready: party.filter((hero) => !isHurt(hero)).length, partySize: party.length }
+  return { firstClear, incomeAt, guildAt, recordAt, autoWindows, peakExpeditions, seed, state, log, wins, marshTrips, drillsStarted, skillsLearned, maxLosingStreak, maxLowGoldMs, partyLevel: averageLevel(party), ready: party.filter((hero) => !isHurt(hero)).length, partySize: party.length }
 }
 
 function median(sorted: number[]): number {
@@ -388,27 +503,33 @@ const args = process.argv.slice(2)
 const fountainArg = args.find((arg) => arg.startsWith('--fountain='))?.slice('--fountain='.length) ?? 'ready'
 const skillMode = args.find((arg) => arg.startsWith('--skills='))?.slice(9) ?? 'on'
 const compareSkills = skillMode === 'compare'
-const [minutesArg, seedsArg] = args.filter((arg) => !arg.startsWith('--fountain=') && !arg.startsWith('--skills='))
+const guildMode = args.find((arg) => arg.startsWith('--guild='))?.slice(8) ?? 'off'
+const compareGuild = guildMode === 'compare'
+const [minutesArg, seedsArg] = args.filter((arg) => !arg.startsWith('--fountain=') && !arg.startsWith('--skills=') && !arg.startsWith('--guild='))
 const compare = fountainArg === 'compare'
 const fountain = fountainModes.find((mode) => mode === fountainArg)
-const minutes = Number(minutesArg ?? (compareSkills ? 720 : compare ? 180 : 60))
-const defaultSeeds = compare || compareSkills ? Array.from({ length: 20 }, (_, index) => index + 1).join(',') : '11'
+const minutes = Number(minutesArg ?? (compareSkills || compareGuild ? 720 : compare ? 180 : 60))
+const defaultSeeds = compare || compareSkills || compareGuild ? Array.from({ length: 20 }, (_, index) => index + 1).join(',') : '11'
 const seedArgs = (seedsArg ?? defaultSeeds).split(',').map((seed) => seed.trim())
 const seeds = seedArgs.map(Number)
-if ((!compare && !fountain) || (compare && compareSkills) || !['on', 'off', 'compare'].includes(skillMode) || !Number.isFinite(minutes) || minutes <= 0 || (compare && minutes < 180) || (compareSkills && minutes < 720) || seedArgs.some((seed, index) => !/^\d+$/.test(seed) || !Number.isSafeInteger(seeds[index]))) {
-  throw new Error('Usage: npx tsx tools/first-hour.ts [positive minutes] [seed,seed,...] [--fountain=off|ready|5min|compare] [--skills=on|off|compare]')
+if ((!compare && !fountain) || [compare, compareSkills, compareGuild].filter(Boolean).length > 1 || !['on', 'off', 'compare'].includes(skillMode) || !['on', 'off', 'compare'].includes(guildMode) || !Number.isFinite(minutes) || minutes <= 0 || (compare && minutes < 180) || ((compareSkills || compareGuild) && minutes < 720) || seedArgs.some((seed, index) => !/^\d+$/.test(seed) || !Number.isSafeInteger(seeds[index]))) {
+  throw new Error('Usage: npx tsx tools/first-hour.ts [positive minutes] [seed,seed,...] [--fountain=off|ready|5min|compare] [--skills=on|off|compare] [--guild=off|on|compare]')
 }
 
 type Simulation = ReturnType<typeof simulate>
 
-function incomeSummary(mode: string, at: number, results: Simulation[]) {
+function incomeSummary(mode: string, at: number, results: Simulation[], measureGuild = false) {
   const samples = results.map(({ incomeAt }) => incomeAt[at]!)
   const mid = (values: number[]) => values.length ? Number(median(values.sort((a, b) => a - b)).toFixed(1)) : '—'
-  const gross = ({ fountain, expedition, guide }: Income) => fountain + expedition + guide
+  const gross = ({ fountain, expedition, guide, contracts }: Income) => fountain + expedition + guide + contracts
   return {
     mode, minutes: at, 'gross gold': mid(samples.map(gross)),
     'fountain gold': mid(samples.map((sample) => sample.fountain)),
     'expedition gold': mid(samples.map((sample) => sample.expedition)),
+    ...(measureGuild && {
+      'contract gold': mid(samples.map((sample) => sample.contracts)),
+      'contract % of gross': mid(samples.filter((sample) => gross(sample) > 0).map((sample) => 100 * sample.contracts / gross(sample))),
+    }),
     'fountain % of gross': mid(samples.filter((sample) => gross(sample) > 0).map((sample) => 100 * sample.fountain / gross(sample))),
     'fountain % of expedition': mid(samples.filter((sample) => sample.expedition > 0).map((sample) => 100 * sample.fountain / sample.expedition)),
     jackpots: mid(samples.map((sample) => sample.jackpots)),
@@ -426,7 +547,38 @@ function firstClearSummary(results: Simulation[], at: number) {
   }))
 }
 
-if (compareSkills) {
+if (compareGuild) {
+  const passive = seeds.map((seed) => simulate(720, seed, fountain!, false, skillMode === 'on', false, true))
+  const managed = seeds.map((seed) => simulate(720, seed, fountain!, false, skillMode === 'on', true, true))
+  const cutoffs = [180, 720]
+  console.log('Per-seed medians. Gross includes wishes, guide rewards, expeditions, auto and contracts, excluding starting gold.')
+  console.table(cutoffs.flatMap((at) => [incomeSummary('passive guild', at, passive, true), incomeSummary('managed guild', at, managed, true)]))
+  console.log(`Guild milestones in minutes by 12h (reached/total). Auto uses two disjoint presets in ${villageRules.auto.runMs / 60_000}-minute offline windows.`)
+  console.table(guildRules.levels.slice(1).map(({ level, record }) => {
+    const row = (key: 'guildAt' | 'recordAt', value: number) => managed.flatMap((run) => {
+      const time = run[key][value]
+      return time != null && time <= 720 ? [time] : []
+    })
+    const built = row('guildAt', level)
+    const reached = row('recordAt', record)
+    return { level, record, built: summarize(built), 'built seeds': built.length, 'threshold reached': record ? summarize(reached) : '—', 'threshold seeds': record ? reached.length : '—' }
+  }))
+  console.log(`Two-preset auto windows: ${managed.reduce((sum, run) => sum + run.autoWindows, 0)} across ${managed.filter((run) => run.autoWindows > 0).length}/${seeds.length} seeds`)
+  console.log(`Four concurrent expeditions: ${managed.filter((run) => run.peakExpeditions >= 4).length}/${seeds.length} seeds`)
+  console.log('First clear in minutes (cleared/total). Paired savings use only seeds that cleared in both runs by the cutoff.')
+  console.table(cutoffs.flatMap((at) => {
+    const before = firstClearSummary(passive, at)
+    const after = firstClearSummary(managed, at)
+    return order.map((id) => {
+      const saved = passive.flatMap((run, index) => {
+        const a = run.firstClear[id]
+        const b = managed[index]!.firstClear[id]
+        return a != null && b != null && a <= at && b <= at ? [a - b] : []
+      }).sort((a, b) => a - b)
+      return { cutoff: at, dungeon: id, passive: before[id], managed: after[id], 'paired minutes saved': saved.length ? median(saved).toFixed(1) : '—', paired: saved.length }
+    })
+  }))
+} else if (compareSkills) {
   const bare = seeds.map((seed) => simulate(720, seed, fountain!, false, false))
   const learned = seeds.map((seed) => simulate(720, seed, fountain!, false, true))
   console.log('First clear minutes (cleared/total); paired minutes saved use only seeds that cleared in both runs by the cutoff.')
@@ -453,7 +605,7 @@ if (compareSkills) {
   console.log('Level 1 control for the design target (fountain/expedition income)')
   console.table([incomeSummary('ready, Lv1 only', 60, seeds.map((seed) => simulate(60, seed, 'ready', true, skillMode === 'on')))])
 } else {
-  const results = seeds.map((seed) => simulate(minutes, seed, fountain!, false, skillMode === 'on'))
+  const results = seeds.map((seed) => simulate(minutes, seed, fountain!, false, skillMode === 'on', guildMode === 'on', guildMode === 'on'))
   const displayLevel = (level: number | undefined) => level?.toFixed(1) ?? 'n/a'
   if (results.length === 1) {
     const { state, log, wins, partyLevel, ready, partySize, maxLosingStreak } = results[0]!
@@ -475,5 +627,5 @@ if (compareSkills) {
 
   console.log('first clear (minutes): ' + Object.entries(firstClearSummary(results, minutes)).map(([id, value]) => `${id} ${value}`).join(' · '))
   console.log(`workshop built: ${results.filter(({ state }) => state.buildings.alchemy > 0).length}/${results.length} · marsh trips: ${results.reduce((sum, result) => sum + result.marshTrips, 0)}`)
-  console.table([incomeSummary(fountain!, minutes, results)])
+  console.table([incomeSummary(fountain!, minutes, results, guildMode === 'on')])
 }
