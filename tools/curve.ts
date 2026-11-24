@@ -1,10 +1,11 @@
 // A fixed lineup for comparison and starter lineups drawn from the real game.
-import { classById, combatRules, progression } from '../src/core/data'
+import { classById, combatRules, nestRules, progression } from '../src/core/data'
 import { DEFAULT_TACTICS, runDungeon } from '../src/core/dungeon'
 import { freshState, presetById, reduce } from '../src/core/game'
 import { createHero, generateHero } from '../src/core/hero'
 import { createRng } from '../src/core/rng'
-import type { ClassId, Hero, PartyMember, Row, Supplies, Tactics, TrinketId } from '../src/core/types'
+import { AFFIX_IDS } from '../src/core/nest'
+import type { AffixId, ClassId, Hero, PartyMember, Row, Supplies, Tactics, TrinketId } from '../src/core/types'
 
 const LINEUP: [ClassId, Row][] = [
   ['warrior', 'front'],
@@ -17,9 +18,30 @@ const LINEUP: [ClassId, Row][] = [
 export const DEFAULT_PARTY_SAMPLES = 40
 export const BATTLES_PER_PARTY = 10
 export const MARSH_ID = 'venom_marsh'
-type Loadout = { supplies: Supplies; withoutHealer?: boolean; prepare?: (party: PartyMember[]) => PartyMember[]; blast?: Tactics['blast'] }
+type Loadout = { supplies: Supplies; withoutHealer?: boolean; prepare?: (party: PartyMember[]) => PartyMember[]; blast?: Tactics['blast']; affixes?: AffixId[]; prepareNest?: boolean }
 export const FORT_ID = 'bandit_fort'
 export const CITADEL_ID = 'haunted_citadel'
+export const NEST_ID = 'dragon_nest'
+export const nestPairs = AFFIX_IDS.flatMap((a, index) => AFFIX_IDS.slice(index + 1).map((b): AffixId[] => [a, b]))
+
+export function nestPreparation(party: Hero[], affixes: readonly AffixId[]) {
+  const tank = party.find((hero) => classById(hero.classId).role === 'tank') ?? party[0]
+  const healer = party.find((hero) => classById(hero.classId).role === 'healer') ?? tank
+  const trinkets: { id: TrinketId; heroId: string }[] = []
+  const equip = (id: TrinketId, hero: Hero | undefined) => { if (hero) trinkets.push({ id, heroId: hero.id }) }
+  const supplies: Supplies = {}
+  for (const affix of affixes) {
+    if (affix === 'venom') { supplies.antidote = 3; equip('poisonWard', tank) }
+    if (affix === 'traps' && !party.some((hero) => hero.classId === 'rogue')) equip('trapSense', tank)
+    if (affix === 'ambush') equip('alert', tank)
+    if (affix === 'silence') { supplies.clarity = 3; equip('calm', healer) }
+    if (affix === 'paralyze') { supplies.tonic = 3; equip('steady', tank) }
+    if (affix === 'noRest') supplies.heal = 3
+  }
+  const breakers = party.filter((hero) => classById(hero.classId).interrupt).length
+  const blast: Tactics['blast'] = affixes.includes('charged') && breakers < 2 ? 'brace' : 'interrupt'
+  return { supplies, trinkets, blast }
+}
 
 export const citadelLoadouts = Object.fromEntries([0, 1, 2].flatMap((extra) =>
   (['interrupt', 'brace'] as const).map((blast): [string, Loadout] => [`extra${extra}-${blast}`, {
@@ -136,12 +158,30 @@ export function starterWinRates(parties: PartyMember[][], dungeonId: string, lev
   let interrupts = 0
   const tactics = loadout?.blast ? { ...DEFAULT_TACTICS, blast: loadout.blast } : DEFAULT_TACTICS
   const outcomes = parties.map((party, index) => {
-    const prepared = loadout?.prepare?.(party) ?? party
+    let prepared = loadout?.prepare?.(party) ?? party
+    if (loadout?.prepareNest && loadout.affixes?.includes('swift')) {
+      const alternatives = parties[(index + 1) % parties.length]!
+      const recruited = new Set<string>()
+      prepared = prepared.map((member) => {
+        const faster = alternatives.find(({ hero }) => hero.classId === member.hero.classId
+          && hero.stats.agi > member.hero.stats.agi && !recruited.has(hero.id))
+        if (!faster) return member
+        recruited.add(faster.hero.id)
+        return { ...member, hero: { ...faster.hero, id: member.hero.id } }
+      })
+    }
+    const plan = loadout?.prepareNest && loadout.affixes ? nestPreparation(prepared.map(({ hero }) => hero), loadout.affixes) : undefined
+    if (plan) prepared = prepared.map((member) => wear(member, plan.trinkets.filter(({ heroId }) => heroId === member.hero.id).map(({ id }) => id)))
     const lineup = loadout?.withoutHealer ? prepared.filter(({ hero }) => classById(hero.classId).role !== 'healer') : prepared
     const leveled = partyAtLevel(lineup, level)
+    const chosenTactics = plan ? { ...tactics, blast: plan.blast } : tactics
     let wins = 0
     for (let seed = 1; seed <= battles; seed += 1) {
-      const result = runDungeon(leveled, dungeonId, tactics, seed, loadout?.supplies)
+      const variant = loadout?.affixes ? {
+        affixes: loadout.affixes,
+        floors: nestRules.floors.map((options, floor) => ({ monsters: options[(index + (seed - 1) * (floor + 1) + floor) % options.length]! })),
+      } : undefined
+      const result = runDungeon(leveled, dungeonId, chosenTactics, seed, plan?.supplies ?? loadout?.supplies, variant)
       if (result.ok && loadout?.blast) {
         for (const { key } of result.report.log) {
           if (key === 'log.charge') charges += 1

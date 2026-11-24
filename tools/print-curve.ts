@@ -2,7 +2,7 @@
 // Reproduce the design sample size: npx tsx tools/print-curve.ts --marsh 24 14 --battles=6
 import { alchemyRules, dungeonById, dungeons, potionById, villageRules } from '../src/core/data'
 import type { PotionId } from '../src/core/types'
-import { BATTLES_PER_PARTY, CITADEL_ID, DEFAULT_PARTY_SAMPLES, FORT_ID, MARSH_ID, citadelLoadouts, fortLoadouts, marshLoadouts, starterParties, starterWinRates, wardLoadout, winRate } from './curve'
+import { BATTLES_PER_PARTY, CITADEL_ID, DEFAULT_PARTY_SAMPLES, FORT_ID, MARSH_ID, NEST_ID, citadelLoadouts, fortLoadouts, marshLoadouts, nestPairs, starterParties, starterWinRates, wardLoadout, winRate } from './curve'
 
 const args = process.argv.slice(2)
 const fixed = args.includes('--fixed')
@@ -10,17 +10,37 @@ const marsh = args.includes('--marsh')
 const fort = args.includes('--fort')
 const wards = args.includes('--wards')
 const citadel = args.includes('--citadel')
+const nest = args.includes('--nest')
 const battles = Number(args.find((arg) => arg.startsWith('--battles='))?.slice(10) ?? BATTLES_PER_PARTY)
 const [sampleArg, maxLevelArg] = args.filter((arg) => !arg.startsWith('--'))
 const samples = Number(sampleArg ?? DEFAULT_PARTY_SAMPLES)
-const minLevel = citadel ? 14 : fort ? 12 : marsh ? 8 : 1
-const maxLevel = Number(maxLevelArg ?? (citadel ? 18 : fort ? 17 : marsh ? 14 : 12))
-if ([fixed, marsh, fort, wards, citadel].filter(Boolean).length > 1 || !Number.isSafeInteger(samples) || samples < 1 || !Number.isSafeInteger(maxLevel) || maxLevel < minLevel || !Number.isSafeInteger(battles) || battles < 1) {
-  throw new Error('Usage: npx tsx tools/print-curve.ts [positive samples] [maxLevel] [--fixed|--marsh|--fort|--wards|--citadel] [--battles=N]')
+const minLevel = nest ? 18 : citadel ? 14 : fort ? 12 : marsh ? 8 : 1
+const maxLevel = Number(maxLevelArg ?? (nest ? 22 : citadel ? 18 : fort ? 17 : marsh ? 14 : 12))
+if ([fixed, marsh, fort, wards, citadel, nest].filter(Boolean).length > 1 || !Number.isSafeInteger(samples) || samples < 1 || !Number.isSafeInteger(maxLevel) || maxLevel < minLevel || !Number.isSafeInteger(battles) || battles < 1) {
+  throw new Error('Usage: npx tsx tools/print-curve.ts [positive samples] [maxLevel] [--fixed|--marsh|--fort|--wards|--citadel|--nest] [--battles=N]')
 }
 const percent = (rate: number) => `${Math.round(rate * 100)}%`
 const parties = fixed ? [] : starterParties(samples)
-if (fort || wards || citadel) {
+if (nest) {
+  const levels = Array.from({ length: maxLevel - minLevel + 1 }, (_, index) => index + minLevel)
+  const measurements = nestPairs.map((affixes) => ({
+    pair: affixes.join('+'),
+    levels: levels.map((level) => [false, true].map((prepareNest) => starterWinRates(parties, NEST_ID, level, { supplies: {}, affixes, prepareNest }, battles))),
+  }))
+  const cell = (base: { median: number; lowerQuartile: number }, prepared: { median: number; lowerQuartile: number }) =>
+    `${percent(base.median)}/${percent(base.lowerQuartile)} → ${percent(prepared.median)}/${percent(prepared.lowerQuartile)}`
+  console.log(`Dragon Nest · median/P25 without preparation → prepared · ${samples} parties × ${battles} battles per condition`)
+  console.table([
+    ...measurements.map(({ pair, levels: results }) => ({ pair, ...Object.fromEntries(levels.map((level, i) => [`L${level}`, cell(results[i]![0]!, results[i]![1]!)])) })),
+    { pair: 'mean of pairs', ...Object.fromEntries(levels.map((level, i) => {
+      const means = [0, 1].map((mode) => ({
+        median: measurements.reduce((sum, row) => sum + row.levels[i]![mode]!.median, 0) / measurements.length,
+        lowerQuartile: measurements.reduce((sum, row) => sum + row.levels[i]![mode]!.lowerQuartile, 0) / measurements.length,
+      }))
+      return [`L${level}`, cell(means[0]!, means[1]!)]
+    })) },
+  ])
+} else if (fort || wards || citadel) {
   const scenarios = citadel ? citadelLoadouts : fort ? fortLoadouts : {
     none: marshLoadouts.none,
     ward1: wardLoadout(1),

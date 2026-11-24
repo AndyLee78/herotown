@@ -1,11 +1,14 @@
 // Plays the first hours like a simple player would, to catch dead ends in
 // the early flow. Run: npx tsx tools/first-hour.ts [minutes] [seed,seed,...] [--fountain=off|ready|5min|compare]
-import { classById, dungeons, potionById, progression, villageRules } from '../src/core/data'
+import { classById, dungeons, potionById, progression, trinketById, villageRules } from '../src/core/data'
 import { fountainWishes } from '../src/core/fountain'
 import { busyHeroIds, dungeonUnlocked, freshState, presetById, reduce, townLevel, type BuildingId, type GameState } from '../src/core/game'
 import { guideStatus } from '../src/core/guide'
 import { canDeploy } from '../src/core/hero'
-import type { ClassId, Hero } from '../src/core/types'
+import { heroTrinkets, trinketOf } from '../src/core/magic'
+import { nestRevealed, nestSeason } from '../src/core/nest'
+import { NEST_ID, nestPreparation } from './curve'
+import type { ClassId, Hero, PotionId, Supplies } from '../src/core/types'
 
 const isHurt = (hero: Hero) => hero.condition === 'injured' || hero.condition === 'critical'
 const essentialRoles = ['warrior', 'cleric'] as const
@@ -48,6 +51,62 @@ const difficultyOrder = [...dungeons].sort((a, b) => a.recommendedLevel - b.reco
 const difficulty = new Map(difficultyOrder.map((dungeon, index) => [dungeon.id, index]))
 const marshId = 'venom_marsh'
 const citadelId = 'haunted_citadel'
+
+function buildForNest(state: GameState, id: BuildingId, now: number): { state: GameState; destination?: string } {
+  if (state.construction) return { state }
+  const cost = villageRules.buildings.find((building) => building.id === id)?.levels.find(({ level }) => level === state.buildings[id] + 1)
+  const built = reduce(state, { type: 'build', id, now })
+  if (built.construction) return { state: built }
+  if (!cost || built.gold < cost.gold || built.materials.wood < cost.wood) return { state: built, destination: 'hill_cave' }
+  if (built.materials.stone < cost.stone) return { state: built, destination: 'moss_path' }
+  if (built.materials.iron < cost.iron) return { state: built, destination: 'abandoned_mine' }
+  return { state: built, destination: 'sunken_crypt' }
+}
+
+function prepareForNest(state: GameState, now: number): { state: GameState; destination?: string } {
+  if (!nestRevealed(state)) {
+    if (state.buildings.guild === 0) return buildForNest(state, 'guild', now)
+    state = reduce(state, { type: 'buyIntel' })
+    if (!nestRevealed(state)) return { state, destination: 'hill_cave' }
+  }
+  const { affixes } = nestSeason(state.seed, state.calendar)
+  let party = selectedHeroes(state)
+  if (affixes.includes('swift')) {
+    for (const hero of party) {
+      if (classById(hero.classId).role !== 'dps') continue
+      const faster = state.roster.find((other) => other.classId === hero.classId && other.stats.agi > hero.stats.agi
+        && canDeploy(other) && !isHurt(other) && !party.some(({ id }) => id === other.id))
+      if (faster) {
+        state = reduce(state, { type: 'remove', id: hero.id })
+        state = reduce(state, { type: 'add', id: faster.id })
+        party = selectedHeroes(state)
+      }
+    }
+  }
+  const plan = nestPreparation(party, affixes)
+  for (const { id, heroId } of plan.trinkets) {
+    if (state.roster.some((hero) => hero.id === heroId && heroTrinkets(hero).has(id))) continue
+    const item = state.stash.find((gear) => trinketOf(gear) === id)
+    if (item) {
+      state = reduce(state, { type: 'equip', heroId, gearId: item.id })
+      continue
+    }
+    const recipe = trinketById(id)!
+    if (state.buildings.magic < recipe.magicLevel) return buildForNest(state, 'magic', now)
+    if (!state.magic) state = reduce(state, { type: 'enchant', trinketId: id, now })
+    return { state, destination: state.magic ? undefined : 'sunken_crypt' }
+  }
+  for (const [id, count] of Object.entries(plan.supplies) as [PotionId, number][]) {
+    if ((state.potions[id] ?? 0) >= count) continue
+    const recipe = potionById(id)!
+    if (state.buildings.alchemy < recipe.alchemyLevel) return buildForNest(state, 'alchemy', now)
+    if (!state.alchemy) state = reduce(state, { type: 'brew', potionId: id, now })
+    return { state, destination: state.alchemy ? undefined : state.materials.bone < recipe.bone ? 'sunken_crypt' : 'moss_path' }
+  }
+  const preset = presetById(state, state.presetId)
+  if (preset) state = reduce(state, { type: 'tactics', presetId: preset.id, tactics: { ...preset.tactics, blast: plan.blast } })
+  return { state, destination: NEST_ID }
+}
 const marshSupplies = { antidote: 4, heal: 2 } as const
 const workshop = villageRules.buildings.find(({ id }) => id === 'alchemy')!
 const workshopCost = workshop.levels.find(({ level }) => level === 1)!
@@ -140,7 +199,7 @@ function simulate(minutes: number, seed: number, fountain: FountainMode, keepFou
     const prepareMarsh = dungeonUnlocked(state, marshId)
     const needsWorkshop = prepareMarsh && state.buildings.alchemy === 0 && townLevel(state.fame).level >= workshop.unlockLevel
     // Reserve money and materials for the workshop once the route to the marsh is open.
-    if (!state.construction) {
+    if (!state.construction && pickDungeon(state, training) !== NEST_ID) {
       const options = villageRules.buildings
         .filter(({ id }) => needsWorkshop ? id === 'alchemy' : id !== 'alchemy')
         .filter((building) => building.id !== 'fountain' || (fountain !== 'off' && !keepFountainAtLevelOne))
@@ -157,7 +216,7 @@ function simulate(minutes: number, seed: number, fountain: FountainMode, keepFou
       }
     }
     const nextPotion = (['antidote', 'heal'] as const).find((id) => (state.potions[id] ?? 0) < marshSupplies[id])
-    if (prepareMarsh && state.buildings.alchemy > 0 && nextPotion && !state.alchemy && state.expeditions.length === 0) {
+    if (prepareMarsh && pickDungeon(state, training) !== NEST_ID && state.buildings.alchemy > 0 && nextPotion && !state.alchemy && state.expeditions.length === 0) {
       state = reduce(state, { type: 'brew', potionId: nextPotion, now })
       if (state.alchemy) note(`brew ${nextPotion}`)
     }
@@ -169,6 +228,13 @@ function simulate(minutes: number, seed: number, fountain: FountainMode, keepFou
     }
     if (state.expeditions.length === 0 && selected.length > 0 && !selected.some(isHurt)) {
       let dungeon: string | undefined = pickDungeon(state, training)
+      if (dungeon === NEST_ID) {
+        const before = nestRevealed(state)
+        const prepared = prepareForNest(state, now)
+        state = prepared.state
+        dungeon = prepared.destination
+        if (!before && nestRevealed(state)) note(`buy nest intel · ${nestSeason(state.seed, state.calendar).affixes.join('+')}`)
+      }
       if (dungeon === marshId && (state.buildings.alchemy === 0 || nextPotion)) {
         const recipe = nextPotion ? potionById(nextPotion) : undefined
         if (state.buildings.alchemy === 0) {
@@ -191,8 +257,10 @@ function simulate(minutes: number, seed: number, fountain: FountainMode, keepFou
           const blast = selected.some(({ classId }) => classById(classId).interrupt) ? 'interrupt' : 'brace'
           if (preset.tactics.blast !== blast) state = reduce(state, { type: 'tactics', presetId: preset.id, tactics: { ...preset.tactics, blast } })
         }
-        for (const [potionId, count] of Object.entries(marshSupplies) as [keyof typeof marshSupplies, number][]) {
-          const wanted = dungeon === marshId ? count : 0
+        const selectedSupplies: Supplies = dungeon === NEST_ID ? nestPreparation(selectedHeroes(state), nestSeason(state.seed, state.calendar).affixes).supplies
+          : dungeon === marshId ? marshSupplies : {}
+        for (const potionId of ['heal', 'antidote', 'tonic', 'clarity'] as const) {
+          const wanted = selectedSupplies[potionId] ?? 0
           if ((presetById(state, state.presetId)?.supplies?.[potionId] ?? 0) !== wanted) {
             state = reduce(state, { type: 'supplies', potionId, count: wanted })
           }
@@ -204,6 +272,10 @@ function simulate(minutes: number, seed: number, fountain: FountainMode, keepFou
           if (dungeon === marshId) {
             marshTrips += 1
             note(`marsh departure · supplies ${JSON.stringify(sent.expeditions.at(-1)?.supplies)}`)
+          }
+          if (dungeon === NEST_ID) {
+            const trinkets = [...new Set(selectedHeroes(state).flatMap((hero) => [...heroTrinkets(hero)]))]
+            note(`nest departure · supplies ${JSON.stringify(sent.expeditions.at(-1)?.supplies ?? {})} · trinkets ${trinkets.join('+') || 'none'} · blast ${presetById(state, state.presetId)?.tactics.blast ?? 'interrupt'}`)
           }
         } else if (sent.notice && !log[log.length - 1]?.endsWith(sent.notice)) {
           note(`cannot depart: ${sent.notice}`)
@@ -299,7 +371,7 @@ function incomeSummary(mode: string, at: number, results: Simulation[]) {
   }
 }
 
-const order = ['hill_cave', 'moss_path', 'abandoned_mine', 'deep_shaft', 'barrow', 'sunken_crypt', marshId, 'bandit_fort', citadelId]
+const order = ['hill_cave', 'moss_path', 'abandoned_mine', 'deep_shaft', 'barrow', 'sunken_crypt', marshId, 'bandit_fort', citadelId, NEST_ID]
 function firstClearSummary(results: Simulation[], at: number) {
   return Object.fromEntries(order.map((id) => {
     const times = results.flatMap((result) => {
