@@ -1,4 +1,4 @@
-import type { DungeonReport, LogEntry, ReplayUnit } from '../../core'
+import type { AffixId, DungeonReport, LogEntry, ReplayUnit } from '../../core'
 
 // Turns a dungeon report's log into steps a 3D replay can play one by one.
 // Pure data, so it can be tested without WebGL.
@@ -10,7 +10,7 @@ export type StatusMark = 'poison' | 'paralyze' | 'slow' | 'silence'
 type Base = { log: number; downs: string[] }
 
 export type ReplayStep =
-  | (Base & { type: 'floor'; floor: number; units: ReplayUnit[] })
+  | (Base & { type: 'floor'; floor: number; units: ReplayUnit[]; affixes?: AffixId[] })
   | (Base & { type: 'attack'; actorId: string; hits: Hit[] })
   | (Base & { type: 'heal'; actorId: string; targetId: string; amount: number })
   | (Base & { type: 'taunt' | 'buff' | 'debuff'; actorId: string })
@@ -48,7 +48,8 @@ export function buildSteps(report: DungeonReport): ReplayStep[] {
     switch (entry.key) {
       case 'log.floor': {
         const floor = number(entry, 'floor')
-        steps.push({ type: 'floor', floor, units: floors[floor - 1] ?? [], log: index, downs: [] })
+        const affixes = report.affixes?.length ? report.affixes : undefined
+        steps.push({ type: 'floor', floor, units: floors[floor - 1] ?? [], affixes, log: index, downs: [] })
         break
       }
       case 'log.attack':

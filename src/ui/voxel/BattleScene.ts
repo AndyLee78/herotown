@@ -1,5 +1,5 @@
 import * as THREE from 'three'
-import { monsterById, type DungeonReport, type ReplayUnit } from '../../core'
+import { monsterById, type AffixId, type DungeonReport, type ReplayUnit } from '../../core'
 import { buildCharacter, walkPose } from './character'
 import { buildEnemy, idleActor, type Actor } from './enemies'
 import { Builder, disposeTree } from './kit'
@@ -91,9 +91,24 @@ const THEMES = {
   1: { sky: '#2a2622', floor: ['#7a6a58', '#6f604f', '#84735f', '#756553'], wall: ['#5a4c40', '#524538', '#625244'], light: '#ffb85a', crystal: '#9fe8ff' },
   2: { sky: '#24262a', floor: ['#6a6660', '#625e58', '#726d66', '#5d5953'], wall: ['#4a4744', '#53504c', '#44413e'], light: '#ffa64d', crystal: '#ffcf5a' },
   3: { sky: '#1e1f2a', floor: ['#4e5266', '#565a70', '#4a4d60', '#525670'], wall: ['#3b3e4f', '#34374a', '#40435a'], light: '#c79bff', crystal: '#b48cff' },
+  nest: { sky: '#2a1210', floor: ['#5a3a30', '#4a2e28', '#6a4438', '#52342c'], wall: ['#4a2a22', '#3a1e18', '#5a3228'], light: '#ff6a3a', crystal: '#ffcf5a' },
 } as const
 
-export function battleTheme(tier: number) {
+const AFFIX_COLOR: Record<AffixId, string> = {
+  venom: '#6fbf4a',
+  traps: '#c4a574',
+  ambush: '#6a6a6a',
+  charged: '#ff6a3a',
+  silence: '#e05a4a',
+  paralyze: '#ffe14a',
+  swift: '#7fe3ff',
+  noRest: '#ff8a3d',
+}
+
+export function battleTheme(tier: number, dungeonId?: string) {
+  if (dungeonId === 'dragon_nest') {
+    return THEMES.nest
+  }
   return THEMES[(Math.min(3, Math.max(1, tier)) as 1 | 2 | 3)]
 }
 
@@ -108,6 +123,7 @@ export class BattleScene {
   private readonly projectiles: Projectile[] = []
   private readonly particles: Particle[] = []
   private readonly floaters: Floater[] = []
+  private readonly embers: { mesh: THREE.Mesh; base: THREE.Vector3; phase: number; speed: number }[] = []
   private readonly numberTextures = new Map<string, THREE.CanvasTexture>()
   private readonly sparkGeometry = new THREE.BoxGeometry(1, 1, 1)
   private readonly sparkMaterials = new Map<string, THREE.MeshBasicMaterial>()
@@ -118,6 +134,7 @@ export class BattleScene {
   private running = true
   private quiet = false
   private frame = 0
+  private readonly nest: boolean
 
   constructor(
     private readonly canvas: HTMLCanvasElement,
@@ -130,11 +147,12 @@ export class BattleScene {
     this.renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2))
     this.renderer.shadowMap.enabled = true
     this.renderer.shadowMap.type = THREE.PCFSoftShadowMap
-    const theme = THEMES[(Math.min(3, Math.max(1, tier)) as 1 | 2 | 3)]
+    this.nest = report.dungeonId === 'dragon_nest'
+    const theme = battleTheme(tier, report.dungeonId)
     this.scene.background = new THREE.Color(theme.sky)
-    this.scene.add(new THREE.HemisphereLight('#ffffff', '#6b6256', 1.5))
-    const sun = new THREE.DirectionalLight('#fff1dc', 2)
-    sun.position.set(4, 12, 8)
+    this.scene.add(new THREE.HemisphereLight(this.nest ? '#ffb080' : '#ffffff', this.nest ? '#5a3020' : '#6b6256', this.nest ? 1.2 : 1.5))
+    const sun = new THREE.DirectionalLight(this.nest ? '#ff6a3a' : '#fff1dc', this.nest ? 1.6 : 2)
+    sun.position.set(this.nest ? -2 : 4, 12, 8)
     sun.castShadow = true
     sun.shadow.mapSize.set(1024, 1024)
     Object.assign(sun.shadow.camera, { left: -9, right: 9, top: 9, bottom: -9, near: 1, far: 40 })
@@ -142,6 +160,9 @@ export class BattleScene {
     sun.shadow.normalBias = 0.02
     this.scene.add(sun, sun.target, this.bars)
     this.scene.add(this.buildArena(theme))
+    if (this.nest) {
+      this.spawnEmbers()
+    }
     this.camera.position.copy(LOOK_AT).add(CAMERA_OFFSET)
     this.camera.lookAt(LOOK_AT)
     this.resizer = new ResizeObserver(() => this.resize())
@@ -314,6 +335,7 @@ export class BattleScene {
       this.animate(fighter, dt, time)
     }
     this.updateEffects(dt)
+    this.updateEmbers(time)
     this.renderer.render(this.scene, this.camera)
   }
 
@@ -321,6 +343,9 @@ export class BattleScene {
     switch (step.type) {
       case 'floor':
         this.startFloor(step.units, instant)
+        if (step.affixes?.length && !instant) {
+          this.showAffixes(step.affixes)
+        }
         break
       case 'attack':
         this.attack(step.actorId, step.hits, step.downs, instant)
@@ -625,6 +650,79 @@ export class BattleScene {
           }
         })
       }
+    }
+  }
+
+  private showAffixes(affixes: AffixId[]) {
+    affixes.forEach((id, index) => {
+      const color = AFFIX_COLOR[id]
+      const x = (index - (affixes.length - 1) / 2) * 1.4
+      const pos = new THREE.Vector3(x, 2.4, 0.4)
+      this.burst(pos, color, 14)
+      this.banner(id, color, pos)
+    })
+  }
+
+  private banner(text: string, color: string, at: THREE.Vector3) {
+    const key = `affix:${text}:${color}`
+    let texture = this.numberTextures.get(key)
+    if (!texture) {
+      const canvas = document.createElement('canvas')
+      canvas.width = 160
+      canvas.height = 64
+      const context = canvas.getContext('2d')
+      if (!context) {
+        return
+      }
+      context.clearRect(0, 0, 160, 64)
+      context.font = 'bold 28px sans-serif'
+      context.textAlign = 'center'
+      context.textBaseline = 'middle'
+      context.lineWidth = 8
+      context.strokeStyle = 'rgba(30, 20, 16, 0.9)'
+      context.strokeText(text, 80, 32)
+      context.fillStyle = color
+      context.fillText(text, 80, 32)
+      texture = new THREE.CanvasTexture(canvas)
+      texture.colorSpace = THREE.SRGBColorSpace
+      this.numberTextures.set(key, texture)
+    }
+    const sprite = new THREE.Sprite(new THREE.SpriteMaterial({ map: texture, depthTest: false, transparent: true }))
+    sprite.renderOrder = 22
+    sprite.scale.set(1.6, 0.64, 1)
+    sprite.position.copy(at)
+    this.scene.add(sprite)
+    this.floaters.push({ sprite, t: 0 })
+  }
+
+  private spawnEmbers() {
+    let material = this.sparkMaterials.get('#ff8a3d')
+    if (!material) {
+      material = new THREE.MeshBasicMaterial({ color: '#ff8a3d' })
+      this.sparkMaterials.set('#ff8a3d', material)
+    }
+    for (let index = 0; index < 28; index += 1) {
+      const mesh = new THREE.Mesh(this.sparkGeometry, material)
+      mesh.scale.setScalar(0.04 + this.random() * 0.05)
+      const base = new THREE.Vector3((this.random() - 0.5) * 10, this.random() * 3, (this.random() - 0.5) * 6)
+      mesh.position.copy(base)
+      this.scene.add(mesh)
+      this.embers.push({ mesh, base, phase: this.random() * Math.PI * 2, speed: 0.4 + this.random() * 0.6 })
+    }
+  }
+
+  private updateEmbers(time: number) {
+    for (const ember of this.embers) {
+      const rise = ((time * ember.speed + ember.phase) % 4) / 4
+      ember.mesh.position.set(
+        ember.base.x + Math.sin(time * 1.2 + ember.phase) * 0.25,
+        0.2 + rise * 3.6,
+        ember.base.z + Math.cos(time * 0.9 + ember.phase) * 0.2,
+      )
+      ember.mesh.scale.setScalar(0.03 + (1 - rise) * 0.06)
+      const material = ember.mesh.material as THREE.MeshBasicMaterial
+      material.opacity = 0.35 + (1 - rise) * 0.55
+      material.transparent = true
     }
   }
 

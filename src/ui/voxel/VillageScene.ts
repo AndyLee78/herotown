@@ -522,7 +522,15 @@ export class VillageScene {
 
   // Starts the walk out for heroes who just left, and the walk in for those
   // who just came back. Heroes already away when the page opens stay hidden.
+  // A lone scout (Docs/depth.md 3d) slips out the south gate without packing.
   private syncAway(away: Set<string>) {
+    const leaving: Walker[] = []
+    for (const walker of this.walkers.values()) {
+      if (walker.kind === 'roster' && away.has(walker.id) && !walker.away) {
+        leaving.push(walker)
+      }
+    }
+    const sneak = leaving.length === 1
     let order = 0
     for (const walker of this.walkers.values()) {
       if (walker.kind !== 'roster') {
@@ -534,6 +542,10 @@ export class VillageScene {
         if (walker.fresh) {
           walker.state = 'gone'
           walker.root.visible = false
+        } else if (sneak) {
+          walker.state = 'leave'
+          walker.speed = 2.4
+          walker.target.set(GATE.x + (walker.random() - 0.5) * 0.6, 0, GATE.z + 0.6)
         } else {
           walker.state = 'gather'
           walker.target.set(GATHER.x + ((order % 3) - 1) * 0.75, 0, GATHER.z + Math.floor(order / 3) * 0.75)
@@ -541,6 +553,7 @@ export class VillageScene {
         }
       } else if (!isAway && walker.away) {
         walker.away = false
+        walker.speed = 0.9 + walker.random() * 0.3
         walker.root.visible = true
         walker.root.position.set(GATE.x + (walker.random() - 0.5) * 1.2, 0, GATE.z)
         walker.state = 'arrive'
