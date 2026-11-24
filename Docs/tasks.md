@@ -95,7 +95,7 @@ Claude Code, Cursor, GPT(Codex)가 함께 쓰는 작업 목록이다. 작업 하
 | 53 | 정찰 나가는 도적과 어픽스 연출 | Cursor | `BattleScene.ts`, `replay.ts`, `VillageScene.ts` | 완료 (613ee56) |
 | 54 | 3d core 코드 리뷰 (f47daff) | GPT | `Docs/reviews/f47daff.md` (새 파일만) | 완료 (abc39ce) |
 | 55 | 용의 둥지 밸런스 측정 | GPT | `tools/curve.ts`, `print-curve.ts`, `tune-curve.ts`, `first-hour.ts` | 완료 (4e7351e) |
-| 56 | 훈련소 화면과 스킬 고르기 | Cursor | `App.tsx`, `src/ui/game/*.tsx`, `styles.css`, `src/locales/*` | 대기 |
+| 56 | 훈련소 화면과 스킬 고르기 | Cursor | `App.tsx`, `src/ui/game/*.tsx`, `styles.css`, `src/locales/*` | 완료 (5010c29) |
 | 57 | 훈련소 건물·스킬 연출 3D | Cursor | `world.ts`, `VillageScene.ts`, `BattleScene.ts`, `replay.ts` | 대기 (56 뒤) |
 | 58 | 스킬·훈련소 core 코드 리뷰 (8e25753) | GPT | `Docs/reviews/8e25753.md` (새 파일만) | 대기 |
 | 59 | 스킬을 배우는 곡선·시뮬레이터 | GPT | `tools/curve.ts`, `print-curve.ts`, `tune-curve.ts`, `first-hour.ts` | 대기 |
@@ -1380,27 +1380,7 @@ tools/curve.ts, tools/print-curve.ts, tools/tune-curve.ts, tools/first-hour.ts�
 
 ## 56. 훈련소 화면과 스킬 고르기 (Cursor)
 
-**지금 시작할 수 있다.** core는 8e25753. 설계: `Docs/skills.md`.
-
-**전달할 내용**
-
-```
-Docs/skills.md를 읽고 화면을 만든다. src/ui/App.tsx, src/ui/game/*.tsx, src/ui/styles.css, src/locales/*만 고친다. core는 고치지 않는다.
-
-core에 이미 있는 것('../../core'에서 export):
-- 스킬: classById(id).skills[i].effect(첫 스킬은 기본기라 effect 없음). heroSkillEffects(hero), skillPicks(level), maxExtraSkills(), starterSkill(classId), trainingRules.pickLevels([3, 7]), trainingRules.forgetGold.
-- hero.skillPoints는 레벨에서 계산된다. { type: 'learn', id, skillId }는 포인트가 있고 세 개 중 두 개를 넘지 않을 때만 된다. { type: 'forget', heroId, skillId }(훈련소 필요, 골드)는 배운 것 하나를 잊고 포인트를 돌려준다.
-- 훈련소: 건물 id 'training'(마을 Lv3). { type: 'drill', heroId, now }. state.drills: { heroId, finishAt, xp }[]. drillXp(state, hero), drillGold(hero), drillTime(state), partyLevel(state). 결과 notice: noTraining, drillHero, trainingFull. 훈련 중인 영웅은 busyHeroIds에 들어간다.
-- 전투 로그 키: log.volley, log.weaken, log.cleanse(문구 있음).
-
-1. 영웅 상세의 스킬 칸: 기본기 + 고를 수 있는 세 개. 각 스킬에 효과 한 줄(classes.json effect를 문구로: 예 "받는 피해 −5%", "6번째 행동마다 적 모두를 친다"). "Lv3에 하나, Lv7에 하나, 세 개 중 두 개" 안내. 포인트가 있으면 [배우기], 두 개를 다 배웠으면 나머지는 잠김. 훈련소가 있으면 배운 스킬에 [잊기 골드 N].
-2. 훈련소 창(App.tsx BUILDING_SCREEN의 training을 새 화면으로): 자리 수(건물 레벨), 훈련 중인 영웅과 남은 시간 막대, 마을에 있는 어른 영웅 목록에 "훈련하면 +경험치(레벨 몇 정도)"와 비용. partyLevel 표시. 뒤처진 영웅이 위로 오게 정렬.
-3. 영웅 목록·출전 목록에서 훈련 중인 영웅에게 "훈련 중" 칩.
-4. 스킬 포인트가 남은 영웅이 있으면 영웅 탭 배지.
-5. 문구 ko/en 같은 키.
-
-확인: npm run dev에서 디버그로 마을 Lv3·훈련소를 만들고, 낮은 레벨 영웅을 훈련시키고 스킬을 배우고 잊어 본다. 스크린샷을 메모에.
-```
+**완료 (5010c29).** 스킬 고르기·잊기, 훈련소 창, 훈련 중 칩, 포인트 배지. 배우기·잊기·훈련 시작 확인.
 
 ---
 
