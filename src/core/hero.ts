@@ -1,5 +1,6 @@
 import { ageBands, ageMultiplier, bandForAge, classById, classList, maxAge, names, progression, traits } from './data'
 import { normalizeGear } from './gear'
+import { normalizeLearned } from './skills'
 import { isGenes, type Genes } from './genes'
 import { createRng, type Rng } from './rng'
 import {
@@ -57,7 +58,7 @@ export function createHero(draft: HeroDraft): Hero {
   const age = clampAge(draft.age)
   const training = clampTraining(draft.training ?? 0)
   const potentials = { ...draft.potentials }
-  const firstSkill = classById(draft.classId).skills[0]?.id ?? ''
+  const skills = normalizeLearned(draft.classId, draft.learned, draft.level ?? 1)
   return {
     id: draft.id,
     name: draft.name,
@@ -71,8 +72,9 @@ export function createHero(draft: HeroDraft): Hero {
     traitIds: [...(draft.traitIds ?? [])],
     level: draft.level ?? 1,
     xp: draft.xp ?? 0,
-    skillPoints: draft.skillPoints ?? 0,
-    learned: [...(draft.learned ?? [firstSkill])],
+    // Points follow the level: two picks, at the levels in training.json (Docs/skills.md).
+    skillPoints: skills.skillPoints,
+    learned: skills.learned,
     gear: draft.gear ? draft.gear.map((item) => normalizeGear(item, draft.classId)) : [normalizeGear(undefined, draft.classId)],
     clears: [...(draft.clears ?? [])],
     deaths: draft.deaths ?? 0,

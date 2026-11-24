@@ -116,7 +116,8 @@
     "temple": "신전",
     "fountain": "행운의 분수",
     "alchemy": "연금술 공방",
-    "magic": "마법 공방"
+    "magic": "마법 공방",
+    "training": "훈련소"
   },
   "buildingHint": {
     "hall": "마을 레벨과 다음 목표를 보여 준다.",
@@ -127,7 +128,8 @@
     "temple": "부상과 중상을 치료하고, 한 번 죽은 영웅을 되돌린다.",
     "fountain": "소원이 차면 눌러서 동전을 받는다. 아주 가끔 대박이 터진다.",
     "alchemy": "물약을 만든다. 만든 물약은 마을 창고에 쌓이고, 출정할 때 가져간다.",
-    "magic": "장신구를 만든다. 영웅마다 장신구 두 개를 낄 수 있다."
+    "magic": "장신구를 만든다. 영웅마다 장신구 두 개를 낄 수 있다.",
+    "training": "뒤처진 영웅을 훈련시켜 빨리 끌어올린다. 배운 스킬을 다시 고를 수도 있다."
   },
   "resource": {
     "wood": "목재 {{amount}}",
@@ -203,7 +205,10 @@
     "scoutHero": "정찰은 다치지 않은 도적만 갈 수 있습니다.",
     "scoutBusy": "이미 정찰을 보냈습니다.",
     "nestKnown": "이번 계절의 둥지는 이미 알고 있습니다.",
-    "noGuild": "길드가 없습니다."
+    "noGuild": "길드가 없습니다.",
+    "noTraining": "훈련소가 없습니다.",
+    "drillHero": "훈련할 수 없는 영웅입니다.",
+    "trainingFull": "훈련소 자리가 다 찼습니다."
   },
   "defeat": {
     "noHealer": "치유사가 없어 피해를 버티지 못했다.",
@@ -726,7 +731,10 @@
     "interrupt": "{{actor}}, {{target}}의 광역기를 끊었다",
     "brace": "{{actor}}, 방어 자세",
     "phase": "{{actor}}, {{phase}}단계로 바뀐다",
-    "summon": "{{actor}}, {{summoned}} 소환"
+    "summon": "{{actor}}, {{summoned}} 소환",
+    "volley": "{{actor}}, 휩쓸기!",
+    "weaken": "{{target}}, 약화",
+    "cleanse": "{{target}}, 중독 정화"
   },
   "sound": {
     "title": "효과음",
@@ -836,7 +844,8 @@
       "temple": "치료·부활 시간 −{{value}}%",
       "fountain": "분수 대박 확률 +{{value}}%p",
       "alchemy": "물약 만드는 시간 −{{value}}%",
-      "magic": "장신구 만드는 시간 −{{value}}%"
+      "magic": "장신구 만드는 시간 −{{value}}%",
+      "training": "훈련 시간 −{{value}}%"
     }
   },
   "trinket": {

@@ -58,6 +58,8 @@ const BUILDING_SCREEN: Record<BuildingId, Screen> = {
   fountain: 'town',
   alchemy: 'alchemy',
   magic: 'magic',
+  // The training screen comes with task 56; until then it opens the roster.
+  training: 'roster',
 }
 
 const CONFIRM_NOTICES = new Set<GameNotice>(['seenDeath', 'wornParty'])

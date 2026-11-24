@@ -10,6 +10,7 @@
     "temple": 0.3,
     "fountain": 0.01,
     "alchemy": 0.2,
-    "magic": 0.2
+    "magic": 0.2,
+    "training": 0.2
   }
 }

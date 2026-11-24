@@ -32,10 +32,27 @@ export type AgeBand = {
   mental: number
 }
 
+// What a learned skill adds on top of the role's innate actions (Docs/skills.md).
+export type SkillEffect = {
+  attack?: number
+  guard?: number
+  speed?: number
+  heal?: number
+  threat?: number
+  bleed?: number
+  weaken?: number
+  regen?: number
+  partyGuard?: number
+  partyAttack?: number
+  volleyEvery?: number
+  cleanse?: boolean
+}
+
 export type SkillDef = {
   id: string
   kind: SkillKind
   power: number
+  effect?: SkillEffect
 }
 
 export type ClassDef = {

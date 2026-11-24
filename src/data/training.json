@@ -1,0 +1,32 @@
+{
+  "pickLevels": [
+    3,
+    7
+  ],
+  "forgetGold": 40,
+  "sessionMs": [
+    600000,
+    480000,
+    360000
+  ],
+  "goldBase": 10,
+  "goldPerLevel": 3,
+  "shares": [
+    {
+      "gap": 2,
+      "share": 1
+    },
+    {
+      "gap": 1,
+      "share": 0.6
+    },
+    {
+      "gap": -99,
+      "share": 0.25
+    }
+  ],
+  "partyAuraCap": {
+    "guard": 0.08,
+    "attack": 0.06
+  }
+}

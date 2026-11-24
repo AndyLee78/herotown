@@ -5,6 +5,7 @@ import classesFile from '../data/classes.json'
 import lifeFile from '../data/life.json'
 import magicFile from '../data/magic.json'
 import nestFile from '../data/nest.json'
+import trainingFile from '../data/training.json'
 import smithFile from '../data/smith.json'
 import combatFile from '../data/combat.json'
 import dungeonsFile from '../data/dungeons.json'
@@ -125,7 +126,7 @@ export function validateGameData(data: GameData): void {
   if (data.dungeons.length < 2) {
     throw new Error('Need at least 2 dungeons')
   }
-  const needed = ['hall', 'inn', 'house', 'guild', 'smith', 'temple', 'fountain', 'alchemy', 'magic']
+  const needed = ['hall', 'inn', 'house', 'guild', 'smith', 'temple', 'fountain', 'alchemy', 'magic', 'training']
   if (data.village.buildings.length !== needed.length || needed.some((id) => !data.village.buildings.some((building) => building.id === id))) {
     throw new Error(`The town needs exactly these buildings: ${needed.join(', ')}`)
   }
@@ -213,6 +214,7 @@ export function trinketById(id: string) {
 if (magicRules.trinkets.some((trinket) => trinket.magicLevel < 1 || trinket.ms <= 0 || trinket.crystal < 0)) {
   throw new Error('Every trinket needs a workshop level and a making time')
 }
+export const trainingRules = trainingFile
 export const nestRules = nestFile as typeof nestFile & { floors: string[][][] }
 export const fountainRules = fountainFile
 

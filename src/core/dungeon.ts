@@ -1,5 +1,5 @@
 import { classById, combatRules, dungeonById, lifeRules, magicRules, nestRules, progression } from './data'
-import { createHeroUnit, heroUnitsToReport, simulateFloor, type BattleUnit, type Kit } from './combat'
+import { applyAuras, createHeroUnit, heroUnitsToReport, simulateFloor, type BattleUnit, type Kit } from './combat'
 import { canDeploy, createHero } from './hero'
 import { createRng } from './rng'
 import type { AffixId, Condition, DungeonFloor, DungeonReport, DungeonResult, Hero, PartyMember, Supplies, Tactics } from './types'
@@ -41,6 +41,7 @@ export function runDungeon(party: PartyMember[], dungeonId: string, tactics: Tac
   }
   const rng = createRng(seed)
   const heroes = party.map((member, index) => createHeroUnit(member, index))
+  applyAuras(heroes)
   const kit: Kit = { stock: { ...supplies }, used: {} }
   const carried = Object.values(supplies).some((count) => (count ?? 0) > 0)
   const log: DungeonReport['log'] = []
@@ -132,25 +133,30 @@ export function applyReport(hero: Hero, report: DungeonReport): Hero {
   if (!next) {
     return hero
   }
-  let xp = hero.xp + report.xp
+  const grown = gainXp(hero, report.xp)
+  const rank = { healthy: 0, fatigued: 1, injured: 2, critical: 3, dead: 4 }
+  const condition = rank[next.condition] > rank[hero.condition] ? next.condition : hero.condition
+  return {
+    ...grown,
+    condition,
+    fatigue: Math.min(100, hero.fatigue + next.fatigue),
+  }
+}
+
+// Experience from a trip or the training ground. Each level is a round of
+// hard-won experience: every stat grows by the training it adds, and skill
+// picks open at their levels.
+export function gainXp(hero: Hero, amount: number): Hero {
+  let xp = hero.xp + amount
   let level = hero.level
   while (xp >= level * progression.xpPerLevel) {
     xp -= level * progression.xpPerLevel
     level += 1
   }
-  const skillPoints = (hero.skillPoints ?? 0) + (level - hero.level) * lifeRules.skillPointsPerLevel
-  const rank = { healthy: 0, fatigued: 1, injured: 2, critical: 3, dead: 4 }
-  const condition = rank[next.condition] > rank[hero.condition] ? next.condition : hero.condition
-  // Each level is a round of hard-won experience: every stat grows by the training it adds.
-  const grown = level > hero.level ? createHero({ ...hero, training: hero.training + (level - hero.level) * progression.trainingPerLevel }) : hero
-  return {
-    ...grown,
-    xp,
-    level,
-    skillPoints,
-    condition,
-    fatigue: Math.min(100, hero.fatigue + next.fatigue),
+  if (level === hero.level) {
+    return { ...hero, xp }
   }
+  return { ...createHero({ ...hero, level, training: hero.training + (level - hero.level) * progression.trainingPerLevel }), xp, level }
 }
 
 export type StatusToll = { poisonShare: number; stunned: number; muted: number; trapShare?: number; ambushShare?: number; blastShare?: number }

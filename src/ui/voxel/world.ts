@@ -19,6 +19,8 @@ export const LOTS: Record<BuildingId, Lot> = {
   fountain: { x: 0, z: 0, w: 2.2, d: 2.2 },
   alchemy: { x: -10.5, z: -1.5, w: 3, d: 2.6 },
   // East of the temple, facing the plaza, so floating crystals catch the light.
+  // Placeholder spot for the training ground until it gets a model (Docs/skills.md).
+  training: { x: -5.5, z: 9.5, w: 3.2, d: 2.6 },
   magic: { x: 5.2, z: -10.2, w: 3, d: 2.6 },
 }
 

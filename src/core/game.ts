@@ -1,5 +1,6 @@
 import { chargeFountain, freshFountain, makeWish, readFountain, upgradeFountain, type FountainState } from './fountain'
 import { claimGuide, guideSteps } from './guide'
+import { finishDrills, forgetSkill, readDrills, startDrill, type Drill } from './drill'
 import { buyIntel, finishScout, isNest, nestSeason, readScout, seasonKey, startScout, type ScoutJob } from './nest'
 import { finishEnchant, readMagicJob, startEnchant, type MagicJob } from './magic'
 import { finishBrew, readAlchemyJob, readSupplies, returnSupplies, startBrew, takeSupplies, type AlchemyJob } from './alchemy'
@@ -13,7 +14,7 @@ import type { Rng } from './rng'
 import type { Genes } from './genes'
 import type { Bond, ClassId, CombatError, DungeonReport, Gear, GearSlot, Gender, Hero, PartyMember, PotionId, Proposal, Role, Row, Supplies, Tactics, TrinketId } from './types'
 
-export const SAVE_VERSION = 13
+export const SAVE_VERSION = 14
 
 export type SeasonId = 'spring' | 'summer' | 'autumn' | 'winter'
 
@@ -52,7 +53,7 @@ export type SmithJob = {
   finishAt: number
 }
 
-export type BuildingId = 'hall' | 'inn' | 'house' | 'guild' | 'smith' | 'temple' | 'fountain' | 'alchemy' | 'magic'
+export type BuildingId = 'hall' | 'inn' | 'house' | 'guild' | 'smith' | 'temple' | 'fountain' | 'alchemy' | 'magic' | 'training'
 export type MaterialName = 'wood' | 'stone' | 'iron' | 'bone' | 'herb' | 'crystal'
 
 export type AutoPolicy = 'material' | 'safe' | 'fixed'
@@ -150,6 +151,9 @@ export type GameNotice =
   | 'alchemyBusy'
   | 'noMagic'
   | 'scoutHero'
+  | 'noTraining'
+  | 'drillHero'
+  | 'trainingFull'
   | 'scoutBusy'
   | 'nestKnown'
   | 'noGuild'
@@ -220,6 +224,8 @@ export type GameState = {
   // The nest season revealed by scouting, intel or a trip (Docs/depth.md 3d).
   nestSeen: string | null
   scout: ScoutJob | null
+  // Heroes at the training ground (Docs/skills.md).
+  drills: Drill[]
 }
 
 export type AdPlacement = 'absence' | 'construction' | 'temple'
@@ -270,6 +276,8 @@ export type GameAction =
   | { type: 'seenAdults' }
   | { type: 'scout'; heroId: string; now: number }
   | { type: 'buyIntel' }
+  | { type: 'drill'; heroId: string; now: number }
+  | { type: 'forget'; heroId: string; skillId: string }
   | { type: 'declineProposal'; a: string; b: string; now?: number }
   | { type: 'wish'; now: number }
   | { type: 'brew'; potionId: PotionId; now: number }
@@ -323,6 +331,7 @@ export function freshState(seed: number, now: number): GameState {
     magic: null,
     nestSeen: null,
     scout: null,
+    drills: [],
   }
 }
 
@@ -569,6 +578,12 @@ function apply(state: GameState, action: GameAction): GameState {
   if (action.type === 'buyIntel') {
     return buyIntel(state)
   }
+  if (action.type === 'drill') {
+    return startDrill(state, action.heroId, action.now, busyHeroIds(state))
+  }
+  if (action.type === 'forget') {
+    return forgetSkill(state, action.heroId, action.skillId)
+  }
   if (action.type === 'seenAdults') {
     return { ...state, comingOfAge: [] }
   }
@@ -616,6 +631,7 @@ function advance(state: GameState, now: number): GameState {
     next = finishBrew(next, until, crafted)
     next = finishEnchant(next, until, crafted)
     next = finishScout(next, until, until === turnAt)
+    next = finishDrills(next, until)
     next = finishCare(next, until)
     next = recoverRoster(next, piece, until)
     next = updateVisitors(next, until, visitors)
@@ -1350,6 +1366,10 @@ export function busyHeroIds(state: GameState): Set<string> {
   if (state.scout) {
     away.add(state.scout.heroId)
   }
+  // Heroes in training are busy too (Docs/skills.md).
+  for (const drill of state.drills ?? []) {
+    away.add(drill.heroId)
+  }
   return away
 }
 
@@ -1805,6 +1825,7 @@ function normalize(record: Record<string, unknown>, now: number): GameState {
     magic: readMagicJob(record.magic),
     nestSeen: typeof record.nestSeen === 'string' ? record.nestSeen : null,
     scout: readScout(record.scout),
+    drills: readDrills(record.drills),
     auto: isAuto(record.auto) ? record.auto : base.auto,
     notice: null,
   }

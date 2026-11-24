@@ -116,7 +116,8 @@
     "temple": "Temple",
     "fountain": "Lucky Fountain",
     "alchemy": "Alchemy Workshop",
-    "magic": "Magic Workshop"
+    "magic": "Magic Workshop",
+    "training": "Training Ground"
   },
   "buildingHint": {
     "hall": "See your village level and next goal.",
@@ -127,7 +128,8 @@
     "temple": "Treat wounds or revive a hero after their first death.",
     "fountain": "Tap it when a wish is ready for a few coins. Now and then, a jackpot.",
     "alchemy": "Brews potions. They go into the village stock, and parties carry them out.",
-    "magic": "Makes trinkets. Each hero can wear two."
+    "magic": "Makes trinkets. Each hero can wear two.",
+    "training": "Brings heroes who fall behind up to speed. Learned skills can be swapped here."
   },
   "resource": {
     "wood": "Wood {{amount}}",
@@ -203,7 +205,10 @@
     "scoutHero": "Only an unhurt rogue can scout.",
     "scoutBusy": "A scout is already out.",
     "nestKnown": "You already know this season's nest.",
-    "noGuild": "There is no guild yet."
+    "noGuild": "There is no guild yet.",
+    "noTraining": "There is no training ground yet.",
+    "drillHero": "This hero cannot train now.",
+    "trainingFull": "The training ground is full."
   },
   "defeat": {
     "noHealer": "Bring a healer to keep the party going.",
@@ -726,7 +731,10 @@
     "interrupt": "{{actor}} breaks {{target}}'s blast",
     "brace": "{{actor}} braces",
     "phase": "{{actor}} enters phase {{phase}}",
-    "summon": "{{actor}} calls {{summoned}}"
+    "summon": "{{actor}} calls {{summoned}}",
+    "volley": "{{actor}} sweeps the field!",
+    "weaken": "{{target}} is weakened",
+    "cleanse": "{{target}} is cleansed of poison"
   },
   "sound": {
     "title": "Sound",
@@ -836,7 +844,8 @@
       "temple": "Care time −{{value}}%",
       "fountain": "Fountain jackpot chance +{{value}}%p",
       "alchemy": "Brewing time −{{value}}%",
-      "magic": "Trinket making time −{{value}}%"
+      "magic": "Trinket making time −{{value}}%",
+      "training": "Training time −{{value}}%"
     }
   },
   "trinket": {

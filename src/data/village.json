@@ -397,6 +397,37 @@
           "ms": 2700000
         }
       ]
+    },
+    {
+      "id": "training",
+      "unlockLevel": 3,
+      "startLevel": 0,
+      "levels": [
+        {
+          "level": 1,
+          "gold": 80,
+          "wood": 30,
+          "stone": 30,
+          "iron": 5,
+          "ms": 600000
+        },
+        {
+          "level": 2,
+          "gold": 150,
+          "wood": 40,
+          "stone": 40,
+          "iron": 10,
+          "ms": 1200000
+        },
+        {
+          "level": 3,
+          "gold": 240,
+          "wood": 50,
+          "stone": 60,
+          "iron": 15,
+          "ms": 2400000
+        }
+      ]
     }
   ]
 }

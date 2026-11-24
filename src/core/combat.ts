@@ -1,6 +1,7 @@
-import { alchemyRules, classById, combatRules, lifeRules, magicRules, monsterById, nestRules, potionById } from './data'
+import { alchemyRules, classById, combatRules, lifeRules, magicRules, monsterById, nestRules, potionById, trainingRules } from './data'
 import { heroGearMods } from './gear'
 import { heroTrinkets } from './magic'
+import { heroSkillEffects } from './skills'
 import type { Rng } from './rng'
 import type { AffixId, BossPhase, LogEntry, MonsterDef, PartyMember, PotionId, ReplayUnit, Row, Supplies, Tactics, UnitReport } from './types'
 
@@ -86,6 +87,14 @@ export type BattleUnit = {
   huntsCasters: boolean
   // How hard the opening ambush strikes (the nest's affix is gentler, 3d).
   ambushPower: number
+  // Learned skills (Docs/skills.md).
+  guard: number
+  volleyEvery: number
+  weaken: number
+  cleanse: boolean
+  regen: number
+  partyGuard: number
+  partyAttack: number
 }
 
 // Potions a party carries into a fight and what it has drunk.
@@ -128,6 +137,13 @@ const STATUS_FREE = {
   blastTaken: 0,
   huntsCasters: false,
   ambushPower: 1,
+  guard: 0,
+  volleyEvery: 0,
+  weaken: 0,
+  cleanse: false,
+  regen: 0,
+  partyGuard: 0,
+  partyAttack: 0,
 }
 
 export type FloorOutcome = 'victory' | 'wipe' | 'retreat' | 'timeout'
@@ -157,6 +173,7 @@ export function createHeroUnit(member: PartyMember, index: number): BattleUnit {
   const bondScale = 1 + Math.max(0, member.bonus ?? 0)
   const maxHp = Math.max(1, Math.round(baseHp * injuryScale))
   const trinkets = heroTrinkets(hero)
+  const learned = heroSkillEffects(hero)
   return {
     id: hero.id,
     refId: hero.id,
@@ -173,14 +190,14 @@ export function createHeroUnit(member: PartyMember, index: number): BattleUnit {
     hasDebuff: skills.has('debuff'),
     hp: maxHp,
     maxHp,
-    attack: (hero.stats[klass.attackStat] * klass.attackScale + gear.attack) * fatigueScale * injuryScale * bondScale,
+    attack: (hero.stats[klass.attackStat] * klass.attackScale + gear.attack) * fatigueScale * injuryScale * bondScale * (1 + learned.attack),
     defense: hero.stats.vit * klass.defenseScale + gear.defense,
-    heal: hero.stats.wis * klass.healScale * bondScale,
-    speed: Math.max(1, (hero.stats.agi + (hero.traitIds.includes('nocturnal') ? combatRules.nocturnalSpeed : 0)) * fatigueScale),
+    heal: hero.stats.wis * klass.healScale * bondScale * (1 + learned.heal),
+    speed: Math.max(1, (hero.stats.agi + (hero.traitIds.includes('nocturnal') ? combatRules.nocturnalSpeed : 0)) * fatigueScale * (1 + learned.speed)),
     gauge: 0,
-    threat: klass.role === 'tank' ? combatRules.tankThreat : combatRules.baseThreat,
+    threat: (klass.role === 'tank' ? combatRules.tankThreat : combatRules.baseThreat) + learned.threat,
     dot: 0,
-    dotOnHit: 0,
+    dotOnHit: learned.bleed,
     buffed: false,
     debuffed: false,
     opened: false,
@@ -204,6 +221,27 @@ export function createHeroUnit(member: PartyMember, index: number): BattleUnit {
     steady: trinkets.has('steady') ? magicRules.ward : 1,
     calm: trinkets.has('calm') ? magicRules.ward : 1,
     interrupt: klass.interrupt ?? false,
+    guard: learned.guard,
+    volleyEvery: learned.volleyEvery,
+    weaken: learned.weaken,
+    cleanse: learned.cleanse,
+    regen: learned.regen,
+    partyGuard: learned.partyGuard,
+    partyAttack: learned.partyAttack,
+  }
+}
+
+// Party-wide skills (ward, veil, bless, anthem) apply when the party sets
+// out, added up to a cap (Docs/skills.md).
+export function applyAuras(heroes: BattleUnit[]) {
+  const guard = Math.min(trainingRules.partyAuraCap.guard, heroes.reduce((sum, hero) => sum + hero.partyGuard, 0))
+  const attack = Math.min(trainingRules.partyAuraCap.attack, heroes.reduce((sum, hero) => sum + hero.partyAttack, 0))
+  if (guard <= 0 && attack <= 0) {
+    return
+  }
+  for (const hero of heroes) {
+    hero.guard = 1 - (1 - hero.guard) * (1 - guard)
+    hero.attack *= 1 + attack
   }
 }
 
@@ -311,6 +349,17 @@ export function simulateFloor(
       // A bracing hero holds still: no potions until the blast lands (review 7eaca30).
       if (!(kit && !actor.braced && drinkPotion(actor, kit, tactics, tick, log))) {
         heroAct(actor, heroes, enemies, tactics, rng, tick, log)
+      }
+      // Hymn: a little healing for everyone on each of the singer's turns.
+      if (actor.regen > 0) {
+        for (const ally of living(heroes)) {
+          const healed = Math.min(ally.maxHp - ally.hp, Math.max(1, Math.round(ally.maxHp * actor.regen)))
+          if (healed > 0) {
+            ally.hp += healed
+            actor.healed += healed
+            push(log, tick, 'log.heal', { ...actorParams(actor), ...targetParams(ally), amount: healed })
+          }
+        }
       }
     } else {
       enemyAct(actor, heroes, rng, tick, log)
@@ -444,7 +493,11 @@ function attack(actor: BattleUnit, enemies: BattleUnit[], tactics: Tactics, rng:
   if (!pool.length) {
     return
   }
-  if (actor.aoe) {
+  // Slam and volley: every few actions the hit lands on everyone in reach.
+  if (actor.aoe || (actor.volleyEvery > 0 && (actor.actions + 1) % actor.volleyEvery === 0)) {
+    if (!actor.aoe) {
+      push(log, tick, 'log.volley', actorParams(actor))
+    }
     for (const target of pool) {
       strike(actor, target, rng, tick, log, combatRules.aoeMultiplier)
     }
@@ -610,11 +663,18 @@ function strike(actor: BattleUnit, target: BattleUnit, rng: Rng, tick: number, l
     multiplier *= 1.6
   }
   attack *= multiplier
-  const amount = Math.max(combatRules.minDamage, Math.round(vary(rng, attack - target.defense)))
+  const raw = Math.max(combatRules.minDamage, Math.round(vary(rng, attack - target.defense)))
+  // Guarding skills shave the blow (only for heroes who learned them, so older fights match).
+  const amount = target.guard > 0 ? Math.max(combatRules.minDamage, Math.round(raw * (1 - target.guard))) : raw
   actor.dealt += amount
   hurt(target, amount, tick, log, 'log.attack', actor)
   if (target.hp > 0 && actor.dotOnHit > 0 && target.immunePoison <= 0) {
     target.dot = Math.min(Math.max(combatRules.dotCap, actor.poisonCap), target.dot + actor.dotOnHit)
+  }
+  // Weakening skills: the target hits softer for the rest of the floor.
+  if (target.hp > 0 && actor.weaken > 0 && !target.debuffed && rng.next() < actor.weaken) {
+    target.debuffed = true
+    push(log, tick, 'log.weaken', targetParams(target))
   }
   // Status chances roll only for units that have them, so older fights replay the same.
   if (target.hp > 0 && actor.paralyzeOnHit > 0 && rng.next() < actor.paralyzeOnHit * target.steady) {
@@ -662,6 +722,11 @@ function heal(actor: BattleUnit, target: BattleUnit, rng: Rng, tick: number, log
   target.hp += healed
   actor.healed += healed
   push(log, tick, 'log.heal', { ...actorParams(actor), ...targetParams(target), amount: healed })
+  // Purify eases poison by half; antidotes still clear it (Docs/skills.md).
+  if (actor.cleanse && target.dot > 0) {
+    target.dot = Math.floor(target.dot / 2)
+    push(log, tick, 'log.cleanse', targetParams(target))
+  }
 }
 
 function vary(rng: Rng, amount: number): number {
