@@ -96,7 +96,7 @@ Claude Code, Cursor, GPT(Codex)가 함께 쓰는 작업 목록이다. 작업 하
 | 54 | 3d core 코드 리뷰 (f47daff) | GPT | `Docs/reviews/f47daff.md` (새 파일만) | 완료 (abc39ce) |
 | 55 | 용의 둥지 밸런스 측정 | GPT | `tools/curve.ts`, `print-curve.ts`, `tune-curve.ts`, `first-hour.ts` | 완료 (4e7351e) |
 | 56 | 훈련소 화면과 스킬 고르기 | Cursor | `App.tsx`, `src/ui/game/*.tsx`, `styles.css`, `src/locales/*` | 완료 (5010c29) |
-| 57 | 훈련소 건물·스킬 연출 3D | Cursor | `world.ts`, `VillageScene.ts`, `BattleScene.ts`, `replay.ts` | 대기 (56 뒤) |
+| 57 | 훈련소 건물·스킬 연출 3D | Cursor | `world.ts`, `VillageScene.ts`, `BattleScene.ts`, `replay.ts` | 완료 (b13376f) |
 | 58 | 스킬·훈련소 core 코드 리뷰 (8e25753) | GPT | `Docs/reviews/8e25753.md` (새 파일만) | 대기 |
 | 59 | 스킬을 배우는 곡선·시뮬레이터 | GPT | `tools/curve.ts`, `print-curve.ts`, `tune-curve.ts`, `first-hour.ts` | 대기 |
 
@@ -1386,16 +1386,7 @@ tools/curve.ts, tools/print-curve.ts, tools/tune-curve.ts, tools/first-hour.ts�
 
 ## 57. 훈련소 건물·스킬 연출 3D (Cursor)
 
-**작업 56 뒤에 시작한다.**
-
-**전달할 내용**
-
-```
-src/ui/voxel/world.ts, VillageScene.ts, BattleScene.ts, replay.ts만 고친다.
-1. 마을에 훈련소 건물(레벨 1–3, 허수아비·나무 검 걸이·모래판). world.ts LOTS의 training 자리는 임시이므로 어울리게 옮겨도 된다. 훈련 중인 영웅(state.drills)이 허수아비를 치는 동작.
-2. 전투 다시 보기: log.volley(휩쓸기 궤적), log.weaken(대상 머리 위 아래 화살표), log.cleanse(초록 물방울이 흩어짐).
-확인: 스크린샷을 메모에.
-```
+**완료 (b13376f).** 모래판·허수아비 훈련소, 훈련 중 타격 동작, volley/weaken/cleanse 연출. drillIds 전달을 위해 App·VillageView도 최소 수정.
 
 ---
 
