@@ -8,6 +8,8 @@ import {
   exportSave,
   housingFree,
   importSave,
+  lowMorale,
+  isChild,
   reduce,
   residents,
   timeRules,
@@ -28,7 +30,7 @@ import { BattleHub } from './game/battleScreens'
 import { Inn, Roster } from './game/heroScreens'
 import { UiIcon, TownLogo, type ResourceKind } from './game/icons'
 import { Bar, Portrait, Res, Window, needsWarning, useNow, waitLabel } from './game/kit'
-import { Absence, Alchemy, ComingOfAge, ConfirmDepart, Guild, Magic, Settings, Smith, Town, Training, WishButton } from './game/villageScreens'
+import { Absence, Alchemy, ComingOfAge, ConfirmDepart, Festival, Guild, Magic, Settings, Smith, Town, Training, WishButton } from './game/villageScreens'
 import { loadGame, storeGame } from './storage'
 import { registerSW } from 'virtual:pwa-register'
 import { isSoundName, play, unlockSound } from './sound'
@@ -36,7 +38,7 @@ import { isSoundName, play, unlockSound } from './sound'
 const ExpeditionPanel = lazy(() => import('./ExpeditionPanel').then((mod) => ({ default: mod.ExpeditionPanel })))
 const VillageView = lazy(() => import('./VillageView').then((mod) => ({ default: mod.VillageView })))
 
-type Screen = 'town' | 'inn' | 'roster' | 'battle' | 'smith' | 'alchemy' | 'magic' | 'training' | 'guild' | 'settings'
+type Screen = 'town' | 'inn' | 'roster' | 'battle' | 'smith' | 'alchemy' | 'magic' | 'training' | 'guild' | 'settings' | 'festival'
 type Toast = { id: number; text: string }
 
 const DOCK: { screen: Screen; icon: ReactNode }[] = [
@@ -319,28 +321,22 @@ export function App() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [bornKey])
 
-  const deathMark = useRef<string | null>(null)
-  const dead = save?.absence?.deaths ?? []
-  const deathKey = dead.length > 0 ? `${save?.lastTickAt ?? 0}|${dead.join(',')}` : ''
+  const knownGraves = useRef<Set<string> | null>(null)
+  const graveyard = save?.graveyard
   useEffect(() => {
-    if (!save) {
-      return
-    }
-    if (deathMark.current === null) {
-      deathMark.current = deathKey
-      return
-    }
-    if (deathKey && deathKey !== deathMark.current) {
-      const graves = [...save.graveyard].reverse()
+    if (!graveyard) return
+    const previous = knownGraves.current
+    knownGraves.current = new Set(graveyard.map(({ id }) => id))
+    if (previous) {
       const korean = i18n.language.startsWith('ko')
-      for (const name of dead) {
-        const age = graves.find((grave) => grave.name === name)?.age
-        pushToast(t('family.passed', { name: korean ? josa(name, '이') : name, age: age ?? '?' }))
+      for (const { id, name, age } of graveyard) {
+        if (previous.has(id)) continue
+        const passed = t('family.passed', { name: korean ? josa(name, '이') : name, age: age ?? '?' })
+        pushToast(`${passed}\n${t('morale.grief')}`)
       }
     }
-    deathMark.current = deathKey
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [deathKey])
+  }, [graveyard])
 
   const jumpClock = (ms: number) => {
     const base = gameNow()
@@ -409,7 +405,7 @@ export function App() {
   }
   const badges: Partial<Record<Screen, number | boolean>> = {
     inn: save.visitors.length,
-    roster: save.roster.some((hero) => needsWarning(hero) || hero.skillPoints > 0),
+    roster: save.roster.some((hero) => needsWarning(hero) || hero.skillPoints > 0 || (!isChild(hero) && hero.condition !== 'dead' && lowMorale(hero))),
     battle: reportUnseen || save.expeditions.length > 0,
   }
 
@@ -467,7 +463,7 @@ export function App() {
         {DOCK.map((item) => {
           const badge = badges[item.screen]
           return (
-            <button key={item.screen} type="button" aria-pressed={screen === item.screen} onClick={() => { play('tap'); open(item.screen) }}>
+          <button key={item.screen} type="button" aria-pressed={screen === item.screen || (screen === 'festival' && item.screen === 'town')} onClick={() => { play('tap'); open(item.screen) }}>
               {item.icon}
               <span>{t(`screen.${item.screen}`)}</span>
               {typeof badge === 'number' && badge > 0 ? <span className="badge">{badge}</span> : badge === true ? <span className="badge dot" /> : null}
@@ -476,7 +472,9 @@ export function App() {
         })}
       </nav>
 
-      {screen ? (
+      {screen === 'festival' ? (
+        <Festival save={save} onAction={apply} onClose={() => { play('close'); setScreen('town') }} />
+      ) : screen ? (
         <Window
           title={t(`screen.${screen}`)}
           icon={
@@ -485,7 +483,7 @@ export function App() {
           onClose={() => { play('close'); setScreen(null) }}
         >
           {screen === 'town' ? (
-            <Town save={save} onAction={apply} busy={adBusy} onWatch={() => watchAd('construction')} onAlchemy={() => open('alchemy')} onMagic={() => open('magic')} onTraining={() => open('training')} onGuild={() => open('guild')} onSelectHero={(id) => { setSelectedId(id); open('roster') }} />
+            <Town save={save} onAction={apply} busy={adBusy} onWatch={() => watchAd('construction')} onAlchemy={() => open('alchemy')} onMagic={() => open('magic')} onTraining={() => open('training')} onGuild={() => open('guild')} onFestival={() => open('festival')} onSelectHero={(id) => { setSelectedId(id); open('roster') }} />
           ) : null}
           {screen === 'inn' ? <Inn save={save} onHire={(id) => apply({ type: 'hire', id, now: gameNow() })} /> : null}
           {screen === 'roster' ? (
@@ -508,7 +506,9 @@ export function App() {
               onExport={() => downloadSave(exportSave(save))}
               onImport={(text) => {
                 try {
-                  setSave(importSave(text, gameNow()))
+                  const imported = importSave(text, gameNow())
+                  knownGraves.current = new Set(imported.graveyard.map(({ id }) => id))
+                  setSave(imported)
                   setFileNotice(null)
                 } catch (error) {
                   setFileNotice(t(`result.${error instanceof Error ? error.message : 'checksum'}`))

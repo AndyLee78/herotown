@@ -2,7 +2,7 @@ import type { TFunction } from 'i18next'
 import { X } from 'lucide-react'
 import { lazy, Suspense, useEffect, useState, type ReactNode } from 'react'
 import { useTranslation } from 'react-i18next'
-import { lifeRules, type GameState, type Gear, type Hero, type LogEntry } from '../../core'
+import { lifeRules, lowMorale, moraleOf, moraleRules, type GameState, type Gear, type Hero, type LogEntry } from '../../core'
 import { gameNow, subscribeGameClock } from '../clock'
 import { ResourceIcon, type ResourceKind } from './icons'
 
@@ -14,6 +14,23 @@ export function Portrait({ hero, large = false }: { hero: Hero; large?: boolean 
       <Suspense fallback={null}>
         <HeroPortrait hero={hero} />
       </Suspense>
+    </span>
+  )
+}
+
+export function MoraleBar({ hero }: { hero: Hero }) {
+  const { t } = useTranslation()
+  const morale = moraleOf(hero)
+  const low = lowMorale(hero)
+  const high = morale >= moraleRules.high
+  return (
+    <span className="morale-meter">
+      <span className="fatigue">
+        <Bar value={morale} max={100} tone={low ? 'bad' : high ? 'good' : 'info'} />
+        <span className="muted">{t('morale.value', { value: Math.floor(morale) })}</span>
+      </span>
+      {low ? <Chip tone="bad">{t('morale.low', { percent: moraleRules.lowPenalty * 100 })}</Chip> : null}
+      {high ? <Chip tone="good">{t('morale.high', { percent: moraleRules.highAttack * 100 })}</Chip> : null}
     </span>
   )
 }

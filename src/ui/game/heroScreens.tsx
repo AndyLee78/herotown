@@ -17,6 +17,7 @@ import {
   legendBonus,
   lifeRules,
   maxExtraSkills,
+  moraleRules,
   potentialBand,
   progression,
   residents,
@@ -44,6 +45,7 @@ import { portraitUrl } from '../voxel/portrait'
 import {
   Bar,
   Chip,
+  MoraleBar,
   Portrait,
   Res,
   Window,
@@ -221,6 +223,7 @@ export function Roster({
                   <Bar value={hero.fatigue} max={100} tone={fatigueTone(hero)} />
                   <span className="muted">{fatigueText(t, hero)}</span>
                 </span>
+                <MoraleBar hero={hero} />
               </span>
               {needsWarning(hero) ? <span className="warn-dot" aria-label={t('hero.warning')} /> : null}
             </button>
@@ -324,6 +327,8 @@ function HeroDetail({
         <Bar value={hero.fatigue} max={100} tone={fatigueTone(hero)} />
         <span className="muted">{fatigueText(t, hero)}</span>
       </span>
+      <MoraleBar hero={hero} />
+      <p className="muted">{t('morale.recovery', { base: moraleRules.base })}</p>
       {recovery ? <p className="muted">{recovery}</p> : null}
       {careAt != null ? <p className="banner">{t(hero.resurrectAt != null ? 'hero.reviving' : 'hero.treating', { time: waitLabel(careAt - now) })}</p> : null}
 

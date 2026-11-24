@@ -30,9 +30,12 @@ import {
   guildRules,
   hallOfFame,
   magicRules,
+  moraleOf,
+  moraleRules,
   partyLevel,
   population,
   progression,
+  seasonKey,
   smithRules,
   timeRules,
   townLevel,
@@ -46,6 +49,7 @@ import {
   type Grave,
   type Hero,
 } from '../../core'
+import { festivalCost } from '../../core/game'
 import { gameNow, gameOffset, offsetParts, subscribeGameClock } from '../clock'
 import { loadSoundPrefs, saveSoundPrefs, SOUND_NAMES } from '../sound'
 import { canReplay } from '../voxel/replay'
@@ -67,6 +71,7 @@ export function Town({
   onMagic,
   onTraining,
   onGuild,
+  onFestival,
   onSelectHero,
 }: {
   save: GameState
@@ -77,6 +82,7 @@ export function Town({
   onMagic: () => void
   onTraining: () => void
   onGuild: () => void
+  onFestival: () => void
   onSelectHero: (id: string) => void
 }) {
   const { t } = useTranslation()
@@ -85,6 +91,8 @@ export function Town({
   const level = townLevel(save.fame)
   const people = population(save)
   const kids = save.roster.filter(isChild).sort((a, b) => b.age - a.age)
+  const adults = save.roster.filter((hero) => !isChild(hero) && hero.condition !== 'dead')
+  const villageMorale = adults.length > 0 ? Math.round(adults.reduce((total, hero) => total + moraleOf(hero), 0) / adults.length) : '—'
   const next = villageRules.levels.find((entry) => entry.level === level.level + 1)
   const now = useNow(save.construction != null)
   const total = save.construction ? villageRules.buildings.find((b) => b.id === save.construction?.id)?.levels.find((l) => l.level === save.buildings[save.construction!.id] + 1)?.ms ?? 1 : 1
@@ -111,6 +119,7 @@ export function Town({
           </button>
           <Chip>{t('town.parties', { count: expeditionSlots(save.buildings.guild) })}</Chip>
           <Chip>{t('town.visitors', { count: visitorCap(save.buildings.inn) })}</Chip>
+          <Chip>{t('morale.village', { value: villageMorale })}</Chip>
           {save.buildings.guild > 0 ? (
             <Chip tone={save.guild && save.guild.seasonal.length > 0 && save.guild.seasonal.every((c) => c.done) ? 'good' : 'info'}>
               {t('town.contracts', {
@@ -120,6 +129,7 @@ export function Town({
             </Chip>
           ) : null}
         </span>
+        <button type="button" className="btn gold small" onClick={onFestival}>{t('morale.festival.open')}</button>
       </div>
 
       {save.construction ? (
@@ -254,6 +264,34 @@ export function Town({
       ) : null}
       {hall ? <Hall save={save} onClose={() => setHall(false)} /> : null}
     </>
+  )
+}
+
+export function Festival({ save, onAction, onClose }: { save: GameState; onAction: Act; onClose: () => void }) {
+  const { t } = useTranslation()
+  const season = save.calendar.season
+  const held = save.festival?.season === seasonKey(save.calendar)
+  const cost = festivalCost(save)
+  const rules = moraleRules.festival
+  const effect = t(`morale.festival.${season}.effect`, {
+    multiplier: rules.bondBoost,
+    percent: rules.xpShare * 100,
+    ...rules.harvest,
+    bonus: rules.memorial,
+    base: moraleRules.base,
+  })
+  return (
+    <Window title={t(`morale.festival.${season}.name`)} onClose={onClose} small>
+      <p>{t('morale.festival.common', { morale: rules.morale, fame: rules.fame })}</p>
+      <p>{effect}</p>
+      <div className="row">
+        <Res kind="gold" amount={cost} />
+        <button type="button" className="btn gold" disabled={held || save.gold < cost} onClick={() => onAction({ type: 'festival' })}>
+          {t(held ? 'morale.festival.held' : 'morale.festival.open')}
+        </button>
+      </div>
+      {!held && save.gold < cost ? <p className="muted">{t('result.poor')}</p> : null}
+    </Window>
   )
 }
 

@@ -1,4 +1,33 @@
 {
+  "morale": {
+    "value": "Morale {{value}}",
+    "low": "Dispirited (attack and speed −{{percent}}%, sits out auto expeditions)",
+    "high": "Inspired (attack +{{percent}}%)",
+    "recovery": "Morale returns to {{base}} over time.",
+    "village": "Village morale {{value}}",
+    "grief": "Family and friends are grieving.",
+    "festival": {
+      "open": "Hold festival",
+      "held": "Already held this season",
+      "common": "All heroes gain {{morale}} morale. The village gains {{fame}} fame.",
+      "spring": {
+        "name": "Spring Planting Festival",
+        "effect": "Expedition affinity gains are multiplied by {{multiplier}} until the season ends."
+      },
+      "summer": {
+        "name": "Summer Martial Tournament",
+        "effect": "All adult heroes gain {{percent}}% of the XP needed for their current level."
+      },
+      "autumn": {
+        "name": "Autumn Harvest Festival",
+        "effect": "The village gains {{wood}} wood, {{stone}} stone, and {{iron}} iron."
+      },
+      "winter": {
+        "name": "Winter Remembrance Festival",
+        "effect": "Heroes below {{base}} morale gain an additional {{bonus}} morale."
+      }
+    }
+  },
   "app": {
     "title": "Hero's Town",
     "tagline": "Stage 1",

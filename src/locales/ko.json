@@ -1,4 +1,33 @@
 {
+  "morale": {
+    "value": "사기 {{value}}",
+    "low": "실의 (공격·속도 −{{percent}}%, 자동 출정 제외)",
+    "high": "의욕 넘침 (공격 +{{percent}}%)",
+    "recovery": "사기는 시간이 지나면 {{base}}으로 돌아옵니다.",
+    "village": "마을 사기 {{value}}",
+    "grief": "가족과 친구가 슬퍼합니다.",
+    "festival": {
+      "open": "축제 열기",
+      "held": "이번 계절 축제 완료",
+      "common": "모든 영웅의 사기가 {{morale}} 오르고 마을 명성이 {{fame}} 오릅니다.",
+      "spring": {
+        "name": "봄 파종제",
+        "effect": "계절이 끝날 때까지 원정에서 얻는 호감도가 {{multiplier}}배가 됩니다."
+      },
+      "summer": {
+        "name": "여름 무술 대회",
+        "effect": "어른 영웅 모두 현재 레벨에 필요한 경험치의 {{percent}}%를 얻습니다."
+      },
+      "autumn": {
+        "name": "가을 수확제",
+        "effect": "마을이 나무 {{wood}}개, 돌 {{stone}}개, 철 {{iron}}개를 얻습니다."
+      },
+      "winter": {
+        "name": "겨울 추모제",
+        "effect": "사기가 {{base}}보다 낮은 영웅은 사기가 {{bonus}} 더 오릅니다."
+      }
+    }
+  },
   "app": {
     "title": "영웅의 마을",
     "tagline": "단계 1",

@@ -1053,6 +1053,21 @@ button,
   text-align: right;
 }
 
+.morale-meter {
+  display: grid;
+  gap: 4px;
+  justify-items: start;
+  min-width: 0;
+}
+
+.morale-meter .fatigue {
+  width: 100%;
+}
+
+.morale-meter .chip {
+  white-space: normal;
+}
+
 .fatigue {
   display: grid;
   grid-template-columns: minmax(60px, 120px) auto;
@@ -1369,6 +1384,7 @@ input[type='range'] {
 }
 
 .toast {
+  white-space: pre-line;
   padding: 10px 16px;
   font-weight: 800;
   background: var(--paper);

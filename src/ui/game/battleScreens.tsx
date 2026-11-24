@@ -37,7 +37,7 @@ import {
 import { gameNow } from '../clock'
 import { josa } from '../josa'
 import { ResourceIcon, type ResourceKind } from './icons'
-import { Bar, Chip, Portrait, Res, clampPercent, fatigueTone, needsWarning, useNow, waitLabel } from './kit'
+import { Bar, Chip, MoraleBar, Portrait, Res, clampPercent, fatigueTone, needsWarning, useNow, waitLabel } from './kit'
 import { Report } from './villageScreens'
 import { dungeonPreviewUrl, monsterPortraitUrl } from '../voxel/portrait'
 
@@ -686,6 +686,7 @@ function PartyEditor({ save, onAction, onBack }: { save: GameState; onAction: Ac
                     <Bar value={hero.fatigue} max={100} tone={fatigueTone(hero)} />
                     <span className="muted">{Math.round(hero.fatigue)}</span>
                   </span>
+                  <MoraleBar hero={hero} />
                 </span>
               </button>
             )
@@ -713,6 +714,7 @@ function PartyEditor({ save, onAction, onBack }: { save: GameState; onAction: Ac
                     <Portrait hero={hero} />
                     <span className="slot-body">
                       <strong>{hero.name}</strong>
+                      <MoraleBar hero={hero} />
                       <span className="row">
                         <button
                           type="button"
