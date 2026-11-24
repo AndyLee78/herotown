@@ -93,7 +93,7 @@ Claude Code, Cursor, GPT(Codex)가 함께 쓰는 작업 목록이다. 작업 하
 | 51 | 용의 둥지 몬스터·던전 그림 | Cursor | `src/ui/voxel/enemies.ts`, `portrait.ts` | 대기 |
 | 52 | 둥지 카드(가려진 어픽스·정찰·정보 구매)와 리포트 | Cursor | `App.tsx`, `src/ui/game/*.tsx`, `styles.css`, `src/locales/*` | 대기 |
 | 53 | 정찰 나가는 도적과 어픽스 연출 | Cursor | `BattleScene.ts`, `replay.ts`, `VillageScene.ts` | 대기 (52 뒤) |
-| 54 | 3d core 코드 리뷰 (커밋 해시는 아래) | GPT | `Docs/reviews/<해시>.md` (새 파일만) | 대기 |
+| 54 | 3d core 코드 리뷰 (f47daff) | GPT | `Docs/reviews/f47daff.md` (새 파일만) | 대기 |
 | 55 | 용의 둥지 밸런스 측정 | GPT | `tools/curve.ts`, `print-curve.ts`, `tune-curve.ts`, `first-hour.ts` | 대기 |
 
 ---
@@ -1384,12 +1384,12 @@ src/ui/voxel/BattleScene.ts, src/ui/voxel/replay.ts, src/ui/voxel/VillageScene.t
 
 ## 54. 3d core 코드 리뷰 (GPT)
 
-**3d core 커밋 뒤에 시작한다.** 커밋 해시는 작업 보드 표의 "3d core" 커밋(Add the dragon's nest...)이다.
+3d core 커밋은 **f47daff**이다.
 
 **전달할 내용**
 
 ```
-3d core 커밋(git log에서 "Add the dragon's nest"로 찾는다)을 리뷰한다. 코드는 고치지 않고 Docs/reviews/<해시>.md 새 파일 하나에만 쓴다(Docs/reviews/README.md 형식).
+3d core 커밋 f47daff를 리뷰한다. 코드는 고치지 않고 Docs/reviews/f47daff.md 새 파일 하나에만 쓴다(Docs/reviews/README.md 형식).
 볼 것: Docs/depth.md 3d와 수치·규칙 차이, nestSeason의 결정성(같은 계절은 같고, 계절마다 바뀌는지), 정찰의 오프라인 진행과 계절이 바뀌는 순간(정찰 중 계절이 바뀌면 어느 계절이 공개되는지), 원정 귀환 시 공개 조건(sameAffixes), 자동 출정이 둥지에 갈 때의 어픽스, 정찰 중인 도적과 busyHeroIds·출산·사망·은퇴의 관계, 어픽스가 소환 유닛(advancePhases)에도 붙는지, 기존 던전 결과가 바뀌지 않았는지(부모 커밋과 시드 전투 비교), 세이브 12 → 13.
 ```
 
