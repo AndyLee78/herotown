@@ -91,7 +91,7 @@ Claude Code, Cursor, GPT(Codex)가 함께 쓰는 작업 목록이다. 작업 하
 | 49 | 마량 성채 밸런스 측정 | GPT | `tools/curve.ts`, `print-curve.ts`, `tune-curve.ts`, `first-hour.ts` | 완료 (0551f9f) |
 | 50 | 아이를 영웅·출전 목록에서 빼고 성인식 알림 | Claude Code (사용자 요청으로 직접) | `src/ui/game/*.tsx`, `App.tsx`, `styles.css`, `src/locales/*` | 완료 (다음 커밋) |
 | 51 | 용의 둥지 몬스터·던전 그림 | Cursor | `src/ui/voxel/enemies.ts`, `portrait.ts` | 완료 (ac00d51) |
-| 52 | 둥지 카드(가려진 어픽스·정찰·정보 구매)와 리포트 | Cursor | `App.tsx`, `src/ui/game/*.tsx`, `styles.css`, `src/locales/*` | 대기 |
+| 52 | 둥지 카드(가려진 어픽스·정찰·정보 구매)와 리포트 | Cursor | `App.tsx`, `src/ui/game/*.tsx`, `styles.css`, `src/locales/*` | 완료 (a63366f) |
 | 53 | 정찰 나가는 도적과 어픽스 연출 | Cursor | `BattleScene.ts`, `replay.ts`, `VillageScene.ts` | 대기 (52 뒤) |
 | 54 | 3d core 코드 리뷰 (f47daff) | GPT | `Docs/reviews/f47daff.md` (새 파일만) | 대기 |
 | 55 | 용의 둥지 밸런스 측정 | GPT | `tools/curve.ts`, `print-curve.ts`, `tune-curve.ts`, `first-hour.ts` | 대기 |
@@ -1326,28 +1326,7 @@ core에 이미 있는 것:
 
 ## 52. 둥지 카드(가려진 어픽스·정찰·정보 구매)와 리포트 (Cursor)
 
-**지금 시작할 수 있다(작업 51과 파일이 겹치지 않는다).**
-
-**전달할 내용**
-
-```
-Docs/depth.md 3d를 읽고 화면을 만든다. src/ui/App.tsx, src/ui/game/*.tsx, src/ui/styles.css, src/locales/*만 고친다. core는 고치지 않는다.
-
-core에 이미 있는 것(src/core/nest.ts, '../../core'에서 export한다):
-- nestSeason(state.seed, state.calendar): { key, affixes: AffixId[], floors: { monsters }[] }. nestRevealed(state): 이번 계절을 알고 있는지. isNest(dungeonId).
-- 동작: { type: 'scout', heroId, now }(다치지 않은 도적, 5분, 그동안 원정 중으로 표시됨), { type: 'buyIntel' }(길드 Lv1+, 골드 nestRules.intelGold). state.scout: { heroId, finishAt } | null.
-- 리포트 report.affixes. 결과 notice: scoutHero, scoutBusy, nestKnown, noGuild.
-- 문구 키: dungeon.dragon_nest, enemy.drake/wyvern/kobold_mystic/elder_dragon, affix.<id>, affix.hint.<id>, nest.hidden, nest.scout, nest.intel, result.*.
-
-1. 던전 목록·상세에서 용의 둥지: 알기 전에는 어픽스와 적 구성을 "?"로 가린다(nest.hidden). 알고 나면 이번 계절의 어픽스 두 개(이름 + 대응 한 줄 affix.hint)와 층별 적 구성(nestSeason의 floors)을 보여 준다. "다음 계절까지 남은 시간"도 보여 준다.
-2. 가려져 있을 때 버튼 두 개: [도적 정찰](도적 고르기, 정찰 중이면 남은 시간 막대), [길드 정보 구매 골드 N].
-3. 출발 준비(Prep): 둥지를 고르면 이번 계절 어픽스(알 때만)와, 파티가 각 어픽스에 대비했는지 한 줄씩 보여 준다(venom: 해독 물약 또는 해독의 목걸이, traps: 도적 또는 함정 감지, ambush: 경계, charged: 끊을 영웅 또는 버티기, silence: 고요 또는 맑은 정신 물약, paralyze: 굳건 또는 각성 물약, noRest: 회복 물약). 대비 안 된 줄은 경고 색.
-4. 원정 기록·리포트: 그 원정의 어픽스(report.affixes) 칩.
-5. 영웅 목록·출전 목록: 정찰 중인 도적은 "정찰 중" 칩.
-6. 문구 ko/en 같은 키.
-
-확인: npm run dev에서 디버그로 성채까지 클리어한 세이브를 만들어 정보 구매와 정찰로 각각 공개해 본다. 확인 못 한 부분은 메모에.
-```
+**완료 (a63366f).** 가려진 둥지·정보 구매·출발 대비 점검·리포트 칩·정찰 중 칩. 정보 구매로 공개·대비 줄 확인. 정찰 타이머 막대는 UI 코드만(코어 시퀀스는 확인).
 
 ---
 
