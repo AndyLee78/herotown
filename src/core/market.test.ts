@@ -143,3 +143,15 @@ describe('review bb1c2cf fixes', () => {
     expect(reduce(state, { type: 'sellPotion', potionId: 'heal', count: Number.NaN }).potions.heal).toBe(2)
   })
 })
+
+describe('merchant stock', () => {
+  it('never brings two of the same thing', () => {
+    for (let seed = 1; seed <= 30; seed += 1) {
+      const base = { ...freshState(seed, now), buildings: { ...freshState(seed, now).buildings, market: 3, smith: 1 } }
+      const state = updateMerchant({ ...base, market: { ...base.market, nextMerchantAt: now } }, now + 1)
+      const keys = state.market.merchant!.offers.map((offer) => (offer.kind === 'gear' ? offer.gear.recipeId : offer.kind === 'potion' ? offer.potionId : offer.material))
+      expect(new Set(keys).size).toBe(keys.length)
+      expect(state.market.merchant!.offers[0]?.kind).toBe('gear')
+    }
+  })
+})

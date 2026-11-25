@@ -260,20 +260,29 @@ function stockFor(state: GameState, nonce: number): MerchantOffer[] {
   const smithLevel = state.buildings.smith
   const reachable = smithRules.recipes.filter((recipe) => recipe.smithLevel <= Math.max(1, smithLevel + 1) && recipe.smithLevel < 99)
   const gearPool = reachable.filter((recipe) => recipe.smithLevel === Math.max(...reachable.map((entry) => entry.smithLevel)))
+  // Every offer is a different thing: no two of the same blade or bundle.
+  type Pick = { kind: 'gear'; recipe: (typeof gearPool)[number] } | { kind: 'potion'; potionId: PotionId } | { kind: 'material'; material: MaterialName }
+  let pool: Pick[] = [
+    ...gearPool.map((recipe) => ({ kind: 'gear' as const, recipe })),
+    ...alchemyRules.potions.map((potion) => ({ kind: 'potion' as const, potionId: potion.id as PotionId })),
+    ...(rules.materials as MaterialName[]).map((material) => ({ kind: 'material' as const, material })),
+  ]
   const offers: MerchantOffer[] = []
-  for (let index = 0; index < count; index += 1) {
+  for (let index = 0; index < count && pool.length > 0; index += 1) {
     const id = `m${nonce}-${index}`
-    const roll = index === 0 ? 'gear' : index === 1 ? 'material' : pick(['material', 'potion', 'gear'] as const)
-    if (roll === 'gear' && gearPool.length > 0) {
-      const recipe = pick(gearPool)
-      const gear = forgeGear(recipe, `${state.seed}-m${nonce}-${index}`, rng.next() < 0.5 ? 'power' : 'guard')
-      offers.push({ id, kind: 'gear', gear, price: Math.ceil(recipeValue(recipe.id) * rules.markup), sold: false })
-    } else if (roll === 'potion') {
-      const potion = pick(alchemyRules.potions)
-      const unit = bottleCost(potion.id)
-      offers.push({ id, kind: 'potion', potionId: potion.id as PotionId, count: rules.potionCount, price: Math.ceil(unit * rules.potionCount * rules.markup), sold: false })
+    // The first is always gear and the second materials, when there are any.
+    const wanted = index === 0 ? 'gear' : index === 1 ? 'material' : null
+    const choices = wanted && pool.some((entry) => entry.kind === wanted) ? pool.filter((entry) => entry.kind === wanted) : pool
+    const choice = pick(choices)
+    pool = pool.filter((entry) => entry !== choice)
+    if (choice.kind === 'gear') {
+      const gear = forgeGear(choice.recipe, `${state.seed}-m${nonce}-${index}`, rng.next() < 0.5 ? 'power' : 'guard')
+      offers.push({ id, kind: 'gear', gear, price: Math.ceil(recipeValue(choice.recipe.id) * rules.markup), sold: false })
+    } else if (choice.kind === 'potion') {
+      const unit = bottleCost(choice.potionId)
+      offers.push({ id, kind: 'potion', potionId: choice.potionId, count: rules.potionCount, price: Math.ceil(unit * rules.potionCount * rules.markup), sold: false })
     } else {
-      const material = pick(rules.materials as MaterialName[])
+      const material = choice.material
       offers.push({ id, kind: 'material', material, amount: rules.bundle, price: Math.ceil(marketRules.basePrice[material] * rules.bundle * rules.markup), sold: false })
     }
   }

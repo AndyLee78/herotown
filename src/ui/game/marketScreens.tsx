@@ -74,9 +74,11 @@ export function Market({ save, onAction }: { save: GameState; onAction: (action:
             const name = t(`potion.${potionId}`)
             const stock = save.potions[potionId] ?? 0
             const unit = potionValue(potionId)
+            // Sells what there is when the chosen amount is more than the stock.
+            const count = Math.min(stock, quantity)
             return <li key={potionId} className="line">
               <span>{name} <Chip>{stock}</Chip> <span className="muted">{t('market.unitSale', { gold: unit })}</span></span>
-              <button type="button" className="btn small" disabled={stock < quantity} onClick={() => setSale({ action: { type: 'sellPotion', potionId, count: quantity }, name: t('market.bundle', { name, count: quantity }) })}>{t('market.sellGold', { gold: quantity * unit })}</button>
+              <button type="button" className="btn small" disabled={count <= 0 || unit <= 0} onClick={() => setSale({ action: { type: 'sellPotion', potionId, count }, name: t('market.bundle', { name, count }) })}>{t('market.sellGold', { gold: count * unit })}</button>
             </li>
           })}</ul>
         </> : null}
