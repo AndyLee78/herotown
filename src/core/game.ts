@@ -8,7 +8,7 @@ import { enroll, graduate, teachSeason, unenroll } from './school'
 import { afterTrip, benchAtDeparture, feel } from './personality'
 import { festivalScale, gather, type TavernState } from './tavern'
 import { bequeath, bequeathed, comfortHeir, heirloomMods } from './heirloom'
-import { blessing, enshrine, shrineMorale, unshrine, type Shrine } from './legends'
+import { blessing, enshrine, fitShrine, shrineMorale, unshrine, type Shrine } from './legends'
 import { buyOffer, freshMarket, sellGear, sellPotion, trade, updateMerchant, type Market, type MerchantOffer } from './market'
 import { forgetSkill, readDrills, runDrills, startDrill, type Drill } from './drill'
 import { buyIntel, finishScout, isNest, nestSeason, readScout, seasonKey, startScout, type ScoutJob } from './nest'
@@ -474,7 +474,7 @@ export function migrate(raw: unknown, now: number): GameState {
     return fromLegacy(record, now)
   }
   if (typeof record.version === 'number' && record.version >= 2 && record.version <= SAVE_VERSION) {
-    return normalize(record, now)
+    return fitShrine(normalize(record, now))
   }
   if (typeof record.version === 'number' && record.version > SAVE_VERSION) {
     throw new Error('newer')
@@ -2473,7 +2473,10 @@ function readShrine(value: unknown): Shrine | null {
   }
   const shrine = value as Partial<Shrine>
   return {
-    gear: Array.isArray(shrine.gear) ? shrine.gear.map((item) => normalizeGear(item, 'warrior')) : [],
+    // Only heirlooms, each once (review 4c3aec1); fitShrine moves any extra to the stash.
+    gear: Array.isArray(shrine.gear)
+      ? shrine.gear.map((item) => normalizeGear(item, 'warrior')).filter((item, index, all) => item.heirloom != null && all.findIndex((other) => other.id === item.id) === index)
+      : [],
     honoured: Array.isArray(shrine.honoured) ? shrine.honoured.filter((id): id is string => typeof id === 'string') : [],
   }
 }

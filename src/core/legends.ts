@@ -38,7 +38,19 @@ export function shrineSlots(state: GameState): number {
 
 // Each heirloom on display raises the level spirits settle back to.
 export function shrineMorale(state: GameState): number {
-  return (state.shrine?.gear.length ?? 0) * legendsRules.shrineMorale
+  // Only while the hall stands, and only as many as it has room for (review 4c3aec1).
+  return Math.min(state.shrine?.gear.length ?? 0, shrineSlots(state)) * legendsRules.shrineMorale
+}
+
+// A loaded display with more pieces than the hall has room for sends the
+// rest back to the stash.
+export function fitShrine(state: GameState): GameState {
+  const shrine = state.shrine
+  if (!shrine || shrine.gear.length <= shrineSlots(state)) {
+    return state
+  }
+  const room = shrineSlots(state)
+  return { ...state, shrine: { ...shrine, gear: shrine.gear.slice(0, room) }, stash: [...state.stash, ...shrine.gear.slice(room)] }
 }
 
 export function enshrine(state: GameState, gearId: string): GameState {

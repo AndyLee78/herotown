@@ -84,3 +84,19 @@ describe('heirlooms on display', () => {
     expect(migrate(old, now).shrine).toBeNull()
   })
 })
+
+describe('review 4c3aec1 fixes', () => {
+  it('loads only heirlooms, each once, and sends extras past the room to the stash', () => {
+    const relic = (id: string) => ({ ...forgeGear(blade, id), heirloom: { ownerId: 'old', ownerName: 'Old', generations: 1 } })
+    const saved = { ...town(1), shrine: { gear: [relic('a'), relic('a'), forgeGear(blade, 'plain'), relic('b'), relic('c')], honoured: [] } }
+    const opened = migrate(JSON.parse(JSON.stringify(saved)), now)
+    expect(opened.shrine?.gear.map((gear) => gear.id)).toEqual(['a', 'b'])
+    expect(opened.stash.map((gear) => gear.id)).toContain('c')
+    expect(shrineMorale(opened)).toBe(2 * legendsRules.shrineMorale)
+  })
+
+  it('lifts no spirits without the hall', () => {
+    const relic = { ...forgeGear(blade, 'r'), heirloom: { ownerId: 'old', ownerName: 'Old', generations: 1 } }
+    expect(shrineMorale({ ...town(0), shrine: { gear: [relic], honoured: [] } })).toBe(0)
+  })
+})
