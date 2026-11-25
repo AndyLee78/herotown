@@ -122,6 +122,10 @@ Claude Code, Cursor, GPT(Codex)가 함께 쓰는 작업 목록이다. 작업 하
 | 80 | 성격·감정 화면 | GPT | `src/ui/App.tsx`, `src/ui/game/*.tsx`, `src/ui/styles.css`, `src/locales/*` | 완료 (b16876f) |
 | 81 | 성격 core 코드 리뷰 (49c92da) | GPT | `Docs/reviews/49c92da.md` (새 파일만) | 완료 (b9207af) |
 | 82 | 성격 영향 측정 | GPT | `tools/*`, `Docs/personality.md`의 측정 절 | 완료 (0559f10) |
+| 83 | 선술집 건물·술자리·축제 장식 3D | Cursor | `src/ui/voxel/*` | 대기 (84와 함께 가능) |
+| 84 | 선술집·유품 화면 | GPT | `src/ui/App.tsx`, `src/ui/game/*.tsx`, `src/ui/styles.css`, `src/locales/*` | 대기 (83과 함께 가능) |
+| 85 | 선술집·유품 core 코드 리뷰 (161d1d1) | GPT | `Docs/reviews/161d1d1.md` (새 파일만) | 대기 (84 뒤) |
+| 86 | 선술집·유품 측정 | GPT | `tools/*`, `Docs/tavern.md`의 측정 절 | 대기 (85 뒤) |
 
 ---
 
@@ -1970,3 +1974,95 @@ core에 이미 있는 것('../../core'에서 export):
 - 한 친구를 30회 연속 남긴 경우 서운함이 10회, `resentment.benchedTrips` 5·`resentment.loss` 8 비교에서는 6회였다. 이 설정을 플레이테스트 제안으로 남겼다.
 - Claude Code가 리뷰 네 가지를 고치고 측정 제안을 반영했다(c3d2a87). 추모제 대상은 축제 전 사기로 정하고, 성격 궁합은 공격에만 넣고, 은퇴한 가족도 불안을 느끼고, 서운함은 가벼운 피로를 센다. anxiety.loss 8, resentment 5번·8.
 - Claude Code가 127.0.0.1에서 영웅 상세(성격·감정·연패), 친한 사이 궁합, 파티 편집의 궁합·충돌 칩, 축제 뒤 마을 말풍선을 확인했다.
+
+---
+
+## 83. 선술집 건물·술자리·축제 장식 3D (Cursor)
+
+**지금 시작할 수 있다. 작업 84(GPT)와 파일이 겹치지 않아 함께 돌릴 수 있다(같은 폴더에서 동시에 돌리려면 git worktree로 나눈다).** 설계: `Docs/tavern.md`. 끝나면 Claude Code가 화면을 직접 확인한다.
+
+**전달할 내용**
+
+```
+Docs/tavern.md를 읽고 선술집의 3D를 만든다. src/ui/voxel/*만 고친다. core, App.tsx, 화면(src/ui/game/*)은 고치지 않는다.
+
+이미 있는 것:
+- 건물 id 'tavern'(마을 Lv2, 레벨 1–3). world.ts LOTS에 자리 표시용 tavern: { x: -4.6, z: -6.4, w: 3, d: 2.6 }가 있다(광장 북서쪽, 회관과 신전 사이). 지금은 기본 집 모양이다.
+- VillageScene.update(props)에 tavernRound: { heroIds, at } | null(가장 최근 술자리)이 이미 들어온다. at이 바뀌면 새 술자리다. App·VillageView는 연결되어 있다.
+- 축제는 props로 아직 오지 않는다. 축제 장식이 필요하면 다른 방법 대신 이 작업 메모에 "festival prop 필요"라고 적는다(Claude Code가 연결한다).
+
+1. 자리 확인: 카메라는 남동쪽(16,16,16)에서 본다. 회관·신전·연금술 공방·광장 걷는 길과 겹치거나 가리지 않는지 보고, 필요하면 LOTS.tavern 좌표만 옮긴다.
+2. world.ts drawBuilding에 선술집 모델: Lv1 작은 목조 주점(나무 간판에 잔 그림, 문 옆 통), Lv2 2층과 바깥 탁자 하나, Lv3 넓은 테라스와 줄 등불. 건설 중 비계는 기존 규칙 그대로.
+3. 술자리: tavernRound.at이 바뀌면 heroIds의 영웅들이 선술집 앞 탁자로 걸어가 둘러앉고(또는 서서) 잔을 들어 건배하는 동작을 몇 초 보인 뒤 원래 하던 일로 돌아간다. 원정·훈련 중인 영웅은 건너뛴다. 이미 지난 술자리로 페이지를 열면 아무것도 하지 않는다.
+4. 앞마당: 선술집 앞에 작은 광장(돌바닥 몇 칸, 벤치). 영웅 몇 명이 가끔 들러 앉는다(성격 사교적이면 더 자주).
+5. 성능: 기존 Builder로 합친 메시, 탁자·잔은 한 번 만들어 재사용.
+
+확인: npm run dev에서 디버그 세이브로 선술집 Lv1–3, 술자리 장면을 본다. tsc·test·build 통과. 확인한 내용을 메모에.
+```
+
+**메모**
+
+---
+
+## 84. 선술집·유품 화면 (GPT)
+
+**지금 시작할 수 있다. 작업 83(Cursor)과 함께 돌릴 수 있다.** 설계: `Docs/tavern.md`. 끝나면 Claude Code가 화면을 직접 확인한다.
+
+**전달할 내용**
+
+```
+Docs/tavern.md를 읽고 선술집과 유품을 화면에 보인다. src/ui/App.tsx, src/ui/game/*.tsx, src/ui/styles.css, src/locales/*만 고친다. core와 src/ui/voxel/*은 고치지 않는다. 기존 창 구조와 kit.tsx 공용 조각을 그대로 쓴다.
+
+core에 이미 있는 것('../../core'에서 export):
+- 건물 id 'tavern'(마을 Lv2, 레벨 1–3). App.tsx BUILDING_SCREEN의 tavern은 지금 'town'을 연다.
+- tavernRules(sessionsPerSeason, minPeople 2, maxPeople 3, cost, affinity, joy, fatigue, minglePerLevel, festivalScale, heirloom.bonus/maxGenerations/comfort), gatherLeft(state), gatherPreview(state, heroIds) → [{ a, b, affinity }], festivalScale(state), affinityScale(a, b).
+- 동작 { type: 'gather', heroIds }(술자리), { type: 'bequeath', retireeId, gearId, toId }(toId가 null이면 창고). 결과 notice: noTavern, tavernFull, gatherSize, busyHero, poor, notHeir, missing(문구는 locales의 result.*에 이미 있다).
+- gear.heirloom: { ownerId, ownerName, family?, generations, comforted? }. heirloomBonus(state, hero, gear)(그 영웅이 끼면 오르는 비율), isHeir(state, heroId, ownerId).
+
+1. 선술집 창(App.tsx BUILDING_SCREEN의 tavern을 새 화면으로): 이번 계절 남은 술자리 n/m, 비용, 레벨별 효과 표(술자리 수·평소 교류·축제 배수).
+2. 술자리 만들기: 어른 영웅 목록에서 2–3명 고르기(바쁜 영웅은 흐리게, 이유). 고르면 짝마다 오를 호감도 미리보기(gatherPreview, 지금 호감도 → 오른 뒤), 잘 맞음/안 맞음 칩. [술자리 열기 n골드].
+3. 축제 창(기존): 선술집이 있으면 "선술집이 주최: 효과 ×1.3" 한 줄.
+4. 유품 표시: 장비 이름 앞에 "○○ 가문의"(family, 없으면 ownerName) 유품 표시와 대 수(1–3대). 영웅 상세·창고·장비 고르기에서 그 영웅이 끼면 오르는 비율(heirloomBonus > 0이면 "자손 보너스 +9%").
+5. 은퇴자 상세: 지닌 장비마다 [물려주기] → 자손(isHeir) 목록에서 고르기, 또는 [창고에 두기]. 자손이 없으면 안내.
+6. 유품을 처음 낀 자손의 사기 회복은 기존 사기 변화 표시를 따른다(별도 문구 선택).
+7. 문구 ko/en 같은 키. 좁은 화면(375px)에서 넘치지 않게.
+
+확인: npm run dev에서 디버그 세이브(선술집 Lv1, 은퇴한 할아버지와 손자, 성격이 섞인 영웅)로 술자리·물려주기·유품 착용을 본다. tsc·test·build 통과. 확인한 내용을 메모에.
+```
+
+**메모**
+
+---
+
+## 85. 선술집·유품 core 코드 리뷰 (GPT)
+
+**작업 84 뒤에 시작한다(같은 도구라 순서대로).** core 커밋은 **161d1d1**과 **f1dd9ef**다.
+
+**전달할 내용**
+
+```
+선술집·유품 core 커밋 161d1d1, f1dd9ef를 리뷰한다. 코드는 고치지 않고 Docs/reviews/161d1d1.md 새 파일 하나에만 쓴다(Docs/reviews/README.md 형식).
+볼 것: Docs/tavern.md와 수치·규칙 차이, 술자리 제한(계절 경계, 같은 영웅 중복, 아이·사망·바쁜 영웅, 은퇴자), 호감도 상한과 성격 배수, 평소 교류와 축제 배수가 들어가는 경로, 유품이 되는 경로(전투 영구 사망·자연사·은퇴자 자연사·해고·은퇴자 물려주기)와 빠진 경로, 자손 판정(3대, 무덤의 부모 정보, 은퇴자), 대 수 증가 규칙, 자손 보너스가 전투에 들어가는 경로(수동·자동), 슬픔 위로 1회 제한, 장비 정규화와 세이브 20 → 21.
+```
+
+**메모**
+
+---
+
+## 86. 선술집·유품 측정 (GPT)
+
+**작업 85 뒤에 시작한다.**
+
+**전달할 내용**
+
+```
+선술집과 유품이 진행에 주는 영향을 측정한다. tools/에 새 스크립트를 만들거나 기존 시뮬레이터를 넓힌다. core는 고치지 않는다. 결과는 Docs/tavern.md 끝에 "측정 (날짜)" 절로 적는다.
+
+1. 술자리를 계절마다 다 쓰는 플레이어와 안 쓰는 플레이어의 첫 결혼·첫 아이 시점(잘 맞는 짝, 안 맞는 짝).
+2. 선술집 레벨별 평소 교류와 축제 배수가 사기·호감도에 주는 차이.
+3. 유품 보너스(6/9/12%)가 전투 승률에 주는 차이, 대 수가 3까지 가는 데 걸리는 대략적인 세대 시간.
+4. 술자리 비용과 피로가 원정 흐름을 방해하는지.
+5. 숫자를 바꿀 제안이 있으면 tavern.json 키와 값으로 적는다(고치지는 않는다).
+```
+
+**메모**
