@@ -194,7 +194,7 @@ export function recoveryText(t: TFunction, hero: Hero, now: number): string | nu
   return t('hero.recoverIn', { condition: t(`condition.${hero.condition}`), hours })
 }
 
-export function itemLabel(t: TFunction, item: Gear, fallback: Hero['classId']): string {
+export function itemLabel(t: TFunction, item: Gear, fallback: Hero['classId'], heirBonus = 0): string {
   const owner = item.id.split('.')[0] ?? fallback
   const classes = ['warrior', 'rogue', 'archer', 'mage', 'cleric', 'bard', 'dancer']
   const classId = classes.includes(owner) ? owner : fallback
@@ -205,7 +205,11 @@ export function itemLabel(t: TFunction, item: Gear, fallback: Hero['classId']): 
     item.option ? t(`option.${item.option}`) : '',
     item.enhance > 0 ? `+${item.enhance}` : '',
   ].filter(Boolean)
-  return `${name} (${extra.join(', ')})`
+  const heirloom = item.heirloom
+  const title = heirloom ? t('heirloom.name', { owner: heirloom.family ?? heirloom.ownerName, item: name }) : name
+  if (heirloom) extra.push(t('heirloom.generation', { count: heirloom.generations }))
+  if (heirBonus > 0) extra.push(t('heirloom.bonus', { percent: Math.round(heirBonus * 100) }))
+  return `${title} (${extra.join(', ')})`
 }
 
 export function formatEntry(t: TFunction, entry: LogEntry): string {

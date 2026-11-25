@@ -1209,6 +1209,11 @@ button,
   background: var(--paper-2);
 }
 
+.tavern-effects {
+  table-layout: fixed;
+  overflow-wrap: anywhere;
+}
+
 .peak-stat {
   display: block;
 }

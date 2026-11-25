@@ -28,6 +28,7 @@ import {
   fountainNextAt,
   fountainRules,
   fountainWishes,
+  festivalScale,
   guildLevel,
   guildRules,
   hallOfFame,
@@ -173,6 +174,7 @@ export function Town({
   onSchool,
   onGuild,
   onMarket,
+  onTavern,
   onFestival,
   onSelectHero,
 }: {
@@ -186,6 +188,7 @@ export function Town({
   onSchool: () => void
   onGuild: () => void
   onMarket: () => void
+  onTavern: () => void
   onFestival: () => void
   onSelectHero: (id: string) => void
 }) {
@@ -317,6 +320,9 @@ export function Town({
               ) : null}
               {id === 'market' && current > 0 ? (
                 <button type="button" className="btn" onClick={onMarket}>{t('market.open')}</button>
+              ) : null}
+              {id === 'tavern' && current > 0 ? (
+                <button type="button" className="btn" onClick={onTavern}>{t('tavern.open')}</button>
               ) : null}
               {id === 'temple' && current > 0 ? (
                 <label className="toggle">
@@ -487,8 +493,9 @@ export function Festival({ save, onAction, onClose }: { save: GameState; onActio
   const held = save.festival?.season === seasonKey(save.calendar)
   const cost = festivalCost(save)
   const rules = moraleRules.festival
+  const scale = festivalScale(save)
   const effect = t(`morale.festival.${season}.effect`, {
-    multiplier: rules.bondBoost,
+    multiplier: Number((rules.bondBoost * scale).toFixed(2)),
     percent: rules.xpShare * 100,
     ...rules.harvest,
     bonus: rules.memorial,
@@ -496,7 +503,8 @@ export function Festival({ save, onAction, onClose }: { save: GameState; onActio
   })
   return (
     <Window title={t(`morale.festival.${season}.name`)} onClose={onClose} small>
-      <p>{t('morale.festival.common', { morale: rules.morale, fame: rules.fame })}</p>
+      <p>{t('morale.festival.common', { morale: Math.round(rules.morale * scale), fame: rules.fame })}</p>
+      {scale > 1 ? <p className="muted">{t('tavern.hosted', { scale })}</p> : null}
       <p>{effect}</p>
       <div className="row">
         <Res kind="gold" amount={cost} />

@@ -6,6 +6,7 @@ import {
   STAT_KEYS,
   adRules,
   affinityScale,
+  busyHeroIds,
   adsRemaining,
   ancestorsOf,
   canDeploy,
@@ -17,6 +18,8 @@ import {
   emotionScale,
   freeInterviews,
   guildLevel,
+  heirloomBonus,
+  isHeir,
   interviewsLeft,
   knowledge,
   legendBonus,
@@ -37,6 +40,7 @@ import {
   visitorStay,
   type GameAction,
   type GameState,
+  type Gear,
   type Grave,
   type Hero,
   magicRules,
@@ -257,7 +261,7 @@ export function Roster({
           ))}
         </div>
         {save.roster.some(isChild) ? <p className="muted">{t('hero.childrenElsewhere', { count: save.roster.filter(isChild).length })}</p> : null}
-        {save.retirees.length > 0 ? <Retirees save={save} onAction={onAction} /> : null}
+        {save.retirees.length > 0 ? <Retirees save={save} onAction={onAction} onSelect={onSelect} /> : null}
         {save.graveyard.length > 0 ? (
           <>
             <h3 className="section-title">{t('label.graveyard')}</h3>
@@ -431,13 +435,14 @@ function HeroDetail({
       </ul>
 
       <h3 className="section-title">{t('ui.gear')}</h3>
+      {save.retirees.some(({ hero: retiree }) => retiree.id === hero.id) ? <Inheritance save={save} hero={hero} onAction={onAction} /> : null}
       {hero.gear.filter((item) => item.slot !== 'trinket').length === 0 ? <p className="muted">{t('hero.noGear')}</p> : null}
       <ul className="plain">
         {hero.gear
           .filter((item) => item.slot !== 'trinket')
           .map((item) => (
             <li key={item.id} className="line">
-              <span>{itemLabel(t, item, hero.classId)}</span>
+              <span>{itemLabel(t, item, hero.classId, heirloomBonus(save, hero, item))}</span>
               {inRoster ? (
                 <button type="button" className="btn small" onClick={() => onAction({ type: 'unequip', heroId: hero.id, slot: item.slot, gearId: item.id })}>
                   {t('ui.unequip')}
@@ -450,7 +455,7 @@ function HeroDetail({
               .filter((item) => item.slot !== 'trinket')
               .map((item) => (
                 <li key={item.id} className="line">
-                  <span className="muted">{itemLabel(t, item, hero.classId)}</span>
+                  <span className="muted">{itemLabel(t, item, hero.classId, heirloomBonus(save, hero, item))}</span>
                   <button type="button" className="btn small" onClick={() => onAction({ type: 'equip', heroId: hero.id, gearId: item.id })}>
                     {t('ui.equip')}
                   </button>
@@ -474,7 +479,7 @@ function HeroDetail({
           return (
             <li key={item.id} className="line trinket-line">
               <span>
-                <strong>{itemLabel(t, item, hero.classId)}</strong>
+                <strong>{itemLabel(t, item, hero.classId, heirloomBonus(save, hero, item))}</strong>
                 {id ? <span className="muted">{t(`trinket.hint.${id}`)}</span> : null}
               </span>
               {inRoster ? (
@@ -493,7 +498,7 @@ function HeroDetail({
                 return (
                   <li key={item.id} className="line trinket-line">
                     <span>
-                      <span className="muted">{itemLabel(t, item, hero.classId)}</span>
+                      <span className="muted">{itemLabel(t, item, hero.classId, heirloomBonus(save, hero, item))}</span>
                       {id ? <span className="muted">{t(`trinket.hint.${id}`)}</span> : null}
                     </span>
                     <button type="button" className="btn small" onClick={() => onAction({ type: 'equip', heroId: hero.id, gearId: item.id })}>
@@ -783,7 +788,36 @@ function pairCouples(row: TreeNode[]): TreeNode[][] {
 }
 
 // Retired heroes: who they were, and the building each one runs.
-function Retirees({ save, onAction }: { save: GameState; onAction: Act }) {
+function Inheritance({ save, hero, onAction }: { save: GameState; hero: Hero; onAction: Act }) {
+  const { t } = useTranslation()
+  const [selected, setSelected] = useState<string | null>(null)
+  const heirs = save.roster.filter((entry) => isHeir(save, entry.id, hero.id) && entry.condition !== 'dead')
+  const busy = busyHeroIds(save)
+  function give(item: Gear, toId: string | null) {
+    onAction({ type: 'bequeath', retireeId: hero.id, gearId: item.id, toId })
+    setSelected(null)
+  }
+  const gifts = hero.gear.filter(({ recipeId }) => recipeId !== 'starter')
+  if (!gifts.length) return null
+  return (
+    <div className="column">
+      {gifts.map((item) => <div key={item.id} className="card column">
+        <div className="line">
+          <span>{itemLabel(t, item, hero.classId, heirloomBonus(save, hero, item))}</span>
+          <button className="btn small" type="button" aria-expanded={selected === item.id} onClick={() => setSelected(selected === item.id ? null : item.id)}>{t('heirloom.bequeath')}</button>
+        </div>
+        {selected === item.id ? <div className="row">
+          {heirs.length === 0 ? <span className="muted">{t('heirloom.noHeirs')}</span> : null}
+          {heirs.map((heir) => <button className="btn small" type="button" key={heir.id} disabled={busy.has(heir.id)}
+            onClick={() => give(item, heir.id)}>{heir.name}{busy.has(heir.id) ? ` · ${t('house.busy')}` : ''}</button>)}
+          <button className="btn small" type="button" onClick={() => give(item, null)}>{t('heirloom.stash')}</button>
+        </div> : null}
+      </div>)}
+    </div>
+  )
+}
+
+function Retirees({ save, onAction, onSelect }: { save: GameState; onAction: Act; onSelect: (id: string) => void }) {
   const { t } = useTranslation()
   return (
     <>
@@ -796,7 +830,7 @@ function Retirees({ save, onAction }: { save: GameState; onAction: Act }) {
             <div key={hero.id} className="hero-row retiree">
               <Portrait hero={hero} />
               <span className="hero-row-body">
-                <strong>{hero.name}</strong>
+                <button type="button" className="btn tiny" onClick={() => onSelect(hero.id)}>{hero.name}</button>
                 <span className="chips">
                   <Chip tone="info">{t(`class.${hero.classId}`)}</Chip>
                   <Chip>{t('hero.age', { age: hero.age })}</Chip>

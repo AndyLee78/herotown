@@ -1,4 +1,30 @@
 {
+  "tavern": {
+    "left": "Rounds left this season {{left}}/{{total}}",
+    "level": "Level",
+    "sessions": "Rounds",
+    "mingle": "Seasonal affinity",
+    "festival": "Festival multiplier",
+    "choose": "Choose {{min}}–{{max}} adult heroes.",
+    "preview": "{{a}} and {{b}} · affinity {{before}} → {{after}}",
+    "gather": "Host a round",
+    "open": "Open tavern",
+    "hosted": "Hosted by the tavern · effect ×{{scale}}",
+    "busy": {
+      "expedition": "On expedition · {{time}} left",
+      "scout": "Scouting · {{time}} left",
+      "drill": "Training · {{time}} left"
+    }
+  },
+  "heirloom": {
+    "name": "{{owner}} family heirloom · {{item}}",
+    "generation_one": "{{count}} generation",
+    "generation_other": "{{count}} generations",
+    "bonus": "Descendant bonus +{{percent}}%",
+    "bequeath": "Pass down",
+    "noHeirs": "There are no descendants in the village to receive this.",
+    "stash": "Put in storage"
+  },
   "personality": {
     "names": {
       "social": "Sociable",
@@ -174,6 +200,7 @@
     "reload": "Reload"
   },
   "screen": {
+    "tavern": "Tavern",
     "market": "Market",
     "house": "Housing",
     "school": "School",

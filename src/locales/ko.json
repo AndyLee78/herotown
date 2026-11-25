@@ -1,4 +1,30 @@
 {
+  "tavern": {
+    "left": "이번 계절 남은 술자리 {{left}}/{{total}}",
+    "level": "레벨",
+    "sessions": "술자리",
+    "mingle": "평소 교류",
+    "festival": "축제 배수",
+    "choose": "함께할 어른 영웅을 {{min}}~{{max}}명 고르세요.",
+    "preview": "{{a}} · {{b}} 호감도 {{before}} → {{after}}",
+    "gather": "술자리 열기",
+    "open": "선술집 열기",
+    "hosted": "선술집이 주최합니다 · 효과 ×{{scale}}",
+    "busy": {
+      "expedition": "원정 중 · {{time}} 남음",
+      "scout": "정찰 중 · {{time}} 남음",
+      "drill": "훈련 중 · {{time}} 남음"
+    }
+  },
+  "heirloom": {
+    "name": "{{owner}} 가문의 유품 {{item}}",
+    "generation_one": "{{count}}대",
+    "generation_other": "{{count}}대",
+    "bonus": "자손 보너스 +{{percent}}%",
+    "bequeath": "물려주기",
+    "noHeirs": "마을에 물려줄 자손이 없습니다.",
+    "stash": "창고에 두기"
+  },
   "personality": {
     "names": {
       "social": "사교적",
@@ -174,6 +200,7 @@
     "reload": "새로고침"
   },
   "screen": {
+    "tavern": "선술집",
     "market": "시장",
     "house": "집",
     "school": "학교",
