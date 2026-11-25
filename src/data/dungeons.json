@@ -302,6 +302,348 @@
           ]
         }
       ]
+    },
+    {
+      "id": "trial_flame_1",
+      "tier": 6,
+      "recommendedLevel": 12,
+      "betweenHeal": 0.4,
+      "gold": 60,
+      "xp": 180,
+      "floors": [
+        {
+          "monsters": [
+            "drake",
+            "kobold_mystic",
+            "drake"
+          ]
+        },
+        {
+          "monsters": [
+            "cutthroat",
+            "drake"
+          ]
+        },
+        {
+          "monsters": [
+            "bandit_chief",
+            "kobold_mystic"
+          ]
+        }
+      ],
+      "monsterScale": 2.6,
+      "special": "weekday",
+      "element": "flame",
+      "difficulty": 1
+    },
+    {
+      "id": "trial_flame_2",
+      "tier": 6,
+      "recommendedLevel": 15,
+      "betweenHeal": 0.4,
+      "gold": 80,
+      "xp": 240,
+      "floors": [
+        {
+          "monsters": [
+            "drake",
+            "kobold_mystic",
+            "drake"
+          ]
+        },
+        {
+          "monsters": [
+            "cutthroat",
+            "drake"
+          ]
+        },
+        {
+          "monsters": [
+            "bandit_chief",
+            "kobold_mystic"
+          ]
+        }
+      ],
+      "monsterScale": 3.4,
+      "special": "weekday",
+      "element": "flame",
+      "difficulty": 2
+    },
+    {
+      "id": "trial_flame_3",
+      "tier": 6,
+      "recommendedLevel": 18,
+      "betweenHeal": 0.4,
+      "gold": 100,
+      "xp": 300,
+      "floors": [
+        {
+          "monsters": [
+            "drake",
+            "kobold_mystic",
+            "drake"
+          ]
+        },
+        {
+          "monsters": [
+            "cutthroat",
+            "drake"
+          ]
+        },
+        {
+          "monsters": [
+            "bandit_chief",
+            "kobold_mystic"
+          ]
+        }
+      ],
+      "monsterScale": 4.4,
+      "special": "weekday",
+      "element": "flame",
+      "difficulty": 3
+    },
+    {
+      "id": "trial_frost_1",
+      "tier": 6,
+      "recommendedLevel": 12,
+      "betweenHeal": 0.4,
+      "gold": 60,
+      "xp": 180,
+      "floors": [
+        {
+          "monsters": [
+            "wraith",
+            "specter",
+            "ghoul"
+          ]
+        },
+        {
+          "monsters": [
+            "grave_knight",
+            "bone_archer"
+          ]
+        },
+        {
+          "monsters": [
+            "crypt_lord",
+            "specter"
+          ]
+        }
+      ],
+      "monsterScale": 2.6,
+      "special": "weekday",
+      "element": "frost",
+      "difficulty": 1
+    },
+    {
+      "id": "trial_frost_2",
+      "tier": 6,
+      "recommendedLevel": 15,
+      "betweenHeal": 0.4,
+      "gold": 80,
+      "xp": 240,
+      "floors": [
+        {
+          "monsters": [
+            "wraith",
+            "specter",
+            "ghoul"
+          ]
+        },
+        {
+          "monsters": [
+            "grave_knight",
+            "bone_archer"
+          ]
+        },
+        {
+          "monsters": [
+            "crypt_lord",
+            "specter"
+          ]
+        }
+      ],
+      "monsterScale": 3.4,
+      "special": "weekday",
+      "element": "frost",
+      "difficulty": 2
+    },
+    {
+      "id": "trial_frost_3",
+      "tier": 6,
+      "recommendedLevel": 18,
+      "betweenHeal": 0.4,
+      "gold": 100,
+      "xp": 300,
+      "floors": [
+        {
+          "monsters": [
+            "wraith",
+            "specter",
+            "ghoul"
+          ]
+        },
+        {
+          "monsters": [
+            "grave_knight",
+            "bone_archer"
+          ]
+        },
+        {
+          "monsters": [
+            "crypt_lord",
+            "specter"
+          ]
+        }
+      ],
+      "monsterScale": 4.4,
+      "special": "weekday",
+      "element": "frost",
+      "difficulty": 3
+    },
+    {
+      "id": "trial_light_1",
+      "tier": 6,
+      "recommendedLevel": 12,
+      "betweenHeal": 0.4,
+      "gold": 60,
+      "xp": 180,
+      "floors": [
+        {
+          "monsters": [
+            "wisp",
+            "moss_golem",
+            "wisp"
+          ]
+        },
+        {
+          "monsters": [
+            "skeleton",
+            "bone_archer",
+            "wisp"
+          ]
+        },
+        {
+          "monsters": [
+            "citadel_lord",
+            "wisp"
+          ]
+        }
+      ],
+      "monsterScale": 2.6,
+      "special": "weekday",
+      "element": "light",
+      "difficulty": 1
+    },
+    {
+      "id": "trial_light_2",
+      "tier": 6,
+      "recommendedLevel": 15,
+      "betweenHeal": 0.4,
+      "gold": 80,
+      "xp": 240,
+      "floors": [
+        {
+          "monsters": [
+            "wisp",
+            "moss_golem",
+            "wisp"
+          ]
+        },
+        {
+          "monsters": [
+            "skeleton",
+            "bone_archer",
+            "wisp"
+          ]
+        },
+        {
+          "monsters": [
+            "citadel_lord",
+            "wisp"
+          ]
+        }
+      ],
+      "monsterScale": 3.4,
+      "special": "weekday",
+      "element": "light",
+      "difficulty": 2
+    },
+    {
+      "id": "trial_light_3",
+      "tier": 6,
+      "recommendedLevel": 18,
+      "betweenHeal": 0.4,
+      "gold": 100,
+      "xp": 300,
+      "floors": [
+        {
+          "monsters": [
+            "wisp",
+            "moss_golem",
+            "wisp"
+          ]
+        },
+        {
+          "monsters": [
+            "skeleton",
+            "bone_archer",
+            "wisp"
+          ]
+        },
+        {
+          "monsters": [
+            "citadel_lord",
+            "wisp"
+          ]
+        }
+      ],
+      "monsterScale": 4.4,
+      "special": "weekday",
+      "element": "light",
+      "difficulty": 3
+    },
+    {
+      "id": "abyss",
+      "tier": 7,
+      "recommendedLevel": 15,
+      "betweenHeal": 0.35,
+      "gold": 50,
+      "xp": 200,
+      "floors": [
+        {
+          "monsters": [
+            "skeleton",
+            "zombie"
+          ]
+        },
+        {
+          "monsters": [
+            "skeleton",
+            "zombie"
+          ]
+        },
+        {
+          "monsters": [
+            "skeleton",
+            "zombie"
+          ]
+        },
+        {
+          "monsters": [
+            "skeleton",
+            "zombie"
+          ]
+        },
+        {
+          "monsters": [
+            "barrow_lord",
+            "skeleton"
+          ]
+        }
+      ],
+      "monsterScale": 2.2,
+      "special": "endless"
     }
   ]
 }

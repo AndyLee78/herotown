@@ -1,0 +1,78 @@
+{
+  "weekday": {
+    "unlockTown": 6,
+    "attemptsPerDay": 3,
+    "schedule": [
+      "choice",
+      "flame",
+      "frost",
+      "light",
+      "flame",
+      "frost",
+      "light"
+    ],
+    "essence": [
+      4,
+      8,
+      14
+    ]
+  },
+  "abyss": {
+    "unlockTown": 7,
+    "floorsPerRun": 5,
+    "baseScale": 2.2,
+    "scalePerFloor": 0.05,
+    "shardsFirst": 2,
+    "shardsPerFive": 1,
+    "shardsRepeat": 1,
+    "fameEvery": 10,
+    "fame": 10,
+    "bands": [
+      {
+        "from": 1,
+        "monsters": [
+          "skeleton",
+          "zombie",
+          "ghoul",
+          "wraith"
+        ]
+      },
+      {
+        "from": 11,
+        "monsters": [
+          "bandit_thug",
+          "crossbowman",
+          "cutthroat",
+          "venom_toad",
+          "moss_golem"
+        ]
+      },
+      {
+        "from": 21,
+        "monsters": [
+          "grave_knight",
+          "bone_archer",
+          "specter",
+          "drake"
+        ]
+      },
+      {
+        "from": 31,
+        "monsters": [
+          "wyvern",
+          "kobold_mystic",
+          "drake",
+          "specter"
+        ]
+      }
+    ],
+    "bosses": [
+      "barrow_lord",
+      "crypt_lord",
+      "bog_queen",
+      "bandit_chief",
+      "citadel_lord",
+      "elder_dragon"
+    ]
+  }
+}

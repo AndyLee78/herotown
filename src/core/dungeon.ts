@@ -57,7 +57,7 @@ export function runDungeon(party: PartyMember[], dungeonId: string, tactics: Tac
     if (!floorDef) {
       break
     }
-    const result = simulateFloor(heroes, floorDef.monsters, tactics, rng, log, floor + 1, floors, dungeon.monsterScale ?? 1, carried ? kit : undefined, floorDef.trapChance ?? 0, affixes)
+    const result = simulateFloor(heroes, floorDef.monsters, tactics, rng, log, floor + 1, floors, floorDef.scale ?? dungeon.monsterScale ?? 1, carried ? kit : undefined, floorDef.trapChance ?? 0, affixes)
     ticks += result.ticks
     if (result.trap !== 'none') {
       traps[result.trap] += 1

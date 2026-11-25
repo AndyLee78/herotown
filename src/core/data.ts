@@ -15,6 +15,7 @@ import marketFile from '../data/market.json'
 import personalityFile from '../data/personality.json'
 import tavernFile from '../data/tavern.json'
 import legendsFile from '../data/legends.json'
+import endgameFile from '../data/endgame.json'
 import smithFile from '../data/smith.json'
 import combatFile from '../data/combat.json'
 import dungeonsFile from '../data/dungeons.json'
@@ -176,7 +177,10 @@ export const maxAge = ageBandsFile.maxAge
 export const classList = classesFile.classes as ClassDef[]
 export const traits = traitsFile.traits as TraitDef[]
 export const monsters = monstersFile.monsters as MonsterDef[]
-export const dungeons = dungeonsFile.dungeons as DungeonDef[]
+const allDungeons = dungeonsFile.dungeons as DungeonDef[]
+// The regular ladder; the weekday trials and the abyss are kept apart (Docs/endgame.md 4a).
+export const dungeons = allDungeons.filter((dungeon) => !dungeon.special)
+export const specialDungeons = allDungeons.filter((dungeon) => dungeon.special)
 export const names = namesFile
 export const progression = progressionFile
 export const combatRules = combatFile
@@ -231,6 +235,7 @@ export const schoolRules = schoolFile
 export const marketRules = marketFile
 export const tavernRules = tavernFile
 export const legendsRules = legendsFile
+export const endgameRules = endgameFile
 export const personalityRules = personalityFile as {
   ids: string[]
   emotion: Record<import('./types').PersonalityId, Record<'grief' | 'joy' | 'pride' | 'anxiety' | 'resentment', number>>
@@ -296,7 +301,7 @@ validateGameData({
   classes: classList,
   traits,
   monsters,
-  dungeons,
+  dungeons: allDungeons,
   names,
   progression,
   combat: combatRules,
@@ -334,7 +339,7 @@ export function monsterById(id: string): MonsterDef {
 }
 
 export function dungeonById(id: string): DungeonDef {
-  const found = dungeons.find((entry) => entry.id === id)
+  const found = allDungeons.find((entry) => entry.id === id)
   if (!found) {
     throw new Error(`Unknown dungeon ${id}`)
   }

@@ -9,12 +9,13 @@ import { afterTrip, benchAtDeparture, feel } from './personality'
 import { festivalScale, gather, type TavernState } from './tavern'
 import { bequeath, bequeathed, comfortHeir, heirloomMods } from './heirloom'
 import { blessing, enshrine, fitShrine, shrineMorale, unshrine, type Shrine } from './legends'
+import { abyssFloors, freshVault, settleSpecial, specialBlock, spendTrial, type Abyss, type Trials, type Vault } from './trials'
 import { buyOffer, freshMarket, sellGear, sellPotion, trade, updateMerchant, type Market, type MerchantOffer } from './market'
 import { forgetSkill, readDrills, runDrills, startDrill, type Drill } from './drill'
 import { buyIntel, finishScout, isNest, nestSeason, readScout, seasonKey, startScout, type ScoutJob } from './nest'
 import { TRINKET_IDS, enchantTime, finishEnchant, readMagicJob, startEnchant, type MagicJob } from './magic'
 import { POTION_IDS, brewTime, finishBrew, readAlchemyJob, readSupplies, returnSupplies, startBrew, takeSupplies, type AlchemyJob } from './alchemy'
-import { adRules, automationRules, potionById, trinketById, moraleRules, magicRules, nestRules, classById, classList, combatRules, dungeonById, dungeons, expeditionRules, lifeRules, progression, retirementRules, smithRules, timeRules, villageRules } from './data'
+import { adRules, automationRules, potionById, trinketById, moraleRules, magicRules, nestRules, classById, classList, combatRules, dungeonById, dungeons, expeditionRules, lifeRules, progression, retirementRules, smithRules, timeRules, villageRules, specialDungeons, endgameRules } from './data'
 import { forgeGear, normalizeGear, recipeById } from './gear'
 import { applyReport, DEFAULT_TACTICS, gainXp, runDungeon } from './dungeon'
 import { canDeploy, generateHero, isChild, generateVisitors, normalizeHero, restHero, withAge } from './hero'
@@ -24,7 +25,7 @@ import type { Rng } from './rng'
 import type { Genes } from './genes'
 import type { Bond, ClassId, CombatError, DungeonReport, Gear, GearSlot, Gender, Hero, PartyMember, PotionId, Proposal, Role, Row, Supplies, Tactics, TrinketId , StatKey } from './types'
 
-export const SAVE_VERSION = 22
+export const SAVE_VERSION = 23
 
 export type SeasonId = 'spring' | 'summer' | 'autumn' | 'winter'
 
@@ -117,6 +118,8 @@ export type Expedition = {
   supplies?: Supplies
   // The nest season this trip went into (Docs/depth.md 3d).
   nestKey?: string
+  // The floor an abyss run started below (Docs/endgame.md 4a).
+  abyssFrom?: number
 }
 
 // A hero who has hung up their sword. They stay in town, cost no wages,
@@ -184,6 +187,8 @@ export type GameNotice =
   | 'notHeir'
   | 'noLegends'
   | 'shrineFull'
+  | 'trialDay'
+  | 'trialsUsed'
   | 'drillHero'
   | 'trainingFull'
   | 'scoutBusy'
@@ -272,6 +277,10 @@ export type GameState = {
   tavern: TavernState | null
   // Heirlooms on display in the hall of fame (Docs/legends.md).
   shrine: Shrine | null
+  // Late-game rewards and their counters (Docs/endgame.md 4a).
+  vault: Vault
+  trials: Trials | null
+  abyss: Abyss
 }
 
 export type QueueBuilding = 'smith' | 'alchemy' | 'magic'
@@ -415,6 +424,9 @@ export function freshState(seed: number, now: number): GameState {
     market: freshMarket(now),
     tavern: null,
     shrine: null,
+    vault: freshVault(),
+    trials: null,
+    abyss: { best: 0, checkpoint: 0 },
   }
 }
 
@@ -1635,6 +1647,11 @@ export function busyHeroIds(state: GameState): Set<string> {
 // Tier 1 is open from the start; each later tier opens once any dungeon of
 // the tier below has been cleared.
 export function dungeonUnlocked(state: GameState, id: string): boolean {
+  // Weekday trials and the abyss open with the town (Docs/endgame.md 4a).
+  const special = specialDungeons.find((entry) => entry.id === id)
+  if (special) {
+    return townLevel(state.fame).level >= (special.special === 'weekday' ? endgameRules.weekday.unlockTown : endgameRules.abyss.unlockTown)
+  }
   const dungeon = dungeons.find((entry) => entry.id === id)
   if (!dungeon) {
     return false
@@ -1679,6 +1696,11 @@ function startExpedition(state: GameState, presetId: string, confirm: boolean, n
   if (!dungeonUnlocked(state, state.dungeonId)) {
     return { ...state, notice: 'lockedDungeon' }
   }
+  // Today's trial only, three a day (Docs/endgame.md 4a).
+  const blocked = specialBlock(state, state.dungeonId, now)
+  if (blocked) {
+    return { ...state, notice: blocked }
+  }
   const away = busyHeroIds(state)
   if (preset.slots.some((slot) => away.has(slot.id))) {
     return { ...state, notice: 'busyHero' }
@@ -1703,7 +1725,10 @@ function startExpedition(state: GameState, presetId: string, confirm: boolean, n
   // The first expedition of a day keeps the old seed so earlier results replay.
   const battleSeed = state.seedLocked ? state.seed : state.seed + state.day + state.expeditionNonce * 7919
   const carry = takeSupplies(state.potions, preset.supplies)
-  const result = runDungeon(party, state.dungeonId, preset.tactics, battleSeed, carry.taken, nestVariant(state, state.dungeonId))
+  // The abyss is laid out below its checkpoint as the party sets out.
+  const abyssFrom = dungeon.special === 'endless' ? state.abyss.checkpoint : undefined
+  const variant = abyssFrom != null ? { floors: abyssFloors(abyssFrom) } : nestVariant(state, state.dungeonId)
+  const result = runDungeon(party, state.dungeonId, preset.tactics, battleSeed, carry.taken, variant)
   if (!result.ok) {
     return { ...state, notice: result.error }
   }
@@ -1724,9 +1749,11 @@ function startExpedition(state: GameState, presetId: string, confirm: boolean, n
     returnAt: battleEndAt + expeditionRules.returnMs,
     ...(Object.keys(carry.taken).length > 0 ? { supplies: carry.taken } : {}),
     ...(isNest(state.dungeonId) ? { nestKey: seasonKey(state.calendar) } : {}),
+    ...(abyssFrom != null ? { abyssFrom } : {}),
   }
   // Friends left at home notice who went without them (Docs/personality.md).
-  const benched = benchAtDeparture(state, expedition.heroIds, away)
+  const spent = dungeon.special === 'weekday' ? spendTrial(state, now) : state
+  const benched = benchAtDeparture(spent, expedition.heroIds, away)
   return { ...benched, notice: null, potions: carry.stock, expeditionNonce: state.expeditionNonce + 1, expeditions: [...state.expeditions, expedition] }
 }
 
@@ -1774,7 +1801,8 @@ function settleExpedition(state: GameState, expedition: Expedition): GameState {
     expedition.heroIds,
     report.victory,
   )
-  const next = dropFromPresets(grantVictoryRewards(afterTrip(home, expedition.heroIds, report.victory), report, dungeonId))
+  const rewarded = settleSpecial(grantVictoryRewards(afterTrip(home, expedition.heroIds, report.victory), report, dungeonId), dungeonId, report.floorsCleared, report.victory, expedition.abyssFrom)
+  const next = dropFromPresets(rewarded)
   const materials: Partial<Materials> = {}
   for (const key of ['wood', 'stone', 'iron', 'bone', 'herb', 'crystal'] as const) {
     const diff = next.materials[key] - state.materials[key]
@@ -2109,6 +2137,9 @@ function normalize(record: Record<string, unknown>, now: number): GameState {
     market: readMarket(record.market, numberOr(record.lastTickAt, now)),
     tavern: readTavern(record.tavern),
     shrine: readShrine(record.shrine),
+    vault: readVault(record.vault),
+    trials: record.trials && typeof (record.trials as Trials).date === 'string' && typeof (record.trials as Trials).used === 'number' ? { date: (record.trials as Trials).date, used: (record.trials as Trials).used } : null,
+    abyss: readAbyss(record.abyss),
     auto: isAuto(record.auto) ? record.auto : base.auto,
     notice: null,
   }
@@ -2462,6 +2493,24 @@ function drillReserved(state: GameState): Set<string> {
 }
 
 // Saves before version 20 have no market yet (Docs/market.md).
+function readVault(value: unknown): Vault {
+  const vault = freshVault()
+  if (value != null && typeof value === 'object') {
+    for (const key of Object.keys(vault) as (keyof Vault)[]) {
+      const amount = (value as Record<string, unknown>)[key]
+      vault[key] = typeof amount === 'number' && Number.isFinite(amount) ? Math.max(0, amount) : 0
+    }
+  }
+  return vault
+}
+
+function readAbyss(value: unknown): Abyss {
+  const record = (value ?? {}) as Partial<Abyss>
+  const best = typeof record.best === 'number' ? Math.max(0, Math.floor(record.best)) : 0
+  const checkpoint = typeof record.checkpoint === 'number' ? Math.max(0, Math.min(best, Math.floor(record.checkpoint))) : 0
+  return { best, checkpoint }
+}
+
 function readShrine(value: unknown): Shrine | null {
   if (value == null || typeof value !== 'object') {
     return null

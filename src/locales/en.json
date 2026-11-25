@@ -480,7 +480,9 @@
     "gatherSize": "A round is for two or three heroes.",
     "notHeir": "Heirlooms go only to descendants.",
     "noLegends": "There is no hall of fame yet.",
-    "shrineFull": "The display is full."
+    "shrineFull": "The display is full.",
+    "trialDay": "Today is not this essence's day.",
+    "trialsUsed": "Today's trials are all used."
   },
   "defeat": {
     "noHealer": "Bring a healer to keep the party going.",

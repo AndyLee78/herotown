@@ -122,6 +122,8 @@ export type DungeonFloor = {
   monsters: string[]
   // Chance of a trap before the fight (Docs/depth.md 3b).
   trapChance?: number
+  // This floor's own monster scale, for the abyss that grows floor by floor (Docs/endgame.md 4a).
+  scale?: number
 }
 
 export type DungeonDef = {
@@ -134,7 +136,15 @@ export type DungeonDef = {
   gold: number
   xp: number
   floors: DungeonFloor[]
+  // Weekday trials and the endless abyss (Docs/endgame.md 4a) live apart from
+  // the regular dungeon ladder.
+  special?: 'weekday' | 'endless'
+  element?: Essence
+  difficulty?: 1 | 2 | 3
 }
+
+// The weekday essences (Docs/endgame.md 4a).
+export type Essence = 'flame' | 'frost' | 'light'
 
 export type GearSlot = 'weapon' | 'armor' | 'trinket'
 // Heroic and legendary gear come with smith levels 4 and 5 (Docs/endgame.md).
