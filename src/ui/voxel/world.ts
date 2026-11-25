@@ -984,6 +984,57 @@ export function buildPromoteFx(townLevel: number): THREE.Group {
   return root
 }
 
+// Enemy camp beyond the south gate while an invasion is warned (Docs/endgame.md 4c).
+// Built once and shown or hidden.
+export function buildInvasionCamp(): THREE.Group {
+  const root = new THREE.Group()
+  root.name = 'invasionCamp'
+  const b = new Builder()
+  const z0 = GATE.z + 2.6
+  for (const side of [-2.4, -0.8, 0.8, 2.4] as const) {
+    b.box(0.12, 1.7, 0.12, WOOD, side, 0.9, z0)
+    b.box(0.7, 0.95, 0.06, '#8a1a1a', side + (side < 0 ? 0.4 : -0.4), 1.45, z0)
+    b.box(0.7, 0.12, 0.06, '#2a1010', side + (side < 0 ? 0.4 : -0.4), 2.0, z0)
+  }
+  for (const [x, z] of [[-1.6, z0 + 1.1], [1.6, z0 + 1.1], [0, z0 + 2.0]] as const) {
+    b.box(0.55, 0.18, 0.55, '#3a2a20', x, 0.14, z)
+    b.box(0.32, 0.45, 0.32, '#ff6a3a', x, 0.5, z, { glow: true })
+    b.box(0.16, 0.35, 0.16, '#ffd36b', x, 0.85, z, { glow: true })
+  }
+  // Warning banner closer to the gate.
+  b.box(0.1, 1.4, 0.1, WOOD, -3.2, 0.75, GATE.z + 0.9)
+  b.box(0.85, 0.55, 0.06, '#e05a4a', -2.7, 1.35, GATE.z + 0.9)
+  b.box(0.2, 0.2, 0.08, '#ffe27a', -2.7, 1.35, GATE.z + 0.96, { glow: true })
+  root.add(b.build())
+  root.visible = false
+  return root
+}
+
+// Aftermath props after an invasion fight: rubble and smoke for a loss,
+// confetti anchors for a win (bursts handle the petals).
+export function buildInvasionAftermath(won: boolean): THREE.Group {
+  const root = new THREE.Group()
+  root.name = won ? 'invasionWin' : 'invasionLoss'
+  const b = new Builder()
+  if (won) {
+    for (const x of [-1.4, 0, 1.4]) {
+      b.box(0.2, 0.2, 0.2, '#ffe27a', x, 1.6, GATE.z - 0.8, { glow: true })
+    }
+  } else {
+    for (const [x, z, s] of [[-1.2, GATE.z - 0.4, 0.7], [0.8, GATE.z + 0.2, 0.55], [-0.3, GATE.z + 0.9, 0.85]] as const) {
+      b.box(s, 0.35, s * 0.7, '#6a5a4a', x, 0.2, z)
+      b.box(s * 0.5, 0.25, s * 0.4, '#4a3a30', x + 0.2, 0.4, z + 0.1)
+    }
+    for (const x of [-1.8, 0.2, 1.6]) {
+      b.box(0.35, 0.5, 0.35, '#5a5a5a', x, 0.5, GATE.z + 0.5)
+      b.box(0.5, 0.35, 0.5, '#7a7a7a', x, 0.9, GATE.z + 0.5)
+    }
+  }
+  root.add(b.build())
+  root.visible = false
+  return root
+}
+
 // Seasonal festival props for the plaza (and the tavern yard when it is open).
 // One merged mesh per season; world-space coordinates (Docs/morale.md, Docs/tavern.md).
 export function buildFestivalDecor(kind: FestivalKind, withYard: boolean): THREE.Group {

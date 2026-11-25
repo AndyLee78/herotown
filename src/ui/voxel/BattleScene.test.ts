@@ -21,4 +21,11 @@ describe('battleTheme', () => {
     expect(deep.sky).not.toBe(shallow.sky)
     expect(deep.light).not.toBe(shallow.light)
   })
+
+  it('picks a raid arena per boss and an invasion night', () => {
+    expect(battleTheme(7, 'raid', { special: 'raid', raidBossId: 'wyrm' }).kind).toBe('wyrm')
+    expect(battleTheme(7, 'raid', { special: 'raid', raidBossId: 'lich' }).kind).toBe('lich')
+    expect(battleTheme(7, 'raid', { special: 'raid', raidBossId: 'titan' }).kind).toBe('titan')
+    expect(battleTheme(6, 'invasion', { special: 'invasion' }).kind).toBe('invasion')
+  })
 })

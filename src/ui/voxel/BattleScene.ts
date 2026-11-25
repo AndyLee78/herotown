@@ -6,11 +6,16 @@ import { Builder, disposeTree } from './kit'
 import { lookFor, seeded } from './look'
 import type { Hit, ReplayStep, StatusMark } from './replay'
 
+export type RaidBossId = 'wyrm' | 'lich' | 'titan'
+
 export type BattleBackdrop = {
   special?: 'weekday' | 'endless' | 'raid' | 'invasion'
   element?: 'flame' | 'frost' | 'light'
   difficulty?: 1 | 2 | 3
   abyssFrom?: number
+  // Weekly raid boss and its health pool for the big bar on floor 2 (Docs/endgame.md 4c).
+  raidBossId?: RaidBossId
+  raid?: { start: number | null; left?: number; max?: number }
 }
 
 type BattleTheme = {
@@ -19,8 +24,33 @@ type BattleTheme = {
   wall: readonly string[]
   light: string
   crystal: string
-  kind: 'tier' | 'nest' | 'flame' | 'frost' | 'light' | 'abyss'
+  kind: 'tier' | 'nest' | 'flame' | 'frost' | 'light' | 'abyss' | 'wyrm' | 'lich' | 'titan' | 'invasion'
   intensity: number
+}
+
+const RAID_BOSS_OF: Record<string, RaidBossId> = {
+  elder_dragon: 'wyrm',
+  crypt_lord: 'lich',
+  citadel_lord: 'titan',
+}
+
+export function raidBossIdOf(refId: string): RaidBossId | null {
+  return RAID_BOSS_OF[refId] ?? null
+}
+
+// Pool health for the raid bar when the expedition did not carry trip.raid.
+export function raidPoolFromReport(report: DungeonReport): { start: number; left: number; max: number; bossId: RaidBossId } | null {
+  const floor = report.floors?.[1]
+  if (!floor) {
+    return null
+  }
+  const boss = floor.find((unit) => unit.boss && unit.side === 'enemy') ?? floor.find((unit) => unit.side === 'enemy' && raidBossIdOf(unit.refId))
+  if (!boss) {
+    return null
+  }
+  const bossId = raidBossIdOf(boss.refId) ?? 'wyrm'
+  const end = report.units.find((unit) => unit.id === boss.id)
+  return { start: boss.hp, left: end?.hp ?? 0, max: boss.maxHp, bossId }
 }
 
 // Plays a dungeon report back as a 3D auto battle. The outcome is already
@@ -122,6 +152,11 @@ const THEMES = {
   frost: { sky: '#101828', floor: ['#6a8498', '#5a7488', '#7a94a8', '#4a6478'], wall: ['#3a5068', '#2a4058', '#4a6078'], light: '#9fe8ff', crystal: '#d7f4ff', kind: 'frost' as const, intensity: 1 },
   light: { sky: '#2a2418', floor: ['#d4c8a8', '#c8b898', '#e0d4b8', '#bcac88'], wall: ['#b8a888', '#a89878', '#c8b898'], light: '#ffe27a', crystal: '#fff6c8', kind: 'light' as const, intensity: 1 },
   abyss: { sky: '#12081a', floor: ['#2a1838', '#221430', '#321c40', '#1a1028'], wall: ['#1a1028', '#140c20', '#221430'], light: '#9b6bff', crystal: '#c79bff', kind: 'abyss' as const, intensity: 1 },
+  // Weekly raid arenas (Docs/endgame.md 4c).
+  wyrm: { sky: '#2a0c08', floor: ['#5a2414', '#4a1c10', '#6a3020', '#3a1408'], wall: ['#3a160c', '#2a1008', '#4a2014'], light: '#ff6a3a', crystal: '#ffcf5a', kind: 'wyrm' as const, intensity: 2 },
+  lich: { sky: '#0c1424', floor: ['#4a6078', '#3a5068', '#5a7088', '#2a4058'], wall: ['#2a3850', '#1a2840', '#3a4860'], light: '#9fe8ff', crystal: '#e6f4ff', kind: 'lich' as const, intensity: 2 },
+  titan: { sky: '#1c1a18', floor: ['#6a6460', '#5a5450', '#7a746e', '#4a4440'], wall: ['#4a4440', '#3a3430', '#5a5450'], light: '#d9b54a', crystal: '#c9c5bb', kind: 'titan' as const, intensity: 2 },
+  invasion: { sky: '#2a1010', floor: ['#5a3a30', '#4a2e28', '#6a4438', '#52342c'], wall: ['#3a2218', '#2a1810', '#4a2e24'], light: '#ff4a3a', crystal: '#ff8a3d', kind: 'invasion' as const, intensity: 2 },
 } as const
 
 const AFFIX_COLOR: Record<AffixId, string> = {
@@ -155,6 +190,12 @@ export function battleTheme(tier: number, dungeonId?: string, backdrop?: BattleB
       crystal: mixThemeColor('#c79bff', '#ff8a6a', t * 0.6),
       intensity: 1 + Math.floor(depth / 20),
     }
+  }
+  if (backdrop?.special === 'raid') {
+    return THEMES[backdrop.raidBossId ?? 'wyrm']
+  }
+  if (backdrop?.special === 'invasion') {
+    return THEMES.invasion
   }
   return THEMES[(Math.min(3, Math.max(1, tier)) as 1 | 2 | 3)]
 }
@@ -196,8 +237,13 @@ export class BattleScene {
   private readonly nest: boolean
   private readonly abyssFrom: number
   private readonly themeKind: BattleTheme['kind']
+  private readonly raidSpecial: boolean
+  private readonly raidPool: { start: number; left: number; max: number } | null
   private floorLabel: THREE.Sprite | null = null
   private readonly debris: { mesh: THREE.Mesh; base: THREE.Vector3; phase: number; speed: number }[] = []
+  private wingShadow: THREE.Mesh | null = null
+  private raidBar: { root: THREE.Group; fill: THREE.Mesh; max: number } | null = null
+  private raidBossId: string | null = null
 
   constructor(
     private readonly canvas: HTMLCanvasElement,
@@ -213,12 +259,32 @@ export class BattleScene {
     this.renderer.shadowMap.type = THREE.PCFSoftShadowMap
     this.nest = report.dungeonId === 'dragon_nest'
     this.abyssFrom = backdrop.abyssFrom ?? 0
-    const theme = battleTheme(tier, report.dungeonId, backdrop)
+    this.raidSpecial = backdrop.special === 'raid'
+    const fromReport = this.raidSpecial ? raidPoolFromReport(report) : null
+    const bossId = backdrop.raidBossId ?? fromReport?.bossId
+    const theme = battleTheme(tier, report.dungeonId, { ...backdrop, raidBossId: bossId })
     this.themeKind = theme.kind
+    const start = backdrop.raid?.start ?? fromReport?.start ?? null
+    const max = backdrop.raid?.max ?? fromReport?.max ?? null
+    const left = backdrop.raid?.left ?? fromReport?.left ?? null
+    this.raidPool = this.raidSpecial && max != null && max > 0 ? { start: start ?? max, left: left ?? max, max } : null
     this.scene.background = new THREE.Color(theme.sky)
-    const warm = theme.kind === 'flame' || theme.kind === 'nest' || theme.kind === 'abyss'
-    this.scene.add(new THREE.HemisphereLight(warm ? '#ffb080' : theme.kind === 'frost' ? '#d0e8ff' : '#ffffff', warm ? '#5a3020' : theme.kind === 'frost' ? '#405060' : '#6b6256', warm ? 1.2 : 1.5))
-    const sun = new THREE.DirectionalLight(theme.kind === 'flame' || theme.kind === 'nest' ? '#ff6a3a' : theme.kind === 'light' ? '#ffe8a8' : theme.kind === 'frost' ? '#c8e8ff' : theme.kind === 'abyss' ? '#c79bff' : '#fff1dc', warm ? 1.6 : 2)
+    const warm = theme.kind === 'flame' || theme.kind === 'nest' || theme.kind === 'abyss' || theme.kind === 'wyrm' || theme.kind === 'invasion'
+    this.scene.add(new THREE.HemisphereLight(warm ? '#ffb080' : theme.kind === 'frost' || theme.kind === 'lich' ? '#d0e8ff' : '#ffffff', warm ? '#5a3020' : theme.kind === 'frost' || theme.kind === 'lich' ? '#405060' : '#6b6256', warm ? 1.2 : 1.5))
+    const sun = new THREE.DirectionalLight(
+      theme.kind === 'flame' || theme.kind === 'nest' || theme.kind === 'wyrm' || theme.kind === 'invasion'
+        ? '#ff6a3a'
+        : theme.kind === 'light'
+          ? '#ffe8a8'
+          : theme.kind === 'frost' || theme.kind === 'lich'
+            ? '#c8e8ff'
+            : theme.kind === 'abyss'
+              ? '#c79bff'
+              : theme.kind === 'titan'
+                ? '#e8dcc0'
+                : '#fff1dc',
+      warm ? 1.6 : 2,
+    )
     sun.position.set(warm ? -2 : 4, 12, 8)
     sun.castShadow = true
     sun.shadow.mapSize.set(1024, 1024)
@@ -227,12 +293,19 @@ export class BattleScene {
     sun.shadow.normalBias = 0.02
     this.scene.add(sun, sun.target, this.bars)
     this.scene.add(this.buildArena(theme))
-    if (this.nest || theme.kind === 'flame') {
+    if (this.nest || theme.kind === 'flame' || theme.kind === 'wyrm' || theme.kind === 'invasion') {
       this.spawnEmbers(theme.light)
     }
     if (theme.kind === 'abyss') {
       this.spawnDebris(theme.crystal)
       this.setFloorLabel(this.abyssFrom + 1)
+    }
+    if (theme.kind === 'wyrm') {
+      this.spawnWingShadow()
+    }
+    if (this.raidPool) {
+      this.buildRaidBar(this.raidPool.max, this.raidPool.start)
+      this.setRaidBarVisible(false)
     }
     this.camera.position.copy(LOOK_AT).add(CAMERA_OFFSET)
     this.camera.lookAt(LOOK_AT)
@@ -424,6 +497,37 @@ export class BattleScene {
         const x = -6 + index * 4 + random()
         b.box(0.18, 0.9, 0.18, theme.crystal, x, 0.55, -3.5, { glow: true })
       }
+    } else if (theme.kind === 'wyrm') {
+      for (let index = 0; index < 4; index += 1) {
+        const x = -6.5 + index * 3.5
+        b.box(0.7, 0.18, 1.2, '#ff4a2a', x, 0.1, 3.8 + random() * 0.4, { glow: true })
+        b.box(0.35, 1.1, 0.35, '#ff6a3a', x, 0.75, -3.2, { glow: true })
+      }
+      b.box(4.5, 0.2, 2.2, '#3a1408', 1.5, 0.12, 1.2)
+    } else if (theme.kind === 'lich') {
+      b.box(1.4, 0.35, 1.0, '#c9d4e0', 2.2, 0.3, 1.0)
+      b.box(0.9, 1.3, 0.7, '#8a9aac', 2.2, 1.05, 0.9)
+      b.box(1.1, 0.2, 0.9, '#d7f4ff', 2.2, 1.75, 0.9, { glow: true })
+      for (let index = 0; index < 5; index += 1) {
+        const x = -7 + index * 2.4
+        b.box(0.2, 1.2 + random() * 0.5, 0.2, '#e6f4ff', x, 0.7, -3.3, { glow: true })
+      }
+    } else if (theme.kind === 'titan') {
+      for (const [x, z, h] of [[-6.5, -2.8, 2.4], [-4.2, -3.2, 1.8], [5.5, -2.6, 2.8], [7.2, 2.5, 1.4], [-7.5, 3.2, 1.6]] as const) {
+        const wall = theme.wall[Math.floor(random() * theme.wall.length)] ?? theme.wall[0]!
+        b.box(0.9 + random() * 0.4, h, 0.7 + random() * 0.3, wall, x, h / 2, z)
+      }
+      b.box(2.2, 0.35, 0.9, '#8a8580', 0.5, 0.25, 3.5)
+      b.box(0.7, 0.7, 0.7, '#d9b54a', 6.2, 0.45, 1.2, { glow: true })
+    } else if (theme.kind === 'invasion') {
+      for (let index = 0; index < 3; index += 1) {
+        b.box(0.12, 1.5, 0.12, '#5a3a28', -5 + index * 4, 0.85, -3.5)
+        b.box(0.55, 0.7, 0.05, '#c0392b', -5 + index * 4 + 0.35, 1.4, -3.5)
+      }
+      for (let index = 0; index < 4; index += 1) {
+        b.box(0.45, 0.2, 0.45, '#3a2a20', -6 + index * 3.2, 0.15, 3.5)
+        b.box(0.28, 0.55, 0.28, '#ff6a3a', -6 + index * 3.2, 0.55, 3.5, { glow: true })
+      }
     }
   }
 
@@ -474,13 +578,20 @@ export class BattleScene {
     }
     this.updateEffects(dt)
     this.updateEmbers(time)
+    this.syncRaidBar()
+    if (this.wingShadow) {
+      this.wingShadow.position.x = 1.2 + Math.sin(time * 0.55) * 1.4
+      this.wingShadow.scale.x = 1 + Math.sin(time * 0.7) * 0.08
+      const material = this.wingShadow.material as THREE.MeshBasicMaterial
+      material.opacity = 0.22 + (Math.sin(time * 0.9) * 0.5 + 0.5) * 0.18
+    }
     this.renderer.render(this.scene, this.camera)
   }
 
   private apply(step: ReplayStep, instant: boolean) {
     switch (step.type) {
       case 'floor':
-        this.startFloor(step.units, instant)
+        this.startFloor(step.units, instant, step.floor)
         if (this.themeKind === 'abyss') {
           this.setFloorLabel(this.abyssFrom + step.floor)
         }
@@ -816,7 +927,7 @@ export class BattleScene {
     })
   }
 
-  private startFloor(units: ReplayUnit[], instant: boolean) {
+  private startFloor(units: ReplayUnit[], instant: boolean, floor = 1) {
     for (const fighter of [...this.fighters.values()]) {
       if (fighter.side === 'enemy') {
         this.removeFighter(fighter)
@@ -826,6 +937,7 @@ export class BattleScene {
     for (const fighter of this.fighters.values()) {
       this.clearStatuses(fighter)
     }
+    this.raidBossId = null
     for (const side of ['hero', 'enemy'] as const) {
       for (const row of ['front', 'back'] as const) {
         const group = units.filter((unit) => unit.side === side && unit.row === row)
@@ -842,7 +954,18 @@ export class BattleScene {
           if (side === 'enemy' && !instant) {
             fighter.anim = { type: 'spawn', t: 0, dur: 0.6 + order * 0.1 }
           }
+          if (this.raidSpecial && floor >= 2 && unit.side === 'enemy' && (unit.boss || raidBossIdOf(unit.refId))) {
+            this.raidBossId = unit.id
+          }
         })
+      }
+    }
+    if (this.raidPool && this.raidBar) {
+      const show = floor >= 2 && this.raidBossId != null
+      this.setRaidBarVisible(show)
+      if (show) {
+        const boss = this.raidBossId ? this.fighters.get(this.raidBossId) : null
+        this.setRaidBarHp(boss?.hp ?? this.raidPool.start)
       }
     }
   }
@@ -902,6 +1025,56 @@ export class BattleScene {
       mesh.position.copy(base)
       this.scene.add(mesh)
       this.embers.push({ mesh, base, phase: this.random() * Math.PI * 2, speed: 0.4 + this.random() * 0.6 })
+    }
+  }
+
+  private spawnWingShadow() {
+    let material = this.sparkMaterials.get('wingShadow')
+    if (!material) {
+      material = new THREE.MeshBasicMaterial({ color: '#1a0808', transparent: true, opacity: 0.35, side: THREE.DoubleSide })
+      this.sparkMaterials.set('wingShadow', material)
+    }
+    const mesh = new THREE.Mesh(new THREE.PlaneGeometry(9, 3.2), material)
+    mesh.rotation.x = -Math.PI / 2
+    mesh.position.set(1.2, 0.06, 0.6)
+    this.scene.add(mesh)
+    this.wingShadow = mesh
+  }
+
+  private buildRaidBar(max: number, current: number) {
+    const root = new THREE.Group()
+    root.position.set(0, 3.55, -2.4)
+    const bg = new THREE.Mesh(new THREE.BoxGeometry(5.2, 0.22, 0.08), new THREE.MeshBasicMaterial({ color: '#2a1810' }))
+    const fill = new THREE.Mesh(new THREE.BoxGeometry(5.0, 0.14, 0.1), new THREE.MeshBasicMaterial({ color: '#e05a4a' }))
+    fill.position.z = 0.02
+    root.add(bg, fill)
+    this.scene.add(root)
+    this.raidBar = { root, fill, max }
+    this.setRaidBarHp(current)
+  }
+
+  private setRaidBarVisible(show: boolean) {
+    if (this.raidBar) {
+      this.raidBar.root.visible = show
+    }
+  }
+
+  private setRaidBarHp(current: number) {
+    if (!this.raidBar) {
+      return
+    }
+    const share = Math.max(0, Math.min(1, current / this.raidBar.max))
+    this.raidBar.fill.scale.x = Math.max(0.001, share)
+    this.raidBar.fill.position.x = (share - 1) * 2.5
+  }
+
+  private syncRaidBar() {
+    if (!this.raidBar?.root.visible || !this.raidBossId) {
+      return
+    }
+    const boss = this.fighters.get(this.raidBossId)
+    if (boss) {
+      this.setRaidBarHp(boss.hp)
     }
   }
 

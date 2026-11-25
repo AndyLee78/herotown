@@ -24,6 +24,8 @@ import {
   PLAZA,
   buildCemetery,
   buildFestivalDecor,
+  buildInvasionAftermath,
+  buildInvasionCamp,
   buildLot,
   buildMerchantCart,
   buildPromoteFx,
@@ -40,6 +42,7 @@ import {
   trainingPad,
   type FestivalKind,
 } from './world'
+import { buildEnemy } from './enemies'
 
 type LegendProp = { id: string; name: string; classId: string; gender?: string; genes?: unknown }
 type ShrineProp = { id: string; slot: string; grade: string }
@@ -200,6 +203,15 @@ export class VillageScene {
   private townDecor: THREE.Group | null = null
   private promoteFx: THREE.Group | null = null
   private promoteTimer = 0
+  private invasionBooted = false
+  private invasionWarned = false
+  private invasionCamp: THREE.Group | null = null
+  private invasionFight: THREE.Group | null = null
+  private invasionWinFx: THREE.Group | null = null
+  private invasionLossFx: THREE.Group | null = null
+  private invasionLastAt: number | null = null
+  private invasionSceneTimer = 0
+  private invasionSky: THREE.Color | null = null
   private legendsLevel = 0
   private statuesKey = ''
   private statuesRoot: THREE.Group | null = null
@@ -294,6 +306,7 @@ export class VillageScene {
     this.syncTavernRound(props.tavernRound)
     this.syncFestival(props.festival)
     this.syncTown(props.townLevel)
+    this.syncInvasion(props.invasion)
     this.legendsLevel = props.buildings.legends ?? 0
     this.syncLegendStatues(props.legends)
     this.syncShrine(props.shrine)
@@ -327,6 +340,7 @@ export class VillageScene {
     this.clearFestivalDecor()
     this.clearTownDecor()
     this.clearPromoteFx()
+    this.clearInvasionFx()
     this.clearLegendStatues()
     this.clearShrine()
     freeOwnMaterials(this.scene)
@@ -754,6 +768,161 @@ export class VillageScene {
     }
     if (this.promoteTimer <= 0) {
       this.clearPromoteFx()
+    }
+  }
+
+  // Warned camp beyond the gate, and a short fight replay when a result lands.
+  private syncInvasion(invasion: VillageSceneProps['invasion']) {
+    this.ensureInvasionProps()
+    if (!this.invasionBooted) {
+      this.invasionBooted = true
+      this.invasionLastAt = invasion?.last?.at ?? null
+      this.setInvasionWarned(Boolean(invasion?.warned))
+      return
+    }
+    this.setInvasionWarned(Boolean(invasion?.warned))
+    const lastAt = invasion?.last?.at ?? null
+    if (lastAt != null && lastAt !== this.invasionLastAt) {
+      this.invasionLastAt = lastAt
+      this.playInvasionScene(Boolean(invasion?.last?.won))
+    }
+  }
+
+  private ensureInvasionProps() {
+    if (!this.invasionCamp) {
+      this.invasionCamp = buildInvasionCamp()
+      this.scene.add(this.invasionCamp)
+    }
+    if (!this.invasionWinFx) {
+      this.invasionWinFx = buildInvasionAftermath(true)
+      this.scene.add(this.invasionWinFx)
+    }
+    if (!this.invasionLossFx) {
+      this.invasionLossFx = buildInvasionAftermath(false)
+      this.scene.add(this.invasionLossFx)
+    }
+  }
+
+  private setInvasionWarned(warned: boolean) {
+    if (this.invasionCamp) {
+      this.invasionCamp.visible = warned
+    }
+    if (warned === this.invasionWarned) {
+      return
+    }
+    this.invasionWarned = warned
+    if (warned) {
+      if (!this.invasionSky) {
+        this.invasionSky = (this.scene.background as THREE.Color).clone()
+      }
+      this.scene.background = new THREE.Color('#c4786a')
+    } else if (this.invasionSky) {
+      this.scene.background = this.invasionSky.clone()
+    }
+  }
+
+  private playInvasionScene(won: boolean) {
+    this.clearInvasionFight()
+    this.invasionWinFx && (this.invasionWinFx.visible = false)
+    this.invasionLossFx && (this.invasionLossFx.visible = false)
+    const fight = new THREE.Group()
+    fight.name = 'invasionFight'
+    // Simple enemy figures pouring in through the gate.
+    for (let index = 0; index < 5; index += 1) {
+      const enemy = buildEnemy(index % 2 === 0 ? 'bandit_thug' : 'cutthroat')
+      enemy.group.position.set((index - 2) * 0.7, 0, GATE.z + 0.4 - index * 0.15)
+      enemy.group.rotation.y = Math.PI
+      enemy.group.userData.baseZ = enemy.group.position.z
+      enemy.group.userData.phase = index * 0.7
+      fight.add(enemy.group)
+    }
+    this.scene.add(fight)
+    this.invasionFight = fight
+    this.invasionSceneTimer = 4.2
+    // Defenders gather just inside the gate.
+    let slot = 0
+    for (const walker of this.walkers.values()) {
+      if (walker.kind !== 'roster' || !walker.root.visible || walker.state === 'gone' || walker.state === 'leave') {
+        continue
+      }
+      walker.state = 'promote'
+      walker.target.set((slot - 2) * 0.65, 0, GATE.z - 1.6 - (slot % 2) * 0.35)
+      walker.timer = 4.2
+      slot += 1
+      if (slot >= 6) {
+        break
+      }
+    }
+    this.burst(GATE.x, 1.5, GATE.z - 0.5, won ? 'festival' : 'promote')
+    if (won) {
+      this.invasionWinFx && (this.invasionWinFx.visible = true)
+      this.burst(GATE.x - 1.2, 1.8, GATE.z - 1, 'festival')
+      this.burst(GATE.x + 1.2, 1.8, GATE.z - 1, 'festival')
+    } else {
+      this.invasionLossFx && (this.invasionLossFx.visible = true)
+      this.burst(GATE.x, 1.2, GATE.z, 'promote')
+    }
+  }
+
+  private clearInvasionFight() {
+    if (!this.invasionFight) {
+      return
+    }
+    this.scene.remove(this.invasionFight)
+    disposeTree(this.invasionFight)
+    this.invasionFight = null
+  }
+
+  private clearInvasionFx() {
+    this.clearInvasionFight()
+    for (const key of ['invasionCamp', 'invasionWinFx', 'invasionLossFx'] as const) {
+      const group = this[key]
+      if (!group) {
+        continue
+      }
+      this.scene.remove(group)
+      freeOwnMaterials(group)
+      disposeTree(group)
+      this[key] = null
+    }
+    this.invasionSceneTimer = 0
+    this.invasionWarned = false
+    if (this.invasionSky) {
+      this.scene.background = this.invasionSky.clone()
+      this.invasionSky = null
+    }
+  }
+
+  private stepInvasion(delta: number, time: number) {
+    if (this.invasionFight) {
+      for (const child of this.invasionFight.children) {
+        const base = child.userData.baseZ as number | undefined
+        const phase = (child.userData.phase as number) ?? 0
+        if (typeof base === 'number') {
+          const progress = Math.min(1, (4.2 - this.invasionSceneTimer) / 1.6)
+          child.position.z = base - progress * 2.4
+          child.position.y = Math.abs(Math.sin(time * 8 + phase)) * 0.04
+        }
+      }
+    }
+    if (this.invasionSceneTimer > 0) {
+      this.invasionSceneTimer -= delta
+      if (this.invasionSceneTimer <= 0) {
+        this.clearInvasionFight()
+        if (this.invasionWinFx) {
+          this.invasionWinFx.visible = false
+        }
+        if (this.invasionLossFx) {
+          this.invasionLossFx.visible = false
+        }
+      }
+    }
+    if (this.invasionCamp?.visible) {
+      this.invasionCamp.traverse((object) => {
+        if (object instanceof THREE.Mesh && object.material instanceof THREE.MeshBasicMaterial && object.material.transparent) {
+          object.material.opacity = 0.75 + Math.sin(time * 3) * 0.15
+        }
+      })
     }
   }
 
@@ -1639,6 +1808,7 @@ export class VillageScene {
     this.bobShrine(time)
     this.endToastIfDone()
     this.stepPromoteFx(delta, time)
+    this.stepInvasion(delta, time)
     this.stepBursts(delta)
     this.controls.update()
     this.clampPan()

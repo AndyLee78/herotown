@@ -4,7 +4,7 @@ import { useTranslation } from 'react-i18next'
 import { dungeonById, type Expedition, type GameState } from '../core'
 import { Bar, formatEntry, useNow, waitLabel } from './game/kit'
 import { play } from './sound'
-import { BattleScene, replayLength } from './voxel/BattleScene'
+import { BattleScene, raidBossIdOf, raidPoolFromReport, replayLength } from './voxel/BattleScene'
 import { buildSteps } from './voxel/replay'
 
 type Phase = 'out' | 'battle' | 'back'
@@ -122,6 +122,8 @@ function LiveFight({ trip, phase }: { trip: Expedition; phase: Phase }) {
       return
     }
     const dungeon = dungeonById(trip.dungeonId)
+    const fromReport = dungeon.special === 'raid' ? raidPoolFromReport(trip.report) : null
+    const raidRef = trip.report.floors?.[1]?.find((unit) => unit.boss && unit.side === 'enemy')?.refId
     const scene = new BattleScene(canvas, trip.report, steps, dungeon.tier, {
       onStep: setLogIndex,
       onDone: () => undefined,
@@ -137,6 +139,12 @@ function LiveFight({ trip, phase }: { trip: Expedition; phase: Phase }) {
       element: dungeon.element,
       difficulty: dungeon.difficulty,
       abyssFrom: trip.abyssFrom,
+      raidBossId: fromReport?.bossId ?? (raidRef ? raidBossIdOf(raidRef) ?? undefined : undefined),
+      raid: trip.raid
+        ? { start: trip.raid.start, left: trip.raid.left, max: trip.raid.max }
+        : fromReport
+          ? { start: fromReport.start, left: fromReport.left, max: fromReport.max }
+          : undefined,
     })
     sceneRef.current = scene
     // Play the whole replay in exactly the time the fight takes on the clock.

@@ -2,7 +2,7 @@ import { useEffect, useMemo, useRef, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { dungeonById, type DungeonReport } from '../core'
 import { play } from './sound'
-import { BattleScene } from './voxel/BattleScene'
+import { BattleScene, raidPoolFromReport } from './voxel/BattleScene'
 import { buildSteps } from './voxel/replay'
 
 const SPEEDS = [1, 2, 4] as const
@@ -26,6 +26,7 @@ export function BattleView({ report, describe }: { report: DungeonReport; descri
     }
     const dungeon = report.dungeonId ? dungeonById(report.dungeonId) : null
     const tier = dungeon?.tier ?? 1
+    const raid = dungeon?.special === 'raid' ? raidPoolFromReport(report) : null
     const scene = new BattleScene(canvas, report, steps, tier, {
       onStep: (index) => setCaption(describeRef.current(index)),
       onDone: () => {
@@ -37,6 +38,8 @@ export function BattleView({ report, describe }: { report: DungeonReport; descri
       special: dungeon?.special,
       element: dungeon?.element,
       difficulty: dungeon?.difficulty,
+      raidBossId: raid?.bossId,
+      raid: raid ? { start: raid.start, left: raid.left, max: raid.max } : undefined,
     })
     sceneRef.current = scene
     setDone(false)
