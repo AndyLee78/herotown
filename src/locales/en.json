@@ -1,4 +1,23 @@
 {
+  "vault": {
+    "flame": "Flame essence",
+    "frost": "Frost essence",
+    "light": "Light essence",
+    "abyss": "Abyss shards"
+  },
+  "special": {
+    "title": "Special dungeons",
+    "weekday": "Weekday trials",
+    "today": "Today · {{element}}",
+    "choice": "Choose any essence",
+    "attempts": "Attempts left {{left}}/{{total}}",
+    "unlock": "Unlocks at town Lv{{level}}",
+    "best": "Best floor {{floor}}",
+    "checkpoint": "Checkpoint {{floor}}",
+    "floor": "Floor {{floor}}",
+    "newBest": "New record · Floor {{floor}}",
+    "vault": "Vault"
+  },
   "legends": {
     "level": "Hall level",
     "potential": "Potential per legend",
@@ -499,6 +518,46 @@
     "blasted": "The boss's blast went unbroken. Bring a warrior, rogue or archer, or set tactics to 'Brace'."
   },
   "dungeon": {
+    "abyss": {
+      "name": "Abyss",
+      "hint": "Clear the next five floors below your checkpoint and earn abyss shards."
+    },
+    "trial_flame_1": {
+      "name": "Trial of Flame · Novice",
+      "hint": "Clear the trial to earn flame essence."
+    },
+    "trial_flame_2": {
+      "name": "Trial of Flame · Veteran",
+      "hint": "Clear the trial to earn flame essence."
+    },
+    "trial_flame_3": {
+      "name": "Trial of Flame · Master",
+      "hint": "Clear the trial to earn flame essence."
+    },
+    "trial_frost_1": {
+      "name": "Trial of Frost · Novice",
+      "hint": "Clear the trial to earn frost essence."
+    },
+    "trial_frost_2": {
+      "name": "Trial of Frost · Veteran",
+      "hint": "Clear the trial to earn frost essence."
+    },
+    "trial_frost_3": {
+      "name": "Trial of Frost · Master",
+      "hint": "Clear the trial to earn frost essence."
+    },
+    "trial_light_1": {
+      "name": "Trial of Light · Novice",
+      "hint": "Clear the trial to earn light essence."
+    },
+    "trial_light_2": {
+      "name": "Trial of Light · Veteran",
+      "hint": "Clear the trial to earn light essence."
+    },
+    "trial_light_3": {
+      "name": "Trial of Light · Master",
+      "hint": "Clear the trial to earn light essence."
+    },
     "hill_cave": {
       "name": "Hill Cave",
       "hint": "A good first trip for new heroes."

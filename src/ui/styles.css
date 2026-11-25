@@ -1214,6 +1214,17 @@ button,
   overflow-wrap: anywhere;
 }
 
+.vault-flame { color: #9b350c; }
+.vault-frost { color: #215a88; }
+.vault-light { color: #765700; }
+.vault-abyss { color: #623285; }
+
+.special-choice {
+  flex-wrap: wrap;
+  min-width: 0;
+  text-align: left;
+}
+
 .legends-effects {
   table-layout: fixed;
   overflow-wrap: anywhere;

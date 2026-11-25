@@ -30,6 +30,7 @@ import { rewardedAds } from './ads'
 import { addGameOffset, gameNow, offsetSteps, resetGameOffset } from './clock'
 import { josa } from './josa'
 import { BattleHub } from './game/battleScreens'
+import { applyWithVaultHistory } from './game/specialDungeons'
 import { Market } from './game/marketScreens'
 import { Tavern } from './game/tavernScreens'
 import { Inn, Roster } from './game/heroScreens'
@@ -175,7 +176,7 @@ export function App() {
     let cancel = false
     void loadGame(now).then((loaded) => {
       if (!cancel) {
-        setSave(reduce(loaded, { type: 'catchUp', now }))
+        setSave(applyWithVaultHistory(loaded, { type: 'catchUp', now }))
       }
     })
     return () => {
@@ -191,7 +192,7 @@ export function App() {
 
   useEffect(() => {
     const timer = window.setInterval(() => {
-      setSave((current) => (current ? reduce(current, { type: 'catchUp', now: gameNow() }) : current))
+      setSave((current) => (current ? applyWithVaultHistory(current, { type: 'catchUp', now: gameNow() }) : current))
     }, timeRules.tickMs)
     return () => window.clearInterval(timer)
   }, [])
@@ -211,7 +212,7 @@ export function App() {
     }
     const due = Math.max(Math.min(...dueTimes), save.lastTickAt + 1)
     const timer = window.setTimeout(() => {
-      setSave((current) => (current ? reduce(current, { type: 'catchUp', now: gameNow() }) : current))
+      setSave((current) => (current ? applyWithVaultHistory(current, { type: 'catchUp', now: gameNow() }) : current))
     }, Math.max(250, due - gameNow() + 40))
     return () => window.clearTimeout(timer)
   }, [save])
@@ -223,7 +224,7 @@ export function App() {
       return
     }
     const timer = window.setTimeout(() => {
-      setSave((current) => (current ? reduce(current, { type: 'catchUp', now: gameNow() }) : current))
+      setSave((current) => (current ? applyWithVaultHistory(current, { type: 'catchUp', now: gameNow() }) : current))
     }, Math.max(250, next - gameNow() + 40))
     return () => window.clearTimeout(timer)
   }, [save?.expeditions])
@@ -368,7 +369,7 @@ export function App() {
       let cursor = base
       for (const step of offsetSteps(ms, timeRules.maxOfflineMs)) {
         cursor += step
-        next = reduce(next, { type: 'catchUp', now: cursor })
+        next = applyWithVaultHistory(next, { type: 'catchUp', now: cursor })
       }
       return next
     })
@@ -376,7 +377,7 @@ export function App() {
 
   const resetClock = () => {
     resetGameOffset()
-    setSave((current) => (current ? reduce(current, { type: 'catchUp', now: gameNow() }) : current))
+    setSave((current) => (current ? applyWithVaultHistory(current, { type: 'catchUp', now: gameNow() }) : current))
   }
 
   const watchAd = (placement: AdPlacement) => {

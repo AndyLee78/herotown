@@ -73,6 +73,7 @@ import { dungeonPreviewUrl } from '../voxel/portrait'
 import { GraveFace, bonusValue } from './heroScreens'
 import { Bar, Chip, CostList, Portrait, Res, SchoolInfo, Window, affordable, formatEntry, itemLabel, useNow, waitLabel } from './kit'
 import { josa } from '../josa'
+import { SpecialRewardChips, VaultAmount } from './specialDungeons'
 
 const BattleView = lazy(() => import('../BattleView').then((mod) => ({ default: mod.BattleView })))
 
@@ -213,6 +214,12 @@ export function Town({
   const total = save.construction ? villageRules.buildings.find((b) => b.id === save.construction?.id)?.levels.find((l) => l.level === save.buildings[save.construction!.id] + 1)?.ms ?? 1 : 1
   return (
     <>
+      {Object.values(save.vault).some((amount) => amount > 0) ? (
+        <div className="card column">
+          <strong>{t('special.vault')}</strong>
+          <div className="chips">{(['flame', 'frost', 'light', 'abyss'] as const).map((kind) => <VaultAmount key={kind} kind={kind} amount={save.vault[kind]} />)}</div>
+        </div>
+      ) : null}
       <div className="card summary">
         <div>
           <strong className="name">{t('town.level', { level: level.level })}</strong>
@@ -1148,6 +1155,7 @@ export function Report({ report }: { report: DungeonReport | null }) {
       <div className={report.victory ? 'result-banner win' : 'result-banner lose'}>
         <strong>{report.victory ? t('result.victory') : t('result.defeat')}</strong>
         {report.dungeonId ? <span>{t(`dungeon.${report.dungeonId}.name`)}</span> : null}
+        <span className="chips"><SpecialRewardChips report={report} /></span>
         {report.defeatReason ? (
           <span>{report.defeatReason === 'tooWeak' ? t('defeat.tooWeak', { level: recommended }) : t(`defeat.${report.defeatReason}`)}</span>
         ) : null}

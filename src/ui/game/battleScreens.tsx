@@ -26,6 +26,7 @@ import {
   partyBonus,
   partyFit,
   readiness,
+  specialBlock,
   timeRules,
   villageRules,
   type AffixId,
@@ -43,6 +44,7 @@ import { josa } from '../josa'
 import { ResourceIcon, type ResourceKind } from './icons'
 import { Bar, Chip, Portrait, Res, clampPercent, needsWarning, useNow, waitLabel } from './kit'
 import { Report } from './villageScreens'
+import { SpecialDungeons, SpecialRewardChips } from './specialDungeons'
 import { dungeonPreviewUrl, monsterPortraitUrl } from '../voxel/portrait'
 
 type Act = (action: GameAction) => void
@@ -96,7 +98,9 @@ export function BattleHub({ save, onAction, onDepart }: { save: GameState; onAct
 
 function DungeonBoard({ save, onAction, onPrepare }: { save: GameState; onAction: Act; onPrepare: () => void }) {
   const { t } = useTranslation()
-  const dungeon = dungeonById(save.dungeonId)
+  const selected = dungeonById(save.dungeonId)
+  const dungeon = selected.special ? dungeons[0]! : selected
+  const now = useNow(true)
   const open = dungeonUnlocked(save, dungeon.id)
   const drop = villageRules.drops[dungeon.id as keyof typeof villageRules.drops]
   const season = isNest(dungeon.id) ? nestSeason(save.seed, save.calendar) : null
@@ -108,6 +112,7 @@ function DungeonBoard({ save, onAction, onPrepare }: { save: GameState; onAction
   const auto = repeat * villageRules.auto.rewardScale
   const material = drop?.material as ResourceKind | undefined
   return (
+    <div className="column">
     <div className="board">
       <div className="board-list">
         {[...dungeons].sort((a, b) => a.tier - b.tier || a.recommendedLevel - b.recommendedLevel).map((entry) => {
@@ -189,10 +194,18 @@ function DungeonBoard({ save, onAction, onPrepare }: { save: GameState; onAction
         ) : (
           <p className="muted">???</p>
         )}
-        <button type="button" className="btn primary big" disabled={!open} onClick={onPrepare}>
+        <button type="button" className="btn primary big" disabled={!open} onClick={() => {
+          if (selected.special) onAction({ type: 'dungeon', id: dungeon.id })
+          onPrepare()
+        }}>
           {t('battle.prepare')}
         </button>
       </div>
+    </div>
+    <SpecialDungeons save={save} now={now} onSelect={(id) => {
+      onAction({ type: 'dungeon', id })
+      onPrepare()
+    }} />
     </div>
   )
 }
@@ -435,7 +448,8 @@ export function Prep({
   const busy = heroes.some((hero) => away.has(hero.id))
   const full = save.expeditions.length >= slots
   const [stamping, setStamping] = useState(false)
-  const blocked = heroes.length === 0 ? t('battle.emptyPreset') : busy ? t('result.busyHero') : full ? t('result.slotsFull') : !dungeonUnlocked(save, dungeon.id) ? t('result.lockedDungeon') : null
+  const special = specialBlock(save, dungeon.id, now)
+  const blocked = special ? t(`result.${special}`) : heroes.length === 0 ? t('battle.emptyPreset') : busy ? t('result.busyHero') : full ? t('result.slotsFull') : !dungeonUnlocked(save, dungeon.id) ? t('result.lockedDungeon') : null
   const depart = () => {
     if (stamping || blocked) {
       return
@@ -991,6 +1005,7 @@ function History({ save, onOpen }: { save: GameState; onOpen: (report: DungeonRe
                 </span>
               ))}
               {report.gained?.fame ? <Res kind="fame" amount={`+${report.gained.fame}`} light /> : null}
+              <SpecialRewardChips report={report} />
               <Chip>{t('result.xp', { xp: report.xp })}</Chip>
               {POTION_IDS.filter((id) => (report.potionsUsed?.[id] ?? 0) > 0).map((id) => (
                 <Chip key={id}>{t('battle.usedPotion', { potion: t(`potion.${id}`), count: report.potionsUsed?.[id] ?? 0 })}</Chip>
