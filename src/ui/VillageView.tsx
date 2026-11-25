@@ -29,10 +29,11 @@ type Props = {
   festival: 'spring' | 'summer' | 'autumn' | 'winter' | null
   legends: { id: string; name: string; classId: string; gender?: string; genes?: unknown }[]
   shrine: { id: string; slot: string; grade: string }[]
+  townLevel: number
   onWish: () => void
 }
 
-export function VillageView({ roster, visitors, awayIds, drillIds, retirees, partyIds, selectedId, onSelect, onPickBuilding, villageLabel, buildings, constructing, buildingLabels, expeditions, active, graves, wishes, wishCap, wishAt, wishJackpot, merchant, tavernRound, festival, legends, shrine, onWish }: Props) {
+export function VillageView({ roster, visitors, awayIds, drillIds, retirees, partyIds, selectedId, onSelect, onPickBuilding, villageLabel, buildings, constructing, buildingLabels, expeditions, active, graves, wishes, wishCap, wishAt, wishJackpot, merchant, tavernRound, festival, legends, shrine, townLevel, onWish }: Props) {
   const canvasRef = useRef<HTMLCanvasElement>(null)
   const sceneRef = useRef<VillageScene | null>(null)
   const onSelectRef = useRef(onSelect)
@@ -107,6 +108,7 @@ export function VillageView({ roster, visitors, awayIds, drillIds, retirees, par
       festival,
       legends,
       shrine,
+      townLevel,
     })
   })
 

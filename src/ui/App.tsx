@@ -459,6 +459,7 @@ export function App() {
           tavernRound={save.tavern?.last ?? null}
           legends={[...hallOfFame(save), ...livingLegends(save)].map((entry) => ({ id: entry.id, name: entry.name, classId: entry.classId, gender: entry.gender, genes: 'genes' in entry ? entry.genes : undefined }))}
           shrine={(save.shrine?.gear ?? []).map((item) => ({ id: item.id, slot: item.slot, grade: item.grade }))}
+          townLevel={townLevelOf(save).level}
           festival={save.festival && save.festival.season === `${save.calendar.year}-${save.calendar.season}` ? save.festival.kind : null}
           onWish={() => apply({ type: 'wish', now: gameNow() })}
           active={!covered}

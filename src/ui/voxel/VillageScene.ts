@@ -74,6 +74,8 @@ export type VillageSceneProps = {
   // the heirlooms on display (Docs/legends.md).
   legends: LegendProp[]
   shrine: ShrineProp[]
+  // The town level with promotions (Docs/endgame.md 4b), for the town's look and the promotion scene (task 100).
+  townLevel: number
 }
 
 type Area = { minX: number; maxX: number; minZ: number; maxZ: number }
