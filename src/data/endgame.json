@@ -74,5 +74,37 @@
       "elder_dragon"
     ],
     "scaleGrowth": 1.06
-  }
+  },
+  "promotions": [
+    {
+      "level": 8,
+      "abyssBest": 10,
+      "offering": {
+        "flame": 12,
+        "frost": 8,
+        "light": 8,
+        "abyss": 60
+      }
+    },
+    {
+      "level": 9,
+      "abyssBest": 25,
+      "offering": {
+        "flame": 40,
+        "frost": 30,
+        "light": 30,
+        "abyss": 150
+      }
+    },
+    {
+      "level": 10,
+      "abyssBest": 40,
+      "offering": {
+        "flame": 80,
+        "frost": 60,
+        "light": 60,
+        "abyss": 250
+      }
+    }
+  ]
 }

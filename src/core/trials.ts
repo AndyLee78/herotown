@@ -1,6 +1,6 @@
 import { dungeonById, endgameRules } from './data'
 import type { GameState } from './game'
-import { localDateKey, townLevel } from './game'
+import { localDateKey, townLevelOf } from './game'
 import { hashString } from './genes'
 import { createRng } from './rng'
 import type { DungeonFloor, Essence } from './types'
@@ -39,7 +39,7 @@ export function trialsLeft(state: GameState, now: number): number {
 export function specialBlock(state: GameState, dungeonId: string, now: number): 'lockedDungeon' | 'trialDay' | 'trialsUsed' | null {
   const dungeon = dungeonById(dungeonId)
   if (dungeon.special === 'weekday') {
-    if (townLevel(state.fame).level < endgameRules.weekday.unlockTown) {
+    if (townLevelOf(state).level < endgameRules.weekday.unlockTown) {
       return 'lockedDungeon'
     }
     const today = todayElement(now)
@@ -49,7 +49,7 @@ export function specialBlock(state: GameState, dungeonId: string, now: number): 
     return trialsLeft(state, now) < 1 ? 'trialsUsed' : null
   }
   if (dungeon.special === 'endless') {
-    return townLevel(state.fame).level < endgameRules.abyss.unlockTown ? 'lockedDungeon' : null
+    return townLevelOf(state).level < endgameRules.abyss.unlockTown ? 'lockedDungeon' : null
   }
   return null
 }

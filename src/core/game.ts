@@ -9,7 +9,7 @@ import { afterTrip, benchAtDeparture, feel } from './personality'
 import { festivalScale, gather, type TavernState } from './tavern'
 import { bequeath, bequeathed, comfortHeir, heirloomMods } from './heirloom'
 import { blessing, enshrine, fitShrine, shrineMorale, unshrine, type Shrine } from './legends'
-import { abyssFloors, freshVault, settleSpecial, specialBlock, spendTrial, type Abyss, type Trials, type Vault } from './trials'
+import { abyssFloors, freshVault, settleSpecial, specialBlock, spendTrial, type Abyss, type Trials, type Vault, type VaultKey } from './trials'
 import { buyOffer, freshMarket, sellGear, sellPotion, trade, updateMerchant, type Market, type MerchantOffer } from './market'
 import { forgetSkill, readDrills, runDrills, startDrill, type Drill } from './drill'
 import { buyIntel, finishScout, isNest, nestSeason, readScout, seasonKey, startScout, type ScoutJob } from './nest'
@@ -25,7 +25,14 @@ import type { Rng } from './rng'
 import type { Genes } from './genes'
 import type { Bond, ClassId, CombatError, DungeonReport, Gear, GearSlot, Gender, Hero, PartyMember, PotionId, Proposal, Role, Row, Supplies, Tactics, TrinketId , StatKey } from './types'
 
-export const SAVE_VERSION = 23
+export const SAVE_VERSION = 24
+
+// Town levels up to here come with fame alone (Docs/endgame.md 4b).
+export const PROMOTION_FREE = 7
+
+export function townLevelOf(state: Pick<GameState, 'fame' | 'promoted'>) {
+  return townLevel(state.fame, state.promoted ?? PROMOTION_FREE)
+}
 
 export type SeasonId = 'spring' | 'summer' | 'autumn' | 'winter'
 
@@ -189,6 +196,10 @@ export type GameNotice =
   | 'shrineFull'
   | 'trialDay'
   | 'trialsUsed'
+  | 'promoteFame'
+  | 'promoteDeed'
+  | 'promoteOffering'
+  | 'promoteMax'
   | 'drillHero'
   | 'trainingFull'
   | 'scoutBusy'
@@ -281,6 +292,8 @@ export type GameState = {
   vault: Vault
   trials: Trials | null
   abyss: Abyss
+  // The highest town level whose promotion ritual is done (7 before any).
+  promoted: number
 }
 
 export type QueueBuilding = 'smith' | 'alchemy' | 'magic'
@@ -361,6 +374,7 @@ export type GameAction =
   | { type: 'buyOffer'; offerId: string }
   | { type: 'gather'; heroIds: string[] }
   | { type: 'bequeath'; retireeId: string; gearId: string; toId: string | null }
+  | { type: 'promote' }
   | { type: 'enshrine'; gearId: string }
   | { type: 'unshrine'; gearId: string }
   | { type: 'declineProposal'; a: string; b: string; now?: number }
@@ -427,6 +441,7 @@ export function freshState(seed: number, now: number): GameState {
     vault: freshVault(),
     trials: null,
     abyss: { best: 0, checkpoint: 0 },
+    promoted: PROMOTION_FREE,
   }
 }
 
@@ -434,7 +449,7 @@ export function reduce(state: GameState, action: GameAction): GameState {
   const next = applyAction(state, action)
   // A town level-up cheers everyone, whatever raised the fame: a first clear,
   // a building, a festival or a contract (Docs/morale.md, review b9036a0).
-  const gained = townLevel(next.fame).level - townLevel(state.fame).level
+  const gained = townLevelOf(next).level - townLevelOf(state).level
   if (gained > 0 && next !== state) {
     return { ...next, roster: next.roster.map((hero) => feel(hero, 'pride', moraleRules.pride.townLevel * gained)) }
   }
@@ -640,7 +655,7 @@ function apply(state: GameState, action: GameAction): GameState {
     const visitors = generateVisitors(
       state.seed + visitorNonce * progression.visitorNonceStride,
       visitorCap(state.buildings.inn),
-      townLevel(state.fame).visitorPotential + retireeBonus(state, 'inn'),
+      townLevelOf(state).visitorPotential + retireeBonus(state, 'inn'),
       femaleChance(state),
       neededClasses(state, []),
     ).map((hero) => ({ ...hero, arrivedAt: now }))
@@ -688,6 +703,9 @@ function apply(state: GameState, action: GameAction): GameState {
   }
   if (action.type === 'buyIntel') {
     return buyIntel(state)
+  }
+  if (action.type === 'promote') {
+    return promote(state)
   }
   if (action.type === 'enshrine') {
     return enshrine(state, action.gearId)
@@ -865,10 +883,12 @@ function advance(state: GameState, now: number): GameState {
   return { ...next, absence }
 }
 
-export function townLevel(fame: number) {
+// The town level fame reaches; past level 7 each level also needs its
+// promotion ritual (Docs/endgame.md 4b), so `promoted` caps it.
+export function townLevel(fame: number, promoted = Number.POSITIVE_INFINITY) {
   let current = villageRules.levels[0]
   for (const level of villageRules.levels) {
-    if (fame >= level.fame) {
+    if (fame >= level.fame && (level.level <= PROMOTION_FREE || level.level <= promoted)) {
       current = level
     }
   }
@@ -1125,7 +1145,7 @@ function updateVisitors(state: GameState, now: number, arrived: string[]): GameS
   let nextVisitorAt = state.nextVisitorAt
   let nonce = state.visitorNonce
   const cap = visitorCap(state.buildings.inn)
-  const bonus = townLevel(state.fame).visitorPotential + retireeBonus(state, 'inn')
+  const bonus = townLevelOf(state).visitorPotential + retireeBonus(state, 'inn')
   if (visitors.length < state.visitors.length && visitors.length < cap) {
     nextVisitorAt = Math.min(nextVisitorAt, now)
   }
@@ -1145,7 +1165,7 @@ function updateVisitors(state: GameState, now: number, arrived: string[]): GameS
       arrivedAt: now,
     }
     // A separate stream decides prodigies (Docs/scouting.md).
-    const hero = { ...arrive(drawn, createRng(state.seed + nonce * progression.visitorNonceStride + 31), townLevel(state.fame).level), arrivedAt: now }
+    const hero = { ...arrive(drawn, createRng(state.seed + nonce * progression.visitorNonceStride + 31), townLevelOf(state).level), arrivedAt: now }
     visitors.push(hero)
     arrived.push(hero.name)
     nextVisitorAt += villageRules.inn.arriveEveryMs
@@ -1177,16 +1197,16 @@ function startBuild(state: GameState, id: BuildingId, now: number): GameState {
   if (id === 'guild' && (state.guild?.record ?? 0) < guildLevel(state.buildings.guild + 1).record) {
     return { ...state, notice: 'guildRecord' }
   }
-  if (townLevel(state.fame).level < def.unlockLevel) {
+  if (townLevelOf(state).level < def.unlockLevel) {
     return { ...state, notice: 'locked' }
   }
   const current = state.buildings[id]
   const cost = def.levels.find((level) => level.level === current + 1) as (Cost & { level: number; ms: number; town?: number }) | undefined
-  if (!cost || current >= townLevel(state.fame).maxBuildingLevel) {
+  if (!cost || current >= townLevelOf(state).maxBuildingLevel) {
     return { ...state, notice: 'maxLevel' }
   }
   // The late levels wait for town levels 8-10 (Docs/endgame.md).
-  if ((cost.town ?? 0) > townLevel(state.fame).level) {
+  if ((cost.town ?? 0) > townLevelOf(state).level) {
     return { ...state, notice: 'locked' }
   }
   if (!affordable(state, cost)) {
@@ -1651,7 +1671,7 @@ export function dungeonUnlocked(state: GameState, id: string): boolean {
   // Weekday trials and the abyss open with the town (Docs/endgame.md 4a).
   const special = specialDungeons.find((entry) => entry.id === id)
   if (special) {
-    return townLevel(state.fame).level >= (special.special === 'weekday' ? endgameRules.weekday.unlockTown : endgameRules.abyss.unlockTown)
+    return townLevelOf(state).level >= (special.special === 'weekday' ? endgameRules.weekday.unlockTown : endgameRules.abyss.unlockTown)
   }
   const dungeon = dungeons.find((entry) => entry.id === id)
   if (!dungeon) {
@@ -1885,7 +1905,7 @@ function startRevive(state: GameState, id: string, now: number): GameState {
 }
 
 // Late costs also take bone, herb and crystal (Docs/endgame.md).
-type Cost = { gold: number; wood: number; stone: number; iron: number; bone?: number; herb?: number; crystal?: number }
+type Cost = { gold: number; wood: number; stone: number; iron: number; bone?: number; herb?: number; crystal?: number } & Partial<Record<VaultKey, number>>
 
 function affordable(state: GameState, cost: Cost): boolean {
   return (
@@ -1895,7 +1915,9 @@ function affordable(state: GameState, cost: Cost): boolean {
     state.materials.iron >= cost.iron &&
     state.materials.bone >= (cost.bone ?? 0) &&
     state.materials.herb >= (cost.herb ?? 0) &&
-    state.materials.crystal >= (cost.crystal ?? 0)
+    state.materials.crystal >= (cost.crystal ?? 0) &&
+    // Essences and abyss shards from the vault (Docs/endgame.md 4b).
+    (Object.keys(state.vault) as VaultKey[]).every((key) => state.vault[key] >= (cost[key] ?? 0))
   )
 }
 
@@ -1912,7 +1934,31 @@ function pay(state: GameState, cost: Cost): GameState {
       herb: state.materials.herb - (cost.herb ?? 0),
       crystal: state.materials.crystal - (cost.crystal ?? 0),
     },
+    vault: Object.fromEntries((Object.keys(state.vault) as VaultKey[]).map((key) => [key, state.vault[key] - (cost[key] ?? 0)])) as Vault,
   }
+}
+
+// The promotion ritual for town levels 8-10: enough fame, a deed in the
+// abyss, and an offering from the vault (Docs/endgame.md 4b).
+function promote(state: GameState): GameState {
+  const target = (state.promoted ?? PROMOTION_FREE) + 1
+  const rule = endgameRules.promotions.find((entry) => entry.level === target)
+  const level = villageRules.levels.find((entry) => entry.level === target)
+  if (!rule || !level) {
+    return { ...state, notice: 'promoteMax' }
+  }
+  if (state.fame < level.fame) {
+    return { ...state, notice: 'promoteFame' }
+  }
+  if (state.abyss.best < rule.abyssBest) {
+    return { ...state, notice: 'promoteDeed' }
+  }
+  const offering = rule.offering as Partial<Record<VaultKey, number>>
+  if ((Object.keys(state.vault) as VaultKey[]).some((key) => state.vault[key] < (offering[key] ?? 0))) {
+    return { ...state, notice: 'promoteOffering' }
+  }
+  const vault = Object.fromEntries((Object.keys(state.vault) as VaultKey[]).map((key) => [key, state.vault[key] - (offering[key] ?? 0)])) as Vault
+  return { ...state, notice: null, vault, promoted: target }
 }
 
 function startCraft(state: GameState, recipeId: string, now: number): GameState {
@@ -2150,6 +2196,7 @@ function normalize(record: Record<string, unknown>, now: number): GameState {
     vault: readVault(record.vault),
     trials: record.trials && typeof (record.trials as Trials).date === 'string' && typeof (record.trials as Trials).used === 'number' ? { date: (record.trials as Trials).date, used: (record.trials as Trials).used } : null,
     abyss: readAbyss(record.abyss),
+    promoted: typeof record.promoted === 'number' && Number.isFinite(record.promoted) ? Math.max(PROMOTION_FREE, Math.min(10, Math.floor(record.promoted))) : PROMOTION_FREE,
     auto: isAuto(record.auto) ? record.auto : base.auto,
     notice: null,
   }
@@ -2262,7 +2309,7 @@ function numberOr(value: unknown, fallback: number): number {
 // Festivals (Docs/morale.md): once a season, a lift for everyone and a
 // seasonal gift.
 export function festivalCost(state: GameState): number {
-  return moraleRules.festival.goldBase + moraleRules.festival.goldPerTownLevel * townLevel(state.fame).level
+  return moraleRules.festival.goldBase + moraleRules.festival.goldPerTownLevel * townLevelOf(state).level
 }
 
 function holdFestival(state: GameState): GameState {

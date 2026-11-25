@@ -501,7 +501,11 @@
     "noLegends": "명예의 전당이 없습니다.",
     "shrineFull": "전시할 자리가 다 찼습니다.",
     "trialDay": "오늘은 이 정수의 날이 아닙니다.",
-    "trialsUsed": "오늘 요일 던전을 모두 돌았습니다."
+    "trialsUsed": "오늘 요일 던전을 모두 돌았습니다.",
+    "promoteFame": "명성이 모자랍니다.",
+    "promoteDeed": "심연을 더 깊이 내려가야 합니다.",
+    "promoteOffering": "바칠 정수나 심연석이 모자랍니다.",
+    "promoteMax": "마을이 이미 최고 레벨입니다."
   },
   "defeat": {
     "noHealer": "치유사가 없어 피해를 버티지 못했다.",

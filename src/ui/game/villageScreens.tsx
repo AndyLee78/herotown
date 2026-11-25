@@ -51,7 +51,7 @@ import {
   shrineSlots,
   smithRules,
   timeRules,
-  townLevel,
+  townLevelOf,
   tuition,
   villageRules,
   visitorCap,
@@ -204,7 +204,7 @@ export function Town({
   const { t } = useTranslation()
   const [census, setCensus] = useState(false)
   const [hall, setHall] = useState(false)
-  const level = townLevel(save.fame)
+  const level = townLevelOf(save)
   const people = population(save)
   const kids = save.roster.filter(isChild).sort((a, b) => b.age - a.age)
   const adults = save.roster.filter((hero) => !isChild(hero) && hero.condition !== 'dead')

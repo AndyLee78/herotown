@@ -16,7 +16,7 @@ import {
   reduce,
   residents,
   timeRules,
-  townLevel,
+  townLevelOf,
   villageRules,
   visitorCap,
   visitorStay,
@@ -259,7 +259,7 @@ export function App() {
     if (!current) {
       return
     }
-    const beforeLevel = townLevel(current.fame).level
+    const beforeLevel = townLevelOf(current).level
     const next = reduce(current, action)
     saveRef.current = next
     setSave(next)
@@ -276,7 +276,7 @@ export function App() {
     if (action.type === 'build' && next.construction && !current.construction) {
       play('build')
     }
-    if (townLevel(next.fame).level > beforeLevel) {
+    if (townLevelOf(next).level > beforeLevel) {
       play('levelUp')
     }
     if (next.notice && CONFIRM_NOTICES.has(next.notice)) {
@@ -583,7 +583,7 @@ export function App() {
 
 function Hud({ save, onOpen }: { save: GameState; onOpen: (screen: Screen) => void }) {
   const { t } = useTranslation()
-  const level = townLevel(save.fame)
+  const level = townLevelOf(save)
   const next = villageRules.levels.find((entry) => entry.level === level.level + 1)
   const now = useNow(save.construction != null)
   return (

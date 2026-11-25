@@ -133,7 +133,9 @@
       "bone": 15,
       "crystal": 10,
       "ms": 14400000,
-      "smithLevel": 4
+      "smithLevel": 4,
+      "flame": 6,
+      "abyss": 15
     },
     {
       "id": "epic.mail",
@@ -149,7 +151,9 @@
       "bone": 15,
       "crystal": 10,
       "ms": 14400000,
-      "smithLevel": 4
+      "smithLevel": 4,
+      "frost": 6,
+      "abyss": 15
     },
     {
       "id": "legend.blade",
@@ -165,7 +169,10 @@
       "bone": 30,
       "crystal": 25,
       "ms": 21600000,
-      "smithLevel": 5
+      "smithLevel": 5,
+      "flame": 20,
+      "light": 10,
+      "abyss": 50
     },
     {
       "id": "legend.mail",
@@ -181,7 +188,10 @@
       "bone": 30,
       "crystal": 25,
       "ms": 21600000,
-      "smithLevel": 5
+      "smithLevel": 5,
+      "frost": 20,
+      "light": 10,
+      "abyss": 50
     }
   ]
 }

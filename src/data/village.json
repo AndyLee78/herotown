@@ -206,7 +206,9 @@
           "iron": 10,
           "ms": 1800000,
           "town": 8,
-          "herb": 10
+          "herb": 10,
+          "frost": 6,
+          "abyss": 10
         }
       ]
     },
@@ -255,7 +257,9 @@
           "iron": 20,
           "ms": 2400000,
           "town": 8,
-          "bone": 20
+          "bone": 20,
+          "flame": 6,
+          "abyss": 15
         },
         {
           "level": 6,
@@ -266,7 +270,10 @@
           "ms": 3600000,
           "town": 10,
           "bone": 40,
-          "crystal": 10
+          "crystal": 10,
+          "flame": 20,
+          "frost": 15,
+          "abyss": 60
         }
       ]
     },
@@ -316,7 +323,10 @@
           "ms": 9000000,
           "town": 9,
           "bone": 30,
-          "crystal": 15
+          "crystal": 15,
+          "frost": 20,
+          "light": 20,
+          "abyss": 50
         }
       ]
     },
@@ -358,7 +368,9 @@
           "ms": 14400000,
           "town": 8,
           "bone": 20,
-          "crystal": 15
+          "crystal": 15,
+          "flame": 10,
+          "abyss": 20
         },
         {
           "level": 5,
@@ -369,7 +381,11 @@
           "ms": 21600000,
           "town": 10,
           "bone": 40,
-          "crystal": 30
+          "crystal": 30,
+          "flame": 30,
+          "frost": 20,
+          "light": 20,
+          "abyss": 80
         }
       ]
     },
@@ -473,7 +489,9 @@
           "ms": 3600000,
           "town": 8,
           "herb": 30,
-          "crystal": 10
+          "crystal": 10,
+          "light": 8,
+          "abyss": 15
         }
       ]
     },
@@ -514,7 +532,10 @@
           "iron": 25,
           "ms": 3600000,
           "town": 9,
-          "crystal": 30
+          "crystal": 30,
+          "light": 20,
+          "frost": 10,
+          "abyss": 40
         }
       ]
     },
@@ -555,7 +576,9 @@
           "iron": 20,
           "ms": 3600000,
           "town": 8,
-          "bone": 20
+          "bone": 20,
+          "flame": 8,
+          "abyss": 15
         }
       ]
     },
@@ -596,7 +619,10 @@
           "iron": 20,
           "ms": 5400000,
           "town": 9,
-          "crystal": 20
+          "crystal": 20,
+          "light": 15,
+          "frost": 10,
+          "abyss": 40
         }
       ]
     },
@@ -639,7 +665,10 @@
           "town": 9,
           "bone": 20,
           "herb": 20,
-          "crystal": 20
+          "crystal": 20,
+          "frost": 15,
+          "light": 10,
+          "abyss": 40
         }
       ]
     },
@@ -680,7 +709,9 @@
           "iron": 20,
           "ms": 3600000,
           "town": 8,
-          "herb": 30
+          "herb": 30,
+          "light": 6,
+          "abyss": 10
         }
       ]
     },
@@ -722,7 +753,11 @@
           "ms": 7200000,
           "town": 10,
           "bone": 40,
-          "crystal": 40
+          "crystal": 40,
+          "flame": 25,
+          "frost": 25,
+          "light": 25,
+          "abyss": 80
         }
       ]
     }

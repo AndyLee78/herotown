@@ -501,7 +501,11 @@
     "noLegends": "There is no hall of fame yet.",
     "shrineFull": "The display is full.",
     "trialDay": "Today is not this essence's day.",
-    "trialsUsed": "Today's trials are all used."
+    "trialsUsed": "Today's trials are all used.",
+    "promoteFame": "Not enough fame.",
+    "promoteDeed": "The party must go deeper into the abyss.",
+    "promoteOffering": "Not enough essence or abyss shards to offer.",
+    "promoteMax": "The town is already at its highest level."
   },
   "defeat": {
     "noHealer": "Bring a healer to keep the party going.",
