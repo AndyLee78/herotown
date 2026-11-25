@@ -139,7 +139,7 @@ Claude Code, Cursor, GPT(Codex)가 함께 쓰는 작업 목록이다. 작업 하
 | 97 | 금고·요일 던전·심연 화면 | GPT | `src/ui/App.tsx`, `src/ui/game/*.tsx`, `src/ui/styles.css`, `src/locales/*` | 완료 (ec16996) |
 | 98 | 4a core 코드 리뷰 (b80777c) | GPT | `Docs/reviews/b80777c.md` (새 파일만) | 완료 (82ab2e2) |
 | 99 | 4a 측정: 요일 던전 승률·심연 깊이·하루 자원 | GPT | `tools/*`, `Docs/endgame.md`의 측정 절 | 완료 (374866e) |
-| 100 | 승격 의식·마을 레벨 8–10 모습 3D | Cursor | `src/ui/voxel/*` | 대기 (101과 함께 가능) |
+| 100 | 승격 의식·마을 레벨 8–10 모습 3D | Cursor | `src/ui/voxel/*` | 완료 (3132b54) |
 | 101 | 승격·새 자원 비용·마을 Lv10·장비 등급 화면 | GPT | `src/ui/App.tsx`, `src/ui/game/*.tsx`, `src/ui/styles.css`, `src/locales/*` | 대기 (100과 함께 가능) |
 | 102 | 4b core 코드 리뷰 (d89e486, c89e043) | GPT | `Docs/reviews/c89e043.md` (새 파일만) | 대기 (101 뒤) |
 | 103 | 4b 측정: Lv8–10 도달·자원 흐름 | GPT | `tools/*`, `Docs/endgame.md`의 측정 절 | 대기 (102 뒤) |
@@ -2428,6 +2428,8 @@ Docs/endgame.md의 4b를 읽고 승격을 마을에서 보이게 한다. src/ui/
 ```
 
 **메모**
+
+Lv8 회관 깃발, Lv9 낮은 성벽(남쪽 문 열림)+등불 길, Lv10 첨탑·금빛. 첫 로드는 장식만, 7→8·8→9·9→10에서만 광장 집합·빛 기둥·폭죽(~5초). 장식은 townLevel 변경 시에만 다시 만듦. tsc·test·build 통과. 디버그 승격 직전 세이브로 장면은 눈으로 확인하지 못함.
 
 ---
 
