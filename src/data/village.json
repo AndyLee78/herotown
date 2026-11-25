@@ -53,6 +53,24 @@
       "fame": 340,
       "visitorPotential": 40,
       "maxBuildingLevel": 4
+    },
+    {
+      "level": 8,
+      "fame": 520,
+      "visitorPotential": 45,
+      "maxBuildingLevel": 5
+    },
+    {
+      "level": 9,
+      "fame": 820,
+      "visitorPotential": 50,
+      "maxBuildingLevel": 5
+    },
+    {
+      "level": 10,
+      "fame": 1250,
+      "visitorPotential": 55,
+      "maxBuildingLevel": 6
     }
   ],
   "inn": {
@@ -60,7 +78,8 @@
       0,
       5,
       6,
-      7
+      7,
+      8
     ],
     "stayMs": 180000,
     "stayPerLevelMs": 120000,
@@ -178,6 +197,16 @@
           "stone": 0,
           "iron": 0,
           "ms": 300000
+        },
+        {
+          "level": 3,
+          "gold": 160,
+          "wood": 60,
+          "stone": 40,
+          "iron": 10,
+          "ms": 1800000,
+          "town": 8,
+          "herb": 10
         }
       ]
     },
@@ -217,6 +246,27 @@
           "stone": 40,
           "iron": 10,
           "ms": 1200000
+        },
+        {
+          "level": 5,
+          "gold": 260,
+          "wood": 90,
+          "stone": 70,
+          "iron": 20,
+          "ms": 2400000,
+          "town": 8,
+          "bone": 20
+        },
+        {
+          "level": 6,
+          "gold": 380,
+          "wood": 120,
+          "stone": 100,
+          "iron": 30,
+          "ms": 3600000,
+          "town": 10,
+          "bone": 40,
+          "crystal": 10
         }
       ]
     },
@@ -256,6 +306,17 @@
           "stone": 60,
           "iron": 25,
           "ms": 7200000
+        },
+        {
+          "level": 5,
+          "gold": 380,
+          "wood": 80,
+          "stone": 80,
+          "iron": 35,
+          "ms": 9000000,
+          "town": 9,
+          "bone": 30,
+          "crystal": 15
         }
       ]
     },
@@ -287,6 +348,28 @@
           "stone": 20,
           "iron": 16,
           "ms": 10800000
+        },
+        {
+          "level": 4,
+          "gold": 200,
+          "wood": 30,
+          "stone": 40,
+          "iron": 30,
+          "ms": 14400000,
+          "town": 8,
+          "bone": 20,
+          "crystal": 15
+        },
+        {
+          "level": 5,
+          "gold": 300,
+          "wood": 40,
+          "stone": 60,
+          "iron": 45,
+          "ms": 21600000,
+          "town": 10,
+          "bone": 40,
+          "crystal": 30
         }
       ]
     },
@@ -380,6 +463,17 @@
           "stone": 60,
           "iron": 15,
           "ms": 2700000
+        },
+        {
+          "level": 4,
+          "gold": 360,
+          "wood": 50,
+          "stone": 80,
+          "iron": 20,
+          "ms": 3600000,
+          "town": 8,
+          "herb": 30,
+          "crystal": 10
         }
       ]
     },
@@ -411,6 +505,16 @@
           "stone": 60,
           "iron": 20,
           "ms": 2700000
+        },
+        {
+          "level": 4,
+          "gold": 420,
+          "wood": 60,
+          "stone": 80,
+          "iron": 25,
+          "ms": 3600000,
+          "town": 9,
+          "crystal": 30
         }
       ]
     },
@@ -442,6 +546,16 @@
           "stone": 60,
           "iron": 15,
           "ms": 2400000
+        },
+        {
+          "level": 4,
+          "gold": 340,
+          "wood": 60,
+          "stone": 80,
+          "iron": 20,
+          "ms": 3600000,
+          "town": 8,
+          "bone": 20
         }
       ]
     },
@@ -473,6 +587,16 @@
           "stone": 60,
           "iron": 15,
           "ms": 3600000
+        },
+        {
+          "level": 4,
+          "gold": 400,
+          "wood": 80,
+          "stone": 80,
+          "iron": 20,
+          "ms": 5400000,
+          "town": 9,
+          "crystal": 20
         }
       ]
     },
@@ -504,6 +628,18 @@
           "stone": 80,
           "iron": 20,
           "ms": 3600000
+        },
+        {
+          "level": 4,
+          "gold": 440,
+          "wood": 100,
+          "stone": 100,
+          "iron": 30,
+          "ms": 5400000,
+          "town": 9,
+          "bone": 20,
+          "herb": 20,
+          "crystal": 20
         }
       ]
     },
@@ -535,6 +671,16 @@
           "stone": 60,
           "iron": 12,
           "ms": 2400000
+        },
+        {
+          "level": 4,
+          "gold": 360,
+          "wood": 90,
+          "stone": 80,
+          "iron": 20,
+          "ms": 3600000,
+          "town": 8,
+          "herb": 30
         }
       ]
     },
@@ -566,6 +712,17 @@
           "stone": 160,
           "iron": 30,
           "ms": 5400000
+        },
+        {
+          "level": 4,
+          "gold": 760,
+          "wood": 100,
+          "stone": 200,
+          "iron": 40,
+          "ms": 7200000,
+          "town": 10,
+          "bone": 40,
+          "crystal": 40
         }
       ]
     }

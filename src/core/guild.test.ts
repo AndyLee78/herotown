@@ -23,7 +23,7 @@ function town(guild = 1, extra: Partial<GameState> = {}): GameState {
 
 describe('guild levels', () => {
   it('adds a party at level 1, auto parties later, and narrows appraisal', () => {
-    expect([0, 1, 2, 3, 4].map(expeditionSlots)).toEqual(guildRules.levels.map((level) => level.expeditions))
+    expect([0, 1, 2, 3, 4, 5].map(expeditionSlots)).toEqual(guildRules.levels.map((level) => level.expeditions))
     expect(expeditionSlots(1)).toBeGreaterThan(expeditionSlots(0))
     expect(guildLevel(0).autoParties).toBe(0)
     expect(guildLevel(3).autoParties).toBe(2)
@@ -41,7 +41,7 @@ describe('guild levels', () => {
     expect(reduce(state, { type: 'build', id: 'guild', now }).notice).toBe('guildRecord')
     const proven = { ...state, guild: { ...state.guild!, record: guildLevel(2).record } }
     expect(reduce(proven, { type: 'build', id: 'guild', now }).construction?.id).toBe('guild')
-    expect(villageRules.buildings.find((building) => building.id === 'guild')?.levels).toHaveLength(4)
+    expect(villageRules.buildings.find((building) => building.id === 'guild')?.levels).toHaveLength(5)
   })
 })
 

@@ -8,12 +8,13 @@ export function recipeById(id: string): SmithRecipe | undefined {
 }
 
 export function craftableRecipes(): SmithRecipe[] {
-  return smithRules.recipes.filter((recipe) => recipe.smithLevel <= 3)
+  // Every recipe but the starter blade (smithLevel 99).
+  return smithRules.recipes.filter((recipe) => recipe.smithLevel < 99)
 }
 
 export function normalizeGear(item: Partial<Gear> | undefined, classId: ClassId): Gear {
   const slot: GearSlot = item?.slot === 'armor' || item?.slot === 'trinket' ? item.slot : 'weapon'
-  const grade: GearGrade = item?.grade === 'fine' || item?.grade === 'rare' ? item.grade : 'common'
+  const grade: GearGrade = item?.grade === 'fine' || item?.grade === 'rare' || item?.grade === 'epic' || item?.grade === 'legend' ? item.grade : 'common'
   const element: GearElement | undefined = item?.element === 'flame' || item?.element === 'silver' ? item.element : undefined
   const option: GearOption | undefined = item?.option === 'power' || item?.option === 'guard' ? item.option : undefined
   return {
@@ -79,9 +80,10 @@ export function forgeGear(recipe: SmithRecipe, id: string, option?: GearOption):
     id,
     recipeId: recipe.id,
     slot: recipe.slot === 'armor' ? 'armor' : 'weapon',
-    grade: recipe.grade === 'fine' || recipe.grade === 'rare' ? recipe.grade : 'common',
+    grade: recipe.grade === 'fine' || recipe.grade === 'rare' || recipe.grade === 'epic' || recipe.grade === 'legend' ? recipe.grade : 'common',
     element,
-    option: recipe.grade === 'rare' ? option : undefined,
+    // Rare and better pieces roll an option.
+    option: recipe.grade === 'rare' || recipe.grade === 'epic' || recipe.grade === 'legend' ? option : undefined,
     enhance: 0,
   }
 }

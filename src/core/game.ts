@@ -1168,30 +1168,19 @@ function startBuild(state: GameState, id: BuildingId, now: number): GameState {
     return { ...state, notice: 'locked' }
   }
   const current = state.buildings[id]
-  const cost = def.levels.find((level) => level.level === current + 1)
+  const cost = def.levels.find((level) => level.level === current + 1) as (Cost & { level: number; ms: number; town?: number }) | undefined
   if (!cost || current >= townLevel(state.fame).maxBuildingLevel) {
     return { ...state, notice: 'maxLevel' }
   }
-  if (
-    state.gold < cost.gold ||
-    state.materials.wood < cost.wood ||
-    state.materials.stone < cost.stone ||
-    state.materials.iron < cost.iron
-  ) {
+  // The late levels wait for town levels 8-10 (Docs/endgame.md).
+  if ((cost.town ?? 0) > townLevel(state.fame).level) {
+    return { ...state, notice: 'locked' }
+  }
+  if (!affordable(state, cost)) {
     return { ...state, notice: 'resources' }
   }
   return {
-    ...state,
-    notice: null,
-    gold: state.gold - cost.gold,
-    materials: {
-      wood: state.materials.wood - cost.wood,
-      stone: state.materials.stone - cost.stone,
-      iron: state.materials.iron - cost.iron,
-      bone: state.materials.bone,
-      herb: state.materials.herb,
-      crystal: state.materials.crystal,
-    },
+    ...pay(state, cost),
     construction: { id, finishAt: now + Math.round(cost.ms * (1 - retireeBonus(state, 'hall'))) },
   }
 }
@@ -1857,16 +1846,22 @@ function startRevive(state: GameState, id: string, now: number): GameState {
   }
 }
 
-function affordable(state: GameState, cost: { gold: number; wood: number; stone: number; iron: number }): boolean {
+// Late costs also take bone, herb and crystal (Docs/endgame.md).
+type Cost = { gold: number; wood: number; stone: number; iron: number; bone?: number; herb?: number; crystal?: number }
+
+function affordable(state: GameState, cost: Cost): boolean {
   return (
     state.gold >= cost.gold &&
     state.materials.wood >= cost.wood &&
     state.materials.stone >= cost.stone &&
-    state.materials.iron >= cost.iron
+    state.materials.iron >= cost.iron &&
+    state.materials.bone >= (cost.bone ?? 0) &&
+    state.materials.herb >= (cost.herb ?? 0) &&
+    state.materials.crystal >= (cost.crystal ?? 0)
   )
 }
 
-function pay(state: GameState, cost: { gold: number; wood: number; stone: number; iron: number }): GameState {
+function pay(state: GameState, cost: Cost): GameState {
   return {
     ...state,
     notice: null,
@@ -1875,9 +1870,9 @@ function pay(state: GameState, cost: { gold: number; wood: number; stone: number
       wood: state.materials.wood - cost.wood,
       stone: state.materials.stone - cost.stone,
       iron: state.materials.iron - cost.iron,
-      bone: state.materials.bone,
-      herb: state.materials.herb,
-      crystal: state.materials.crystal,
+      bone: state.materials.bone - (cost.bone ?? 0),
+      herb: state.materials.herb - (cost.herb ?? 0),
+      crystal: state.materials.crystal - (cost.crystal ?? 0),
     },
   }
 }
@@ -1890,7 +1885,7 @@ function startCraft(state: GameState, recipeId: string, now: number): GameState 
     return { ...state, notice: 'smithBusy' }
   }
   const recipe = recipeById(recipeId)
-  if (!recipe || recipe.smithLevel > 3) {
+  if (!recipe || recipe.smithLevel >= 99) {
     return { ...state, notice: 'recipe' }
   }
   if (state.buildings.smith < recipe.smithLevel) {

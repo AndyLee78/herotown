@@ -39,6 +39,14 @@
       "contracts": 4,
       "appraisal": 0,
       "record": 16
+    },
+    {
+      "level": 5,
+      "expeditions": 4,
+      "autoParties": 3,
+      "contracts": 5,
+      "appraisal": 0,
+      "record": 28
     }
   ],
   "deliverChance": 0.35,

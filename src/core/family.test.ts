@@ -352,9 +352,10 @@ describe('stage 2b: old age, graves and legends', () => {
     ])
   })
 
-  it('builds houses up to level 4 with room for two couples per level', () => {
+  // Levels 5 and 6 came with the endgame (Docs/endgame.md).
+  it('builds houses up to level 6 with room for two couples per level', () => {
     const house = villageRules.buildings.find((building) => building.id === 'house')
-    expect(house?.levels.map((level) => level.level)).toEqual([1, 2, 3, 4])
+    expect(house?.levels.map((level) => level.level)).toEqual([1, 2, 3, 4, 5, 6])
     expect(housingFree(town([], { buildings: { ...freshState(5, now).buildings, house: 4 } }))).toBe(4 * familyRules.couplesPerHouseLevel)
   })
 

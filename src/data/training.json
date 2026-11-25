@@ -7,7 +7,8 @@
   "sessionMs": [
     600000,
     480000,
-    360000
+    360000,
+    300000
   ],
   "goldBase": 10,
   "goldPerLevel": 3,

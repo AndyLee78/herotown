@@ -137,7 +137,8 @@ export type DungeonDef = {
 }
 
 export type GearSlot = 'weapon' | 'armor' | 'trinket'
-export type GearGrade = 'common' | 'fine' | 'rare'
+// Heroic and legendary gear come with smith levels 4 and 5 (Docs/endgame.md).
+export type GearGrade = 'common' | 'fine' | 'rare' | 'epic' | 'legend'
 export type GearElement = 'flame' | 'silver'
 export type GearOption = 'power' | 'guard'
 

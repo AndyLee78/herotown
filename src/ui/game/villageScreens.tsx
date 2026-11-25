@@ -1070,7 +1070,7 @@ export function Smith({ save, onAction }: { save: GameState; onAction: Act }) {
   const { t } = useTranslation()
   const working = save.smith != null
   const now = useNow(working)
-  const recipes = smithRules.recipes.filter((recipe) => recipe.smithLevel <= 3)
+  const recipes = smithRules.recipes.filter((recipe) => recipe.smithLevel < 99)
   const queueFull = save.automation.queues.smith.length >= save.buildings.smith
   return (
     <>

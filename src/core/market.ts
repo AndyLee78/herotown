@@ -145,7 +145,8 @@ function recipeValue(recipeId: string): number {
   const price = marketRules.basePrice
   const smith = smithRules.recipes.find((recipe) => recipe.id === recipeId)
   if (smith) {
-    return smith.gold + smith.wood * price.wood + smith.stone * price.stone + smith.iron * price.iron
+    const late = smith as { bone?: number; crystal?: number }
+    return smith.gold + smith.wood * price.wood + smith.stone * price.stone + smith.iron * price.iron + (late.bone ?? 0) * price.bone + (late.crystal ?? 0) * price.crystal
   }
   // Trinkets are 'trinket.<id>' (magic.ts).
   const trinket = magicRules.trinkets.find((entry) => `trinket.${entry.id}` === recipeId)
