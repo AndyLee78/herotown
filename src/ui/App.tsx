@@ -7,6 +7,8 @@ import {
   guideStatus,
   exportSave,
   housingFree,
+  hallOfFame,
+  livingLegends,
   merchantHere,
   importSave,
   lowMorale,
@@ -454,6 +456,8 @@ export function App() {
           wishJackpot={save.fountain.last?.jackpot ?? false}
           merchant={merchantHere(save) != null}
           tavernRound={save.tavern?.last ?? null}
+          legends={[...hallOfFame(save), ...livingLegends(save)].map((entry) => ({ id: entry.id, name: entry.name, classId: entry.classId, gender: entry.gender, genes: 'genes' in entry ? entry.genes : undefined }))}
+          shrine={(save.shrine?.gear ?? []).map((item) => ({ id: item.id, slot: item.slot, grade: item.grade }))}
           festival={save.festival && save.festival.season === `${save.calendar.year}-${save.calendar.season}` ? save.festival.kind : null}
           onWish={() => apply({ type: 'wish', now: gameNow() })}
           active={!covered}

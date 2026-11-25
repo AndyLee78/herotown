@@ -61,6 +61,10 @@ export type VillageSceneProps = {
   tavernRound: { heroIds: string[]; at: number } | null
   // The festival held this season, if any (Docs/morale.md), for decorations (task 87).
   festival: 'spring' | 'summer' | 'autumn' | 'winter' | null
+  // Legends for statues at the hall of fame (graves and retired legends), and
+  // the heirlooms on display (Docs/legends.md); the 3D comes with task 88.
+  legends: { id: string; name: string; classId: string; gender?: string; genes?: unknown }[]
+  shrine: { id: string; slot: string; grade: string }[]
 }
 
 type Area = { minX: number; maxX: number; minZ: number; maxZ: number }
