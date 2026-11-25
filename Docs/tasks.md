@@ -131,7 +131,7 @@ Claude Code, Cursor, GPT(Codex)가 함께 쓰는 작업 목록이다. 작업 하
 | 89 | 명예의 전당 화면 | GPT | `src/ui/App.tsx`, `src/ui/game/*.tsx`, `src/ui/styles.css`, `src/locales/*` | 완료 (24a56ef) |
 | 90 | 명예의 전당 core 코드 리뷰 (4c3aec1) | GPT | `Docs/reviews/4c3aec1.md` (새 파일만) | 완료 (3b65093) |
 | 91 | 마을 Lv7까지 전체 흐름 점검 | GPT | `tools/*`, `Docs/balance.md`(새 파일) | 완료 (4075ab5) |
-| 92 | 상위 레벨 건물·영웅·전설 장비 3D | Cursor | `src/ui/voxel/*` | 대기 (지금 시작 가능) |
+| 92 | 상위 레벨 건물·영웅·전설 장비 3D | Cursor | `src/ui/voxel/*` | 완료 (0e3e29d) |
 | 93 | 마을 Lv8–10·상위 레벨·전설 장비 화면 | GPT | `src/ui/App.tsx`, `src/ui/game/*.tsx`, `src/ui/styles.css`, `src/locales/*` | 보류 (4b에서 다시 씀, Docs/endgame.md) |
 | 94 | 4a core 코드 리뷰 (d89e486) | GPT | `Docs/reviews/d89e486.md` (새 파일만) | 보류 (4b에서 다시 씀) |
 | 95 | 4a 측정: Lv8–10 도달·후반 재료·전설 장비 | GPT | `tools/*`, `Docs/endgame.md`의 측정 절 | 보류 (4b에서 다시 씀) |
@@ -2241,6 +2241,8 @@ Docs/endgame.md의 4a를 읽고 3D를 맞춘다. src/ui/voxel/*만 고친다. co
 ```
 
 **메모**
+
+집 Lv5 별채·Lv6 3층, 대장간 큰 화로·금 모루, 학교 전용 메시, 나머지 건물 Lv4/5 깃발·불빛. 영웅/전설은 마을·초상에서 `gearAuraOf`로 보라/금빛 무기·트림·파티클(공용 glow 재질). ReplayHero에 gear가 없어 전투 리플레이 오라는 아직 안 붙음. tsc·test·build 통과. 디버그 Lv10 세이브로 마을을 눈으로 확인하지는 못함(기존 세이브 보호).
 
 ---
 
