@@ -114,7 +114,7 @@ Claude Code, Cursor, GPT(Codex)가 함께 쓰는 작업 목록이다. 작업 하
 | 72 | 집 화면: 방으로 묶어 보기 | GPT | `src/ui/App.tsx`, `src/ui/game/*.tsx`, `src/ui/styles.css`, `src/locales/*` | 완료 (2102e68) |
 | 73 | 파티 구성·전투 준비 화면의 영웅 상태와 소속 | GPT | `src/ui/game/battleScreens.tsx`, `src/ui/App.tsx`, `src/ui/styles.css`, `src/locales/*` | 완료 (c85b59e) |
 | 74 | 집·준비 상태 core 코드 리뷰 (7995eb2, b1261a7) | GPT | `Docs/reviews/b1261a7.md` (새 파일만) | 완료 (55e1167) |
-| 75 | 시장 건물·떠돌이 상인 3D | Cursor | `src/ui/voxel/*` | 대기 (76과 함께 가능) |
+| 75 | 시장 건물·떠돌이 상인 3D | Cursor | `src/ui/voxel/*` | 완료 (0397ba8) |
 | 76 | 시장 화면 | GPT | `src/ui/App.tsx`, `src/ui/game/*.tsx`, `src/ui/styles.css`, `src/locales/*` | 대기 (75와 함께 가능) |
 | 77 | 시장 core 코드 리뷰 (bb1c2cf) | GPT | `Docs/reviews/bb1c2cf.md` (새 파일만) | 대기 (76 뒤) |
 | 78 | 시장 경제 측정 | GPT | `tools/*`, `Docs/market.md`의 측정 절 | 대기 (77 뒤) |
@@ -1799,27 +1799,12 @@ VillageScene/BattleScene의 연출은 화면 작업이라 리뷰 대상이 아�
 
 ## 75. 시장 건물·떠돌이 상인 3D (Cursor)
 
-**지금 시작할 수 있다. 작업 76(GPT)과 파일이 겹치지 않아 함께 돌릴 수 있다(같은 폴더에서 동시에 돌리려면 git worktree로 나눈다).** 설계: `Docs/market.md`. 끝나면 Claude Code가 화면을 직접 확인한다.
+**완료 (0397ba8).** 설계: `Docs/market.md`.
 
-**전달할 내용**
-
-```
-Docs/market.md를 읽고 시장의 3D를 만든다. src/ui/voxel/*만 고친다. core, App.tsx, 화면(src/ui/game/*)은 고치지 않는다.
-
-이미 있는 것:
-- 건물 id 'market'(마을 Lv3, 레벨 1–3). world.ts LOTS에 자리 표시용 market: { x: 10.3, z: -2.4, w: 3, d: 2.4 }가 있다(광장 동쪽, 여관과 길드 사이). 지금은 기본 집 모양으로 그려진다.
-- VillageScene.update(props)에 merchant: boolean(떠돌이 상인이 마을에 있는지)이 이미 들어온다. App과 VillageView는 연결되어 있다.
-
-1. 자리 확인: 카메라는 남동쪽(16,16,16)에서 본다. 다른 건물·여관 앞마당(INN_YARD)·길·분수 둘레와 겹치거나 가리지 않는지 보고, 필요하면 LOTS.market 좌표만 옮긴다.
-2. world.ts drawBuilding에 시장 모델: Lv1 천막 노점 두세 개(줄무늬 차양, 상자·자루·통), Lv2 노점이 늘고 간판, Lv3 지붕 있는 장터(깃발). 건설 중 비계는 기존 규칙 그대로.
-3. 떠돌이 상인: merchant가 true인 동안 시장 옆에 짐마차(바퀴·덮개·말 또는 당나귀)와 상인 한 명(모자·배낭)이 서 있다. 상인은 마차 둘레를 천천히 오가거나 손을 흔든다. 도착할 때(false → true) 남쪽 입구에서 마차가 걸어 들어오고, 떠날 때 입구로 나간다. 이미 와 있는 상태로 페이지를 열면 그 자리에 있다.
-4. 마을 영웅 몇 명이 가끔 시장 앞에 들러 서 있다(선택, 성능에 부담이 없으면).
-5. 성능: 기존 Builder로 합친 메시를 쓰고, 상인과 마차는 한 번 만들어 보였다 숨긴다.
-
-확인: npm run dev에서 디버그 세이브로 시장 Lv1–3과 상인 도착·떠남을 본다. tsc·test·build 통과. 확인한 내용을 메모에.
-```
-
-**메모**
+메모:
+- LOTS.market을 (10.8, −3.2)로 옮겨 여관 앞마당·길드·분수와 띄웠다. Lv1 줄무늬 노점, Lv2 추가 노점·간판, Lv3 지붕·깃발.
+- 상인 마차+당나귀+모자/배낭 인물을 한 번 만들어 재사용. 첫 로드는 주차, 이후 false↔true면 남문 입·퇴장. 영웅이 가끔 시장 앞을 들른다.
+- 5176에서 Lv1–3·상인 주차를 확인. 입·퇴장 연출은 장면이 살아 있는 동안 merchant 플래그가 바뀔 때 동작(화면 작업 76 뒤 재확인 권장). tsc·테스트 296·빌드 통과.
 
 ---
 
