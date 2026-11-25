@@ -3,6 +3,8 @@ import { VitePWA } from 'vite-plugin-pwa'
 import { defineConfig } from 'vitest/config'
 
 export default defineConfig({
+  // GitHub Pages serves the game under /herotown/ (Docs/tasks.md task 12); local builds stay at the root.
+  base: process.env.PAGES_BASE ?? '/',
   plugins: [
     react(),
     VitePWA({

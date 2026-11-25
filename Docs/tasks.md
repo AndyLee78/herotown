@@ -51,7 +51,7 @@ Claude Code, Cursor, GPT(Codex)가 함께 쓰는 작업 목록이다. 작업 하
 | 9 | PWA·오프라인 실행·업데이트 알림 | Cursor | `vite.config.ts`, `public/` | 완료 (3c3c45c) |
 | 10 | 효과음 (코드 합성) + 음량 설정 | Cursor | `src/ui/sound.ts`, `App.tsx` | 완료 (c657c25) |
 | 11 | 해가 바뀌면 나이 먹기 | Cursor | `src/core/game.ts` | 완료 (551fb7e) |
-| 12 | GitHub Pages 배포 | Cursor 또는 GPT | `vite.config.ts`, `.github/workflows/` | 대기 (사용자가 저장소를 먼저 올려야 함) |
+| 12 | GitHub Pages 배포 | Cursor 또는 GPT | `vite.config.ts`, `.github/workflows/` | 완료 (Claude Code, 저장소 AndyLee78/herotown) |
 | 13 | 원정 화면 그림·소리 다듬기 | Cursor | `src/ui/voxel/*`, `battleScreens.tsx` | 완료 (03806a1) |
 | 14 | 던전 미리보기를 배경 일러스트처럼 | Cursor | `src/ui/voxel/portrait.ts` | 완료 (1dce191) |
 | 15 | 영어 문구 다듬기 | GPT | `src/locales/en.json` | 완료 (e6754c1) |
