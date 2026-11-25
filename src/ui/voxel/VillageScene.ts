@@ -1,9 +1,18 @@
 import * as THREE from 'three'
 import { MapControls } from 'three/examples/jsm/controls/MapControls.js'
-import { familyRules, type BuildingId, type Hero } from '../../core'
+import {
+  familyRules,
+  isChild,
+  moraleOf,
+  personalityOf,
+  type BuildingId,
+  type Hero,
+  type PersonalityId,
+} from '../../core'
 import { buildBody, buildCharacter, idlePose, walkPose, type Rig } from './character'
 import { Builder, disposeTree, makeLabel } from './kit'
 import { hashString, lookFor, lookKey, seeded } from './look'
+import { buildMoodBubble, idleSeconds, strollPace, type MoodKind } from './mood'
 import {
   GATE,
   GATHER,
@@ -70,7 +79,28 @@ type Walker = {
   load: THREE.Object3D | null
   leanOn: Walker | null
   slowTo: number
+  // Docs/personality.md: village habits and sudden morale bubbles.
+  personality: PersonalityId | null
+  morale: number
+  lastMorale: number | null
+  fidget: number
+  mood: THREE.Group | null
 }
+
+type MoodSlot = { group: THREE.Group; kind: MoodKind; life: number; host: Walker | null }
+
+const MOOD_SPIKE = 8
+const MAX_MOODS = 4
+const EDGE_SPOTS: { x: number; z: number }[] = [
+  { x: PLAZA.min - 0.8, z: PLAZA.min - 0.6 },
+  { x: PLAZA.max + 0.8, z: PLAZA.min - 0.6 },
+  { x: PLAZA.min - 0.8, z: PLAZA.max + 0.6 },
+  { x: PLAZA.max + 0.8, z: PLAZA.max + 0.4 },
+  { x: PLAZA.min - 1.2, z: 0 },
+  { x: PLAZA.max + 1.2, z: 1.2 },
+  { x: -3.5, z: PLAZA.min - 1 },
+  { x: 3.5, z: PLAZA.min - 1 },
+]
 
 type LotView = { key: string; group: THREE.Group; label: THREE.Sprite | null; labelText: string; top: number }
 
@@ -123,6 +153,9 @@ export class VillageScene {
   private readonly merchantTarget = new THREE.Vector3()
   private merchantPhase = 0.7
   private merchantPace = 0
+  private trainingOpen = false
+  private readonly childIds = new Set<string>()
+  private readonly moodSlots: MoodSlot[] = []
 
   constructor(
     private readonly canvas: HTMLCanvasElement,
@@ -198,6 +231,13 @@ export class VillageScene {
       this.playWish(props.wishJackpot)
     }
     this.marketOpen = (props.buildings.market ?? 0) > 0
+    this.trainingOpen = (props.buildings.training ?? 0) > 0
+    this.childIds.clear()
+    for (const hero of living) {
+      if (isChild(hero)) {
+        this.childIds.add(hero.id)
+      }
+    }
     this.syncMerchant(props.merchant)
     const party = new Set(props.partyIds)
     for (const walker of this.walkers.values()) {
@@ -217,6 +257,9 @@ export class VillageScene {
     this.canvas.removeEventListener('pointerdown', this.handleDown)
     this.canvas.removeEventListener('pointerup', this.handleUp)
     this.controls.dispose()
+    for (const slot of this.moodSlots) {
+      this.releaseMood(slot)
+    }
     freeOwnMaterials(this.scene)
     disposeTree(this.scene)
     this.renderer.dispose()
@@ -636,6 +679,7 @@ export class VillageScene {
       const key = lookKey(look)
       const existing = this.walkers.get(hero.id)
       if (existing && existing.key === key && existing.kind === kind) {
+        this.touchMood(existing, hero)
         continue
       }
       if (existing) {
@@ -651,6 +695,7 @@ export class VillageScene {
         if (existing.marker) {
           existing.marker.position.y = existing.rig.height + 0.2
         }
+        this.touchMood(existing, hero)
         continue
       }
       const random = seeded(hashString(hero.id) ^ 0x9e3779b9)
@@ -673,15 +718,22 @@ export class VillageScene {
         load: null,
         leanOn: null,
         slowTo: 0,
+        personality: null,
+        morale: 60,
+        lastMorale: null,
+        fidget: 0,
+        mood: null,
       }
       walker.root.add(walker.rig.group)
       this.placeIn(walker, kind === 'visitor' ? YARD_AREA : PLAZA_AREA)
       walker.root.rotation.y = random() * Math.PI * 2
       this.actors.add(walker.root)
       this.walkers.set(hero.id, walker)
+      this.touchMood(walker, hero)
     }
     for (const [id, walker] of this.walkers) {
       if (!seen.has(id)) {
+        this.clearMood(walker)
         if (this.ring.parent === walker.root) {
           this.ring.removeFromParent()
           this.selectedLabel = null
@@ -692,6 +744,205 @@ export class VillageScene {
         this.walkers.delete(id)
       }
     }
+  }
+
+  private touchMood(walker: Walker, hero: Hero) {
+    if (walker.kind !== 'roster') {
+      walker.personality = null
+      walker.morale = moraleOf(hero)
+      walker.lastMorale = walker.morale
+      return
+    }
+    walker.personality = personalityOf(hero)
+    const next = moraleOf(hero)
+    if (walker.lastMorale != null) {
+      const delta = next - walker.lastMorale
+      if (delta >= MOOD_SPIKE) {
+        this.showMood(walker, 'up')
+      } else if (delta <= -MOOD_SPIKE) {
+        this.showMood(walker, 'down')
+      }
+    }
+    walker.morale = next
+    walker.lastMorale = next
+  }
+
+  private showMood(walker: Walker, kind: MoodKind) {
+    if (walker.state === 'gone' || !walker.root.visible) {
+      return
+    }
+    this.clearMood(walker)
+    let slot = this.moodSlots.find((entry) => entry.host === null && entry.kind === kind)
+    if (!slot) {
+      const active = this.moodSlots.filter((entry) => entry.host != null).length
+      if (active >= MAX_MOODS) {
+        const oldest = this.moodSlots
+          .filter((entry) => entry.host != null)
+          .sort((a, b) => a.life - b.life)[0]
+        if (oldest) {
+          this.releaseMood(oldest)
+        }
+      }
+      slot = this.moodSlots.find((entry) => entry.host === null && entry.kind === kind)
+    }
+    if (!slot) {
+      const group = buildMoodBubble(kind)
+      this.scene.add(group)
+      slot = { group, kind, life: 0, host: null }
+      this.moodSlots.push(slot)
+    }
+    slot.host = walker
+    slot.life = 2
+    slot.group.visible = true
+    walker.mood = slot.group
+    this.placeMood(slot)
+    // Settings (and other overlays) pause the tick; still paint the bubble once.
+    if (!this.active) {
+      this.renderer.render(this.scene, this.camera)
+    }
+  }
+
+  private releaseMood(slot: MoodSlot) {
+    if (slot.host?.mood === slot.group) {
+      slot.host.mood = null
+    }
+    slot.host = null
+    slot.life = 0
+    slot.group.visible = false
+  }
+
+  private clearMood(walker: Walker) {
+    const slot = this.moodSlots.find((entry) => entry.host === walker)
+    if (slot) {
+      this.releaseMood(slot)
+    }
+  }
+
+  private placeMood(slot: MoodSlot) {
+    const host = slot.host
+    if (!host) {
+      return
+    }
+    slot.group.position.set(host.root.position.x, host.rig.height + 0.75, host.root.position.z)
+  }
+
+  private stepMoods(delta: number, time: number) {
+    for (const slot of this.moodSlots) {
+      if (!slot.host) {
+        continue
+      }
+      slot.life -= delta
+      this.placeMood(slot)
+      slot.group.position.y += 0.08 + Math.sin(time * 6) * 0.02
+      slot.group.rotation.y = time * 1.5
+      if (slot.life <= 0 || slot.host.state === 'gone' || !slot.host.root.visible) {
+        this.releaseMood(slot)
+      }
+    }
+  }
+
+  // Personality habits while strolling the square (Docs/personality.md).
+  private pickStrollTarget(walker: Walker) {
+    const personality = walker.personality
+    if (walker.kind === 'roster' && personality && this.rollPersonalityTarget(walker, personality)) {
+      keepOffFountain(walker.target)
+      return
+    }
+    if (walker.kind === 'roster' && this.marketOpen && walker.random() < 0.12) {
+      const front = marketFront()
+      walker.target.set(
+        front.minX + walker.random() * (front.maxX - front.minX),
+        0,
+        front.minZ + walker.random() * (front.maxZ - front.minZ),
+      )
+    } else {
+      const area = walker.kind === 'visitor' ? YARD_AREA : PLAZA_AREA
+      walker.target.set(
+        area.minX + walker.random() * (area.maxX - area.minX),
+        0,
+        area.minZ + walker.random() * (area.maxZ - area.minZ),
+      )
+    }
+    keepOffFountain(walker.target)
+  }
+
+  private rollPersonalityTarget(walker: Walker, personality: PersonalityId): boolean {
+    const roll = walker.random()
+    if (personality === 'social' && roll < 0.6) {
+      const buddies = [...this.walkers.values()].filter(
+        (other) => other.id !== walker.id && other.kind === 'roster' && this.canStroll(other) && other.root.visible,
+      )
+      if (buddies.length > 0) {
+        const buddy = buddies[Math.floor(walker.random() * buddies.length)]!
+        const angle = walker.random() * Math.PI * 2
+        const dist = 0.55 + walker.random() * 0.45
+        walker.target.set(buddy.root.position.x + Math.cos(angle) * dist, 0, buddy.root.position.z + Math.sin(angle) * dist)
+        return true
+      }
+    }
+    if (personality === 'loner' && roll < 0.7) {
+      for (let attempt = 0; attempt < 5; attempt += 1) {
+        const spot = EDGE_SPOTS[Math.floor(walker.random() * EDGE_SPOTS.length)]!
+        const x = spot.x + (walker.random() - 0.5) * 0.8
+        const z = spot.z + (walker.random() - 0.5) * 0.8
+        const crowded = [...this.walkers.values()].some(
+          (other) => other.id !== walker.id && other.root.visible && Math.hypot(other.root.position.x - x, other.root.position.z - z) < 1.7,
+        )
+        if (!crowded) {
+          walker.target.set(x, 0, z)
+          return true
+        }
+      }
+    }
+    if (personality === 'ambitious' && roll < 0.55) {
+      if (this.trainingOpen && walker.random() < 0.55) {
+        const pad = trainingPad()
+        walker.target.set(pad.x + (walker.random() - 0.5) * 1.2, 0, pad.z + (walker.random() - 0.5) * 1.2)
+      } else {
+        walker.target.set(GATE.x + (walker.random() - 0.5) * 1.6, 0, GATE.z - 1.2 - walker.random() * 1.4)
+      }
+      return true
+    }
+    if (personality === 'gentle' && roll < 0.55) {
+      const soft = [...this.walkers.values()].filter(
+        (other) =>
+          other.id !== walker.id &&
+          other.root.visible &&
+          this.canStroll(other) &&
+          (other.kind === 'retiree' || this.childIds.has(other.id)),
+      )
+      if (soft.length > 0) {
+        const buddy = soft[Math.floor(walker.random() * soft.length)]!
+        const angle = walker.random() * Math.PI * 2
+        walker.target.set(buddy.root.position.x + Math.cos(angle) * 0.7, 0, buddy.root.position.z + Math.sin(angle) * 0.7)
+        return true
+      }
+    }
+    if (personality === 'timid' && roll < 0.65) {
+      const lots = Object.values(LOTS)
+      const lot = lots[Math.floor(walker.random() * lots.length)]!
+      walker.target.set(lot.x + (walker.random() - 0.5) * lot.w * 0.5, 0, lot.z + lot.d / 2 + 0.45 + walker.random() * 0.5)
+      return true
+    }
+    if (personality === 'hotheaded' && roll < 0.35) {
+      walker.target.set(
+        PLAZA.min + walker.random() * (PLAZA.max - PLAZA.min),
+        0,
+        PLAZA.min + walker.random() * (PLAZA.max - PLAZA.min),
+      )
+      return true
+    }
+    return false
+  }
+
+  private applyMoralePose(walker: Walker) {
+    if (walker.morale > 30) {
+      return
+    }
+    walker.rig.torso.rotation.x = Math.max(walker.rig.torso.rotation.x, 0.28)
+    walker.rig.head.rotation.x = Math.max(walker.rig.head.rotation.x, 0.18)
+    walker.rig.armL.rotation.x = Math.min(walker.rig.armL.rotation.x, -0.25)
+    walker.rig.armR.rotation.x = Math.min(walker.rig.armR.rotation.x, -0.25)
   }
 
   // Heroes in training stand by the scarecrow and keep swinging.
@@ -932,6 +1183,7 @@ export class VillageScene {
       this.step(walker, delta, time)
     }
     this.stepMerchant(delta, time)
+    this.stepMoods(delta, time)
     this.bobFountain(time)
     this.bobSmoke(time)
     this.bobCrystals(time)
@@ -955,6 +1207,7 @@ export class VillageScene {
     }
     if (walker.state === 'vow') {
       idlePose(walker.rig, time, walker.phase)
+      this.applyMoralePose(walker)
       walker.timer -= delta
       if (walker.timer <= 0) {
         walker.state = 'idle'
@@ -982,6 +1235,7 @@ export class VillageScene {
     }
     if (walker.state === 'idle') {
       idlePose(walker.rig, time, walker.phase)
+      this.applyMoralePose(walker)
       walker.timer -= delta
       if (walker.timer <= 0) {
         if (this.parentOf.has(walker.id) && walker.solo <= 0 && walker.random() < 0.28) {
@@ -991,23 +1245,9 @@ export class VillageScene {
           walker.timer = 0.6
           return
         }
-        if (walker.kind === 'roster' && this.marketOpen && walker.random() < 0.14) {
-          const front = marketFront()
-          walker.target.set(
-            front.minX + walker.random() * (front.maxX - front.minX),
-            0,
-            front.minZ + walker.random() * (front.maxZ - front.minZ),
-          )
-        } else {
-          const area = walker.kind === 'visitor' ? YARD_AREA : PLAZA_AREA
-          walker.target.set(
-            area.minX + walker.random() * (area.maxX - area.minX),
-            0,
-            area.minZ + walker.random() * (area.maxZ - area.minZ),
-          )
-        }
-        keepOffFountain(walker.target)
+        this.pickStrollTarget(walker)
         walker.state = 'walk'
+        walker.fidget = walker.personality === 'hotheaded' ? 0.8 + walker.random() * 0.6 : 99
       }
       return
     }
@@ -1041,14 +1281,24 @@ export class VillageScene {
           walker.slowTo = 0
         }
         walker.state = 'idle'
-        walker.timer = 1.5 + walker.random() * 4
+        walker.timer = idleSeconds(walker.personality, walker.random)
       }
       return
     }
+    if (walker.state === 'walk' && walker.personality === 'hotheaded' && walker.kind === 'roster') {
+      walker.fidget -= delta
+      if (walker.fidget <= 0) {
+        walker.fidget = 0.9 + walker.random() * 0.8
+        if (walker.random() < 0.4) {
+          this.pickStrollTarget(walker)
+        }
+      }
+    }
+    const trait = walker.kind === 'roster' ? strollPace(walker.personality, walker.morale) : 1
     const hurry = walker.state === 'gather' || walker.state === 'leave' ? 1.4 : walker.solo > 0 ? 1.65 : 1
     const carrying = walker.state === 'arrive' && walker.slowTo > 0 ? walker.slowTo / pace : 1
     const lean = walker.leanOn ? 1.6 : 1
-    const stepLength = Math.min(distance, walker.speed * pace * hurry * carrying * lean * delta)
+    const stepLength = Math.min(distance, walker.speed * pace * trait * hurry * carrying * lean * delta)
     position.x += (dx / distance) * stepLength
     position.z += (dz / distance) * stepLength
     // Slide around the fountain rim instead of through the basin; a little
@@ -1063,7 +1313,8 @@ export class VillageScene {
       keepOffFountain(position)
     }
     walker.root.rotation.y = turnToward(walker.root.rotation.y, Math.atan2(dx, dz), delta * 8)
-    walkPose(walker.rig, time, walker.phase, walker.speed * pace)
+    walkPose(walker.rig, time, walker.phase, walker.speed * pace * trait)
+    this.applyMoralePose(walker)
     if (walker.leanOn) {
       // Limping, leaning in toward the friend, the near arm up on their shoulder.
       walker.rig.group.rotation.z = 0.18 + Math.sin(time * 6 + walker.phase) * 0.05
