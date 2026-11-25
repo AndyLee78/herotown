@@ -136,9 +136,9 @@ Claude Code, Cursor, GPT(Codex)가 함께 쓰는 작업 목록이다. 작업 하
 | 94 | 4a core 코드 리뷰 (d89e486) | GPT | `Docs/reviews/d89e486.md` (새 파일만) | 보류 (4b에서 다시 씀) |
 | 95 | 4a 측정: Lv8–10 도달·후반 재료·전설 장비 | GPT | `tools/*`, `Docs/endgame.md`의 측정 절 | 보류 (4b에서 다시 씀) |
 | 96 | 요일 던전·심연 전투 배경 3D | Cursor | `src/ui/voxel/*`, `src/ui/BattleView.tsx`, `src/ui/ExpeditionPanel.tsx` | 완료 (4ae5c02) |
-| 97 | 금고·요일 던전·심연 화면 | GPT | `src/ui/App.tsx`, `src/ui/game/*.tsx`, `src/ui/styles.css`, `src/locales/*` | 대기 (96과 함께 가능) |
-| 98 | 4a core 코드 리뷰 (b80777c) | GPT | `Docs/reviews/b80777c.md` (새 파일만) | 대기 (97 뒤) |
-| 99 | 4a 측정: 요일 던전 승률·심연 깊이·하루 자원 | GPT | `tools/*`, `Docs/endgame.md`의 측정 절 | 대기 (98 뒤) |
+| 97 | 금고·요일 던전·심연 화면 | GPT | `src/ui/App.tsx`, `src/ui/game/*.tsx`, `src/ui/styles.css`, `src/locales/*` | 완료 (ec16996) |
+| 98 | 4a core 코드 리뷰 (b80777c) | GPT | `Docs/reviews/b80777c.md` (새 파일만) | 완료 (82ab2e2) |
+| 99 | 4a 측정: 요일 던전 승률·심연 깊이·하루 자원 | GPT | `tools/*`, `Docs/endgame.md`의 측정 절 | 완료 (374866e) |
 
 ---
 
@@ -2363,6 +2363,8 @@ core에 이미 있는 것('../../core'에서 export):
 
 **메모**
 
+금고, 특수 던전 선택, 정산·기록 표시를 추가했다. Lv7 강한 파티로 시련 3회와 심연 5층 정산을 실행해 각 정수 4개, 심연석 11개와 체크포인트·저장 이력을 확인했다. 브라우저 375px 실기 검증은 미완료다.
+
 ---
 
 ## 98. 4a core 코드 리뷰 (GPT)
@@ -2377,6 +2379,8 @@ core에 이미 있는 것('../../core'에서 export):
 ```
 
 **메모**
+
+날짜 역행 시 횟수 복구, 기록의 정산 정보 누락, 피로 상태 출정, 세이브 정규화 문제를 재현해 `Docs/reviews/b80777c.md`에 기록했다.
 
 ---
 
@@ -2396,3 +2400,5 @@ core에 이미 있는 것('../../core'에서 export):
 ```
 
 **메모**
+
+시드 20개로 요일 시련 승률, 심연 깊이·명성, 일·주 수입을 측정해 `Docs/endgame.md`에 기록했다. tsc·테스트 354개·빌드 통과.
