@@ -147,7 +147,7 @@ Claude Code, Cursor, GPT(Codex)가 함께 쓰는 작업 목록이다. 작업 하
 | 105 | 레이드·침공 화면 | GPT | `src/ui/App.tsx`, `src/ui/game/*.tsx`, `src/ui/styles.css`, `src/locales/*` | 완료 (30cc97e) |
 | 106 | 4c core 코드 리뷰 (1650b75) | GPT | `Docs/reviews/1650b75.md` (새 파일만) | 완료 (58eea1f) |
 | 107 | 4c 측정: Lv9·10 승격·레이드 주기·침공 | GPT | `tools/*`, `Docs/endgame.md`의 측정 절 | 완료 (32d2605) |
-| 108 | 기념물·계절 이벤트·번영 3D | Cursor | `src/ui/voxel/*`, `src/ui/BattleView.tsx`, `src/ui/ExpeditionPanel.tsx` | 대기 (109와 함께 가능) |
+| 108 | 기념물·계절 이벤트·번영 3D | Cursor | `src/ui/voxel/*`, `src/ui/BattleView.tsx`, `src/ui/ExpeditionPanel.tsx` | 완료 (7c5a6b9) |
 | 109 | 이벤트·기념물·강화 확장·레이드 단계·번영 화면 | GPT | `src/ui/App.tsx`, `src/ui/game/*.tsx`, `src/ui/styles.css`, `src/locales/*` | 대기 (108과 함께 가능) |
 | 110 | 4d core 코드 리뷰 (1eeb27b) | GPT | `Docs/reviews/1eeb27b.md` (새 파일만) | 대기 (109 뒤) |
 | 111 | 4d 측정: Lv10 이후 한 달 | GPT | `tools/*`, `Docs/endgame.md`의 측정 절 | 대기 (110 뒤) |
@@ -2637,6 +2637,8 @@ Docs/endgame.md의 4d를 읽고 3D를 만든다. src/ui/voxel/*, src/ui/BattleVi
 ```
 
 **메모**
+
+기념물 넷(광장 석상·동쪽 등대·성벽 망루·남쪽 개선문)은 단계 변경 시에만 다시 만들고, 등대 빛은 회전. 번영은 10/20/30에서 길 등불·깃발·꽃. 계절 이벤트 전투 배경 spring/summer/autumn/winter. tsc·test·build 통과. 디버그 세이브로 마을·이벤트 리플레이는 눈으로 확인하지 못함.
 
 ---
 
