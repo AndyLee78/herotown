@@ -1,4 +1,27 @@
 {
+  "market": {
+    "open": "시장 열기",
+    "materials": "재료",
+    "sell": "팔기",
+    "merchant": "떠돌이 상인",
+    "quantity": "거래 수량",
+    "deal": "이번 계절 · {{cheap}} {{discount}}% 할인 · {{wanted}} {{demand}}% 비싸게 매입",
+    "pressure": "시세 {{value}}%",
+    "discount": "구매 −{{percent}}%",
+    "demand": "판매 +{{percent}}%",
+    "unitPrices": "1개 기준 · 사기 {{buy}}골드 · 팔기 {{sell}}골드",
+    "buyGold": "사기 {{gold}}골드",
+    "sellGold": "팔기 {{gold}}골드",
+    "confirm": "{{name}}을(를) 판매할까요?",
+    "confirmSale": "판매 확정",
+    "unitSale": "개당 {{gold}}골드",
+    "bundle": "{{name}} ×{{count}}",
+    "leaves": "{{time}} 뒤 떠남",
+    "absent": "상인이 오면 알려 드립니다.",
+    "arrived": "떠돌이 상인이 시장에 도착했습니다.",
+    "sold": "팔림",
+    "buy": "사기"
+  },
   "prep": {
     "fatigue": "피로 {{value}}",
     "recovering": "{{condition}} · 회복까지 {{time}}",
@@ -118,6 +141,7 @@
     "reload": "새로고침"
   },
   "screen": {
+    "market": "시장",
     "house": "집",
     "school": "학교",
     "town": "마을 운영",

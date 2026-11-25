@@ -1,4 +1,27 @@
 {
+  "market": {
+    "open": "Open market",
+    "materials": "Materials",
+    "sell": "Sell",
+    "merchant": "Wandering merchant",
+    "quantity": "Trade quantity",
+    "deal": "This season · {{discount}}% off {{cheap}} · {{demand}}% more when selling {{wanted}}",
+    "pressure": "Price {{value}}%",
+    "discount": "Buy −{{percent}}%",
+    "demand": "Sell +{{percent}}%",
+    "unitPrices": "Per unit · Buy {{buy}} gold · Sell {{sell}} gold",
+    "buyGold": "Buy for {{gold}} gold",
+    "sellGold": "Sell for {{gold}} gold",
+    "confirm": "Sell {{name}}?",
+    "confirmSale": "Confirm sale",
+    "unitSale": "{{gold}} gold each",
+    "bundle": "{{name}} ×{{count}}",
+    "leaves": "Leaves in {{time}}",
+    "absent": "We’ll let you know when a merchant arrives.",
+    "arrived": "The wandering merchant is at the market.",
+    "sold": "Sold",
+    "buy": "Buy"
+  },
   "prep": {
     "fatigue": "Fatigue {{value}}",
     "recovering": "{{condition}} · recovers in {{time}}",
@@ -118,6 +141,7 @@
     "reload": "Reload"
   },
   "screen": {
+    "market": "Market",
     "house": "Housing",
     "school": "School",
     "town": "Town",

@@ -28,6 +28,7 @@ import { rewardedAds } from './ads'
 import { addGameOffset, gameNow, offsetSteps, resetGameOffset } from './clock'
 import { josa } from './josa'
 import { BattleHub } from './game/battleScreens'
+import { Market } from './game/marketScreens'
 import { Inn, Roster } from './game/heroScreens'
 import { UiIcon, TownLogo, type ResourceKind } from './game/icons'
 import { Bar, Portrait, Res, Window, needsWarning, useNow, waitLabel } from './game/kit'
@@ -39,7 +40,7 @@ import { isSoundName, play, unlockSound } from './sound'
 const ExpeditionPanel = lazy(() => import('./ExpeditionPanel').then((mod) => ({ default: mod.ExpeditionPanel })))
 const VillageView = lazy(() => import('./VillageView').then((mod) => ({ default: mod.VillageView })))
 
-type Screen = 'town' | 'inn' | 'roster' | 'battle' | 'smith' | 'alchemy' | 'magic' | 'training' | 'school' | 'guild' | 'house' | 'settings' | 'festival'
+type Screen = 'town' | 'inn' | 'roster' | 'battle' | 'smith' | 'alchemy' | 'magic' | 'training' | 'school' | 'guild' | 'house' | 'market' | 'settings' | 'festival'
 type Toast = { id: number; text: string }
 
 const DOCK: { screen: Screen; icon: ReactNode }[] = [
@@ -63,7 +64,7 @@ const BUILDING_SCREEN: Record<BuildingId, Screen> = {
   magic: 'magic',
   school: 'school',
   // The market screen comes with its own task (Docs/market.md); until then it opens the town.
-  market: 'town',
+  market: 'market',
   training: 'training',
 }
 
@@ -325,6 +326,13 @@ export function App() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [bornKey])
 
+  const merchantArrival = save ? merchantHere(save)?.arriveAt : undefined
+  useEffect(() => {
+    if (merchantArrival != null) pushToast(t('market.arrived'))
+    // Announce once per visit, including a visit still active after loading.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [merchantArrival])
+
   const knownGraves = useRef<Set<string> | null>(null)
   const graveyard = save?.graveyard
   useEffect(() => {
@@ -488,7 +496,7 @@ export function App() {
           onClose={() => { play('close'); setScreen(null) }}
         >
           {screen === 'town' ? (
-            <Town save={save} onAction={apply} busy={adBusy} onWatch={() => watchAd('construction')} onAlchemy={() => open('alchemy')} onMagic={() => open('magic')} onTraining={() => open('training')} onSchool={() => open('school')} onGuild={() => open('guild')} onFestival={() => open('festival')} onSelectHero={(id) => { setSelectedId(id); open('roster') }} />
+            <Town save={save} onAction={apply} busy={adBusy} onWatch={() => watchAd('construction')} onAlchemy={() => open('alchemy')} onMagic={() => open('magic')} onTraining={() => open('training')} onSchool={() => open('school')} onGuild={() => open('guild')} onMarket={() => open('market')} onFestival={() => open('festival')} onSelectHero={(id) => { setSelectedId(id); open('roster') }} />
           ) : null}
           {screen === 'inn' ? <Inn save={save} onAction={apply} /> : null}
           {screen === 'house' ? <House save={save} onSelectHero={(id) => { setSelectedId(id); open('roster') }} /> : null}
@@ -502,6 +510,7 @@ export function App() {
           {screen === 'training' ? <Training save={save} onAction={apply} /> : null}
           {screen === 'school' ? <School save={save} onAction={apply} /> : null}
           {screen === 'guild' ? <Guild save={save} onAction={apply} /> : null}
+          {screen === 'market' ? <Market save={save} onAction={apply} /> : null}
           {screen === 'settings' ? (
             <Settings
               save={save}

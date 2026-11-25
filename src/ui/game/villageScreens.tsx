@@ -172,6 +172,7 @@ export function Town({
   onTraining,
   onSchool,
   onGuild,
+  onMarket,
   onFestival,
   onSelectHero,
 }: {
@@ -184,6 +185,7 @@ export function Town({
   onTraining: () => void
   onSchool: () => void
   onGuild: () => void
+  onMarket: () => void
   onFestival: () => void
   onSelectHero: (id: string) => void
 }) {
@@ -312,6 +314,9 @@ export function Town({
                 <button type="button" className="btn" onClick={onGuild}>
                   {t('guild.open')}
                 </button>
+              ) : null}
+              {id === 'market' && current > 0 ? (
+                <button type="button" className="btn" onClick={onMarket}>{t('market.open')}</button>
               ) : null}
               {id === 'temple' && current > 0 ? (
                 <label className="toggle">
