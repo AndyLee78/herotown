@@ -62,7 +62,7 @@ describe('the weekly raid', () => {
     expect(first.raid).toMatchObject({ killed: false, tier: 2, hp: null })
     expect(first.vault[boss.spoil as 'scale']).toBe(endgameRules.raid.tiers[0]!.spoils)
     const state = { ...town(8), raid: { week, bossId: boss.id, hp: 100, max: 10_000, killed: false, tier: endgameRules.raid.tiers.length } }
-    const killed = settleRaid(state, week, 150, 0, 10_000)
+    const killed = settleRaid(state, week, 150, 0, 10_000, undefined, endgameRules.raid.tiers.length)
     expect(killed.raid?.killed).toBe(true)
     expect(killed.raidKills).toBe(1)
     expect(killed.vault[boss.spoil as 'scale']).toBe(endgameRules.raid.tiers[endgameRules.raid.tiers.length - 1]!.spoils)
@@ -162,5 +162,19 @@ describe('review 1650b75 fixes', () => {
     expect(opened.automation.queues.smith).toEqual(['fine.blade'])
     expect(opened.vault.scale).toBe(0)
     expect(opened.gold).toBeGreaterThan(base.gold)
+  })
+})
+
+describe('review 1eeb27b fixes', () => {
+  it('keeps a lower tier’s damage off the tier it opened', () => {
+    const week = raidWeek(monday)
+    const state = { ...town(8), raid: { week, bossId: raidBoss(week).id, hp: null, max: null, killed: false, tier: 2 } }
+    expect(settleRaid(state, week, 100, 0, 10_000, undefined, 1)).toBe(state)
+  })
+
+  it('opens tier 2 for a version 25 save that already won this week', () => {
+    const week = raidWeek(monday)
+    const old = JSON.parse(JSON.stringify({ ...town(8), version: 25, raid: { week, bossId: raidBoss(week).id, hp: 0, max: 10_000, killed: true } })) as Record<string, unknown>
+    expect(migrate(old, monday).raid).toMatchObject({ tier: 2, killed: false, hp: null })
   })
 })

@@ -25,7 +25,8 @@ export function normalizeGear(item: Partial<Gear> | undefined, classId: ClassId)
     element,
     option,
     // Heroic and legendary gear goes up to +10 (Docs/endgame.md 4d).
-    enhance: Math.max(0, Math.min(grade === 'epic' || grade === 'legend' ? smithRules.lateEnhance.max : smithRules.enhanceMax, item?.enhance ?? 0)),
+    // Whole steps only (review 1eeb27b).
+    enhance: Math.max(0, Math.min(grade === 'epic' || grade === 'legend' ? smithRules.lateEnhance.max : smithRules.enhanceMax, Math.floor(Number.isFinite(item?.enhance) ? item!.enhance! : 0))),
     ...(readHeirloom(item?.heirloom) ? { heirloom: readHeirloom(item?.heirloom)! } : {}),
   }
 }

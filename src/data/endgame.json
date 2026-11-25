@@ -308,7 +308,7 @@
         },
         {
           "id": "winter.essence",
-          "cost": 25,
+          "cost": 15,
           "stock": 2,
           "vault": {
             "flame": 8,
@@ -348,27 +348,33 @@
         "stages": [
           {
             "gold": 400,
-            "stone": 150,
+            "stone": 90,
             "flame": 20,
             "light": 20,
-            "valor": 10
+            "valor": 10,
+            "bone": 150,
+            "crystal": 60
           },
           {
             "gold": 700,
-            "stone": 250,
+            "stone": 150,
             "flame": 40,
             "light": 40,
             "valor": 25,
-            "crown": 1
+            "crown": 1,
+            "bone": 300,
+            "crystal": 120
           },
           {
             "gold": 1200,
-            "stone": 400,
+            "stone": 240,
             "flame": 70,
             "light": 70,
             "valor": 45,
             "crown": 2,
-            "token": 40
+            "token": 40,
+            "bone": 600,
+            "crystal": 240
           }
         ]
       },
@@ -385,7 +391,9 @@
             "wood": 150,
             "frost": 20,
             "abyss": 20,
-            "valor": 10
+            "valor": 10,
+            "bone": 150,
+            "crystal": 60
           },
           {
             "gold": 700,
@@ -393,7 +401,9 @@
             "frost": 40,
             "abyss": 40,
             "valor": 25,
-            "scale": 1
+            "scale": 1,
+            "bone": 300,
+            "crystal": 120
           },
           {
             "gold": 1200,
@@ -402,7 +412,9 @@
             "abyss": 60,
             "valor": 45,
             "scale": 2,
-            "token": 40
+            "token": 40,
+            "bone": 600,
+            "crystal": 240
           }
         ]
       },
@@ -416,27 +428,33 @@
         "stages": [
           {
             "gold": 400,
-            "stone": 200,
+            "stone": 120,
             "iron": 60,
             "frost": 20,
-            "valor": 15
+            "valor": 15,
+            "bone": 150,
+            "crystal": 60
           },
           {
             "gold": 700,
-            "stone": 300,
+            "stone": 180,
             "iron": 100,
             "frost": 40,
             "valor": 30,
-            "core": 1
+            "core": 1,
+            "bone": 300,
+            "crystal": 120
           },
           {
             "gold": 1200,
-            "stone": 450,
+            "stone": 270,
             "iron": 150,
             "frost": 70,
             "valor": 50,
             "core": 2,
-            "token": 40
+            "token": 40,
+            "bone": 600,
+            "crystal": 240
           }
         ]
       },
@@ -450,30 +468,36 @@
         "stages": [
           {
             "gold": 500,
-            "stone": 150,
+            "stone": 90,
             "wood": 100,
             "flame": 20,
-            "valor": 10
+            "valor": 10,
+            "bone": 150,
+            "crystal": 60
           },
           {
             "gold": 800,
-            "stone": 250,
+            "stone": 150,
             "wood": 150,
             "flame": 40,
             "valor": 25,
             "scale": 1,
-            "crown": 1
+            "crown": 1,
+            "bone": 300,
+            "crystal": 120
           },
           {
             "gold": 1400,
-            "stone": 400,
+            "stone": 240,
             "wood": 250,
             "flame": 70,
             "valor": 45,
             "scale": 1,
             "crown": 1,
             "core": 1,
-            "token": 40
+            "token": 40,
+            "bone": 600,
+            "crystal": 240
           }
         ]
       }

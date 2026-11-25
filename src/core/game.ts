@@ -133,7 +133,8 @@ export type Expedition = {
   // The floor an abyss run started below (Docs/endgame.md 4a).
   abyssFrom?: number
   // The raid week and the boss's health before and after this party (Docs/endgame.md 4c).
-  raid?: { week: string; start: number | null; left?: number; max?: number }
+  // `tier`: the raid tier it fought; missing on trips from before tiers counts as 1 (review 1eeb27b).
+  raid?: { week: string; tier?: number; start: number | null; left?: number; max?: number }
 }
 
 // A hero who has hung up their sword. They stay in town, cost no wages,
@@ -1842,7 +1843,7 @@ function startExpedition(state: GameState, presetId: string, confirm: boolean, n
     ...(Object.keys(carry.taken).length > 0 ? { supplies: carry.taken } : {}),
     ...(isNest(state.dungeonId) ? { nestKey: seasonKey(state.calendar) } : {}),
     ...(abyssFrom != null ? { abyssFrom } : {}),
-    ...(raid && raidPlan ? { raid: { week: raid.week, start: raid.hp, left: raidPlan.raid.left, max: raidPlan.raid.max } } : {}),
+    ...(raid && raidPlan ? { raid: { week: raid.week, tier: raid.tier ?? 1, start: raid.hp, left: raidPlan.raid.left, max: raidPlan.raid.max } } : {}),
   }
   // Friends left at home notice who went without them (Docs/personality.md).
   const spent = dungeon.special === 'weekday' ? spendTrial(state, now) : dungeon.special === 'event' ? spendEvent(state) : raid ? { ...state, raid } : state
@@ -1896,7 +1897,7 @@ function settleExpedition(state: GameState, expedition: Expedition): GameState {
     report.victory,
   )
   const special = settleSpecial(grantVictoryRewards(afterTrip(home, expedition.heroIds, report.victory), report, dungeonId), dungeonId, report.floorsCleared, report.victory, expedition.abyssFrom)
-  const raided = expedition.raid ? settleRaid(special, expedition.raid.week, expedition.raid.start, expedition.raid.left, expedition.raid.max, expedition.returnAt) : special
+  const raided = expedition.raid ? settleRaid(special, expedition.raid.week, expedition.raid.start, expedition.raid.left, expedition.raid.max, expedition.returnAt, expedition.raid.tier ?? 1) : special
   const rewarded = dungeonById(dungeonId).special === 'event' ? settleEvent(raided, report.victory) : raided
   const next = dropFromPresets(rewarded)
   const materials: Partial<Materials> = {}
@@ -1916,6 +1917,8 @@ function settleExpedition(state: GameState, expedition: Expedition): GameState {
   }
   const record: DungeonReport = {
     ...report,
+    // The experience as granted, with the statue's share (review 1eeb27b).
+    xp: Math.round(report.xp * (1 + statueXp(state))),
     dungeonId,
     presetId: expedition.presetId,
     finishedAt: expedition.returnAt,
@@ -2115,7 +2118,7 @@ export function enhanceCostFor(gear: Gear): Cost & { ms: number } {
   const late = smithRules.lateEnhance
   const step = gear.enhance - smithRules.enhanceMax + 1
   const essence = gear.slot === 'armor' ? 'frost' : 'flame'
-  return { gold: late.gold * step, wood: 0, stone: 0, iron: late.iron * step, [essence]: late.essencePerStep * step, abyss: late.abyssPerStep * step, ms: smithRules.enhanceCost.ms }
+  return { gold: late.gold * step, wood: 0, stone: 0, iron: late.iron * step, bone: late.bonePerStep * step, crystal: late.crystalPerStep * step, [essence]: late.essencePerStep * step, abyss: late.abyssPerStep * step, ms: smithRules.enhanceCost.ms }
 }
 
 // Valour buys a new option on rare and better gear (Docs/endgame.md 4d).
@@ -2732,6 +2735,10 @@ function readRaid(value: unknown): Raid | null {
   }
   const num = (entry: unknown) => (typeof entry === 'number' && Number.isFinite(entry) ? Math.max(0, entry) : null)
   const tier = typeof record.tier === 'number' ? Math.max(1, Math.min(endgameRules.raid.tiers.length, Math.floor(record.tier))) : 1
+  // A boss won before tiers existed opens tier 2 instead of closing the week (review 1eeb27b).
+  if (typeof record.tier !== 'number' && record.killed === true) {
+    return { week: record.week, bossId: record.bossId, hp: null, max: null, killed: false, tier: 2 }
+  }
   return { week: record.week, bossId: record.bossId, hp: num(record.hp), max: num(record.max), killed: record.killed === true, tier }
 }
 
