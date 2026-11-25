@@ -23,8 +23,11 @@ import {
   buildLot,
   buildMerchantCart,
   buildTerrain,
+  buildToastTable,
   marketFront,
   merchantPark,
+  tavernTableSpot,
+  tavernYard,
   trainingPad,
 } from './world'
 
@@ -66,7 +69,8 @@ type Walker = {
   key: string
   // gather → pack → leave → gone when a party sets out; arrive when it comes home.
   // drill: hitting the scarecrow at the training ground.
-  state: 'idle' | 'walk' | 'gather' | 'pack' | 'leave' | 'gone' | 'arrive' | 'vow' | 'drill'
+  // toastWalk → toast: a tavern round (Docs/tavern.md).
+  state: 'idle' | 'walk' | 'gather' | 'pack' | 'leave' | 'gone' | 'arrive' | 'vow' | 'drill' | 'toastWalk' | 'toast'
   away: boolean
   fresh: boolean
   timer: number
@@ -156,6 +160,13 @@ export class VillageScene {
   private merchantPhase = 0.7
   private merchantPace = 0
   private trainingOpen = false
+  private tavernOpen = false
+  private tavernRoundBooted = false
+  private tavernRoundSeen: number | null = null
+  private toastTable: THREE.Group | null = null
+  private toastCups: THREE.Object3D | null = null
+  private toastCenter = new THREE.Vector3()
+  private toasting = false
   private readonly childIds = new Set<string>()
   private readonly moodSlots: MoodSlot[] = []
 
@@ -234,6 +245,7 @@ export class VillageScene {
     }
     this.marketOpen = (props.buildings.market ?? 0) > 0
     this.trainingOpen = (props.buildings.training ?? 0) > 0
+    this.tavernOpen = (props.buildings.tavern ?? 0) > 0
     this.childIds.clear()
     for (const hero of living) {
       if (isChild(hero)) {
@@ -241,6 +253,7 @@ export class VillageScene {
       }
     }
     this.syncMerchant(props.merchant)
+    this.syncTavernRound(props.tavernRound)
     const party = new Set(props.partyIds)
     for (const walker of this.walkers.values()) {
       this.setMarker(walker, walker.kind === 'roster' && party.has(walker.id))
@@ -261,6 +274,12 @@ export class VillageScene {
     this.controls.dispose()
     for (const slot of this.moodSlots) {
       this.releaseMood(slot)
+    }
+    if (this.toastTable) {
+      this.scene.remove(this.toastTable)
+      disposeTree(this.toastTable)
+      this.toastTable = null
+      this.toastCups = null
     }
     freeOwnMaterials(this.scene)
     disposeTree(this.scene)
@@ -460,6 +479,101 @@ export class VillageScene {
     const child = this.walkers.get(id)
     if (child) {
       child.root.position.set(house.x + 1.2, 0, house.z + 1.4)
+    }
+  }
+
+  // First paint with an old round does nothing; a new `at` starts a toast (Docs/tavern.md).
+  private syncTavernRound(round: { heroIds: string[]; at: number } | null) {
+    if (!this.tavernRoundBooted) {
+      this.tavernRoundBooted = true
+      this.tavernRoundSeen = round?.at ?? null
+      return
+    }
+    if (!round || round.at === this.tavernRoundSeen) {
+      return
+    }
+    this.tavernRoundSeen = round.at
+    this.startToast(round.heroIds)
+  }
+
+  private ensureToastTable() {
+    if (this.toastTable) {
+      return
+    }
+    const table = buildToastTable()
+    this.scene.add(table)
+    this.toastTable = table
+    this.toastCups = table.getObjectByName('cups') ?? null
+  }
+
+  private startToast(heroIds: string[]) {
+    if (!this.tavernOpen) {
+      return
+    }
+    this.ensureToastTable()
+    const spot = tavernTableSpot()
+    this.toastCenter.set(spot.x, 0, spot.z)
+    if (this.toastTable) {
+      this.toastTable.position.set(spot.x, 0, spot.z)
+      this.toastTable.visible = true
+    }
+    this.toasting = false
+    let seated = 0
+    for (const id of heroIds) {
+      const walker = this.walkers.get(id)
+      if (!walker || walker.kind !== 'roster') {
+        continue
+      }
+      if (
+        walker.state === 'gone' ||
+        walker.state === 'leave' ||
+        walker.state === 'gather' ||
+        walker.state === 'pack' ||
+        walker.state === 'arrive' ||
+        walker.state === 'drill' ||
+        walker.away
+      ) {
+        continue
+      }
+      const seat = spot.seats[seated % spot.seats.length]!
+      seated += 1
+      walker.state = 'toastWalk'
+      walker.root.visible = true
+      walker.target.set(seat.x, 0, seat.z)
+      walker.speed = 1.35
+      walker.leanOn = null
+      walker.solo = 0
+    }
+    if (seated === 0 && this.toastTable) {
+      this.toastTable.visible = false
+    } else if (seated > 0) {
+      this.toasting = true
+    }
+  }
+
+  private endToastIfDone() {
+    if (!this.toasting) {
+      return
+    }
+    for (const walker of this.walkers.values()) {
+      if (walker.state === 'toast' || walker.state === 'toastWalk') {
+        return
+      }
+    }
+    this.toasting = false
+    if (this.toastTable) {
+      this.toastTable.visible = false
+    }
+  }
+
+  private bobToastCups(time: number) {
+    if (!this.toastCups || !this.toastTable?.visible) {
+      return
+    }
+    for (const child of this.toastCups.children) {
+      const index = Number(child.name.replace('cup', '')) || 0
+      child.position.y = 0.58 + Math.max(0, Math.sin(time * 6 + index * 1.2)) * 0.12
+      child.rotation.z = Math.sin(time * 5 + index) * 0.15
     }
   }
 
@@ -850,7 +964,15 @@ export class VillageScene {
       keepOffFountain(walker.target)
       return
     }
-    if (walker.kind === 'roster' && this.marketOpen && walker.random() < 0.12) {
+    const yardChance = personality === 'social' ? 0.22 : 0.08
+    if (walker.kind === 'roster' && this.tavernOpen && walker.random() < yardChance) {
+      const yard = tavernYard()
+      walker.target.set(
+        yard.minX + walker.random() * (yard.maxX - yard.minX),
+        0,
+        yard.minZ + walker.random() * (yard.maxZ - yard.minZ),
+      )
+    } else if (walker.kind === 'roster' && this.marketOpen && walker.random() < 0.12) {
       const front = marketFront()
       walker.target.set(
         front.minX + walker.random() * (front.maxX - front.minX),
@@ -956,7 +1078,16 @@ export class VillageScene {
         continue
       }
       const training = drills.has(walker.id)
-      if (training && walker.state !== 'drill' && walker.state !== 'gone' && walker.state !== 'leave' && walker.state !== 'gather' && walker.state !== 'pack') {
+      if (
+        training &&
+        walker.state !== 'drill' &&
+        walker.state !== 'gone' &&
+        walker.state !== 'leave' &&
+        walker.state !== 'gather' &&
+        walker.state !== 'pack' &&
+        walker.state !== 'toast' &&
+        walker.state !== 'toastWalk'
+      ) {
         walker.state = 'drill'
         walker.root.visible = true
         walker.target.set(pad.x + (slot % 2) * 0.55, 0, pad.z + Math.floor(slot / 2) * 0.55)
@@ -1189,6 +1320,8 @@ export class VillageScene {
     this.bobFountain(time)
     this.bobSmoke(time)
     this.bobCrystals(time)
+    this.bobToastCups(time)
+    this.endToastIfDone()
     this.stepBursts(delta)
     this.controls.update()
     this.clampPan()
@@ -1214,6 +1347,24 @@ export class VillageScene {
       if (walker.timer <= 0) {
         walker.state = 'idle'
         walker.timer = 1.2
+      }
+      return
+    }
+    if (walker.state === 'toast') {
+      walker.root.rotation.y = Math.atan2(
+        this.toastCenter.x - walker.root.position.x,
+        this.toastCenter.z - walker.root.position.z,
+      )
+      idlePose(walker.rig, time, walker.phase)
+      const raise = -1.55 + Math.sin(time * 7 + walker.phase) * 0.25
+      walker.rig.armR.rotation.set(raise, 0.15, 0.35)
+      walker.rig.armL.rotation.set(raise * 0.7, -0.1, -0.25)
+      walker.rig.group.position.y = Math.abs(Math.sin(time * 5 + walker.phase)) * 0.03
+      walker.timer -= delta
+      if (walker.timer <= 0) {
+        walker.state = 'idle'
+        walker.timer = 1 + walker.random() * 0.8
+        this.endToastIfDone()
       }
       return
     }
@@ -1274,6 +1425,13 @@ export class VillageScene {
       } else if (walker.state === 'leave') {
         walker.state = 'gone'
         walker.root.visible = false
+      } else if (walker.state === 'toastWalk') {
+        walker.state = 'toast'
+        walker.timer = 3.4 + walker.random() * 0.8
+        walker.root.rotation.y = Math.atan2(
+          this.toastCenter.x - walker.root.position.x,
+          this.toastCenter.z - walker.root.position.z,
+        )
       } else if (walker.leanOn) {
         // Waiting on the friend who is helping them along.
         idlePose(walker.rig, time, walker.phase)
@@ -1297,7 +1455,12 @@ export class VillageScene {
       }
     }
     const trait = walker.kind === 'roster' ? strollPace(walker.personality, walker.morale) : 1
-    const hurry = walker.state === 'gather' || walker.state === 'leave' ? 1.4 : walker.solo > 0 ? 1.65 : 1
+    const hurry =
+      walker.state === 'gather' || walker.state === 'leave' || walker.state === 'toastWalk'
+        ? 1.4
+        : walker.solo > 0
+          ? 1.65
+          : 1
     const carrying = walker.state === 'arrive' && walker.slowTo > 0 ? walker.slowTo / pace : 1
     const lean = walker.leanOn ? 1.6 : 1
     const stepLength = Math.min(distance, walker.speed * pace * trait * hurry * carrying * lean * delta)

@@ -24,8 +24,9 @@ export const LOTS: Record<BuildingId, Lot> = {
   // East of the square, between the inn yard and the guild (Docs/market.md).
   // Kept clear of INN_YARD, the guild front, the fountain rim and the south road.
   market: { x: 10.8, z: -3.2, w: 3.2, d: 2.6 },
-  // Placeholder spot for the tavern north-west of the square until it gets a model (Docs/tavern.md).
-  tavern: { x: -4.6, z: -6.4, w: 3, d: 2.6 },
+  // North-west of the square, between the hall and the temple (Docs/tavern.md).
+  // Front yard opens south toward the plaza; kept clear of hall, temple and alchemy.
+  tavern: { x: -4.4, z: -5.9, w: 3.2, d: 2.8 },
   // South-west of the square: the training yard, in plain view.
   training: { x: -5.6, z: 8.4, w: 3.6, d: 3.2 },
   // East and south-east.
@@ -56,6 +57,33 @@ export function marketFront(): { minX: number; maxX: number; minZ: number; maxZ:
 export function merchantPark(): { x: number; z: number } {
   const lot = LOTS.market
   return { x: lot.x + lot.w / 2 + 1.05, z: lot.z + 0.55 }
+}
+
+// Stone patch and benches in front of the tavern where townsfolk sit.
+export function tavernYard(): { minX: number; maxX: number; minZ: number; maxZ: number } {
+  const lot = LOTS.tavern
+  return {
+    minX: lot.x - 1.1,
+    maxX: lot.x + 1.1,
+    minZ: lot.z + lot.d / 2 + 0.35,
+    maxZ: lot.z + lot.d / 2 + 1.7,
+  }
+}
+
+// Round table in the tavern yard; seats face the middle for a toast.
+export function tavernTableSpot(): { x: number; z: number; seats: { x: number; z: number }[] } {
+  const lot = LOTS.tavern
+  const x = lot.x + 0.15
+  const z = lot.z + lot.d / 2 + 1.15
+  return {
+    x,
+    z,
+    seats: [
+      { x: x - 0.55, z: z + 0.35 },
+      { x: x + 0.55, z: z + 0.35 },
+      { x: x, z: z - 0.55 },
+    ],
+  }
 }
 
 export const PLAZA = { min: -5.3, max: 5.3 }
@@ -527,6 +555,9 @@ function drawBuilding(b: Builder, id: BuildingId, lot: Lot, level: number): numb
   if (id === 'market') {
     return drawMarket(b, w, d, level)
   }
+  if (id === 'tavern') {
+    return drawTavern(b, w, d, level)
+  }
   if (id === 'smith') {
     const top = house(b, { w, d, h: 1.4 + grow * 0.25, wall: '#9a7a5c', roof: '#6d6d6d', steps: 3 })
     b.box(0.6, 1.3, 0.6, '#7d7a74', -w * 0.3, top + 0.2, -d * 0.15).box(0.36, 0.2, 0.36, '#ff8a3d', -w * 0.3, top + 0.86, -d * 0.15, { glow: true })
@@ -657,6 +688,93 @@ function drawStall(b: Builder, x: number, z: number, stripeA: string, stripeB: s
   }
   b.box(0.18, 0.16, 0.18, '#e8d4a8', x - 0.25, 0.68, z + 0.05)
   b.box(0.14, 0.2, 0.14, '#8fd4ef', x + 0.2, 0.7, z + 0.02)
+}
+
+// Wooden tavern: mug sign and barrels at Lv1, a second storey and outdoor table
+// at Lv2, a wider terrace and string lights at Lv3 (Docs/tavern.md).
+function drawTavern(b: Builder, w: number, d: number, level: number): number {
+  const grow = level - 1
+  const top = house(b, { w, d, h: 1.45 + grow * 0.2, wall: '#b8885a', roof: '#8a3a2a', timber: true, chimney: true })
+  // Mug sign by the door.
+  b.box(0.08, 1.05, 0.08, WOOD, w * 0.38, 0.7, d / 2 + 0.22)
+  b.box(0.55, 0.42, 0.06, '#e8d4a8', w * 0.38, 1.2, d / 2 + 0.26)
+  b.box(0.16, 0.18, 0.05, '#c45c3a', w * 0.35, 1.18, d / 2 + 0.3)
+  b.box(0.07, 0.12, 0.04, '#c45c3a', w * 0.44, 1.2, d / 2 + 0.3)
+  b.box(0.2, 0.05, 0.05, '#efe6d4', w * 0.35, 1.3, d / 2 + 0.3)
+  // Barrels and crates by the entrance.
+  b.box(0.34, 0.4, 0.34, '#6b4a33', -w * 0.38, 0.3, d / 2 + 0.5)
+  b.box(0.28, 0.08, 0.28, '#8a5a32', -w * 0.38, 0.52, d / 2 + 0.5)
+  b.box(0.3, 0.24, 0.3, '#9c7448', -w * 0.12, 0.22, d / 2 + 0.55)
+  // Front yard stones and a bench.
+  b.box(w * 1.15, 0.06, 1.55, '#cfd3d6', 0, 0.04, d / 2 + 1.05)
+  b.box(w * 0.85, 0.04, 1.1, '#b8bdc2', 0.1, 0.07, d / 2 + 1.15)
+  b.box(0.95, 0.12, 0.3, WOOD, -0.35, 0.24, d / 2 + 1.55)
+  b.box(0.1, 0.3, 0.1, WOOD, -0.75, 0.2, d / 2 + 1.55)
+  b.box(0.1, 0.3, 0.1, WOOD, 0.05, 0.2, d / 2 + 1.55)
+  let peak = top
+  if (level >= 2) {
+    const story = 0.85
+    b.box(w * 0.78, story, d * 0.72, '#b8885a', 0, top + story / 2, -0.05)
+    b.box(w * 0.9, 0.16, d * 0.84, '#8a3a2a', 0, top + story + 0.08, -0.05)
+    b.box(0.28, 0.24, 0.06, '#5aa0a0', -w * 0.2, top + story * 0.45, d * 0.34)
+    b.box(0.28, 0.24, 0.06, '#5aa0a0', w * 0.2, top + story * 0.45, d * 0.34)
+    // Outdoor table.
+    b.box(0.7, 0.08, 0.7, WOOD, w * 0.15, 0.42, d / 2 + 1.05)
+    b.box(0.08, 0.4, 0.08, WOOD, w * 0.15 - 0.25, 0.22, d / 2 + 1.05 - 0.25)
+    b.box(0.08, 0.4, 0.08, WOOD, w * 0.15 + 0.25, 0.22, d / 2 + 1.05 - 0.25)
+    b.box(0.08, 0.4, 0.08, WOOD, w * 0.15 - 0.25, 0.22, d / 2 + 1.05 + 0.25)
+    b.box(0.08, 0.4, 0.08, WOOD, w * 0.15 + 0.25, 0.22, d / 2 + 1.05 + 0.25)
+    peak = top + story + 0.16
+  }
+  if (level >= 3) {
+    // Wider terrace and string lights.
+    b.box(w * 1.35, 0.08, 1.9, '#d4b474', 0, 0.08, d / 2 + 1.15)
+    b.box(0.08, 1.15, 0.08, WOOD, -w * 0.55, 0.7, d / 2 + 0.55)
+    b.box(0.08, 1.15, 0.08, WOOD, w * 0.55, 0.7, d / 2 + 0.55)
+    b.box(0.08, 1.15, 0.08, WOOD, -w * 0.55, 0.7, d / 2 + 1.75)
+    b.box(0.08, 1.15, 0.08, WOOD, w * 0.55, 0.7, d / 2 + 1.75)
+    b.box(w * 1.2, 0.04, 0.04, WOOD, 0, 1.2, d / 2 + 0.55)
+    b.box(w * 1.2, 0.04, 0.04, WOOD, 0, 1.2, d / 2 + 1.75)
+    for (const x of [-0.7, -0.35, 0, 0.35, 0.7]) {
+      b.box(0.1, 0.1, 0.1, '#ffe27a', x, 1.12, d / 2 + 0.55, { glow: true })
+      b.box(0.1, 0.1, 0.1, '#ffe27a', x, 1.12, d / 2 + 1.75, { glow: true })
+    }
+    b.box(0.4, 0.18, 0.08, '#d9b54a', -w * 0.25, 1.15, d / 2 + 0.05)
+    peak = Math.max(peak, 1.35)
+  }
+  return peak
+}
+
+// Round toast table and three cups for a tavern round; cups are named for bobbing.
+export function buildToastTable(): THREE.Group {
+  const root = new THREE.Group()
+  const body = new Builder()
+  body.box(0.85, 0.1, 0.85, '#8a5a32', 0, 0.48, 0)
+  body.box(0.95, 0.06, 0.95, '#6b4a33', 0, 0.55, 0)
+  body.box(0.1, 0.45, 0.1, WOOD, -0.3, 0.24, -0.3)
+  body.box(0.1, 0.45, 0.1, WOOD, 0.3, 0.24, -0.3)
+  body.box(0.1, 0.45, 0.1, WOOD, -0.3, 0.24, 0.3)
+  body.box(0.1, 0.45, 0.1, WOOD, 0.3, 0.24, 0.3)
+  root.add(body.build())
+  const cups = new THREE.Group()
+  cups.name = 'cups'
+  ;[
+    [-0.22, 0.18],
+    [0.22, 0.18],
+    [0, -0.22],
+  ].forEach(([cx, cz], index) => {
+    const cup = new Builder()
+      .box(0.14, 0.16, 0.14, '#c45c3a', 0, 0.08, 0)
+      .box(0.16, 0.04, 0.16, '#efe6d4', 0, 0.16, 0)
+      .box(0.05, 0.1, 0.04, '#c45c3a', 0.1, 0.08, 0)
+      .build({ castShadow: false })
+    cup.name = `cup${index}`
+    cup.position.set(cx, 0.58, cz)
+    cups.add(cup)
+  })
+  root.add(cups)
+  root.visible = false
+  return root
 }
 
 // Covered cart and donkey for the wandering merchant (Docs/market.md).
