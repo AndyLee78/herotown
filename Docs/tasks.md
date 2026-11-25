@@ -147,6 +147,10 @@ Claude Code, Cursor, GPT(Codex)가 함께 쓰는 작업 목록이다. 작업 하
 | 105 | 레이드·침공 화면 | GPT | `src/ui/App.tsx`, `src/ui/game/*.tsx`, `src/ui/styles.css`, `src/locales/*` | 완료 (30cc97e) |
 | 106 | 4c core 코드 리뷰 (1650b75) | GPT | `Docs/reviews/1650b75.md` (새 파일만) | 완료 (58eea1f) |
 | 107 | 4c 측정: Lv9·10 승격·레이드 주기·침공 | GPT | `tools/*`, `Docs/endgame.md`의 측정 절 | 완료 (32d2605) |
+| 108 | 기념물·계절 이벤트·번영 3D | Cursor | `src/ui/voxel/*`, `src/ui/BattleView.tsx`, `src/ui/ExpeditionPanel.tsx` | 대기 (109와 함께 가능) |
+| 109 | 이벤트·기념물·강화 확장·레이드 단계·번영 화면 | GPT | `src/ui/App.tsx`, `src/ui/game/*.tsx`, `src/ui/styles.css`, `src/locales/*` | 대기 (108과 함께 가능) |
+| 110 | 4d core 코드 리뷰 (1eeb27b) | GPT | `Docs/reviews/1eeb27b.md` (새 파일만) | 대기 (109 뒤) |
+| 111 | 4d 측정: Lv10 이후 한 달 | GPT | `tools/*`, `Docs/endgame.md`의 측정 절 | 대기 (110 뒤) |
 
 ---
 
@@ -2604,3 +2608,98 @@ core에 이미 있는 것('../../core'에서 export):
 **메모**
 
 20개 시드 × 32일에서 Lv9 11.01일, Lv10 25.02일이 중앙값이었다. 레이드 100회 처치, 침공 120회 방어와 금고 흐름을 기록했다. 타입 검사, 테스트 376개, 프로덕션 빌드 통과.
+
+---
+
+## 108. 기념물·계절 이벤트·번영 3D (Cursor)
+
+**지금 시작할 수 있다. 작업 109(GPT)와 파일이 겹치지 않아 함께 돌릴 수 있다(같은 폴더에서 동시에 돌리려면 git worktree로 나눈다).** 설계: `Docs/endgame.md` 4d.
+
+**전달할 내용**
+
+```
+Docs/endgame.md의 4d를 읽고 3D를 만든다. src/ui/voxel/*, src/ui/BattleView.tsx, src/ui/ExpeditionPanel.tsx만 고친다. core, App.tsx, src/ui/game/*는 고치지 않는다.
+
+이미 있는 것:
+- VillageScene.update(props)에 monuments: { statue?, lighthouse?, walls?, arch? }(단계 0–3)와 prosperity(번영 등급 0–30)가 들어온다. App·VillageView는 연결되어 있다.
+- 특수 던전 event_spring·event_summer·event_autumn·event_winter(special 'event', season). BattleScene special 타입에 'event'가 더해졌다(지금은 tier 배경).
+
+1. 기념물 넷을 마을에 세운다. 자리가 없으면 마을 가장자리·성벽 근처에서 다른 건물을 가리지 않는 곳을 찾는다(카메라는 남동쪽). 단계마다 커지고 꾸며진다.
+   - 영웅의 상: 광장 근처 받침대 위 영웅 석상(단계마다 크기·금빛).
+   - 대등대: 마을 가장자리의 탑, 꼭대기 불빛(단계마다 높아지고 빛이 돈다).
+   - 성벽과 망루: Lv9 성벽에 망루를 더한다(단계마다 망루 수·깃발).
+   - 개선문: 남쪽 입구의 아치(단계마다 장식·금빛).
+2. 번영 등급: 등급이 오를수록 길에 등불·깃발·꽃이 조금씩 늘어난다(과하지 않게, 10·20·30에서 눈에 띄는 변화).
+3. 계절 이벤트 전투 배경: 봄(꽃잎·풀빛), 여름(축제 등불·모닥불), 가을(낙엽·호박), 겨울(눈·얼음).
+4. 성능: 기념물은 단계가 바뀔 때만 다시 만든다.
+
+확인: npm run dev에서 디버그 세이브(마을 Lv10, 기념물 단계 섞어서, 번영 10·20)로 마을과 이벤트 리플레이를 본다. tsc·test·build 통과. 확인한 내용을 메모에.
+```
+
+**메모**
+
+---
+
+## 109. 이벤트·기념물·강화 확장·레이드 단계·번영 화면 (GPT)
+
+**지금 시작할 수 있다. 작업 108(Cursor)과 함께 돌릴 수 있다.** 설계: `Docs/endgame.md` 4d.
+
+**전달할 내용**
+
+```
+Docs/endgame.md의 4d를 화면에 보인다. src/ui/App.tsx, src/ui/game/*.tsx, src/ui/styles.css, src/locales/*만 고친다. core, src/ui/voxel/*, src/ui/BattleView.tsx, src/ui/ExpeditionPanel.tsx는 고치지 않는다.
+
+core에 이미 있는 것('../../core'에서 export):
+- 금고에 token(이벤트 증표). 이벤트: eventDungeonId(state), eventRunsLeft(state), eventShop(state)([{ id, cost, stock, left, vault?, materials?, potions?, gear?, gold? }]), 동작 { type: 'buyEvent', itemId }, 특수 던전 event_<계절>. notice eventSeason, eventUsed, soldOut, poor.
+- 기념물: monumentStage(state, id), monumentCost(id, stage), 효과 statueXp·lighthousePotential·lighthouseOffers·wallsCut·archBonus, 동작 { type: 'raiseMonument', id }(id: statue | lighthouse | walls | arch). notice locked, maxLevel, resources. endgameRules.monuments.
+- 강화: enhanceLimit(gear)(영웅·전설 10, 나머지 3), enhanceCostFor(gear)(정수·심연석 포함), smithRules.lateEnhance.chance. 옵션: 동작 { type: 'setOption', gearId, option }, smithRules.optionValor.
+- 레이드: currentRaid(state, now).tier(1–3), endgameRules.raid.tiers([{ grow, spoils }]).
+- 번영: prosperityRank(state), nextRankFame(state), rankOffering(rank), prosperityBonus(state), rewardBonus(state), 동작 { type: 'prosper' }(notice locked, promoteFame, promoteOffering, promoteMax).
+
+1. 특수 던전 묶음에 계절 이벤트: 이번 계절 던전, 남은 횟수 n/6, 승리 보상 증표. 이벤트 상점(물건, 가격, 남은 수, [사기]).
+2. 기념물 창(마을 운영 또는 회관): 넷의 현재 단계·효과(지금·다음), 다음 단계 비용(모자란 것 빨강)과 [세우기]. Lv9 미만이면 "마을 Lv9에 열림".
+3. 대장간 강화: 영웅·전설 장비는 +10까지, +3 넘으면 성공률(late chance)과 정수·심연석 비용을 보인다. 창고 장비에 [옵션 바꾸기](희귀 이상, 용맹 훈장 8).
+4. 레이드 창에 단계(1/2/3)와 단계별 전리품, 처치 후 "2단계가 열렸다".
+5. 번영 창(마을 Lv10이면 승격 창 자리에): 현재 등급과 보너스, 다음 등급의 명성과 바칠 것, [번영].
+6. 금고 표시에 이벤트 증표.
+7. 문구 ko/en 같은 키. 좁은 화면(375px)에서 넘치지 않게.
+
+확인: npm run dev에서 디버그 세이브(마을 Lv10, 금고 넉넉히)로 이벤트 상점, 기념물 세 단계, +4 강화, 옵션 바꾸기, 레이드 2단계, 번영 1등급을 본다. tsc·test·build 통과. 확인한 내용을 메모에.
+```
+
+**메모**
+
+---
+
+## 110. 4d core 코드 리뷰 (GPT)
+
+**작업 109 뒤에 시작한다(같은 도구라 순서대로).** core 커밋은 **1eeb27b**다.
+
+**전달할 내용**
+
+```
+4d core 커밋 1eeb27b를 리뷰한다. 코드는 고치지 않고 Docs/reviews/1eeb27b.md 새 파일 하나에만 쓴다(Docs/reviews/README.md 형식).
+볼 것: Docs/endgame.md 4d와 차이, 이벤트(계절 경계, 횟수 소모 시점, 증표, 상점 재고와 계절, 장비 지급 id 중복), 기념물(비용 차감, 단계 상한, 효과가 실제로 들어가는 경로: 원정·자동·훈련 경험치, 방문자 잠재력 두 곳, 상인 물건, 침공 세기·손실, 골드·명성), 강화 확장(한도, 비용, 성공률 표 인덱스, 정규화, 대기열), 옵션 재설정, 레이드 단계(단계별 세기·전리품, 같은 주, 처치 수), 번영(명성 계단, 공물, 상한, 보상 배율이 겹치는 곳), 세이브 25 → 26.
+```
+
+**메모**
+
+---
+
+## 111. 4d 측정: Lv10 이후 한 달 (GPT)
+
+**작업 110 뒤에 시작한다.**
+
+**전달할 내용**
+
+```
+마을 Lv10 이후 한 달의 흐름을 측정한다. tools/endgame-4a.ts --4c 흐름에 이벤트 던전(계절마다 6번)과 상점, 기념물(자원이 되면 세우기), 강화 확장, 레이드 단계, 번영을 더한다. core는 고치지 않는다. 결과는 Docs/endgame.md 끝에 "4d 측정 (날짜)" 절로 적는다.
+
+1. Lv10 도달 뒤 30일 동안: 기념물 단계, 번영 등급, 강화 단계(장비별 기대 비용과 실제 소모)의 진행.
+2. 금고 자원 아홉 가지와 일반 재료의 수입·지출·잔액. 여전히 쌓이는 자원과 모자라는 자원.
+3. "소원만 가능" 비율과 "100개 넘는 재료 3종" 비율이 작업 91·103보다 얼마나 줄었는지.
+4. 레이드 단계별 처치 비율, 이벤트 상점에서 실제로 사는 물건.
+5. 숫자를 바꿀 제안이 있으면 파일·키·값으로 적는다(고치지는 않는다).
+```
+
+**메모**
