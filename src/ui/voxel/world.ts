@@ -21,8 +21,9 @@ export const LOTS: Record<BuildingId, Lot> = {
   magic: { x: -10.5, z: 1, w: 3, d: 2.6 },
   house: { x: -9, z: 5.8, w: 3, d: 2.6 },
   school: { x: -10.5, z: 10.6, w: 3.2, d: 2.6 },
-  // Placeholder spot for the market on the east side of the square until it gets a model (Docs/market.md).
-  market: { x: 10.3, z: -2.4, w: 3, d: 2.4 },
+  // East of the square, between the inn yard and the guild (Docs/market.md).
+  // Kept clear of INN_YARD, the guild front, the fountain rim and the south road.
+  market: { x: 10.8, z: -3.2, w: 3.2, d: 2.6 },
   // South-west of the square: the training yard, in plain view.
   training: { x: -5.6, z: 8.4, w: 3.6, d: 3.2 },
   // East and south-east.
@@ -36,6 +37,23 @@ export const LOTS: Record<BuildingId, Lot> = {
 export function trainingPad(): { x: number; z: number; faceX: number; faceZ: number } {
   const lot = LOTS.training
   return { x: lot.x - 0.35, z: lot.z + 0.55, faceX: lot.x + 0.55, faceZ: lot.z - 0.35 }
+}
+
+// Patch of dirt in front of the market where townsfolk sometimes browse.
+export function marketFront(): { minX: number; maxX: number; minZ: number; maxZ: number } {
+  const lot = LOTS.market
+  return {
+    minX: lot.x - 1.1,
+    maxX: lot.x + 0.6,
+    minZ: lot.z + lot.d / 2 + 0.15,
+    maxZ: lot.z + lot.d / 2 + 1.35,
+  }
+}
+
+// Parked spot for the wandering merchant's cart, just east of the stalls.
+export function merchantPark(): { x: number; z: number } {
+  const lot = LOTS.market
+  return { x: lot.x + lot.w / 2 + 1.05, z: lot.z + 0.55 }
 }
 
 export const PLAZA = { min: -5.3, max: 5.3 }
@@ -504,6 +522,9 @@ function drawBuilding(b: Builder, id: BuildingId, lot: Lot, level: number): numb
   if (id === 'training') {
     return drawTraining(b, w, d, level)
   }
+  if (id === 'market') {
+    return drawMarket(b, w, d, level)
+  }
   if (id === 'smith') {
     const top = house(b, { w, d, h: 1.4 + grow * 0.25, wall: '#9a7a5c', roof: '#6d6d6d', steps: 3 })
     b.box(0.6, 1.3, 0.6, '#7d7a74', -w * 0.3, top + 0.2, -d * 0.15).box(0.36, 0.2, 0.36, '#ff8a3d', -w * 0.3, top + 0.86, -d * 0.15, { glow: true })
@@ -575,6 +596,113 @@ export function buildCemetery(graves: { legend?: boolean }[]): THREE.Group {
   // The quiet south-east corner, clear of every lot.
   group.position.set(10.2, 0, 9.4)
   return group
+}
+
+// Tent stalls at Lv1, more stalls and a sign at Lv2, a roofed hall with flags at Lv3.
+function drawMarket(b: Builder, w: number, d: number, level: number): number {
+  const plank = '#c9a36b'
+  b.box(w * 0.98, 0.08, d * 0.98, plank, 0, 0.06, 0)
+  b.box(w * 0.7, 0.04, d * 0.55, '#d4b474', 0, 0.1, 0.15)
+  drawStall(b, -w * 0.3, 0.05, '#e85d4c', '#f4f0e4')
+  drawStall(b, w * 0.28, 0.1, '#4a7eb5', '#f4f0e4')
+  // Goods out front.
+  b.box(0.34, 0.28, 0.34, '#8a5a32', -0.55, 0.22, d * 0.38)
+  b.box(0.28, 0.22, 0.28, '#6b4a33', -0.2, 0.2, d * 0.4)
+  b.box(0.38, 0.2, 0.26, '#d4b474', 0.25, 0.18, d * 0.42)
+  b.box(0.26, 0.32, 0.26, '#7a5236', 0.6, 0.24, d * 0.32)
+  b.box(0.22, 0.18, 0.22, '#c4a574', 0.55, 0.48, d * 0.32)
+  let peak = 1.2
+  if (level >= 2) {
+    drawStall(b, 0, -0.35, '#3f6b4a', '#efe6d4')
+    b.box(0.08, 1.15, 0.08, WOOD, w * 0.05, 0.7, d / 2 + 0.15)
+    b.box(0.72, 0.42, 0.06, '#e2b340', w * 0.05, 1.25, d / 2 + 0.18)
+    b.box(0.5, 0.08, 0.04, '#8a5a32', w * 0.05, 1.08, d / 2 + 0.2)
+    b.box(0.3, 0.24, 0.3, '#9c7448', -w * 0.4, 0.22, -d * 0.35)
+    peak = 1.5
+  }
+  if (level >= 3) {
+    const posts = [
+      [-w * 0.42, -d * 0.4],
+      [w * 0.42, -d * 0.4],
+      [-w * 0.42, d * 0.28],
+      [w * 0.42, d * 0.28],
+    ] as const
+    const roofH = 1.55
+    for (const [px, pz] of posts) {
+      b.box(0.12, roofH, 0.12, WOOD, px, roofH / 2 + 0.08, pz)
+    }
+    b.box(w * 0.98, 0.14, d * 0.88, '#c45c3a', 0, roofH + 0.16, -0.05)
+    b.box(w * 0.7, 0.08, d * 0.55, '#a84830', 0, roofH + 0.28, -0.05)
+    // Flags on the back posts.
+    b.box(0.07, 0.85, 0.07, WOOD, -w * 0.42, roofH + 0.45, -d * 0.4)
+    b.box(0.38, 0.26, 0.04, '#e2b340', -w * 0.22, roofH + 0.8, -d * 0.4)
+    b.box(0.07, 0.85, 0.07, WOOD, w * 0.42, roofH + 0.45, -d * 0.4)
+    b.box(0.38, 0.26, 0.04, '#4a7eb5', w * 0.22, roofH + 0.8, -d * 0.4)
+    peak = roofH + 1.05
+  }
+  return peak
+}
+
+function drawStall(b: Builder, x: number, z: number, stripeA: string, stripeB: string) {
+  b.box(0.95, 0.38, 0.55, '#8a5a32', x, 0.35, z)
+  b.box(0.9, 0.06, 0.5, '#6b4a33', x, 0.56, z)
+  b.box(0.06, 0.9, 0.06, WOOD, x - 0.42, 0.8, z - 0.22)
+  b.box(0.06, 0.9, 0.06, WOOD, x + 0.42, 0.8, z - 0.22)
+  b.box(0.06, 0.72, 0.06, WOOD, x - 0.42, 0.7, z + 0.24)
+  b.box(0.06, 0.72, 0.06, WOOD, x + 0.42, 0.7, z + 0.24)
+  for (let i = 0; i < 4; i += 1) {
+    b.box(0.24, 0.09, 0.72, i % 2 === 0 ? stripeA : stripeB, x - 0.36 + i * 0.24, 1.08, z)
+  }
+  b.box(0.18, 0.16, 0.18, '#e8d4a8', x - 0.25, 0.68, z + 0.05)
+  b.box(0.14, 0.2, 0.14, '#8fd4ef', x + 0.2, 0.7, z + 0.02)
+}
+
+// Covered cart and donkey for the wandering merchant (Docs/market.md).
+export function buildMerchantCart(): THREE.Group {
+  const root = new THREE.Group()
+  const body = new Builder()
+  body.box(1.35, 0.22, 0.8, '#8a5a32', 0, 0.48, 0)
+  body.box(1.45, 0.08, 0.9, '#6b4a33', 0, 0.62, 0)
+  body.box(0.08, 0.45, 0.78, '#8a5a32', -0.62, 0.78, 0)
+  body.box(0.08, 0.45, 0.78, '#8a5a32', 0.62, 0.78, 0)
+  body.box(1.2, 0.5, 0.72, '#c45c3a', 0, 0.95, 0)
+  body.box(1.28, 0.08, 0.78, '#efe6d4', 0, 1.22, 0)
+  body.box(0.35, 0.22, 0.28, '#9c7448', -0.25, 0.78, 0.05)
+  body.box(0.28, 0.18, 0.22, '#d4b474', 0.3, 0.76, -0.05)
+  body.box(0.5, 0.08, 0.12, WOOD, 0, 0.4, 0.75)
+  root.add(body.build())
+
+  const wheels = new THREE.Group()
+  wheels.name = 'wheels'
+  for (const [x, z] of [
+    [-0.48, 0.42],
+    [0.48, 0.42],
+    [-0.48, -0.42],
+    [0.48, -0.42],
+  ] as const) {
+    const wheel = new Builder()
+      .box(0.12, 0.42, 0.42, '#3a2a20', 0, 0, 0)
+      .box(0.08, 0.12, 0.12, '#c9a36b', 0, 0, 0)
+      .build({ castShadow: false })
+    wheel.position.set(x, 0.22, z)
+    wheels.add(wheel)
+  }
+  root.add(wheels)
+
+  const animal = new Builder()
+  animal.box(0.32, 0.38, 0.62, '#8a7048', 0, 0.48, 1.15)
+  animal.box(0.26, 0.26, 0.28, '#8a7048', 0, 0.72, 1.48)
+  animal.box(0.08, 0.16, 0.06, '#5a4830', -0.08, 0.88, 1.42)
+  animal.box(0.08, 0.16, 0.06, '#5a4830', 0.08, 0.88, 1.42)
+  animal.box(0.08, 0.08, 0.04, '#2a2a2a', -0.07, 0.74, 1.62)
+  animal.box(0.08, 0.08, 0.04, '#2a2a2a', 0.07, 0.74, 1.62)
+  animal.box(0.08, 0.28, 0.08, '#5a4830', -0.12, 0.22, 0.95)
+  animal.box(0.08, 0.28, 0.08, '#5a4830', 0.12, 0.22, 0.95)
+  animal.box(0.08, 0.28, 0.08, '#5a4830', -0.12, 0.22, 1.35)
+  animal.box(0.08, 0.28, 0.08, '#5a4830', 0.12, 0.22, 1.35)
+  animal.box(0.06, 0.22, 0.08, '#6b4a33', 0, 0.45, 0.8)
+  root.add(animal.build())
+  return root
 }
 
 function drawTemple(b: Builder, w: number, d: number, grow: number): number {

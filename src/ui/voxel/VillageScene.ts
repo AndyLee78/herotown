@@ -1,10 +1,23 @@
 import * as THREE from 'three'
 import { MapControls } from 'three/examples/jsm/controls/MapControls.js'
 import { familyRules, type BuildingId, type Hero } from '../../core'
-import { buildCharacter, idlePose, walkPose, type Rig } from './character'
+import { buildBody, buildCharacter, idlePose, walkPose, type Rig } from './character'
 import { Builder, disposeTree, makeLabel } from './kit'
 import { hashString, lookFor, lookKey, seeded } from './look'
-import { GATE, GATHER, INN_YARD, LOTS, PLAZA, buildCemetery, buildLot, buildTerrain, trainingPad } from './world'
+import {
+  GATE,
+  GATHER,
+  INN_YARD,
+  LOTS,
+  PLAZA,
+  buildCemetery,
+  buildLot,
+  buildMerchantCart,
+  buildTerrain,
+  marketFront,
+  merchantPark,
+  trainingPad,
+} from './world'
 
 export type VillageSceneProps = {
   roster: Hero[]
@@ -98,6 +111,18 @@ export class VillageScene {
   private readonly bursts: { group: THREE.Group; life: number }[] = []
   private downAt: [number, number] | null = null
   private readonly raycaster = new THREE.Raycaster()
+  // Wandering merchant cart + figure, built once and shown while in town.
+  private merchantWanted = false
+  private merchantBooted = false
+  private marketOpen = false
+  private merchantRoot: THREE.Group | null = null
+  private merchantWheels: THREE.Object3D | null = null
+  private merchantPerson: THREE.Group | null = null
+  private merchantRig: Rig | null = null
+  private merchantState: 'hidden' | 'arrive' | 'idle' | 'leave' = 'hidden'
+  private readonly merchantTarget = new THREE.Vector3()
+  private merchantPhase = 0.7
+  private merchantPace = 0
 
   constructor(
     private readonly canvas: HTMLCanvasElement,
@@ -172,6 +197,8 @@ export class VillageScene {
     if (props.wishBurst) {
       this.playWish(props.wishJackpot)
     }
+    this.marketOpen = (props.buildings.market ?? 0) > 0
+    this.syncMerchant(props.merchant)
     const party = new Set(props.partyIds)
     for (const walker of this.walkers.values()) {
       this.setMarker(walker, walker.kind === 'roster' && party.has(walker.id))
@@ -193,6 +220,138 @@ export class VillageScene {
     freeOwnMaterials(this.scene)
     disposeTree(this.scene)
     this.renderer.dispose()
+  }
+
+  private ensureMerchant() {
+    if (this.merchantRoot) {
+      return
+    }
+    const root = new THREE.Group()
+    const cart = buildMerchantCart()
+    root.add(cart)
+    this.merchantWheels = cart.getObjectByName('wheels') ?? null
+    const rig = buildBody({
+      outfit: { body: '#6b4a8a', trim: '#e2b340', pants: '#3a2a40', weapon: 'none', hat: 'feather', scarf: true },
+      skin: '#f0d2b0',
+      eye: '#2a2a2a',
+      blush: true,
+      hair: '#3a2a20',
+      style: 'short',
+      beard: true,
+      scale: 1,
+      head: 1,
+      stoop: 0,
+    })
+    const pack = new Builder()
+      .box(0.28, 0.34, 0.16, '#6b4a33', 0, 0.18, -0.2)
+      .box(0.12, 0.12, 0.08, '#8a5a32', 0, 0.34, -0.22)
+      .box(0.06, 0.2, 0.04, '#c9a36b', -0.12, 0.22, -0.12)
+      .box(0.06, 0.2, 0.04, '#c9a36b', 0.12, 0.22, -0.12)
+      .build({ castShadow: false })
+    rig.torso.add(pack)
+    const person = new THREE.Group()
+    person.add(rig.group)
+    person.position.set(0.55, 0, 0.15)
+    root.add(person)
+    root.visible = false
+    this.scene.add(root)
+    this.merchantRoot = root
+    this.merchantPerson = person
+    this.merchantRig = rig
+  }
+
+  private syncMerchant(present: boolean) {
+    this.ensureMerchant()
+    const root = this.merchantRoot
+    if (!root) {
+      return
+    }
+    const park = merchantPark()
+    // First paint: if they are already here, stand at the stall (no entrance roll).
+    if (!this.merchantBooted) {
+      this.merchantBooted = true
+      this.merchantWanted = present
+      if (present) {
+        root.visible = true
+        root.position.set(park.x, 0, park.z)
+        root.rotation.y = Math.PI / 2
+        this.merchantState = 'idle'
+        if (this.merchantPerson) {
+          this.merchantPerson.position.set(0.55, 0, 0.15)
+        }
+      }
+      return
+    }
+    if (present && !this.merchantWanted) {
+      // Fresh arrival: roll in from the south gate.
+      root.visible = true
+      root.position.set(GATE.x + 1.2, 0, GATE.z + 0.4)
+      root.rotation.y = Math.atan2(park.x - root.position.x, park.z - root.position.z)
+      this.merchantTarget.set(park.x, 0, park.z)
+      this.merchantState = 'arrive'
+      this.merchantPace = 0
+    } else if (!present && this.merchantWanted) {
+      root.visible = true
+      this.merchantTarget.set(GATE.x + 1.2, 0, GATE.z + 0.6)
+      this.merchantState = 'leave'
+    }
+    this.merchantWanted = present
+  }
+
+  private stepMerchant(delta: number, time: number) {
+    const root = this.merchantRoot
+    const rig = this.merchantRig
+    if (!root || !rig || this.merchantState === 'hidden') {
+      return
+    }
+    if (this.merchantState === 'idle') {
+      const park = merchantPark()
+      this.merchantPace += delta
+      // Pace a short loop beside the cart, then wave.
+      const loop = (Math.sin(this.merchantPace * 0.7) + 1) * 0.5
+      if (this.merchantPerson) {
+        this.merchantPerson.position.set(0.55 + loop * 0.55, 0, 0.15 - loop * 0.35)
+        this.merchantPerson.rotation.y = loop > 0.55 ? -0.6 : 0.2
+      }
+      idlePose(rig, time, this.merchantPhase)
+      if (loop > 0.7) {
+        rig.armR.rotation.set(-1.1 + Math.sin(time * 5) * 0.45, 0, 0.35)
+      }
+      root.rotation.y = Math.PI / 2
+      root.position.set(park.x, 0, park.z)
+      return
+    }
+    const dx = this.merchantTarget.x - root.position.x
+    const dz = this.merchantTarget.z - root.position.z
+    const distance = Math.hypot(dx, dz)
+    if (distance < 0.08) {
+      if (this.merchantState === 'arrive') {
+        this.merchantState = 'idle'
+        this.merchantPace = 0
+        root.rotation.y = Math.PI / 2
+        if (this.merchantPerson) {
+          this.merchantPerson.position.set(0.55, 0, 0.15)
+          this.merchantPerson.rotation.y = 0.2
+        }
+      } else if (this.merchantState === 'leave') {
+        this.merchantState = 'hidden'
+        root.visible = false
+      }
+      idlePose(rig, time, this.merchantPhase)
+      return
+    }
+    const step = Math.min(distance, 2.4 * delta)
+    root.position.x += (dx / distance) * step
+    root.position.z += (dz / distance) * step
+    root.rotation.y = turnToward(root.rotation.y, Math.atan2(dx, dz), delta * 5)
+    if (this.merchantWheels) {
+      this.merchantWheels.rotation.x += step * 3.2
+    }
+    if (this.merchantPerson) {
+      this.merchantPerson.position.set(0.55, 0, 0.15)
+      this.merchantPerson.rotation.y = 0
+    }
+    walkPose(rig, time, this.merchantPhase, 1.1)
   }
 
   private syncGate(count: number) {
@@ -772,6 +931,7 @@ export class VillageScene {
     for (const walker of this.walkers.values()) {
       this.step(walker, delta, time)
     }
+    this.stepMerchant(delta, time)
     this.bobFountain(time)
     this.bobSmoke(time)
     this.bobCrystals(time)
@@ -831,12 +991,21 @@ export class VillageScene {
           walker.timer = 0.6
           return
         }
-        const area = walker.kind === 'visitor' ? YARD_AREA : PLAZA_AREA
-        walker.target.set(
-          area.minX + walker.random() * (area.maxX - area.minX),
-          0,
-          area.minZ + walker.random() * (area.maxZ - area.minZ),
-        )
+        if (walker.kind === 'roster' && this.marketOpen && walker.random() < 0.14) {
+          const front = marketFront()
+          walker.target.set(
+            front.minX + walker.random() * (front.maxX - front.minX),
+            0,
+            front.minZ + walker.random() * (front.maxZ - front.minZ),
+          )
+        } else {
+          const area = walker.kind === 'visitor' ? YARD_AREA : PLAZA_AREA
+          walker.target.set(
+            area.minX + walker.random() * (area.maxX - area.minX),
+            0,
+            area.minZ + walker.random() * (area.maxZ - area.minZ),
+          )
+        }
         keepOffFountain(walker.target)
         walker.state = 'walk'
       }
