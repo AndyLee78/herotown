@@ -28,8 +28,9 @@ export const LOTS: Record<BuildingId, Lot> = {
   // North-west of the square it stood in front of the hall and hid its door
   // from the camera; here nothing stands behind it. The yard opens south.
   tavern: { x: 7.3, z: -2.1, w: 3.2, d: 2.8 },
-  // Placeholder spot for the hall of fame east of the inn until it gets a model (Docs/legends.md).
-  legends: { x: 12.3, z: -9.8, w: 3, d: 2.6 },
+  // East of the inn, clear of the wheat field and the inn yard (Docs/legends.md).
+  // Front opens south for statues; trees south-east of here were nudged away.
+  legends: { x: 12.6, z: -9.4, w: 3.4, d: 2.8 },
   // South-west of the square: the training yard, in plain view.
   training: { x: -5.6, z: 8.4, w: 3.6, d: 3.2 },
   // East and south-east.
@@ -122,7 +123,7 @@ export function buildTerrain(): THREE.Group {
 
   const trees: [number, number, number][] = [
     [-13.5, -2, 1], [-13.6, 3.6, 0.8], [-13.5, 10, 1.1], [-4.5, -13.5, 0.9], [4.5, -13.5, 1], [13.8, -6, 1], [13.5, 8.5, 0.9],
-    [13, 13, 1.1], [-13.4, 13.2, 0.9], [13, -12.5, 1], [-13, -13, 1.1], [3, 13.5, 0.8], [-13.4, -7, 0.7], [12, -11.5, 0.8], [-2.6, 13.5, 1],
+    [13, 13, 1.1], [-13.4, 13.2, 0.9], [14.8, -13.2, 1], [-13, -13, 1.1], [3, 13.5, 0.8], [-13.4, -7, 0.7], [15.2, -11.2, 0.8], [-2.6, 13.5, 1],
   ]
   for (const [x, z, s] of trees) {
     const y = groundTop(x, z)
@@ -561,6 +562,9 @@ function drawBuilding(b: Builder, id: BuildingId, lot: Lot, level: number): numb
   if (id === 'tavern') {
     return drawTavern(b, w, d, level)
   }
+  if (id === 'legends') {
+    return drawLegends(b, w, d, level)
+  }
   if (id === 'smith') {
     const top = house(b, { w, d, h: 1.4 + grow * 0.25, wall: '#9a7a5c', roof: '#6d6d6d', steps: 3 })
     b.box(0.6, 1.3, 0.6, '#7d7a74', -w * 0.3, top + 0.2, -d * 0.15).box(0.36, 0.2, 0.36, '#ff8a3d', -w * 0.3, top + 0.86, -d * 0.15, { glow: true })
@@ -983,4 +987,115 @@ function drawTemple(b: Builder, w: number, d: number, grow: number): number {
   b.box(0.25, 0.25, 0.25, '#e8c95a', 0, top + 0.55, 0.46, { glow: true })
   b.box(0.36, 0.5, 0.05, '#9fd3ff', w * 0.3, 1.2, d / 2 + 0.03, { glow: true })
   return top + 1.1
+}
+
+// Hall of fame: white-stone shrine with pillars (Docs/legends.md).
+// Lv2 adds steps and banners; Lv3 adds a gold roof crest and braziers.
+function drawLegends(b: Builder, w: number, d: number, level: number): number {
+  const grow = level - 1
+  const top = house(b, { w, d, h: 1.55 + grow * 0.2, wall: '#f2efe6', roof: '#8a9098', steps: 3, stone: '#c9c5bb' })
+  // Front columns.
+  for (const x of [-w * 0.32, w * 0.32]) {
+    b.box(0.22, 1.35, 0.22, '#e8e4da', x, 0.78, d / 2 + 0.05)
+    b.box(0.3, 0.1, 0.3, '#d4d0c6', x, 1.5, d / 2 + 0.05)
+    b.box(0.3, 0.1, 0.3, '#d4d0c6', x, 0.12, d / 2 + 0.05)
+  }
+  // Pediment plaque.
+  b.box(w * 0.55, 0.28, 0.08, '#d9b54a', 0, 1.55, d / 2 + 0.08)
+  b.box(0.18, 0.18, 0.06, '#ffe27a', 0, 1.55, d / 2 + 0.12, { glow: true })
+  let peak = Math.max(top, 1.7)
+  if (level >= 2) {
+    // Broad front steps and flags.
+    b.box(w * 1.05, 0.1, 0.55, '#c9c5bb', 0, 0.08, d / 2 + 0.55)
+    b.box(w * 0.9, 0.1, 0.4, '#bdb9af', 0, 0.16, d / 2 + 0.4)
+    for (const x of [-w * 0.45, w * 0.45]) {
+      b.box(0.08, 1.35, 0.08, WOOD, x, 0.75, d / 2 + 0.7)
+      b.box(0.38, 0.5, 0.05, x < 0 ? '#c0392b' : '#3f6fa8', x + (x < 0 ? 0.2 : -0.2), 1.15, d / 2 + 0.7)
+      b.box(0.38, 0.08, 0.05, '#efe6d4', x + (x < 0 ? 0.2 : -0.2), 1.38, d / 2 + 0.7)
+    }
+    peak = Math.max(peak, 1.55)
+  }
+  if (level >= 3) {
+    // Gold crest and braziers.
+    b.box(0.7, 0.18, 0.7, '#d9b54a', 0, top + 0.2, 0)
+    b.box(0.35, 0.35, 0.35, '#ffe27a', 0, top + 0.45, 0, { glow: true })
+    b.box(0.5, 0.12, 0.12, '#d9b54a', 0, top + 0.55, 0)
+    for (const x of [-w * 0.38, w * 0.38]) {
+      b.box(0.28, 0.35, 0.28, '#6b4a33', x, 0.35, d / 2 + 0.35)
+      b.box(0.22, 0.12, 0.22, '#ff8a3d', x, 0.58, d / 2 + 0.35, { glow: true })
+      b.box(0.1, 0.22, 0.1, '#ffd36b', x, 0.72, d / 2 + 0.35, { glow: true })
+    }
+    peak = Math.max(peak, top + 0.7)
+  }
+  return peak
+}
+
+// Pads south of the hall for legend statues: 2 / 4 / 6 by building level.
+export function legendStatuePads(level: number): { x: number; z: number }[] {
+  const count = level <= 0 ? 0 : level === 1 ? 2 : level === 2 ? 4 : 6
+  const lot = LOTS.legends
+  const front = lot.z + lot.d / 2 + 0.85
+  const pads: { x: number; z: number }[] = []
+  if (count <= 2) {
+    for (const x of [lot.x - 0.75, lot.x + 0.75]) {
+      pads.push({ x, z: front })
+    }
+  } else if (count <= 4) {
+    for (let index = 0; index < 4; index += 1) {
+      pads.push({
+        x: lot.x - 0.85 + (index % 2) * 1.7,
+        z: front + Math.floor(index / 2) * 0.9,
+      })
+    }
+  } else {
+    for (let index = 0; index < 6; index += 1) {
+      pads.push({
+        x: lot.x - 1.15 + (index % 3) * 1.15,
+        z: front + Math.floor(index / 3) * 0.9,
+      })
+    }
+  }
+  return pads.slice(0, count)
+}
+
+// Pedestals for displayed heirlooms around the hall front and sides.
+export function shrinePedestals(count: number): { x: number; z: number }[] {
+  const lot = LOTS.legends
+  const spots: { x: number; z: number }[] = [
+    { x: lot.x - 1.35, z: lot.z + 0.2 },
+    { x: lot.x + 1.35, z: lot.z + 0.2 },
+    { x: lot.x - 1.35, z: lot.z - 0.55 },
+    { x: lot.x + 1.35, z: lot.z - 0.55 },
+    { x: lot.x - 0.55, z: lot.z - lot.d / 2 - 0.35 },
+    { x: lot.x + 0.55, z: lot.z - lot.d / 2 - 0.35 },
+  ]
+  return spots.slice(0, Math.max(0, count))
+}
+
+const SHRINE_GRADE: Record<string, string> = {
+  common: '#c9c5bb',
+  fine: '#6db36d',
+  rare: '#5a8fd4',
+}
+
+// Tiny glowing heirloom model for a shrine pedestal (slot + grade colour).
+export function buildShrineRelic(slot: string, grade: string): THREE.Group {
+  const tint = SHRINE_GRADE[grade] ?? SHRINE_GRADE.common!
+  const b = new Builder()
+  b.box(0.36, 0.12, 0.36, '#8a8580', 0, 0.06, 0)
+  b.box(0.28, 0.08, 0.28, '#6b6762', 0, 0.14, 0)
+  if (slot === 'weapon') {
+    b.box(0.08, 0.55, 0.08, tint, 0, 0.48, 0, { glow: true })
+    b.box(0.22, 0.08, 0.06, '#d9b54a', 0, 0.28, 0)
+    b.box(0.14, 0.14, 0.04, tint, 0, 0.72, 0, { glow: true })
+  } else if (slot === 'armor') {
+    b.box(0.28, 0.32, 0.16, tint, 0, 0.4, 0, { glow: true })
+    b.box(0.34, 0.1, 0.2, '#d9b54a', 0, 0.28, 0)
+    b.box(0.12, 0.12, 0.12, tint, 0, 0.58, 0, { glow: true })
+  } else {
+    b.box(0.16, 0.16, 0.1, tint, 0, 0.36, 0, { glow: true })
+    b.box(0.06, 0.22, 0.06, '#d9b54a', 0, 0.28, 0)
+    b.box(0.2, 0.06, 0.06, tint, 0, 0.48, 0, { glow: true })
+  }
+  return b.build({ castShadow: false })
 }

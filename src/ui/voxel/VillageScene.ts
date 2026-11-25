@@ -6,6 +6,9 @@ import {
   moraleOf,
   personalityOf,
   type BuildingId,
+  type ClassId,
+  type Gender,
+  type Genes,
   type Hero,
   type PersonalityId,
 } from '../../core'
@@ -23,15 +26,21 @@ import {
   buildFestivalDecor,
   buildLot,
   buildMerchantCart,
+  buildShrineRelic,
   buildTerrain,
   buildToastTable,
+  legendStatuePads,
   marketFront,
   merchantPark,
+  shrinePedestals,
   tavernTableSpot,
   tavernYard,
   trainingPad,
   type FestivalKind,
 } from './world'
+
+type LegendProp = { id: string; name: string; classId: string; gender?: string; genes?: unknown }
+type ShrineProp = { id: string; slot: string; grade: string }
 
 export type VillageSceneProps = {
   roster: Hero[]
@@ -62,9 +71,9 @@ export type VillageSceneProps = {
   // The festival held this season, if any (Docs/morale.md), for decorations (task 87).
   festival: 'spring' | 'summer' | 'autumn' | 'winter' | null
   // Legends for statues at the hall of fame (graves and retired legends), and
-  // the heirlooms on display (Docs/legends.md); the 3D comes with task 88.
-  legends: { id: string; name: string; classId: string; gender?: string; genes?: unknown }[]
-  shrine: { id: string; slot: string; grade: string }[]
+  // the heirlooms on display (Docs/legends.md).
+  legends: LegendProp[]
+  shrine: ShrineProp[]
 }
 
 type Area = { minX: number; maxX: number; minZ: number; maxZ: number }
@@ -179,6 +188,11 @@ export class VillageScene {
   private festivalKind: FestivalKind | null = null
   private festivalWithYard = false
   private festivalDecor: THREE.Group | null = null
+  private legendsLevel = 0
+  private statuesKey = ''
+  private statuesRoot: THREE.Group | null = null
+  private shrineKey = ''
+  private shrineRoot: THREE.Group | null = null
   private readonly childIds = new Set<string>()
   private readonly moodSlots: MoodSlot[] = []
 
@@ -267,6 +281,9 @@ export class VillageScene {
     this.syncMerchant(props.merchant)
     this.syncTavernRound(props.tavernRound)
     this.syncFestival(props.festival)
+    this.legendsLevel = props.buildings.legends ?? 0
+    this.syncLegendStatues(props.legends)
+    this.syncShrine(props.shrine)
     const party = new Set(props.partyIds)
     for (const walker of this.walkers.values()) {
       this.setMarker(walker, walker.kind === 'roster' && party.has(walker.id))
@@ -295,6 +312,8 @@ export class VillageScene {
       this.toastCups = null
     }
     this.clearFestivalDecor()
+    this.clearLegendStatues()
+    this.clearShrine()
     freeOwnMaterials(this.scene)
     disposeTree(this.scene)
     this.renderer.dispose()
@@ -665,6 +684,112 @@ export class VillageScene {
     freeOwnMaterials(this.festivalDecor)
     disposeTree(this.festivalDecor)
     this.festivalDecor = null
+  }
+
+  // Marble statues of the first legends; rebuilt only when the list or hall level changes.
+  private syncLegendStatues(legends: LegendProp[]) {
+    const pads = legendStatuePads(this.legendsLevel)
+    const shown = this.legendsLevel < 1 ? [] : legends.slice(0, pads.length)
+    const key = `${this.legendsLevel}:${shown.map((entry) => entry.id).join(',')}`
+    if (key === this.statuesKey) {
+      return
+    }
+    this.statuesKey = key
+    this.clearLegendStatues()
+    if (shown.length === 0) {
+      return
+    }
+    const root = new THREE.Group()
+    root.name = 'legend-statues'
+    shown.forEach((entry, index) => {
+      const pad = pads[index]
+      if (!pad) {
+        return
+      }
+      const pedestal = new Builder()
+        .box(0.55, 0.14, 0.55, '#c9c5bb', 0, 0.08, 0)
+        .box(0.42, 0.1, 0.42, '#b8b4aa', 0, 0.18, 0)
+        .build()
+      pedestal.position.set(pad.x, 0, pad.z)
+      root.add(pedestal)
+      const gender: Gender = entry.gender === 'female' ? 'female' : 'male'
+      const classId = entry.classId as ClassId
+      const genes = isGenes(entry.genes) ? entry.genes : undefined
+      const look = lookFor({ id: entry.id, classId, gender, age: 38, genes })
+      const rig = buildCharacter(look)
+      marbleize(rig.group)
+      idlePose(rig, index * 0.7, index * 1.3)
+      const figure = new THREE.Group()
+      figure.add(rig.group)
+      figure.position.set(pad.x, 0.22, pad.z)
+      figure.rotation.y = Math.PI
+      figure.scale.setScalar(1.05)
+      root.add(figure)
+    })
+    this.scene.add(root)
+    this.statuesRoot = root
+  }
+
+  private clearLegendStatues() {
+    if (!this.statuesRoot) {
+      return
+    }
+    this.scene.remove(this.statuesRoot)
+    disposeTree(this.statuesRoot)
+    this.statuesRoot = null
+  }
+
+  // Glowing heirloom models on pedestals around the hall.
+  private syncShrine(shrine: ShrineProp[]) {
+    const pads = this.legendsLevel < 1 ? [] : shrinePedestals(shrine.length)
+    const shown = this.legendsLevel < 1 ? [] : shrine.slice(0, pads.length)
+    const key = `${this.legendsLevel}:${shown.map((item) => `${item.id}:${item.slot}:${item.grade}`).join(',')}`
+    if (key === this.shrineKey) {
+      return
+    }
+    this.shrineKey = key
+    this.clearShrine()
+    if (shown.length === 0) {
+      return
+    }
+    const root = new THREE.Group()
+    root.name = 'legend-shrine'
+    shown.forEach((item, index) => {
+      const pad = pads[index]
+      if (!pad) {
+        return
+      }
+      const relic = buildShrineRelic(item.slot, item.grade)
+      relic.position.set(pad.x, 0, pad.z)
+      relic.userData.baseY = 0
+      relic.userData.phase = index * 1.1
+      root.add(relic)
+    })
+    this.scene.add(root)
+    this.shrineRoot = root
+  }
+
+  private clearShrine() {
+    if (!this.shrineRoot) {
+      return
+    }
+    this.scene.remove(this.shrineRoot)
+    disposeTree(this.shrineRoot)
+    this.shrineRoot = null
+  }
+
+  private bobShrine(time: number) {
+    if (!this.shrineRoot) {
+      return
+    }
+    for (const child of this.shrineRoot.children) {
+      const base = child.userData.baseY
+      const phase = child.userData.phase
+      if (typeof base === 'number' && typeof phase === 'number') {
+        child.position.y = base + Math.sin(time * 2.2 + phase) * 0.04
+        child.rotation.y = time * 0.6 + phase
+      }
+    }
   }
 
   private stepBursts(delta: number) {
@@ -1391,6 +1516,7 @@ export class VillageScene {
     this.bobSmoke(time)
     this.bobCrystals(time)
     this.bobToastCups(time)
+    this.bobShrine(time)
     this.endToastIfDone()
     this.stepBursts(delta)
     this.controls.update()
@@ -1631,6 +1757,33 @@ export class VillageScene {
       }
     }
   }
+}
+
+function isGenes(value: unknown): value is Genes {
+  if (!value || typeof value !== 'object') {
+    return false
+  }
+  const record = value as Record<string, unknown>
+  return typeof record.skin === 'string' && typeof record.hair === 'string' && typeof record.eye === 'string'
+}
+
+// Desaturate character vertex colours into pale marble while keeping shared materials.
+function marbleize(root: THREE.Object3D) {
+  root.traverse((object) => {
+    if (!(object instanceof THREE.Mesh)) {
+      return
+    }
+    const colors = object.geometry.getAttribute('color')
+    if (!colors) {
+      return
+    }
+    for (let index = 0; index < colors.count; index += 1) {
+      const lum = colors.getX(index) * 0.3 + colors.getY(index) * 0.5 + colors.getZ(index) * 0.2
+      const tone = 0.58 + lum * 0.32
+      colors.setXYZ(index, tone * 0.96, tone * 0.95, tone * 0.9)
+    }
+    colors.needsUpdate = true
+  })
 }
 
 function freeOwnMaterials(root: THREE.Object3D) {
