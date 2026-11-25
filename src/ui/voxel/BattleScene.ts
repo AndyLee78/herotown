@@ -6,6 +6,23 @@ import { Builder, disposeTree } from './kit'
 import { lookFor, seeded } from './look'
 import type { Hit, ReplayStep, StatusMark } from './replay'
 
+export type BattleBackdrop = {
+  special?: 'weekday' | 'endless'
+  element?: 'flame' | 'frost' | 'light'
+  difficulty?: 1 | 2 | 3
+  abyssFrom?: number
+}
+
+type BattleTheme = {
+  sky: string
+  floor: readonly string[]
+  wall: readonly string[]
+  light: string
+  crystal: string
+  kind: 'tier' | 'nest' | 'flame' | 'frost' | 'light' | 'abyss'
+  intensity: number
+}
+
 // Plays a dungeon report back as a 3D auto battle. The outcome is already
 // decided by the core; this only shows the steps in order.
 
@@ -97,10 +114,14 @@ const CASTERS = new Set(['mage', 'cleric', 'bard', 'crypt_lord', 'wraith'])
 const STATUS_COLOR: Record<StatusMark, string> = { poison: '#6fbf4a', paralyze: '#ffe14a', slow: '#c4a574', silence: '#e05a4a' }
 const POTION_COLOR: Record<string, string> = { heal: '#8ef08a', antidote: '#7dff9a', tonic: '#ffe14a', clarity: '#d7c4ff' }
 const THEMES = {
-  1: { sky: '#2a2622', floor: ['#7a6a58', '#6f604f', '#84735f', '#756553'], wall: ['#5a4c40', '#524538', '#625244'], light: '#ffb85a', crystal: '#9fe8ff' },
-  2: { sky: '#24262a', floor: ['#6a6660', '#625e58', '#726d66', '#5d5953'], wall: ['#4a4744', '#53504c', '#44413e'], light: '#ffa64d', crystal: '#ffcf5a' },
-  3: { sky: '#1e1f2a', floor: ['#4e5266', '#565a70', '#4a4d60', '#525670'], wall: ['#3b3e4f', '#34374a', '#40435a'], light: '#c79bff', crystal: '#b48cff' },
-  nest: { sky: '#2a1210', floor: ['#5a3a30', '#4a2e28', '#6a4438', '#52342c'], wall: ['#4a2a22', '#3a1e18', '#5a3228'], light: '#ff6a3a', crystal: '#ffcf5a' },
+  1: { sky: '#2a2622', floor: ['#7a6a58', '#6f604f', '#84735f', '#756553'], wall: ['#5a4c40', '#524538', '#625244'], light: '#ffb85a', crystal: '#9fe8ff', kind: 'tier' as const, intensity: 1 },
+  2: { sky: '#24262a', floor: ['#6a6660', '#625e58', '#726d66', '#5d5953'], wall: ['#4a4744', '#53504c', '#44413e'], light: '#ffa64d', crystal: '#ffcf5a', kind: 'tier' as const, intensity: 1 },
+  3: { sky: '#1e1f2a', floor: ['#4e5266', '#565a70', '#4a4d60', '#525670'], wall: ['#3b3e4f', '#34374a', '#40435a'], light: '#c79bff', crystal: '#b48cff', kind: 'tier' as const, intensity: 1 },
+  nest: { sky: '#2a1210', floor: ['#5a3a30', '#4a2e28', '#6a4438', '#52342c'], wall: ['#4a2a22', '#3a1e18', '#5a3228'], light: '#ff6a3a', crystal: '#ffcf5a', kind: 'nest' as const, intensity: 2 },
+  flame: { sky: '#2a1008', floor: ['#6a2e1a', '#5a2414', '#7a3820', '#4a1c10'], wall: ['#4a1e12', '#3a160c', '#5a2818'], light: '#ff6a3a', crystal: '#ffcf5a', kind: 'flame' as const, intensity: 1 },
+  frost: { sky: '#101828', floor: ['#6a8498', '#5a7488', '#7a94a8', '#4a6478'], wall: ['#3a5068', '#2a4058', '#4a6078'], light: '#9fe8ff', crystal: '#d7f4ff', kind: 'frost' as const, intensity: 1 },
+  light: { sky: '#2a2418', floor: ['#d4c8a8', '#c8b898', '#e0d4b8', '#bcac88'], wall: ['#b8a888', '#a89878', '#c8b898'], light: '#ffe27a', crystal: '#fff6c8', kind: 'light' as const, intensity: 1 },
+  abyss: { sky: '#12081a', floor: ['#2a1838', '#221430', '#321c40', '#1a1028'], wall: ['#1a1028', '#140c20', '#221430'], light: '#9b6bff', crystal: '#c79bff', kind: 'abyss' as const, intensity: 1 },
 } as const
 
 const AFFIX_COLOR: Record<AffixId, string> = {
@@ -114,11 +135,40 @@ const AFFIX_COLOR: Record<AffixId, string> = {
   noRest: '#ff8a3d',
 }
 
-export function battleTheme(tier: number, dungeonId?: string) {
+export function battleTheme(tier: number, dungeonId?: string, backdrop?: BattleBackdrop): BattleTheme {
   if (dungeonId === 'dragon_nest') {
     return THEMES.nest
   }
+  if (backdrop?.special === 'weekday' && backdrop.element) {
+    const base = THEMES[backdrop.element]
+    return { ...base, intensity: backdrop.difficulty ?? 1 }
+  }
+  if (backdrop?.special === 'endless') {
+    const depth = backdrop.abyssFrom ?? 0
+    const t = Math.min(1, depth / 40)
+    return {
+      ...THEMES.abyss,
+      sky: mixThemeColor('#12081a', '#1a0808', t),
+      floor: THEMES.abyss.floor.map((hex) => mixThemeColor(hex, '#3a1418', t * 0.55)),
+      wall: THEMES.abyss.wall.map((hex) => mixThemeColor(hex, '#2a0c10', t * 0.45)),
+      light: mixThemeColor('#9b6bff', '#ff4a4a', t * 0.7),
+      crystal: mixThemeColor('#c79bff', '#ff8a6a', t * 0.6),
+      intensity: 1 + Math.floor(depth / 20),
+    }
+  }
   return THEMES[(Math.min(3, Math.max(1, tier)) as 1 | 2 | 3)]
+}
+
+function mixThemeColor(a: string, b: string, t: number): string {
+  const clamp = Math.min(1, Math.max(0, t))
+  const parse = (hex: string) => {
+    const value = hex.replace('#', '')
+    return [parseInt(value.slice(0, 2), 16), parseInt(value.slice(2, 4), 16), parseInt(value.slice(4, 6), 16)] as const
+  }
+  const [ar, ag, ab] = parse(a)
+  const [br, bg, bb] = parse(b)
+  const hex = (n: number) => Math.round(n).toString(16).padStart(2, '0')
+  return `#${hex(ar + (br - ar) * clamp)}${hex(ag + (bg - ag) * clamp)}${hex(ab + (bb - ab) * clamp)}`
 }
 
 export class BattleScene {
@@ -144,6 +194,10 @@ export class BattleScene {
   private quiet = false
   private frame = 0
   private readonly nest: boolean
+  private readonly abyssFrom: number
+  private readonly themeKind: BattleTheme['kind']
+  private floorLabel: THREE.Sprite | null = null
+  private readonly debris: { mesh: THREE.Mesh; base: THREE.Vector3; phase: number; speed: number }[] = []
 
   constructor(
     private readonly canvas: HTMLCanvasElement,
@@ -151,17 +205,21 @@ export class BattleScene {
     private readonly steps: ReplayStep[],
     tier: number,
     private readonly callbacks: BattleCallbacks,
+    backdrop: BattleBackdrop = {},
   ) {
     this.renderer = new THREE.WebGLRenderer({ canvas, antialias: true })
     this.renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2))
     this.renderer.shadowMap.enabled = true
     this.renderer.shadowMap.type = THREE.PCFSoftShadowMap
     this.nest = report.dungeonId === 'dragon_nest'
-    const theme = battleTheme(tier, report.dungeonId)
+    this.abyssFrom = backdrop.abyssFrom ?? 0
+    const theme = battleTheme(tier, report.dungeonId, backdrop)
+    this.themeKind = theme.kind
     this.scene.background = new THREE.Color(theme.sky)
-    this.scene.add(new THREE.HemisphereLight(this.nest ? '#ffb080' : '#ffffff', this.nest ? '#5a3020' : '#6b6256', this.nest ? 1.2 : 1.5))
-    const sun = new THREE.DirectionalLight(this.nest ? '#ff6a3a' : '#fff1dc', this.nest ? 1.6 : 2)
-    sun.position.set(this.nest ? -2 : 4, 12, 8)
+    const warm = theme.kind === 'flame' || theme.kind === 'nest' || theme.kind === 'abyss'
+    this.scene.add(new THREE.HemisphereLight(warm ? '#ffb080' : theme.kind === 'frost' ? '#d0e8ff' : '#ffffff', warm ? '#5a3020' : theme.kind === 'frost' ? '#405060' : '#6b6256', warm ? 1.2 : 1.5))
+    const sun = new THREE.DirectionalLight(theme.kind === 'flame' || theme.kind === 'nest' ? '#ff6a3a' : theme.kind === 'light' ? '#ffe8a8' : theme.kind === 'frost' ? '#c8e8ff' : theme.kind === 'abyss' ? '#c79bff' : '#fff1dc', warm ? 1.6 : 2)
+    sun.position.set(warm ? -2 : 4, 12, 8)
     sun.castShadow = true
     sun.shadow.mapSize.set(1024, 1024)
     Object.assign(sun.shadow.camera, { left: -9, right: 9, top: 9, bottom: -9, near: 1, far: 40 })
@@ -169,8 +227,12 @@ export class BattleScene {
     sun.shadow.normalBias = 0.02
     this.scene.add(sun, sun.target, this.bars)
     this.scene.add(this.buildArena(theme))
-    if (this.nest) {
-      this.spawnEmbers()
+    if (this.nest || theme.kind === 'flame') {
+      this.spawnEmbers(theme.light)
+    }
+    if (theme.kind === 'abyss') {
+      this.spawnDebris(theme.crystal)
+      this.setFloorLabel(this.abyssFrom + 1)
     }
     this.camera.position.copy(LOOK_AT).add(CAMERA_OFFSET)
     this.camera.lookAt(LOOK_AT)
@@ -291,7 +353,7 @@ export class BattleScene {
     this.renderer.dispose()
   }
 
-  private buildArena(theme: (typeof THEMES)[keyof typeof THEMES]): THREE.Group {
+  private buildArena(theme: BattleTheme): THREE.Group {
     const random = seeded(11)
     const pick = (list: readonly string[]) => list[Math.floor(random() * list.length)] as string
     const b = new Builder()
@@ -313,7 +375,56 @@ export class BattleScene {
     for (const [x, z] of [[-7.6, -3.2], [7.4, 1.2], [-8.2, 3.6]] as const) {
       b.box(0.25, 0.6, 0.25, theme.crystal, x, 0.3, z, { glow: true }).box(0.18, 0.4, 0.18, theme.crystal, x + 0.25, 0.2, z + 0.1, { glow: true })
     }
+    this.decorateArena(b, theme, random)
     return b.build()
+  }
+
+  private decorateArena(b: Builder, theme: BattleTheme, random: () => number) {
+    const dense = theme.intensity
+    if (theme.kind === 'flame') {
+      for (let index = 0; index < 2 + dense; index += 1) {
+        const x = -6 + index * (10 / (1 + dense)) + random() * 0.4
+        const z = -2.8 + random() * 4
+        b.box(0.45, 0.2, 0.45, '#3a1a10', x, 0.15, z)
+        b.box(0.28, 0.9 + dense * 0.2, 0.28, '#ff6a3a', x, 0.7, z, { glow: true })
+        b.box(0.16, 0.45, 0.16, '#ffd36b', x, 1.25 + dense * 0.1, z, { glow: true })
+      }
+      for (let index = 0; index < dense; index += 1) {
+        b.box(0.8 + random() * 0.4, 0.12, 0.6 + random() * 0.3, '#ff4a2a', -4 + index * 3.5, 0.08, 4.2 + random(), { glow: true })
+      }
+    } else if (theme.kind === 'frost') {
+      for (let index = 0; index < 3 + dense; index += 1) {
+        const x = -7 + index * 2.2 + random() * 0.3
+        const z = -3.2 + (index % 2) * 1.2
+        const h = 0.8 + dense * 0.25 + random() * 0.4
+        b.box(0.22, h, 0.22, '#d7f4ff', x, h / 2, z, { glow: true })
+        b.box(0.12, h * 0.6, 0.12, '#9fe8ff', x + 0.2, h * 0.35, z + 0.1, { glow: true })
+      }
+      for (let index = 0; index < dense + 1; index += 1) {
+        b.box(1.1, 0.1, 0.9, '#a8d0e8', -5 + index * 4, 0.08, 3.5 + random())
+      }
+    } else if (theme.kind === 'light') {
+      for (let index = 0; index < 2 + dense; index += 1) {
+        const x = -5.5 + index * 3.5
+        b.box(0.35, 1.6 + dense * 0.2, 0.35, '#e8dcc0', x, 0.9, -3.6)
+        b.box(0.55, 0.12, 0.55, '#d9b54a', x, 1.75 + dense * 0.1, -3.6)
+        b.box(0.22, 0.7, 0.22, '#ffe27a', x, 2.15 + dense * 0.1, -3.6, { glow: true })
+      }
+      for (const x of [-7.2, 0, 7.2].slice(0, dense + 1)) {
+        b.box(0.5, 0.08, 0.5, '#fff6c8', x, 0.12, 4.5, { glow: true })
+      }
+    } else if (theme.kind === 'abyss') {
+      for (let index = 0; index < 4 + dense; index += 1) {
+        const x = -7.5 + random() * 15
+        const z = -3 + random() * 8
+        const s = 0.2 + random() * 0.35
+        b.box(s, s * 0.4, s * 0.8, theme.wall[0]!, x, 0.15 + random() * 0.4, z)
+      }
+      for (let index = 0; index < 2 + dense; index += 1) {
+        const x = -6 + index * 4 + random()
+        b.box(0.18, 0.9, 0.18, theme.crystal, x, 0.55, -3.5, { glow: true })
+      }
+    }
   }
 
   private resize() {
@@ -370,6 +481,9 @@ export class BattleScene {
     switch (step.type) {
       case 'floor':
         this.startFloor(step.units, instant)
+        if (this.themeKind === 'abyss') {
+          this.setFloorLabel(this.abyssFrom + step.floor)
+        }
         if (step.affixes?.length && !instant) {
           this.showAffixes(step.affixes)
         }
@@ -775,11 +889,11 @@ export class BattleScene {
     this.floaters.push({ sprite, t: 0 })
   }
 
-  private spawnEmbers() {
-    let material = this.sparkMaterials.get('#ff8a3d')
+  private spawnEmbers(color = '#ff8a3d') {
+    let material = this.sparkMaterials.get(color)
     if (!material) {
-      material = new THREE.MeshBasicMaterial({ color: '#ff8a3d' })
-      this.sparkMaterials.set('#ff8a3d', material)
+      material = new THREE.MeshBasicMaterial({ color, transparent: true })
+      this.sparkMaterials.set(color, material)
     }
     for (let index = 0; index < 28; index += 1) {
       const mesh = new THREE.Mesh(this.sparkGeometry, material)
@@ -788,6 +902,58 @@ export class BattleScene {
       mesh.position.copy(base)
       this.scene.add(mesh)
       this.embers.push({ mesh, base, phase: this.random() * Math.PI * 2, speed: 0.4 + this.random() * 0.6 })
+    }
+  }
+
+  private spawnDebris(color: string) {
+    let material = this.sparkMaterials.get(`debris:${color}`)
+    if (!material) {
+      material = new THREE.MeshBasicMaterial({ color, transparent: true, opacity: 0.75 })
+      this.sparkMaterials.set(`debris:${color}`, material)
+    }
+    for (let index = 0; index < 18; index += 1) {
+      const mesh = new THREE.Mesh(this.sparkGeometry, material)
+      const size = 0.08 + this.random() * 0.12
+      mesh.scale.set(size, size * 0.45, size * 0.7)
+      const base = new THREE.Vector3((this.random() - 0.5) * 12, 0.8 + this.random() * 2.4, (this.random() - 0.5) * 8)
+      mesh.position.copy(base)
+      this.scene.add(mesh)
+      this.debris.push({ mesh, base, phase: this.random() * Math.PI * 2, speed: 0.25 + this.random() * 0.35 })
+    }
+  }
+
+  private setFloorLabel(floor: number) {
+    const key = `abyss-floor:${floor}`
+    let texture = this.numberTextures.get(key)
+    if (!texture) {
+      const canvas = document.createElement('canvas')
+      canvas.width = 160
+      canvas.height = 64
+      const context = canvas.getContext('2d')
+      if (!context) {
+        return
+      }
+      context.clearRect(0, 0, canvas.width, canvas.height)
+      context.fillStyle = 'rgba(18, 8, 26, 0.55)'
+      context.fillRect(8, 12, 144, 40)
+      context.font = 'bold 28px sans-serif'
+      context.textAlign = 'center'
+      context.textBaseline = 'middle'
+      context.fillStyle = '#e6d4ff'
+      context.fillText(`${floor}`, 80, 34)
+      texture = new THREE.CanvasTexture(canvas)
+      texture.colorSpace = THREE.SRGBColorSpace
+      this.numberTextures.set(key, texture)
+    }
+    if (!this.floorLabel) {
+      this.floorLabel = new THREE.Sprite(new THREE.SpriteMaterial({ map: texture, depthTest: false, transparent: true }))
+      this.floorLabel.renderOrder = 30
+      this.floorLabel.scale.set(1.4, 0.56, 1)
+      this.floorLabel.position.set(-6.2, 3.4, -2.2)
+      this.scene.add(this.floorLabel)
+    } else {
+      this.floorLabel.material.map = texture
+      this.floorLabel.material.needsUpdate = true
     }
   }
 
@@ -803,6 +969,15 @@ export class BattleScene {
       const material = ember.mesh.material as THREE.MeshBasicMaterial
       material.opacity = 0.35 + (1 - rise) * 0.55
       material.transparent = true
+    }
+    for (const piece of this.debris) {
+      piece.mesh.position.set(
+        piece.base.x + Math.sin(time * piece.speed + piece.phase) * 0.55,
+        piece.base.y + Math.sin(time * 0.7 + piece.phase) * 0.35,
+        piece.base.z + Math.cos(time * piece.speed * 0.8 + piece.phase) * 0.45,
+      )
+      piece.mesh.rotation.y = time * piece.speed + piece.phase
+      piece.mesh.rotation.x = time * 0.4 + piece.phase
     }
   }
 

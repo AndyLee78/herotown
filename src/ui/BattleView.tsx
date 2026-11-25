@@ -24,7 +24,8 @@ export function BattleView({ report, describe }: { report: DungeonReport; descri
     if (!canvas) {
       return
     }
-    const tier = report.dungeonId ? dungeonById(report.dungeonId).tier : 1
+    const dungeon = report.dungeonId ? dungeonById(report.dungeonId) : null
+    const tier = dungeon?.tier ?? 1
     const scene = new BattleScene(canvas, report, steps, tier, {
       onStep: (index) => setCaption(describeRef.current(index)),
       onDone: () => {
@@ -32,6 +33,10 @@ export function BattleView({ report, describe }: { report: DungeonReport; descri
         setPlaying(false)
       },
       onSound: play,
+    }, {
+      special: dungeon?.special,
+      element: dungeon?.element,
+      difficulty: dungeon?.difficulty,
     })
     sceneRef.current = scene
     setDone(false)

@@ -121,8 +121,8 @@ function LiveFight({ trip, phase }: { trip: Expedition; phase: Phase }) {
     if (!canvas) {
       return
     }
-    const tier = dungeonById(trip.dungeonId).tier
-    const scene = new BattleScene(canvas, trip.report, steps, tier, {
+    const dungeon = dungeonById(trip.dungeonId)
+    const scene = new BattleScene(canvas, trip.report, steps, dungeon.tier, {
       onStep: setLogIndex,
       onDone: () => undefined,
       onSound: (name) => {
@@ -132,6 +132,11 @@ function LiveFight({ trip, phase }: { trip: Expedition; phase: Phase }) {
           play(name)
         }
       },
+    }, {
+      special: dungeon.special,
+      element: dungeon.element,
+      difficulty: dungeon.difficulty,
+      abyssFrom: trip.abyssFrom,
     })
     sceneRef.current = scene
     // Play the whole replay in exactly the time the fight takes on the clock.
