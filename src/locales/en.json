@@ -1,4 +1,22 @@
 {
+  "legends": {
+    "level": "Hall level",
+    "potential": "Potential per legend",
+    "cap": "Potential cap",
+    "attack": "Blessing attack",
+    "slots": "Display slots",
+    "unbuilt": "None",
+    "living": "Living legend",
+    "familyBonus": "Child potential +{{bonus}}",
+    "blessing": "Ancestor’s blessing +{{percent}}%",
+    "display": "Heirlooms on display {{used}}/{{slots}}",
+    "displayHint": "First display grants +{{fame}} fame. Each display raises resting morale by {{morale}} (currently +{{current}}).",
+    "noDisplay": "No heirlooms are on display.",
+    "spare": "Heirlooms in storage",
+    "noSpare": "There are no heirlooms in storage.",
+    "place": "Display",
+    "withdraw": "Take out"
+  },
   "tavern": {
     "left": "Rounds left this season {{left}}/{{total}}",
     "level": "Level",
@@ -200,6 +218,7 @@
     "reload": "Reload"
   },
   "screen": {
+    "legends": "Hall of Fame",
     "tavern": "Tavern",
     "market": "Market",
     "house": "Housing",

@@ -1,4 +1,22 @@
 {
+  "legends": {
+    "level": "전당 레벨",
+    "potential": "전설당 잠재력",
+    "cap": "잠재력 상한",
+    "attack": "가호 공격",
+    "slots": "전시 칸",
+    "unbuilt": "없음",
+    "living": "살아 있는 전설",
+    "familyBonus": "아이 잠재력 +{{bonus}}",
+    "blessing": "조상의 가호 +{{percent}}%",
+    "display": "유품 전시 {{used}}/{{slots}}",
+    "displayHint": "처음 전시하면 명성 +{{fame}}. 전시 하나마다 사기 기준 +{{morale}} (현재 +{{current}}).",
+    "noDisplay": "전시된 유품이 없습니다.",
+    "spare": "창고 유품",
+    "noSpare": "창고에 유품이 없습니다.",
+    "place": "전시하기",
+    "withdraw": "꺼내기"
+  },
   "tavern": {
     "left": "이번 계절 남은 술자리 {{left}}/{{total}}",
     "level": "레벨",
@@ -200,6 +218,7 @@
     "reload": "새로고침"
   },
   "screen": {
+    "legends": "명예의 전당",
     "tavern": "선술집",
     "market": "시장",
     "house": "집",

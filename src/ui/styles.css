@@ -1214,6 +1214,11 @@ button,
   overflow-wrap: anywhere;
 }
 
+.legends-effects {
+  table-layout: fixed;
+  overflow-wrap: anywhere;
+}
+
 .peak-stat {
   display: block;
 }

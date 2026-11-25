@@ -17,6 +17,7 @@ import {
   heroPower,
   heroTrinkets,
   busyHeroIds,
+  blessing,
   isNest,
   monsterById,
   nestRevealed,
@@ -372,6 +373,7 @@ function PartyNotes({ heroes }: { heroes: Hero[] }) {
 function HeroStatus({ save, hero, presetId, now }: { save: GameState; hero: Hero; presetId: string; now: number }) {
   const { t } = useTranslation()
   const status = readiness(save, hero)
+  const ancestorBonus = blessing(save, hero)
   const { busy, condition } = status
   const recovery = hero.treatAt ?? status.recoverAt
   const injured = condition === 'injured' || condition === 'critical'
@@ -391,6 +393,7 @@ function HeroStatus({ save, hero, presetId, now }: { save: GameState; hero: Hero
         </span>
       </span>
       <span className="chips">
+        {ancestorBonus > 0 ? <Chip tone="good">{t('legends.blessing', { percent: Math.round(100 * ancestorBonus) })}</Chip> : null}
         {injured || condition === 'dead' ? <Chip tone="bad">{injured && recovery != null
           ? t('prep.recovering', { condition: t(`condition.${condition}`), time: waitLabel(recovery - now) })
           : t(`condition.${condition}`)}</Chip> : null}

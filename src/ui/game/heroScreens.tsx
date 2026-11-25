@@ -7,6 +7,7 @@ import {
   adRules,
   affinityScale,
   busyHeroIds,
+  blessing,
   adsRemaining,
   ancestorsOf,
   canDeploy,
@@ -334,6 +335,7 @@ function HeroDetail({
   const careAt = hero.resurrectAt ?? hero.treatAt
   const recovery = recoveryText(t, hero, now)
   const personality = personalityOf(hero)
+  const ancestorBonus = blessing(save, hero)
   const describeEmotions = (strong: boolean) => emotions
     .filter((emotion) => strong ? emotionScale(hero, emotion) >= 1.2 : emotionScale(hero, emotion) <= 0.8)
     .map((emotion) => t(`personality.emotions.${emotion}`)).join(', ')
@@ -355,6 +357,7 @@ function HeroDetail({
           />
           <span className="chips">
             <Chip tone="info">{t(`personality.names.${personality}`)}</Chip>
+            {ancestorBonus > 0 ? <Chip tone="good">{t('legends.blessing', { percent: Math.round(100 * ancestorBonus) })}</Chip> : null}
             {hero.traitIds.map((trait) => (
               <Chip key={trait}>{t(`trait.${trait}`)}</Chip>
             ))}

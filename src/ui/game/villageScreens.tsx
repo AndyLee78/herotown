@@ -32,6 +32,10 @@ import {
   guildLevel,
   guildRules,
   hallOfFame,
+  familyRules,
+  legendBonus,
+  legendsRules,
+  livingLegends,
   houseRooms,
   magicRules,
   moraleOf,
@@ -43,6 +47,8 @@ import {
   schoolRules,
   schoolSeats,
   seasonKey,
+  shrineMorale,
+  shrineSlots,
   smithRules,
   timeRules,
   townLevel,
@@ -175,6 +181,7 @@ export function Town({
   onGuild,
   onMarket,
   onTavern,
+  onLegends,
   onFestival,
   onSelectHero,
 }: {
@@ -189,6 +196,7 @@ export function Town({
   onGuild: () => void
   onMarket: () => void
   onTavern: () => void
+  onLegends: () => void
   onFestival: () => void
   onSelectHero: (id: string) => void
 }) {
@@ -221,7 +229,7 @@ export function Town({
           <button type="button" className="chip" onClick={() => setCensus(true)}>
             {t('family.population')}
           </button>
-          <button type="button" className="chip" onClick={() => setHall(true)}>
+          <button type="button" className="chip" onClick={() => save.buildings.legends > 0 ? onLegends() : setHall(true)}>
             {t('family.hall')}
           </button>
           <Chip>{t('town.parties', { count: expeditionSlots(save.buildings.guild) })}</Chip>
@@ -564,6 +572,73 @@ export function ComingOfAge({ save, onView, onClose }: { save: GameState; onView
         </button>
       </div>
     </Window>
+  )
+}
+
+export function Legends({ save, onAction }: { save: GameState; onAction: Act }) {
+  const { t } = useTranslation()
+  const dead = hallOfFame(save).map((grave) => ({ kind: 'grave' as const, person: grave }))
+  const living = livingLegends(save).map((hero) => ({ kind: 'living' as const, person: hero }))
+  const groups = new Map<string, Array<(typeof dead)[number] | (typeof living)[number]>>()
+  for (const entry of [...dead, ...living]) {
+    const family = entry.person.family ?? entry.person.name
+    const group = groups.get(family) ?? []
+    group.push(entry)
+    groups.set(family, group)
+  }
+  const onDisplay = save.shrine?.gear ?? []
+  const slots = shrineSlots(save)
+  const stash = save.stash.filter((gear) => gear.heirloom)
+  return (
+    <div className="column">
+      <table className="school-effects legends-effects">
+        <thead><tr>{(['level', 'potential', 'cap', 'attack', 'slots'] as const).map((key) => <th scope="col" key={key}>{t(`legends.${key}`)}</th>)}</tr></thead>
+        <tbody>{[familyRules.legendPotential, ...legendsRules.legendPotential].map((gain, level) => (
+          <tr key={level} aria-current={save.buildings.legends === level ? 'true' : undefined}>
+            <th scope="row">{level === 0 ? t('legends.unbuilt') : t('ui.level', { level })}</th>
+            <td>+{gain}</td><td>{level === 0 ? familyRules.legendPotentialMax : legendsRules.legendPotentialMax[level - 1]}</td>
+            <td>{level === 0 ? '—' : `+${Math.round(100 * legendsRules.blessing[level - 1]!)}%`}</td>
+            <td>{level === 0 ? '—' : legendsRules.shrineSlots[level - 1]}</td>
+          </tr>
+        ))}</tbody>
+      </table>
+      {groups.size === 0 ? <p className="empty">{t('family.hallEmpty')}</p> : null}
+      {[...groups.entries()].map(([family, entries]) => (
+        <section key={family}>
+          <h3 className="section-title">{family} <Chip tone="good">{t('legends.familyBonus', { bonus: legendBonus(save, family) })}</Chip></h3>
+          {entries.map((entry) => {
+            const person = entry.person
+            return <article key={person.id} className="grave legend">
+              {entry.kind === 'living' ? <Portrait hero={entry.person} /> : <GraveFace grave={entry.person} />}
+              <span className="hero-row-body">
+                <strong>{person.name}</strong>
+                <span className="chips">
+                  <Chip tone="info">{t(`class.${person.classId}`)}</Chip>
+                  <Chip>{t('ui.level', { level: person.level })}</Chip>
+                  {entry.kind === 'living' ? <Chip tone="good">{t('legends.living')}</Chip> : null}
+                </span>
+                <span className="muted">{person.clears.length ? person.clears.map((id) => t(`dungeon.${id}.name`, { defaultValue: id })).join(', ') : t('family.noClears')}</span>
+              </span>
+            </article>
+          })}
+        </section>
+      ))}
+      <section>
+        <h3 className="section-title">{t('legends.display', { used: onDisplay.length, slots })}</h3>
+        <p className="muted">{t('legends.displayHint', { fame: legendsRules.shrineFame, morale: legendsRules.shrineMorale, current: shrineMorale(save) })}</p>
+        {onDisplay.length === 0 ? <p className="muted">{t('legends.noDisplay')}</p> : null}
+        <ul className="plain">{onDisplay.map((gear) => <li key={gear.id} className="line">
+          <span>{itemLabel(t, gear, 'warrior')}</span>
+          <button type="button" className="btn small" onClick={() => onAction({ type: 'unshrine', gearId: gear.id })}>{t('legends.withdraw')}</button>
+        </li>)}</ul>
+        <h3 className="section-title">{t('legends.spare')}</h3>
+        {stash.length === 0 ? <p className="muted">{t('legends.noSpare')}</p> : null}
+        <ul className="plain">{stash.map((gear) => <li key={gear.id} className="line">
+          <span>{itemLabel(t, gear, 'warrior')}</span>
+          <button type="button" className="btn small" disabled={onDisplay.length >= slots} onClick={() => onAction({ type: 'enshrine', gearId: gear.id })}>{t('legends.place')}</button>
+        </li>)}</ul>
+      </section>
+    </div>
   )
 }
 
