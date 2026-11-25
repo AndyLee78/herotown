@@ -889,6 +889,101 @@ export function buildToastTable(): THREE.Group {
 
 export type FestivalKind = 'spring' | 'summer' | 'autumn' | 'winter'
 
+// Late-town look for levels 8–10 (Docs/endgame.md 4b): hall flags, a low
+// perimeter with the south gate left open, lanterns on the road, and a spire.
+// Rebuild only when the town level changes.
+export function buildTownDecor(townLevel: number): THREE.Group {
+  const root = new THREE.Group()
+  root.name = 'townDecor'
+  if (townLevel < 8) {
+    return root
+  }
+  const b = new Builder()
+  const hall = LOTS.hall
+  // Lv8+: tall banners by the hall door.
+  for (const side of [-1, 1] as const) {
+    const x = hall.x + side * (hall.w * 0.42)
+    const z = hall.z + hall.d / 2 + 0.45
+    b.box(0.1, 3.0, 0.1, WOOD, x, 1.55, z)
+    b.box(0.85, 1.15, 0.06, side < 0 ? '#c0392b' : '#3f6fa8', x + side * 0.48, 2.55, z)
+    b.box(0.85, 0.14, 0.06, '#d9b54a', x + side * 0.48, 3.2, z)
+    b.box(0.16, 0.16, 0.08, '#ffe27a', x + side * 0.48, 2.55, z + 0.06, { glow: true })
+  }
+  if (townLevel >= 9) {
+    const wall = '#8d8680'
+    const cap = '#6e675f'
+    const y = 0.45
+    const h = 0.9
+    // North, east, west stretches; south leaves a gap at the gate.
+    for (let x = -13; x <= 13; x += 1.2) {
+      b.box(1.05, h, 0.28, wall, x, y, -13.4)
+      b.box(1.05, 0.12, 0.36, cap, x, y + h / 2 + 0.04, -13.4)
+    }
+    for (let z = -12.5; z <= 12.5; z += 1.2) {
+      b.box(0.28, h, 1.05, wall, -13.4, y, z)
+      b.box(0.36, 0.12, 1.05, cap, -13.4, y + h / 2 + 0.04, z)
+      b.box(0.28, h, 1.05, wall, 13.4, y, z)
+      b.box(0.36, 0.12, 1.05, cap, 13.4, y + h / 2 + 0.04, z)
+    }
+    for (let x = -13; x <= -2.6; x += 1.2) {
+      b.box(1.05, h, 0.28, wall, x, y, 13.4)
+      b.box(1.05, 0.12, 0.36, cap, x, y + h / 2 + 0.04, 13.4)
+    }
+    for (let x = 2.6; x <= 13; x += 1.2) {
+      b.box(1.05, h, 0.28, wall, x, y, 13.4)
+      b.box(1.05, 0.12, 0.36, cap, x, y + h / 2 + 0.04, 13.4)
+    }
+    // Lantern posts along the south road toward the gate.
+    for (const z of [3.5, 6.2, 9.0, 11.2]) {
+      for (const side of [-1.35, 1.35] as const) {
+        b.box(0.1, 1.35, 0.1, WOOD, side, 0.7, z)
+        b.box(0.22, 0.22, 0.22, '#ffe27a', side, 1.45, z, { glow: true })
+      }
+    }
+  }
+  if (townLevel >= 10) {
+    // Spire and gold crest above the hall (kept short so it does not hide the north row).
+    b.box(1.1, 1.15, 1.1, '#b9b6ad', hall.x, 3.35, hall.z - 0.1)
+    b.box(1.3, 0.18, 1.3, '#5b6570', hall.x, 3.95, hall.z - 0.1)
+    b.box(0.55, 1.05, 0.55, '#d9b54a', hall.x, 4.55, hall.z - 0.1)
+    b.box(0.22, 0.55, 0.22, '#ffe27a', hall.x, 5.25, hall.z - 0.1, { glow: true })
+    b.box(0.7, 0.14, 0.14, '#d9b54a', hall.x, 3.55, hall.z + hall.d / 2 + 0.05)
+    b.box(0.2, 0.2, 0.08, '#ffe27a', hall.x, 3.55, hall.z + hall.d / 2 + 0.12, { glow: true })
+    for (const side of [-1, 1] as const) {
+      b.box(0.35, 0.12, 0.35, '#d9b54a', hall.x + side * 1.5, 2.15, hall.z + hall.d / 2 + 0.1)
+    }
+  }
+  root.add(b.build())
+  return root
+}
+
+// Short-lived light pillar and rising banners over the hall for a promotion.
+export function buildPromoteFx(townLevel: number): THREE.Group {
+  const root = new THREE.Group()
+  root.name = 'promoteFx'
+  const hall = LOTS.hall
+  const pillar = new Builder()
+    .box(0.4, 5.2, 0.4, townLevel >= 10 ? '#ffe27a' : townLevel >= 9 ? '#c79bff' : '#9fe8ff', hall.x, 3.6, hall.z, { glow: true })
+    .box(0.7, 0.7, 0.7, '#fff6c8', hall.x, 6.4, hall.z, { glow: true })
+    .box(0.28, 0.28, 0.28, '#ffe27a', hall.x, 7.0, hall.z, { glow: true })
+    .build({ castShadow: false })
+  pillar.name = 'pillar'
+  root.add(pillar)
+  const banners = new Builder()
+  for (const side of [-1, 1] as const) {
+    const x = hall.x + side * 1.6
+    const z = hall.z + hall.d / 2 + 0.2
+    banners.box(0.08, 2.4, 0.08, WOOD, x, 1.3, z)
+    banners.box(0.7, 0.95, 0.05, side < 0 ? '#c0392b' : '#3f6fa8', x + side * 0.4, 2.2, z)
+    banners.box(0.7, 0.12, 0.05, '#d9b54a', x + side * 0.4, 2.75, z)
+  }
+  const flags = banners.build({ castShadow: false })
+  flags.name = 'risingFlags'
+  flags.userData.baseY = 0
+  root.add(flags)
+  return root
+}
+
 // Seasonal festival props for the plaza (and the tavern yard when it is open).
 // One merged mesh per season; world-space coordinates (Docs/morale.md, Docs/tavern.md).
 export function buildFestivalDecor(kind: FestivalKind, withYard: boolean): THREE.Group {

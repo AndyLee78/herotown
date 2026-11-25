@@ -26,9 +26,11 @@ import {
   buildFestivalDecor,
   buildLot,
   buildMerchantCart,
+  buildPromoteFx,
   buildShrineRelic,
   buildTerrain,
   buildToastTable,
+  buildTownDecor,
   legendStatuePads,
   marketFront,
   merchantPark,
@@ -89,7 +91,8 @@ type Walker = {
   // gather → pack → leave → gone when a party sets out; arrive when it comes home.
   // drill: hitting the scarecrow at the training ground.
   // toastWalk → toast: a tavern round (Docs/tavern.md).
-  state: 'idle' | 'walk' | 'gather' | 'pack' | 'leave' | 'gone' | 'arrive' | 'vow' | 'drill' | 'toastWalk' | 'toast'
+  // promote: gather in the plaza for a town promotion (Docs/endgame.md 4b).
+  state: 'idle' | 'walk' | 'gather' | 'pack' | 'leave' | 'gone' | 'arrive' | 'vow' | 'drill' | 'toastWalk' | 'toast' | 'promote'
   away: boolean
   fresh: boolean
   timer: number
@@ -190,6 +193,11 @@ export class VillageScene {
   private festivalKind: FestivalKind | null = null
   private festivalWithYard = false
   private festivalDecor: THREE.Group | null = null
+  private townBooted = false
+  private townLevel = 0
+  private townDecor: THREE.Group | null = null
+  private promoteFx: THREE.Group | null = null
+  private promoteTimer = 0
   private legendsLevel = 0
   private statuesKey = ''
   private statuesRoot: THREE.Group | null = null
@@ -283,6 +291,7 @@ export class VillageScene {
     this.syncMerchant(props.merchant)
     this.syncTavernRound(props.tavernRound)
     this.syncFestival(props.festival)
+    this.syncTown(props.townLevel)
     this.legendsLevel = props.buildings.legends ?? 0
     this.syncLegendStatues(props.legends)
     this.syncShrine(props.shrine)
@@ -314,6 +323,8 @@ export class VillageScene {
       this.toastCups = null
     }
     this.clearFestivalDecor()
+    this.clearTownDecor()
+    this.clearPromoteFx()
     this.clearLegendStatues()
     this.clearShrine()
     freeOwnMaterials(this.scene)
@@ -612,7 +623,7 @@ export class VillageScene {
     }
   }
 
-  private burst(x: number, y: number, z: number, kind: 'wedding' | 'star' | 'festival') {
+  private burst(x: number, y: number, z: number, kind: 'wedding' | 'star' | 'festival' | 'promote') {
     const group = new THREE.Group()
     group.position.set(x, y, z)
     const colors =
@@ -620,25 +631,128 @@ export class VillageScene {
         ? ['#ffe08a', '#fff6c8', '#ffd84d']
         : kind === 'festival'
           ? ['#f4a0c0', '#ffe08a', '#9fd36b', '#8fd4ef', '#fff4ea', '#e0584f']
-          : ['#e0584f', '#ff8fa3', '#f4b4c4', '#fff4ea']
-    const count = kind === 'star' ? 8 : kind === 'festival' ? 14 : 16
+          : kind === 'promote'
+            ? ['#ffe27a', '#fff6c8', '#c79bff', '#9fe8ff', '#d9b54a', '#ff8a3d']
+            : ['#e0584f', '#ff8fa3', '#f4b4c4', '#fff4ea']
+    const count = kind === 'star' ? 8 : kind === 'festival' ? 14 : kind === 'promote' ? 20 : 16
     for (let index = 0; index < count; index += 1) {
-      const size = kind === 'star' ? 0.22 : kind === 'festival' ? 0.12 + (index % 3) * 0.04 : 0.16 + (index % 3) * 0.04
+      const size = kind === 'star' ? 0.22 : kind === 'festival' || kind === 'promote' ? 0.12 + (index % 3) * 0.04 : 0.16 + (index % 3) * 0.04
       const mesh = new THREE.Mesh(
         new THREE.BoxGeometry(size, kind === 'star' ? size : size * 0.45, size * 0.7),
         new THREE.MeshBasicMaterial({ color: colors[index % colors.length] }),
       )
       const angle = (index / count) * Math.PI * 2
-      const speed = kind === 'star' ? 0.35 : kind === 'festival' ? 0.55 : 0.7
+      const speed = kind === 'star' ? 0.35 : kind === 'festival' ? 0.55 : kind === 'promote' ? 0.85 : 0.7
       mesh.userData.velocity = new THREE.Vector3(Math.cos(angle) * speed * 0.55, 0.8 + (index % 4) * 0.15, Math.sin(angle) * speed * 0.55)
-      if (kind === 'festival' && index % 3 === 0) {
+      if ((kind === 'festival' || kind === 'promote') && index % 3 === 0) {
         mesh.userData.float = true
         mesh.userData.velocity.y *= 0.45
       }
       group.add(mesh)
     }
     this.scene.add(group)
-    this.bursts.push({ group, life: kind === 'festival' ? 2.0 : 2.6 })
+    this.bursts.push({ group, life: kind === 'festival' ? 2.0 : kind === 'promote' ? 2.4 : 2.6 })
+  }
+
+  // Town look for Lv8–10, and a one-shot plaza ceremony when the town promotes.
+  private syncTown(level: number) {
+    const next = Math.max(1, Math.min(10, Math.floor(level)))
+    if (!this.townBooted) {
+      this.townBooted = true
+      this.townLevel = next
+      this.setTownDecor(next)
+      return
+    }
+    if (next === this.townLevel) {
+      return
+    }
+    const previous = this.townLevel
+    this.townLevel = next
+    this.setTownDecor(next)
+    if (next > previous && next >= 8 && next <= 10 && previous === next - 1) {
+      this.playPromotion(next)
+    }
+  }
+
+  private setTownDecor(level: number) {
+    this.clearTownDecor()
+    if (level < 8) {
+      return
+    }
+    const decor = buildTownDecor(level)
+    this.scene.add(decor)
+    this.townDecor = decor
+  }
+
+  private clearTownDecor() {
+    if (!this.townDecor) {
+      return
+    }
+    this.scene.remove(this.townDecor)
+    freeOwnMaterials(this.townDecor)
+    disposeTree(this.townDecor)
+    this.townDecor = null
+  }
+
+  private playPromotion(level: number) {
+    this.clearPromoteFx()
+    const fx = buildPromoteFx(level)
+    this.scene.add(fx)
+    this.promoteFx = fx
+    this.promoteTimer = 4.8
+    const hall = LOTS.hall
+    this.burst(hall.x, 3.2, hall.z, 'promote')
+    this.burst(0, 1.6, 0, 'promote')
+    this.burst(1.6, 1.4, 1.2, 'promote')
+    this.burst(-1.4, 1.4, -1.0, 'promote')
+    let index = 0
+    for (const walker of this.walkers.values()) {
+      if (walker.kind !== 'roster' || !walker.root.visible || walker.state === 'gone' || walker.state === 'leave' || walker.state === 'pack') {
+        continue
+      }
+      const angle = (index / 8) * Math.PI * 2
+      const radius = 1.6 + (index % 3) * 0.35
+      walker.state = 'promote'
+      walker.target.set(Math.cos(angle) * radius, 0, Math.sin(angle) * radius)
+      keepOffFountain(walker.target)
+      walker.timer = 4.8
+      walker.root.visible = true
+      index += 1
+      if (index >= 12) {
+        break
+      }
+    }
+  }
+
+  private clearPromoteFx() {
+    if (!this.promoteFx) {
+      return
+    }
+    this.scene.remove(this.promoteFx)
+    freeOwnMaterials(this.promoteFx)
+    disposeTree(this.promoteFx)
+    this.promoteFx = null
+    this.promoteTimer = 0
+  }
+
+  private stepPromoteFx(delta: number, time: number) {
+    if (!this.promoteFx) {
+      return
+    }
+    this.promoteTimer -= delta
+    const pillar = this.promoteFx.getObjectByName('pillar')
+    if (pillar) {
+      pillar.scale.y = 1 + Math.sin(time * 4) * 0.06
+      pillar.position.y = Math.sin(time * 3) * 0.08
+    }
+    const flags = this.promoteFx.getObjectByName('risingFlags')
+    if (flags) {
+      const rise = Math.min(1.2, (4.8 - this.promoteTimer) * 0.45)
+      flags.position.y = rise
+    }
+    if (this.promoteTimer <= 0) {
+      this.clearPromoteFx()
+    }
   }
 
   // First paint with an old festival only shows props; null → kind fires confetti.
@@ -1284,7 +1398,8 @@ export class VillageScene {
         walker.state !== 'gather' &&
         walker.state !== 'pack' &&
         walker.state !== 'toast' &&
-        walker.state !== 'toastWalk'
+        walker.state !== 'toastWalk' &&
+        walker.state !== 'promote'
       ) {
         walker.state = 'drill'
         walker.root.visible = true
@@ -1521,6 +1636,7 @@ export class VillageScene {
     this.bobToastCups(time)
     this.bobShrine(time)
     this.endToastIfDone()
+    this.stepPromoteFx(delta, time)
     this.stepBursts(delta)
     this.controls.update()
     this.clampPan()
@@ -1547,6 +1663,39 @@ export class VillageScene {
         walker.state = 'idle'
         walker.timer = 1.2
       }
+      return
+    }
+    if (walker.state === 'promote') {
+      walker.timer -= delta
+      if (walker.timer <= 0) {
+        walker.state = 'idle'
+        walker.timer = 1.2
+        return
+      }
+      const position = walker.root.position
+      const dx = walker.target.x - position.x
+      const dz = walker.target.z - position.z
+      const distance = Math.hypot(dx, dz)
+      if (distance >= 0.08) {
+        const stepLength = Math.min(distance, walker.speed * pace * 1.55 * delta)
+        position.x += (dx / distance) * stepLength
+        position.z += (dz / distance) * stepLength
+        keepOffFountain(position)
+        walker.root.rotation.y = turnToward(walker.root.rotation.y, Math.atan2(dx, dz), delta * 8)
+        walkPose(walker.rig, time, walker.phase, 1.2)
+        return
+      }
+      const hall = LOTS.hall
+      walker.root.rotation.y = turnToward(
+        walker.root.rotation.y,
+        Math.atan2(hall.x - position.x, hall.z - position.z),
+        delta * 6,
+      )
+      idlePose(walker.rig, time, walker.phase)
+      const raise = -1.4 + Math.sin(time * 6 + walker.phase) * 0.2
+      walker.rig.armR.rotation.set(raise, 0.1, 0.3)
+      walker.rig.armL.rotation.set(raise * 0.75, -0.1, -0.25)
+      walker.rig.group.position.y = Math.abs(Math.sin(time * 5 + walker.phase)) * 0.04
       return
     }
     if (walker.state === 'toast') {
