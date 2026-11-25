@@ -1,7 +1,11 @@
 {
   "pickLevels": [
     3,
-    7
+    7,
+    11,
+    15,
+    20,
+    25
   ],
   "forgetGold": 40,
   "sessionMs": [
@@ -28,6 +32,14 @@
   ],
   "partyAuraCap": {
     "guard": 0.08,
-    "attack": 0.06
-  }
+    "attack": 0.06,
+    "speed": 0.06,
+    "crit": 0.06,
+    "miss": 0.08,
+    "shield": 0.1,
+    "holy": 0.1,
+    "firstStrike": 0.15,
+    "fatigue": 0.2
+  },
+  "dodgeCap": 0.4
 }

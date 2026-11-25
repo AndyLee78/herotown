@@ -1,4 +1,5 @@
-import { classById, combatRules, dungeonById, lifeRules, magicRules, nestRules, progression } from './data'
+import { classById, combatRules, dungeonById, giftRules, lifeRules, magicRules, nestRules, progression, trainingRules } from './data'
+import { heroSkillEffects } from './skills'
 import { applyAuras, createHeroUnit, heroUnitsToReport, simulateFloor, type BattleUnit, type Kit, type RaidPool } from './combat'
 import { canDeploy, createHero } from './hero'
 import { createRng } from './rng'
@@ -41,8 +42,11 @@ export function runDungeon(party: PartyMember[], dungeonId: string, tactics: Tac
     betweenHeal: affixes.includes('noRest') ? 0 : base.betweenHeal,
   }
   const rng = createRng(seed)
-  const heroes = party.map((member, index) => createHeroUnit(member, index))
+  // Skills that answer to who comes along see the party's classes (Docs/identity.md 5a).
+  const allies = party.map((member) => member.hero.classId)
+  const heroes = party.map((member, index) => createHeroUnit({ ...member, allies: member.allies ?? allies }, index))
   applyAuras(heroes)
+  const elite = dungeon.tier >= combatRules.eliteTier ? combatRules.eliteChance : 0
   const kit: Kit = { stock: { ...supplies }, used: {} }
   const carried = Object.values(supplies).some((count) => (count ?? 0) > 0)
   const log: DungeonReport['log'] = []
@@ -58,7 +62,7 @@ export function runDungeon(party: PartyMember[], dungeonId: string, tactics: Tac
     if (!floorDef) {
       break
     }
-    const result = simulateFloor(heroes, floorDef.monsters, tactics, rng, log, floor + 1, floors, floorDef.scale ?? dungeon.monsterScale ?? 1, carried ? kit : undefined, floorDef.trapChance ?? 0, affixes, variant.raid)
+    const result = simulateFloor(heroes, floorDef.monsters, tactics, rng, log, floor + 1, floors, floorDef.scale ?? dungeon.monsterScale ?? 1, carried ? kit : undefined, floorDef.trapChance ?? 0, affixes, variant.raid, elite)
     ticks += result.ticks
     if (result.trap !== 'none') {
       traps[result.trap] += 1
@@ -83,12 +87,14 @@ export function runDungeon(party: PartyMember[], dungeonId: string, tactics: Tac
   // Healing potions stand in for a healer (Docs/depth.md 3a).
   const hadHealer = party.some((member) => classById(member.hero.classId).role === 'healer') || (supplies.heal ?? 0) > 0
   const treasure = party.some((member) => member.hero.traitIds.includes('treasure') && member.hero.condition !== 'dead')
+  // A lucky hero's share of the spoils (Docs/identity.md 5a).
+  const luck = Math.max(0, ...party.map((member) => (member.hero.condition !== 'dead' ? heroSkillEffects(member.hero).lucky : 0)))
   // A loss still brings home a little loot from the floors that were cleared,
   // so a struggling village always has some income.
   // A disarmed trap also gives up what it guarded (Docs/depth.md 3b).
   const gold =
     (victory
-      ? Math.round(dungeon.gold * (treasure ? 1.25 : 1))
+      ? Math.round(dungeon.gold * (treasure ? 1.25 : 1) * (1 + luck))
       : Math.round((dungeon.gold * progression.defeatGoldShare * floorsCleared) / dungeon.floors.length)) +
     traps.disarmed * Math.round(dungeon.gold * magicRules.disarmGold)
   // A loss still teaches something: half the XP, for the share of floors cleared.
@@ -97,6 +103,8 @@ export function runDungeon(party: PartyMember[], dungeonId: string, tactics: Tac
     log.push({ tick: ticks, key: 'log.victory', params: {} })
   }
 
+  const fatigueCut = Math.min(trainingRules.partyAuraCap.fatigue, party.reduce((sum, member) => sum + heroSkillEffects(member.hero).fatigueCut, 0))
+  const fatigueOwn = new Map(party.map((member) => [member.hero.id, heroSkillEffects(member.hero).selfFatigueCut]))
   const report: DungeonReport = {
     dungeonId,
     party: party.map(({ hero }) => ({ id: hero.id, classId: hero.classId, gender: hero.gender, age: hero.age, ...(hero.genes ? { genes: hero.genes } : {}) })),
@@ -118,7 +126,8 @@ export function runDungeon(party: PartyMember[], dungeonId: string, tactics: Tac
       id: hero.refId,
       condition: judgeCondition(hero),
       // Short early trips tire a hero a little; deeper ones more (Docs/fatigue.md).
-      fatigue: tripFatigue(dungeon.tier) + (hero.hp > 0 ? 0 : lifeRules.fatigue.downedExtra),
+      // Solace and the iron body take the edge off the road (Docs/identity.md 5a).
+      fatigue: Math.round(tripFatigue(dungeon.tier) * (1 - fatigueCut) * (1 - (fatigueOwn.get(hero.refId) ?? 0))) + (hero.hp > 0 ? 0 : lifeRules.fatigue.downedExtra),
     })),
   }
   return { ok: true, report }
@@ -148,7 +157,9 @@ export function applyReport(hero: Hero, report: DungeonReport): Hero {
 // hard-won experience: every stat grows by the training it adds, and skill
 // picks open at their levels.
 export function gainXp(hero: Hero, amount: number): Hero {
-  let xp = hero.xp + amount
+  // A late bloomer learns faster past the middle levels (Docs/identity.md 5a).
+  const bloom = hero.gift === 'lateBloomer' && hero.level >= giftRules.lateBloomerLevel ? 1 + giftRules.lateBloomerXp : 1
+  let xp = hero.xp + Math.round(amount * bloom)
   let level = hero.level
   while (xp >= level * progression.xpPerLevel) {
     xp -= level * progression.xpPerLevel

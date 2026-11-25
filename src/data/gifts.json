@@ -1,0 +1,94 @@
+{
+  "chance": 0.06,
+  "perLighthouse": 0.01,
+  "inherit": 0.4,
+  "lateBloomerLevel": 15,
+  "lateBloomerXp": 0.3,
+  "heroBlood": 2,
+  "guardianHp": 0.2,
+  "gifts": [
+    {
+      "id": "undying",
+      "effect": {
+        "undying": true
+      }
+    },
+    {
+      "id": "vanguard",
+      "effect": {
+        "vanguard": true
+      }
+    },
+    {
+      "id": "twinStrike",
+      "effect": {
+        "twinStrike": 0.1
+      }
+    },
+    {
+      "id": "farsight",
+      "effect": {
+        "farsight": true,
+        "alert": true
+      }
+    },
+    {
+      "id": "ironBody",
+      "effect": {
+        "selfFatigueCut": 0.25
+      }
+    },
+    {
+      "id": "healingHands",
+      "effect": {
+        "heal": 0.1,
+        "healTaken": 0.15
+      }
+    },
+    {
+      "id": "dragonBlood",
+      "effect": {
+        "dotGuard": 0.4
+      }
+    },
+    {
+      "id": "marksman",
+      "effect": {
+        "crit": 0.08,
+        "critDamage": 0.2
+      }
+    },
+    {
+      "id": "lucky",
+      "effect": {
+        "lucky": 0.1
+      }
+    },
+    {
+      "id": "tactician",
+      "effect": {
+        "partySpeed": 0.03
+      }
+    },
+    {
+      "id": "lateBloomer",
+      "effect": {}
+    },
+    {
+      "id": "heroBlood",
+      "effect": {}
+    },
+    {
+      "id": "guardian",
+      "effect": {
+        "guardian": true
+      }
+    },
+    {
+      "id": "songbird",
+      "effect": {
+        "partyAttack": 0.02
+      }
+    }
+  ]
+}

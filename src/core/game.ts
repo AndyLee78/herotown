@@ -1,6 +1,6 @@
 import { chargeFountain, freshFountain, makeWish, readFountain, upgradeFountain, type FountainState } from './fountain'
 import { claimGuide, guideSteps } from './guide'
-import { skillPicks } from './skills'
+import { canLearn, skillPicks } from './skills'
 import { deliver, ensureBoard, expeditionSlotsFor, guildLevel, progressClear, readBoard, type GuildBoard } from './guild'
 import { cheer, driftMorale, lowMorale, mourn } from './morale'
 import { arrive, interview, type Interviews } from './scouting'
@@ -13,14 +13,14 @@ import { abyssFloors, freshVault, settleSpecial, specialBlock, spendTrial, type 
 import { currentRaid, raidVariant, rewardBonus, settleRaid, type Raid } from './raid'
 import { resolveInvasion, setDefenders, type Invasion } from './invasion'
 import { buyEvent, eventBlock, settleEvent, spendEvent, type EventState } from './events'
-import { lighthousePotential, raiseMonument, statueXp, type MonumentId } from './monuments'
+import { lighthousePotential, monumentStage, raiseMonument, statueXp, type MonumentId } from './monuments'
 import { prosper } from './prosperity'
 import { buyOffer, freshMarket, sellGear, sellPotion, trade, updateMerchant, type Market, type MerchantOffer } from './market'
 import { forgetSkill, readDrills, runDrills, startDrill, type Drill } from './drill'
 import { buyIntel, finishScout, isNest, nestSeason, readScout, seasonKey, startScout, type ScoutJob } from './nest'
 import { TRINKET_IDS, enchantTime, finishEnchant, readMagicJob, startEnchant, type MagicJob } from './magic'
 import { POTION_IDS, brewTime, finishBrew, readAlchemyJob, readSupplies, returnSupplies, startBrew, takeSupplies, type AlchemyJob } from './alchemy'
-import { adRules, automationRules, potionById, trinketById, moraleRules, magicRules, nestRules, classById, classList, combatRules, dungeonById, dungeons, expeditionRules, lifeRules, progression, retirementRules, smithRules, timeRules, villageRules, specialDungeons, endgameRules } from './data'
+import { adRules, giftRules, automationRules, potionById, trinketById, moraleRules, magicRules, nestRules, classById, classList, combatRules, dungeonById, dungeons, expeditionRules, lifeRules, progression, retirementRules, smithRules, timeRules, villageRules, specialDungeons, endgameRules } from './data'
 import { forgeGear, normalizeGear, recipeById } from './gear'
 import { applyReport, DEFAULT_TACTICS, gainXp, runDungeon } from './dungeon'
 import { canDeploy, generateHero, isChild, generateVisitors, normalizeHero, restHero, withAge } from './hero'
@@ -30,7 +30,7 @@ import type { Rng } from './rng'
 import type { Genes } from './genes'
 import type { Bond, ClassId, CombatError, DungeonReport, Gear, GearSlot, Gender, Hero, PartyMember, PotionId, Proposal, Role, Row, Supplies, Tactics, TrinketId , StatKey } from './types'
 
-export const SAVE_VERSION = 26
+export const SAVE_VERSION = 27
 
 // Town levels up to here come with fame alone (Docs/endgame.md 4b).
 export const PROMOTION_FREE = 7
@@ -689,6 +689,7 @@ function apply(state: GameState, action: GameAction): GameState {
       townLevelOf(state).visitorPotential + retireeBonus(state, 'inn') + lighthousePotential(state),
       femaleChance(state),
       neededClasses(state, []),
+      giftBonus(state),
     ).map((hero) => ({ ...hero, arrivedAt: now }))
     return {
       ...state,
@@ -1212,6 +1213,7 @@ function updateVisitors(state: GameState, now: number, arrived: string[]): GameS
         bonus,
         femaleChance(state),
         neededClasses(state, visitors)[0],
+        giftBonus(state),
       ),
       arrivedAt: now,
     }
@@ -1508,6 +1510,11 @@ function stepCondition(hero: Hero, now: number): Hero {
     return { ...hero, condition: 'fatigued', recoverAt: undefined }
   }
   return { ...hero, recoverAt: undefined }
+}
+
+// The great lighthouse draws more gifted visitors (Docs/identity.md 5a).
+function giftBonus(state: GameState): number {
+  return monumentStage(state, 'lighthouse') * giftRules.perLighthouse
 }
 
 function fatigueRecoveryRate(state: GameState): number {
@@ -1933,10 +1940,10 @@ function learnSkill(state: GameState, id: string, skillId: string): GameState {
   if (!hero) {
     return { ...state, notice: 'missing' }
   }
-  const known = classById(hero.classId).skills.some((skill) => skill.id === skillId)
-  // Picks open by level (Docs/skills.md), whatever points a save carries.
+  // Picks open by level (Docs/skills.md), whatever points a save carries; a
+  // branch is learned step by step (Docs/identity.md 5a).
   const open = skillPicks(hero.level) - (hero.learned.length - 1)
-  if (!known || hero.learned.includes(skillId) || hero.skillPoints < 1 || open < 1) {
+  if (!canLearn(hero, skillId) || hero.skillPoints < 1 || open < 1) {
     return { ...state, notice: 'skill' }
   }
   return {

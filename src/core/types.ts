@@ -48,14 +48,77 @@ export type SkillEffect = {
   partyAttack?: number
   volleyEvery?: number
   cleanse?: boolean
+  // Docs/identity.md 5a.
+  hp?: number
+  crit?: number
+  critDamage?: number
+  pierce?: number
+  lifesteal?: number
+  execute?: number
+  bossDamage?: number
+  counter?: number
+  dodge?: number
+  stun?: number
+  slow?: number
+  burn?: number
+  shield?: number
+  firstStrike?: number
+  lastStand?: number
+  revive?: number
+  partySpeed?: number
+  partyCrit?: number
+  enemyMiss?: number
+  holy?: number
+  partyHoly?: number
+  aoePower?: number
+  weakenPower?: number
+  burnPower?: number
+  partyFirstStrike?: number
+  fatigueCut?: number
+  selfFatigueCut?: number
+  healTaken?: number
+  dotGuard?: number
+  twinStrike?: number
+  lucky?: number
+  trapGuard?: number
+  steadfast?: boolean
+  alert?: boolean
+  farsight?: boolean
+  undying?: boolean
+  vanguard?: boolean
+  guardian?: boolean
+}
+
+// A condition on a skill: when it holds as the party sets out, `bonus` adds on (Docs/identity.md 5a).
+export type SkillWhen = {
+  personality?: PersonalityId
+  moraleAbove?: number
+  moraleBelow?: number
+  withClass?: ClassId
+  bonded?: boolean
+  bonus: SkillEffect
 }
 
 export type SkillDef = {
   id: string
   kind: SkillKind
   power: number
+  // Branch index and the step in it (1-3); the innate skill has neither.
+  branch?: number
+  tier?: number
   effect?: SkillEffect
+  when?: SkillWhen
 }
+
+export type BranchDef = {
+  id: string
+  // Added when all three skills of the branch are learned.
+  mastery: SkillEffect
+}
+
+export type GiftId = 'undying' | 'vanguard' | 'twinStrike' | 'farsight' | 'ironBody' | 'healingHands' | 'dragonBlood' | 'marksman' | 'lucky' | 'tactician' | 'lateBloomer' | 'heroBlood' | 'guardian' | 'songbird'
+export type MonsterKind = 'beast' | 'undead' | 'human' | 'construct' | 'dragon' | 'spirit'
+export type MonsterTrait = 'armor' | 'evasive' | 'nodot' | 'fireproof' | 'healer' | 'thorns' | 'purge'
 
 export type ClassDef = {
   id: ClassId
@@ -72,6 +135,7 @@ export type ClassDef = {
   // Can break a boss's charged blast (Docs/depth.md 3c).
   interrupt?: boolean
   skills: SkillDef[]
+  branches: BranchDef[]
   potentialBias: Stats
 }
 
@@ -90,6 +154,8 @@ export type MonsterDef = {
   defense: number
   speed: number
   dot: number
+  kind?: MonsterKind
+  traits?: MonsterTrait[]
   resist?: number
   weakHoly?: boolean
   weakSilver?: boolean
@@ -190,6 +256,8 @@ export type Hero = {
   school?: { focus?: StatKey; career?: ClassId; seasons: number; carry: number }
   // Missing on heroes from before personalities: personalityOf derives one from the id.
   personality?: PersonalityId
+  // An inborn gift (Docs/identity.md 5a); most heroes have none.
+  gift?: GiftId
   // Defeats in a row, and trips watched from home while friends went (Docs/personality.md).
   losses?: number
   benched?: number
@@ -250,6 +318,8 @@ export type PartyMember = {
   heirloom?: { attack: number; defense: number }
   // A legend among their forebears: attack goes up by this share (Docs/legends.md).
   blessing?: number
+  // The party's classes, for skills that answer to who comes along (Docs/identity.md 5a).
+  allies?: ClassId[]
 }
 
 export type LogEntry = {
@@ -280,6 +350,7 @@ export type ReplayUnit = {
   hp: number
   maxHp: number
   boss: boolean
+  elite?: boolean
 }
 
 export type ReplayHero = {

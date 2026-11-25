@@ -1,13 +1,13 @@
-import { bandForAge, ageBands, classById, dungeons, familyRules, maxAge, moraleRules, names, timeRules, traits, villageRules, personalityRules, legendsRules } from './data'
-import { genesFor, inheritGenes } from './genes'
-import { createHero } from './hero'
+import { bandForAge, ageBands, classById, dungeons, familyRules, giftRules, maxAge, moraleRules, names, timeRules, traits, villageRules, personalityRules, legendsRules } from './data'
+import { genesFor, hashString, inheritGenes } from './genes'
+import { createHero, rollGift, withGiftPotentials } from './hero'
 import { cheer, mourn } from './morale'
 import { affinityScale, feel, inheritPersonality, partyFit } from './personality'
 import { festivalScale, mingle } from './tavern'
 import { bequeathed } from './heirloom'
 import { createRng, type Rng } from './rng'
 import type { GameState, Grave } from './game'
-import { STAT_KEYS, type Bond, type BondStage, type Gender, type Hero, type Proposal, type Stats, type TraitId } from './types'
+import { STAT_KEYS, type Bond, type BondStage, type Gender, type GiftId, type Hero, type Proposal, type Stats, type TraitId } from './types'
 
 // Stage 2 families (Docs/generations.md): affinity between heroes, proposals
 // the player approves, pregnancies, and children who inherit from both parents.
@@ -357,6 +357,17 @@ export function deliverBirths(state: GameState, now: number, events: FamilyEvent
   return { ...state, roster: cheer([...roster, ...born], parents, moraleRules.joy.birth), retirees }
 }
 
+// A parent's gift passes down often; otherwise a child may be born with a
+// fresh one (Docs/identity.md 5a). Its own stream, so other rolls stay put.
+export function inheritGift(id: string, mother: Hero, father: Hero): GiftId | undefined {
+  const rng = createRng(hashString(`gift-inherit:${id}`))
+  const passed = [mother.gift, father.gift].filter((gift): gift is GiftId => gift != null && rng.next() < giftRules.inherit)
+  if (passed.length) {
+    return rng.pick(passed)
+  }
+  return rollGift(id, giftRules.chance)
+}
+
 export function makeChild(rng: Rng, id: string, mother: Hero, father: Hero, bonus = 0): Hero {
   const gender: Gender = rng.next() < 0.5 ? 'male' : 'female'
   const genius = rng.next() < familyRules.geniusChance
@@ -389,15 +400,17 @@ export function makeChild(rng: Rng, id: string, mother: Hero, father: Hero, bonu
     }
   }
   const genes = inheritGenes(rng, gender, genesFor(mother), genesFor(father))
+  const gift = inheritGift(id, mother, father)
   return createHero({
     id,
     name: rng.pick(names[gender]),
     gender,
     classId,
     age: 0,
-    potentials,
+    potentials: withGiftPotentials(potentials, gift),
     potential,
     traitIds: traitIds.slice(0, familyRules.maxTraits),
+    gift,
     // Children usually take after a parent (Docs/personality.md).
     personality: inheritPersonality(id, mother, father),
     family: father.family ?? father.name,

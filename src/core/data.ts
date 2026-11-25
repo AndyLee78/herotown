@@ -28,6 +28,7 @@ import namesFile from '../data/names.json'
 import progressionFile from '../data/progression.json'
 import timeFile from '../data/time.json'
 import traitsFile from '../data/traits.json'
+import giftsFile from '../data/gifts.json'
 import villageFile from '../data/village.json'
 import type {
   AgeBand,
@@ -74,8 +75,18 @@ export function validateGameData(data: GameData): void {
       throw new Error(`Duplicate class ${klass.id}`)
     }
     classIds.add(klass.id)
-    if (klass.skills.length < 3 || klass.skills.length > 4) {
-      throw new Error(`${klass.id} must have 3 or 4 skills`)
+    // One innate skill and three branches of three (Docs/identity.md 5a).
+    if (klass.skills.length !== 10 || klass.branches.length !== 3) {
+      throw new Error(`${klass.id} must have 10 skills in 3 branches`)
+    }
+    for (let branch = 0; branch < 3; branch += 1) {
+      const steps = klass.skills.filter((skill) => skill.branch === branch).map((skill) => skill.tier).sort()
+      if (steps.join() !== '1,2,3') {
+        throw new Error(`${klass.id} branch ${branch} must have steps 1, 2 and 3`)
+      }
+    }
+    if (klass.skills[0]?.branch != null) {
+      throw new Error(`${klass.id} must start with its innate skill`)
     }
     for (const skill of klass.skills) {
       if (!SKILL_KINDS.has(skill.kind)) {
@@ -176,6 +187,7 @@ export const ageBands = ageBandsFile.bands as AgeBand[]
 export const maxAge = ageBandsFile.maxAge
 export const classList = classesFile.classes as ClassDef[]
 export const traits = traitsFile.traits as TraitDef[]
+export const giftRules = giftsFile as Omit<typeof giftsFile, 'gifts'> & { gifts: { id: import('./types').GiftId; effect: import('./types').SkillEffect }[] }
 export const monsters = monstersFile.monsters as MonsterDef[]
 const allDungeons = dungeonsFile.dungeons as DungeonDef[]
 // The regular ladder; the weekday trials and the abyss are kept apart (Docs/endgame.md 4a).
@@ -245,6 +257,8 @@ export const personalityRules = personalityFile as {
   inherit: number
   anxiety: { lossStreak: number; loss: number; familyCritical: number }
   resentment: { benchedTrips: number; loss: number }
+  affinityScale: number
+  affinity: Record<import('./types').PersonalityId, string[]>
 }
 export const guildRules = guildFile as typeof guildFile & { deliverAmount: Record<string, number>; materialValue: Record<string, number> }
 export const nestRules = nestFile as typeof nestFile & { floors: string[][][] }

@@ -125,5 +125,41 @@
   "resentment": {
     "benchedTrips": 5,
     "loss": 8
+  },
+  "affinityScale": 1.2,
+  "affinity": {
+    "hotheaded": [
+      "warrior.berserk",
+      "rogue.assassin",
+      "mage.fire",
+      "dancer.blade"
+    ],
+    "timid": [
+      "warrior.bulwark",
+      "rogue.shadow",
+      "bard.calm",
+      "dancer.charm"
+    ],
+    "ambitious": [
+      "archer.sniper",
+      "cleric.judgment",
+      "bard.valor",
+      "warrior.provoke"
+    ],
+    "gentle": [
+      "cleric.mercy",
+      "cleric.sanctuary",
+      "bard.calm"
+    ],
+    "social": [
+      "bard.valor",
+      "dancer.wind",
+      "mage.arcane"
+    ],
+    "loner": [
+      "rogue.shadow",
+      "archer.hunter",
+      "mage.frost"
+    ]
   }
 }

@@ -28,5 +28,28 @@
   "ambushedShare": 0.08,
   "braceFactor": 0.55,
   "blastedShare": 0.25,
-  "chargeTicks": 3
+  "chargeTicks": 3,
+  "critMultiplier": 1.5,
+  "lowHp": 0.3,
+  "counterPower": 0.6,
+  "armorCut": 0.2,
+  "evasion": 0.15,
+  "thorns": 0.1,
+  "fireproofCut": 0.3,
+  "mobHealBelow": 0.6,
+  "mobHealPower": 1.5,
+  "enrageActions": 24,
+  "enrageAttack": 1.5,
+  "enrageTier": 3,
+  "bossSteady": 0.34,
+  "purgeEvery": 4,
+  "eliteChance": 0.1,
+  "eliteTier": 4,
+  "eliteHp": 1.6,
+  "eliteTraits": [
+    "armor",
+    "evasive",
+    "thorns",
+    "nodot"
+  ]
 }

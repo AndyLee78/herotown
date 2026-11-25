@@ -3,7 +3,7 @@ import { automationRules, progression, retirementRules, trainingRules } from './
 import { gainXp } from './dungeon'
 import type { GameState } from './game'
 import { canDeploy, isChild } from './hero'
-import { normalizeLearned, starterSkill } from './skills'
+import { canForget, normalizeLearned } from './skills'
 import type { Hero } from './types'
 
 // The training ground (Docs/skills.md): heroes behind the party catch up,
@@ -120,7 +120,8 @@ export function forgetSkill(state: GameState, heroId: string, skillId: string): 
     return { ...state, notice: 'noTraining' }
   }
   const hero = state.roster.find((entry) => entry.id === heroId)
-  if (!hero || skillId === starterSkill(hero.classId) || !hero.learned.includes(skillId)) {
+  // Only the last step of a branch (Docs/identity.md 5a).
+  if (!hero || !canForget(hero, skillId)) {
     return { ...state, notice: 'skill' }
   }
   if (state.gold < trainingRules.forgetGold) {

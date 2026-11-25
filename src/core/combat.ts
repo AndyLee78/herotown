@@ -1,10 +1,10 @@
-import { alchemyRules, classById, combatRules, lifeRules, magicRules, monsterById, nestRules, potionById, trainingRules } from './data'
+import { alchemyRules, classById, combatRules, giftRules, lifeRules, magicRules, monsterById, nestRules, potionById, trainingRules } from './data'
 import { heroGearMods } from './gear'
 import { heroTrinkets } from './magic'
 import { heroSkillEffects } from './skills'
 import { moraleScale } from './morale'
 import type { Rng } from './rng'
-import type { AffixId, BossPhase, LogEntry, MonsterDef, PartyMember, PotionId, ReplayUnit, Row, Supplies, Tactics, UnitReport } from './types'
+import type { AffixId, BossPhase, LogEntry, MonsterDef, MonsterKind, MonsterTrait, PartyMember, PotionId, ReplayUnit, Row, Supplies, Tactics, UnitReport } from './types'
 
 export type BattleUnit = {
   id: string
@@ -96,6 +96,53 @@ export type BattleUnit = {
   regen: number
   partyGuard: number
   partyAttack: number
+  // Branches, gifts and monster traits (Docs/identity.md 5a).
+  crit: number
+  critDamage: number
+  pierce: number
+  lifesteal: number
+  execute: number
+  bossDamage: number
+  counter: number
+  dodge: number
+  burnOnHit: number
+  burn: number
+  barrier: number
+  firstStrike: number
+  struck: boolean
+  lastStand: number
+  revive: number
+  reviveUsed: boolean
+  holyBonus: number
+  aoePower: number
+  healTaken: number
+  twinStrike: number
+  trapGuard: number
+  farsight: boolean
+  undying: boolean
+  undyingUsed: boolean
+  vanguard: boolean
+  vanguardUsed: boolean
+  guardian: boolean
+  guardianUsed: boolean
+  // What the party-wide skills of this hero add (applyAuras).
+  partySpeed: number
+  partyCrit: number
+  enemyMiss: number
+  shieldShare: number
+  partyHoly: number
+  partyFirstStrike: number
+  kind?: MonsterKind
+  armor: boolean
+  evasion: number
+  nodot: boolean
+  fireproof: boolean
+  mender: boolean
+  thorns: boolean
+  purgeEvery: number
+  enrageAt: number
+  enraged: boolean
+  elite: boolean
 }
 
 // Potions a party carries into a fight and what it has drunk.
@@ -145,6 +192,50 @@ const STATUS_FREE = {
   regen: 0,
   partyGuard: 0,
   partyAttack: 0,
+  crit: 0,
+  critDamage: 0,
+  pierce: 0,
+  lifesteal: 0,
+  execute: 0,
+  bossDamage: 0,
+  counter: 0,
+  dodge: 0,
+  burnOnHit: 0,
+  burn: 0,
+  barrier: 0,
+  firstStrike: 0,
+  struck: false,
+  lastStand: 0,
+  revive: 0,
+  reviveUsed: false,
+  holyBonus: 0,
+  aoePower: 0,
+  healTaken: 0,
+  twinStrike: 0,
+  trapGuard: 0,
+  farsight: false,
+  undying: false,
+  undyingUsed: false,
+  vanguard: false,
+  vanguardUsed: false,
+  guardian: false,
+  guardianUsed: false,
+  partySpeed: 0,
+  partyCrit: 0,
+  enemyMiss: 0,
+  shieldShare: 0,
+  partyHoly: 0,
+  partyFirstStrike: 0,
+  armor: false,
+  evasion: 0,
+  nodot: false,
+  fireproof: false,
+  mender: false,
+  thorns: false,
+  purgeEvery: 0,
+  enrageAt: 0,
+  enraged: false,
+  elite: false,
 }
 
 export type FloorOutcome = 'victory' | 'wipe' | 'retreat' | 'timeout'
@@ -153,8 +244,10 @@ export function createHeroUnit(member: PartyMember, index: number): BattleUnit {
   const hero = member.hero
   const klass = classById(hero.classId)
   const tough = hero.traitIds.includes('tough')
-  const skills = new Set(klass.skills.map((skill) => skill.kind))
-  const baseHp = Math.max(1, Math.round((klass.hpBase + hero.stats.vit * klass.hpPerVit) * (tough ? combatRules.toughHp : 1)))
+  // The opening buff or debuff follows the innate skill and each branch's first step, as before branches.
+  const skills = new Set(klass.skills.filter((skill) => (skill.tier ?? 1) <= 1).map((skill) => skill.kind))
+  const learned = heroSkillEffects(hero, { allies: member.allies, bonded: (member.healBonus ?? member.bonus ?? 0) > 0 })
+  const baseHp = Math.max(1, Math.round((klass.hpBase + hero.stats.vit * klass.hpPerVit) * (tough ? combatRules.toughHp : 1) * (1 + learned.hp)))
   const gear = heroGearMods(hero)
   // Heirlooms in a descendant's hands (Docs/tavern.md).
   gear.attack += member.heirloom?.attack ?? 0
@@ -178,7 +271,6 @@ export function createHeroUnit(member: PartyMember, index: number): BattleUnit {
   const bondScale = 1 + (member.bonus ?? 0)
   const maxHp = Math.max(1, Math.round(baseHp * injuryScale))
   const trinkets = heroTrinkets(hero)
-  const learned = heroSkillEffects(hero)
   const spirit = moraleScale(hero)
   return {
     id: hero.id,
@@ -222,32 +314,78 @@ export function createHeroUnit(member: PartyMember, index: number): BattleUnit {
     holy: hero.classId === 'cleric',
     ...STATUS_FREE,
     disarm: Math.max(hero.classId === 'rogue' ? magicRules.disarm : 0, trinkets.has('trapSense') ? magicRules.senseDisarm : 0),
-    alert: trinkets.has('alert'),
-    poisonWard: trinkets.has('poisonWard') ? magicRules.ward : 1,
-    steady: trinkets.has('steady') ? magicRules.ward : 1,
+    alert: trinkets.has('alert') || learned.alert,
+    poisonWard: (trinkets.has('poisonWard') ? magicRules.ward : 1) * (1 - learned.dotGuard),
+    // Steadfast heroes cannot be stunned or slowed.
+    steady: learned.steadfast ? 0 : trinkets.has('steady') ? magicRules.ward : 1,
     calm: trinkets.has('calm') ? magicRules.ward : 1,
     interrupt: klass.interrupt ?? false,
     guard: learned.guard,
     volleyEvery: learned.volleyEvery,
-    weaken: learned.weaken,
+    weaken: learned.weaken * (1 + learned.weakenPower),
     cleanse: learned.cleanse,
     regen: learned.regen,
     partyGuard: learned.partyGuard,
     partyAttack: learned.partyAttack,
+    crit: learned.crit,
+    critDamage: learned.critDamage,
+    pierce: Math.min(1, learned.pierce),
+    lifesteal: learned.lifesteal,
+    execute: learned.execute,
+    bossDamage: learned.bossDamage,
+    counter: learned.counter,
+    dodge: learned.dodge,
+    paralyzeOnHit: learned.stun,
+    slowOnHit: learned.slow,
+    burnOnHit: Math.round(learned.burn * (1 + learned.burnPower)),
+    firstStrike: learned.firstStrike,
+    lastStand: learned.lastStand,
+    revive: learned.revive,
+    holyBonus: learned.holy,
+    aoePower: learned.aoePower,
+    healTaken: learned.healTaken,
+    twinStrike: learned.twinStrike,
+    trapGuard: learned.trapGuard,
+    farsight: learned.farsight,
+    undying: learned.undying,
+    vanguard: learned.vanguard,
+    guardian: learned.guardian,
+    partySpeed: learned.partySpeed,
+    partyCrit: learned.partyCrit,
+    enemyMiss: learned.enemyMiss,
+    shieldShare: learned.shield,
+    partyHoly: learned.partyHoly,
+    partyFirstStrike: learned.partyFirstStrike,
   }
 }
 
 // Party-wide skills (ward, veil, bless, anthem) apply when the party sets
 // out, added up to a cap (Docs/skills.md).
 export function applyAuras(heroes: BattleUnit[]) {
-  const guard = Math.min(trainingRules.partyAuraCap.guard, heroes.reduce((sum, hero) => sum + hero.partyGuard, 0))
-  const attack = Math.min(trainingRules.partyAuraCap.attack, heroes.reduce((sum, hero) => sum + hero.partyAttack, 0))
-  if (guard <= 0 && attack <= 0) {
-    return
-  }
+  const cap = trainingRules.partyAuraCap
+  const total = (key: 'partyGuard' | 'partyAttack' | 'partySpeed' | 'partyCrit' | 'enemyMiss' | 'shieldShare' | 'partyHoly' | 'partyFirstStrike', most: number) =>
+    Math.min(most, heroes.reduce((sum, hero) => sum + hero[key], 0))
+  const guard = total('partyGuard', cap.guard)
+  const attack = total('partyAttack', cap.attack)
+  const speed = total('partySpeed', cap.speed)
+  const crit = total('partyCrit', cap.crit)
+  const miss = total('enemyMiss', cap.miss)
+  const shield = total('shieldShare', cap.shield)
+  const holy = total('partyHoly', cap.holy)
+  const first = total('partyFirstStrike', cap.firstStrike)
   for (const hero of heroes) {
-    hero.guard = 1 - (1 - hero.guard) * (1 - guard)
-    hero.attack *= 1 + attack
+    if (guard > 0) {
+      hero.guard = 1 - (1 - hero.guard) * (1 - guard)
+    }
+    if (attack > 0) {
+      hero.attack *= 1 + attack
+    }
+    hero.speed *= 1 + speed
+    hero.crit += crit
+    hero.dodge = Math.min(trainingRules.dodgeCap, hero.dodge + miss)
+    hero.shieldShare = shield
+    hero.holyBonus += holy
+    hero.firstStrike += first
   }
 }
 
@@ -268,8 +406,17 @@ export function simulateFloor(
   trapChance = 0,
   affixes: AffixId[] = [],
   raid?: RaidPool,
+  elite = 0,
 ): { outcome: FloorOutcome; ticks: number; trap: TrapResult } {
   const enemies = monsterIds.map((id, index) => enemyUnit(monsterById(id), index, monsterScale))
+  // Elites in the deeper dungeons (Docs/identity.md 5a): only where the chance is set, so other fights roll the same.
+  if (elite > 0) {
+    for (const enemy of enemies) {
+      if (!enemy.boss && rng.next() < elite) {
+        makeElite(enemy, rng)
+      }
+    }
+  }
   // A raid boss has a far deeper pool of health and keeps what it lost
   // between attempts (Docs/endgame.md 4c).
   const raidBoss = raid ? enemies.find((enemy) => enemy.boss) : undefined
@@ -289,6 +436,11 @@ export function simulateFloor(
   push(log, 0, 'log.floor', { floor: floorNumber })
   for (const hero of heroes) {
     hero.braced = false
+    hero.struck = false
+    hero.vanguardUsed = false
+    hero.reviveUsed = false
+    hero.undyingUsed = false
+    hero.barrier = hero.hp > 0 && hero.shieldShare > 0 ? Math.round(hero.maxHp * hero.shieldShare) : 0
   }
   const trap = springTrap(heroes, trapChance, rng, log)
   // Ambushers start ready to strike, unless a hero on watch spots them.
@@ -306,6 +458,18 @@ export function simulateFloor(
   }
   let tick = 0
   while (tick < combatRules.maxTicks) {
+    reviveFallen(heroes, tick, log)
+    // The guardian angel stands the whole party up once a trip.
+    const angel = !living(heroes).length ? heroes.find((hero) => hero.guardian && !hero.guardianUsed) : undefined
+    if (angel) {
+      angel.guardianUsed = true
+      for (const hero of heroes) {
+        hero.hp = Math.max(1, Math.round(hero.maxHp * giftRules.guardianHp))
+        hero.dot = 0
+        hero.burn = 0
+      }
+      push(log, tick, 'log.guardian', actorParams(angel))
+    }
     if (!living(heroes).length) {
       push(log, tick, 'log.defeat')
       return done({ outcome: 'wipe' as const, ticks: tick, trap })
@@ -326,7 +490,7 @@ export function simulateFloor(
     // A charged blast lands on its own clock, ahead of anyone's gauge (Docs/depth.md 3c).
     const blaster = enemies.find((enemy) => enemy.hp > 0 && enemy.charging && tick >= enemy.blastAt)
     if (blaster) {
-      enemyAct(blaster, heroes, rng, tick, log)
+      enemyAct(blaster, heroes, rng, tick, log, enemies)
       endTurn(blaster, false)
       advancePhases(enemies, monsterScale, tick, log, affixes)
       continue
@@ -340,6 +504,13 @@ export function simulateFloor(
       const dotDamage = Math.max(1, Math.round(actor.dot * (actor.ironWill ? combatRules.ironWillDot : 1) * actor.poisonWard))
       actor.poisonTaken += dotDamage
       hurt(actor, dotDamage, tick, log, 'log.dot')
+      advancePhases(enemies, monsterScale, tick, log, affixes)
+      if (actor.hp <= 0) {
+        continue
+      }
+    }
+    if (actor.burn > 0) {
+      hurt(actor, Math.max(1, Math.round(actor.burn * actor.poisonWard)), tick, log, 'log.burn')
       advancePhases(enemies, monsterScale, tick, log, affixes)
       if (actor.hp <= 0) {
         continue
@@ -375,6 +546,11 @@ export function simulateFloor(
       if (!(kit && !actor.braced && drinkPotion(actor, kit, tactics, tick, log))) {
         heroAct(actor, heroes, enemies, tactics, rng, tick, log)
       }
+      // The vanguard's first turn of a floor comes round again at once.
+      if (actor.vanguard && !actor.vanguardUsed) {
+        actor.vanguardUsed = true
+        actor.gauge += combatRules.gaugeThreshold
+      }
       // Hymn: a little healing for everyone on each of the singer's turns.
       if (actor.regen > 0) {
         for (const ally of living(heroes)) {
@@ -386,8 +562,15 @@ export function simulateFloor(
           }
         }
       }
+    } else if (actor.paralyzed) {
+      // A stunned monster loses this turn; the next one cannot be stunned again.
+      actor.paralyzed = false
+      actor.paralyzeGuard = true
+      push(log, tick, 'log.paralyzed', actorParams(actor))
+      endTurn(actor, true)
+      continue
     } else {
-      enemyAct(actor, heroes, rng, tick, log)
+      enemyAct(actor, heroes, rng, tick, log, enemies)
       // With the brace tactic the whole party takes its stance at the warning.
       if (tactics.blast === 'brace' && actor.charging && actor.blastAt === tick + combatRules.chargeTicks) {
         for (const hero of living(heroes)) {
@@ -409,7 +592,8 @@ export type TrapResult = 'none' | 'disarmed' | 'sprung'
 // a sprung trap hurts everyone but never knocks anyone out, and costs the
 // party its head start. Rolls only happen where traps exist.
 export function springTrap(heroes: BattleUnit[], chance: number, rng: Rng, log: LogEntry[]): TrapResult {
-  if (!(chance > 0) || rng.next() >= chance) {
+  // A far-sighted hero walks the party round every trap (Docs/identity.md 5a).
+  if (!(chance > 0) || living(heroes).some((hero) => hero.farsight) || rng.next() >= chance) {
     return 'none'
   }
   const alive = living(heroes)
@@ -420,7 +604,7 @@ export function springTrap(heroes: BattleUnit[], chance: number, rng: Rng, log: 
   }
   push(log, 0, 'log.trap')
   for (const hero of alive) {
-    const amount = Math.min(hero.hp - 1, Math.round(hero.maxHp * magicRules.trapDamage))
+    const amount = Math.min(hero.hp - 1, Math.round(hero.maxHp * magicRules.trapDamage * (1 - hero.trapGuard)))
     if (amount > 0) {
       hero.hp -= amount
       hero.taken += amount
@@ -524,11 +708,19 @@ function attack(actor: BattleUnit, enemies: BattleUnit[], tactics: Tactics, rng:
       push(log, tick, 'log.volley', actorParams(actor))
     }
     for (const target of pool) {
-      strike(actor, target, rng, tick, log, combatRules.aoeMultiplier)
+      strike(actor, target, rng, tick, log, combatRules.aoeMultiplier + actor.aoePower, true)
     }
+    actor.struck = true
     return
   }
-  strike(actor, chooseTarget(pool, tactics), rng, tick, log, 1)
+  const target = chooseTarget(pool, tactics)
+  strike(actor, target, rng, tick, log, 1)
+  // Twin strike: sometimes the blow lands twice.
+  if (actor.twinStrike > 0 && target.hp > 0 && rng.next() < actor.twinStrike) {
+    push(log, tick, 'log.twin', actorParams(actor))
+    strike(actor, target, rng, tick, log, 1)
+  }
+  actor.struck = true
 }
 
 // A hero drinks at most one potion instead of acting: cures first, then healing.
@@ -587,10 +779,33 @@ function endTurn(actor: BattleUnit, skipped: boolean) {
   actor.immuneStun = Math.max(0, actor.immuneStun - 1)
 }
 
-function enemyAct(actor: BattleUnit, heroes: BattleUnit[], rng: Rng, tick: number, log: LogEntry[]) {
+function enemyAct(actor: BattleUnit, heroes: BattleUnit[], rng: Rng, tick: number, log: LogEntry[], allies: BattleUnit[] = []) {
   const pool = actor.reach === 'melee' ? frontOrAll(heroes) : living(heroes)
   if (!pool.length) {
     return
+  }
+  // Bosses grow furious in a long fight (Docs/identity.md 5a).
+  if (actor.enrageAt > 0 && !actor.enraged && actor.actions + 1 >= actor.enrageAt) {
+    actor.enraged = true
+    actor.attack *= combatRules.enrageAttack
+    push(log, tick, 'log.enrage', actorParams(actor))
+  }
+  // Some bosses shake off weakness and slow every few turns.
+  if (actor.purgeEvery > 0 && (actor.actions + 1) % actor.purgeEvery === 0 && (actor.debuffed || actor.slowed > 0)) {
+    actor.debuffed = false
+    actor.slowed = 0
+    push(log, tick, 'log.purge', actorParams(actor))
+  }
+  // Menders patch up a hurt ally instead of striking.
+  if (actor.mender && !actor.charging) {
+    const patient = lowestRatio(living(allies))
+    if (patient && patient.hp / patient.maxHp < combatRules.mobHealBelow) {
+      const healed = Math.min(patient.maxHp - patient.hp, Math.max(1, Math.round(actor.attack * combatRules.mobHealPower)))
+      patient.hp += healed
+      actor.healed += healed
+      push(log, tick, 'log.heal', { ...actorParams(actor), ...targetParams(patient), amount: healed })
+      return
+    }
   }
   // Boss pattern: every few actions it charges, and the next one blasts everyone.
   if (actor.blastEvery > 0) {
@@ -666,7 +881,14 @@ function chooseTarget(pool: BattleUnit[], tactics: Tactics): BattleUnit {
   return lowestHp(pool)
 }
 
-function strike(actor: BattleUnit, target: BattleUnit, rng: Rng, tick: number, log: LogEntry[], power: number) {
+function strike(actor: BattleUnit, target: BattleUnit, rng: Rng, tick: number, log: LogEntry[], power: number, spread = false) {
+  // Evasive monsters and nimble heroes slip single blows; sweeps still land.
+  // Rolls only where someone can dodge, so older fights replay the same.
+  const dodge = target.side === 'enemy' ? target.evasion : target.dodge
+  if (!spread && dodge > 0 && rng.next() < dodge) {
+    push(log, tick, 'log.miss', { ...actorParams(actor), ...targetParams(target) })
+    return
+  }
   let attack = actor.attack * power * (actor.buffed ? combatRules.buffMultiplier : 1)
   if (actor.debuffed) {
     attack *= combatRules.debuffMultiplier
@@ -687,15 +909,67 @@ function strike(actor: BattleUnit, target: BattleUnit, rng: Rng, tick: number, l
   if (actor.element === 'flame' && target.weakFlame) {
     multiplier *= 1.6
   }
+  if (actor.element === 'flame' && target.fireproof) {
+    multiplier *= 1 - combatRules.fireproofCut
+  }
+  // Branch and gift bonuses (Docs/identity.md 5a).
+  const low = combatRules.lowHp
+  if (target.boss) {
+    multiplier *= 1 + actor.bossDamage
+  }
+  if (target.kind === 'undead' || target.kind === 'spirit') {
+    multiplier *= 1 + actor.holyBonus
+  }
+  if (actor.lastStand > 0 && actor.hp / actor.maxHp < low) {
+    multiplier *= 1 + actor.lastStand
+  }
+  if (actor.firstStrike > 0 && !actor.struck) {
+    multiplier *= 1 + actor.firstStrike
+  }
+  if (actor.execute > 0 && target.hp / target.maxHp < low) {
+    multiplier *= 1 + actor.execute
+  }
+  const crit = actor.crit > 0 && rng.next() < actor.crit
+  if (crit) {
+    multiplier *= combatRules.critMultiplier + actor.critDamage
+  } else if (target.armor) {
+    // Armour turns plain blows; a critical hit gets through.
+    multiplier *= 1 - combatRules.armorCut
+  }
   attack *= multiplier
-  const rolled = vary(rng, attack - target.defense)
+  const rolled = vary(rng, attack - target.defense * (1 - actor.pierce))
   // Guarding skills shave the blow before rounding (review 8e25753); only
   // heroes who learned them take this path, so older fights match.
-  const amount = Math.max(combatRules.minDamage, Math.round(target.guard > 0 ? rolled * (1 - target.guard) : rolled))
+  let guard = target.guard
+  if (target.lastStand > 0 && target.hp / target.maxHp < low) {
+    guard = 1 - (1 - guard) * (1 - target.lastStand)
+  }
+  const amount = Math.max(combatRules.minDamage, Math.round(guard !== 0 ? rolled * (1 - guard) : rolled))
   actor.dealt += amount
+  if (crit) {
+    push(log, tick, 'log.crit', actorParams(actor))
+  }
   hurt(target, amount, tick, log, 'log.attack', actor)
-  if (target.hp > 0 && actor.dotOnHit > 0 && target.immunePoison <= 0) {
+  if (actor.lifesteal > 0 && actor.hp > 0) {
+    const healed = Math.min(actor.maxHp - actor.hp, Math.round(amount * actor.lifesteal))
+    if (healed > 0) {
+      actor.hp += healed
+      actor.healed += healed
+      push(log, tick, 'log.heal', { ...actorParams(actor), ...targetParams(actor), amount: healed })
+    }
+  }
+  if (target.thorns && actor.hp > 0) {
+    hurt(actor, Math.max(1, Math.round(amount * combatRules.thorns)), tick, log, 'log.thorns', target)
+  }
+  if (!spread && target.counter > 0 && target.hp > 0 && actor.hp > 0 && rng.next() < target.counter) {
+    push(log, tick, 'log.counter', actorParams(target))
+    strike(target, actor, rng, tick, log, combatRules.counterPower, true)
+  }
+  if (target.hp > 0 && actor.dotOnHit > 0 && target.immunePoison <= 0 && !target.nodot) {
     target.dot = Math.min(Math.max(combatRules.dotCap, actor.poisonCap), target.dot + actor.dotOnHit)
+  }
+  if (target.hp > 0 && actor.burnOnHit > 0 && !target.fireproof) {
+    target.burn = Math.min(combatRules.dotCap, target.burn + actor.burnOnHit)
   }
   // Weakening skills: the target hits softer for the rest of the floor.
   if (target.hp > 0 && actor.weaken > 0 && !target.debuffed && rng.next() < actor.weaken) {
@@ -732,9 +1006,21 @@ function hurt(
   key: string,
   actor?: BattleUnit,
 ) {
+  // A holy shield soaks blows first (Docs/identity.md 5a).
+  const absorbed = target.barrier > 0 ? Math.min(target.barrier, amount) : 0
+  if (absorbed > 0) {
+    target.barrier -= absorbed
+    amount -= absorbed
+  }
+  // The undying hold on at 1 once a floor.
+  if (target.undying && !target.undyingUsed && amount >= target.hp && target.hp > 0) {
+    target.undyingUsed = true
+    amount = target.hp - 1
+    push(log, tick, 'log.undying', actorParams(target))
+  }
   target.taken += amount
   target.hp = Math.max(0, target.hp - amount)
-  const params = actor ? { ...actorParams(actor), ...targetParams(target), amount } : { ...actorParams(target), amount }
+  const params = actor ? { ...actorParams(actor), ...targetParams(target), amount, ...(absorbed ? { absorbed } : {}) } : { ...actorParams(target), amount, ...(absorbed ? { absorbed } : {}) }
   push(log, tick, key, params)
   if (target.hp === 0) {
     target.overkill = amount
@@ -743,7 +1029,7 @@ function hurt(
 }
 
 function heal(actor: BattleUnit, target: BattleUnit, rng: Rng, tick: number, log: LogEntry[]) {
-  const amount = Math.max(1, Math.round(vary(rng, actor.heal)))
+  const amount = Math.max(1, Math.round(vary(rng, actor.heal) * (1 + target.healTaken)))
   const healed = Math.min(target.maxHp - target.hp, amount)
   target.hp += healed
   actor.healed += healed
@@ -813,7 +1099,62 @@ function enemyUnit(monster: MonsterDef, index: number, scale: number): BattleUni
     phases: monster.phases ?? [],
     huntsCasters: (monster.silence ?? 0) > 0,
     ambushPower: magicRules.ambushPower,
+    ...monsterTraits(monster),
   }
+}
+
+// Kinds and traits (Docs/identity.md 5a). Bosses hold steady against stuns
+// and slows, and the deeper ones grow furious in a long fight.
+function monsterTraits(monster: MonsterDef): Pick<BattleUnit, 'kind' | 'armor' | 'evasion' | 'nodot' | 'fireproof' | 'mender' | 'thorns' | 'purgeEvery' | 'enrageAt' | 'steady'> {
+  const has = (trait: MonsterTrait) => monster.traits?.includes(trait) ?? false
+  return {
+    kind: monster.kind,
+    armor: has('armor'),
+    evasion: has('evasive') ? combatRules.evasion : 0,
+    nodot: has('nodot'),
+    fireproof: has('fireproof'),
+    mender: has('healer'),
+    thorns: has('thorns'),
+    purgeEvery: has('purge') ? combatRules.purgeEvery : 0,
+    enrageAt: monster.boss && monster.tier >= combatRules.enrageTier ? combatRules.enrageActions : 0,
+    steady: monster.boss ? combatRules.bossSteady : 1,
+  }
+}
+
+function makeElite(enemy: BattleUnit, rng: Rng) {
+  enemy.elite = true
+  enemy.maxHp = Math.round(enemy.maxHp * combatRules.eliteHp)
+  enemy.hp = enemy.maxHp
+  const open = (combatRules.eliteTraits as MonsterTrait[]).filter((trait) =>
+    trait === 'armor' ? !enemy.armor : trait === 'evasive' ? enemy.evasion === 0 : trait === 'thorns' ? !enemy.thorns : !enemy.nodot,
+  )
+  const trait = open.length ? rng.pick(open) : undefined
+  if (trait === 'armor') {
+    enemy.armor = true
+  } else if (trait === 'evasive') {
+    enemy.evasion = combatRules.evasion
+  } else if (trait === 'thorns') {
+    enemy.thorns = true
+  } else if (trait === 'nodot') {
+    enemy.nodot = true
+  }
+}
+
+// A miracle: a healer brings one fallen ally back once a floor.
+function reviveFallen(heroes: BattleUnit[], tick: number, log: LogEntry[]) {
+  const fallen = heroes.find((hero) => hero.hp <= 0)
+  if (!fallen) {
+    return
+  }
+  const saint = heroes.find((hero) => hero.hp > 0 && hero.revive > 0 && !hero.reviveUsed)
+  if (!saint) {
+    return
+  }
+  saint.reviveUsed = true
+  fallen.hp = Math.max(1, Math.round(fallen.maxHp * saint.revive))
+  fallen.dot = 0
+  fallen.burn = 0
+  push(log, tick, 'log.revive', { ...actorParams(saint), ...targetParams(fallen) })
 }
 
 // The nest's affixes change its monsters (Docs/depth.md 3d). Older dungeons
@@ -926,6 +1267,7 @@ function replayUnit(unit: BattleUnit): ReplayUnit {
     hp: unit.hp,
     maxHp: unit.maxHp,
     boss: unit.boss,
+    ...(unit.elite ? { elite: true } : {}),
   }
 }
 

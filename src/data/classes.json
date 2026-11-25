@@ -14,12 +14,145 @@
       "defenseScale": 0.5,
       "healScale": 0,
       "skills": [
-        { "id": "warrior.strike", "kind": "attack", "power": 1 },
-        { "id": "warrior.taunt", "kind": "taunt", "power": 1, "effect": {"threat": 30} },
-        { "id": "warrior.guard", "kind": "buff", "power": 1, "effect": {"guard": 0.05} },
-        { "id": "warrior.slam", "kind": "attack", "power": 1.05, "effect": {"volleyEvery": 6} }
+        {
+          "id": "warrior.strike",
+          "kind": "attack",
+          "power": 1
+        },
+        {
+          "id": "warrior.guard",
+          "kind": "buff",
+          "power": 1,
+          "branch": 0,
+          "tier": 1,
+          "effect": {
+            "guard": 0.05
+          }
+        },
+        {
+          "id": "warrior.wall",
+          "kind": "buff",
+          "power": 1,
+          "branch": 0,
+          "tier": 2,
+          "effect": {
+            "hp": 0.08,
+            "guard": 0.03
+          }
+        },
+        {
+          "id": "warrior.counter",
+          "kind": "buff",
+          "power": 1,
+          "branch": 0,
+          "tier": 3,
+          "effect": {
+            "counter": 0.2
+          }
+        },
+        {
+          "id": "warrior.taunt",
+          "kind": "taunt",
+          "power": 1,
+          "branch": 1,
+          "tier": 1,
+          "effect": {
+            "threat": 30
+          }
+        },
+        {
+          "id": "warrior.cow",
+          "kind": "debuff",
+          "power": 1,
+          "branch": 1,
+          "tier": 2,
+          "effect": {
+            "weaken": 0.1
+          }
+        },
+        {
+          "id": "warrior.laststand",
+          "kind": "buff",
+          "power": 1,
+          "branch": 1,
+          "tier": 3,
+          "effect": {
+            "lastStand": 0.15
+          },
+          "when": {
+            "withClass": "cleric",
+            "bonus": {
+              "lastStand": 0.05
+            }
+          }
+        },
+        {
+          "id": "warrior.slam",
+          "kind": "attack",
+          "power": 1.05,
+          "branch": 2,
+          "tier": 1,
+          "effect": {
+            "volleyEvery": 6
+          }
+        },
+        {
+          "id": "warrior.fury",
+          "kind": "buff",
+          "power": 1,
+          "branch": 2,
+          "tier": 2,
+          "effect": {
+            "attack": 0.08,
+            "guard": -0.03
+          },
+          "when": {
+            "personality": "hotheaded",
+            "bonus": {
+              "attack": 0.04
+            }
+          }
+        },
+        {
+          "id": "warrior.thirst",
+          "kind": "buff",
+          "power": 1,
+          "branch": 2,
+          "tier": 3,
+          "effect": {
+            "lifesteal": 0.08
+          }
+        }
       ],
-      "potentialBias": { "str": 14, "agi": 8, "vit": 14, "int": 4, "wil": 7, "wis": 4 }
+      "potentialBias": {
+        "str": 14,
+        "agi": 8,
+        "vit": 14,
+        "int": 4,
+        "wil": 7,
+        "wis": 4
+      },
+      "branches": [
+        {
+          "id": "warrior.bulwark",
+          "mastery": {
+            "partyGuard": 0.03
+          }
+        },
+        {
+          "id": "warrior.provoke",
+          "mastery": {
+            "threat": 30,
+            "steadfast": true
+          }
+        },
+        {
+          "id": "warrior.berserk",
+          "mastery": {
+            "crit": 0.1
+          }
+        }
+      ]
     },
     {
       "id": "rogue",
@@ -35,12 +168,131 @@
       "defenseScale": 0.22,
       "healScale": 0,
       "skills": [
-        { "id": "rogue.stab", "kind": "attack", "power": 1 },
-        { "id": "rogue.bleed", "kind": "attack", "power": 1.1, "effect": {"bleed": 4} },
-        { "id": "rogue.poison", "kind": "debuff", "power": 1, "effect": {"weaken": 0.08} },
-        { "id": "rogue.shadow", "kind": "buff", "power": 1, "effect": {"speed": 0.04} }
+        {
+          "id": "rogue.stab",
+          "kind": "attack",
+          "power": 1
+        },
+        {
+          "id": "rogue.poison",
+          "kind": "debuff",
+          "power": 1,
+          "branch": 0,
+          "tier": 1,
+          "effect": {
+            "weaken": 0.08
+          }
+        },
+        {
+          "id": "rogue.toxin",
+          "kind": "attack",
+          "power": 1,
+          "branch": 0,
+          "tier": 2,
+          "effect": {
+            "bleed": 4
+          }
+        },
+        {
+          "id": "rogue.numb",
+          "kind": "debuff",
+          "power": 1,
+          "branch": 0,
+          "tier": 3,
+          "effect": {
+            "stun": 0.06
+          }
+        },
+        {
+          "id": "rogue.shadow",
+          "kind": "buff",
+          "power": 1,
+          "branch": 1,
+          "tier": 1,
+          "effect": {
+            "speed": 0.04
+          }
+        },
+        {
+          "id": "rogue.evade",
+          "kind": "buff",
+          "power": 1,
+          "branch": 1,
+          "tier": 2,
+          "effect": {
+            "dodge": 0.08
+          }
+        },
+        {
+          "id": "rogue.ambush",
+          "kind": "attack",
+          "power": 1,
+          "branch": 1,
+          "tier": 3,
+          "effect": {
+            "firstStrike": 0.6
+          }
+        },
+        {
+          "id": "rogue.bleed",
+          "kind": "attack",
+          "power": 1.1,
+          "branch": 2,
+          "tier": 1,
+          "effect": {
+            "bleed": 4
+          }
+        },
+        {
+          "id": "rogue.vital",
+          "kind": "attack",
+          "power": 1,
+          "branch": 2,
+          "tier": 2,
+          "effect": {
+            "crit": 0.1
+          }
+        },
+        {
+          "id": "rogue.execute",
+          "kind": "attack",
+          "power": 1,
+          "branch": 2,
+          "tier": 3,
+          "effect": {
+            "execute": 0.3
+          }
+        }
       ],
-      "potentialBias": { "str": 7, "agi": 15, "vit": 8, "int": 5, "wil": 6, "wis": 5 }
+      "potentialBias": {
+        "str": 7,
+        "agi": 15,
+        "vit": 8,
+        "int": 5,
+        "wil": 6,
+        "wis": 5
+      },
+      "branches": [
+        {
+          "id": "rogue.venom",
+          "mastery": {
+            "weakenPower": 0.3
+          }
+        },
+        {
+          "id": "rogue.shadow",
+          "mastery": {
+            "dodge": 0.05,
+            "trapGuard": 0.3
+          }
+        },
+        {
+          "id": "rogue.assassin",
+          "mastery": {
+            "critDamage": 0.3
+          }
+        }
+      ]
     },
     {
       "id": "archer",
@@ -56,12 +308,137 @@
       "defenseScale": 0.24,
       "healScale": 0,
       "skills": [
-        { "id": "archer.shot", "kind": "attack", "power": 1 },
-        { "id": "archer.aim", "kind": "attack", "power": 1.15, "effect": {"attack": 0.06} },
-        { "id": "archer.mark", "kind": "debuff", "power": 1, "effect": {"weaken": 0.08} },
-        { "id": "archer.volley", "kind": "attack", "power": 0.9, "effect": {"volleyEvery": 6} }
+        {
+          "id": "archer.shot",
+          "kind": "attack",
+          "power": 1
+        },
+        {
+          "id": "archer.aim",
+          "kind": "attack",
+          "power": 1.15,
+          "branch": 0,
+          "tier": 1,
+          "effect": {
+            "attack": 0.06
+          }
+        },
+        {
+          "id": "archer.weakspot",
+          "kind": "attack",
+          "power": 1,
+          "branch": 0,
+          "tier": 2,
+          "effect": {
+            "crit": 0.08
+          }
+        },
+        {
+          "id": "archer.pierce",
+          "kind": "attack",
+          "power": 1,
+          "branch": 0,
+          "tier": 3,
+          "effect": {
+            "pierce": 0.25
+          }
+        },
+        {
+          "id": "archer.volley",
+          "kind": "attack",
+          "power": 0.9,
+          "branch": 1,
+          "tier": 1,
+          "effect": {
+            "volleyEvery": 6
+          }
+        },
+        {
+          "id": "archer.quick",
+          "kind": "buff",
+          "power": 1,
+          "branch": 1,
+          "tier": 2,
+          "effect": {
+            "speed": 0.05
+          }
+        },
+        {
+          "id": "archer.rain",
+          "kind": "attack",
+          "power": 1,
+          "branch": 1,
+          "tier": 3,
+          "effect": {
+            "volleyEvery": 5
+          }
+        },
+        {
+          "id": "archer.mark",
+          "kind": "debuff",
+          "power": 1,
+          "branch": 2,
+          "tier": 1,
+          "effect": {
+            "weaken": 0.08
+          }
+        },
+        {
+          "id": "archer.snare",
+          "kind": "debuff",
+          "power": 1,
+          "branch": 2,
+          "tier": 2,
+          "effect": {
+            "slow": 0.1
+          }
+        },
+        {
+          "id": "archer.beast",
+          "kind": "attack",
+          "power": 1,
+          "branch": 2,
+          "tier": 3,
+          "effect": {
+            "bossDamage": 0.1
+          },
+          "when": {
+            "personality": "loner",
+            "bonus": {
+              "bossDamage": 0.05
+            }
+          }
+        }
       ],
-      "potentialBias": { "str": 6, "agi": 14, "vit": 8, "int": 6, "wil": 7, "wis": 6 }
+      "potentialBias": {
+        "str": 6,
+        "agi": 14,
+        "vit": 8,
+        "int": 6,
+        "wil": 7,
+        "wis": 6
+      },
+      "branches": [
+        {
+          "id": "archer.sniper",
+          "mastery": {
+            "bossDamage": 0.12
+          }
+        },
+        {
+          "id": "archer.rapid",
+          "mastery": {
+            "aoePower": 0.1
+          }
+        },
+        {
+          "id": "archer.hunter",
+          "mastery": {
+            "alert": true,
+            "partyFirstStrike": 0.15
+          }
+        }
+      ]
     },
     {
       "id": "mage",
@@ -76,12 +453,130 @@
       "defenseScale": 0.16,
       "healScale": 0,
       "skills": [
-        { "id": "mage.bolt", "kind": "attack", "power": 1 },
-        { "id": "mage.burst", "kind": "attack", "power": 0.9, "effect": {"attack": 0.06} },
-        { "id": "mage.ward", "kind": "buff", "power": 1, "effect": {"partyGuard": 0.03} },
-        { "id": "mage.arc", "kind": "attack", "power": 1.05, "effect": {"speed": 0.04} }
+        {
+          "id": "mage.bolt",
+          "kind": "attack",
+          "power": 1
+        },
+        {
+          "id": "mage.burst",
+          "kind": "attack",
+          "power": 0.9,
+          "branch": 0,
+          "tier": 1,
+          "effect": {
+            "attack": 0.06
+          }
+        },
+        {
+          "id": "mage.flame",
+          "kind": "attack",
+          "power": 1,
+          "branch": 0,
+          "tier": 2,
+          "effect": {
+            "burn": 3
+          }
+        },
+        {
+          "id": "mage.storm",
+          "kind": "attack",
+          "power": 1,
+          "branch": 0,
+          "tier": 3,
+          "effect": {
+            "crit": 0.08
+          }
+        },
+        {
+          "id": "mage.arc",
+          "kind": "attack",
+          "power": 1.05,
+          "branch": 1,
+          "tier": 1,
+          "effect": {
+            "speed": 0.04
+          }
+        },
+        {
+          "id": "mage.frost",
+          "kind": "debuff",
+          "power": 1,
+          "branch": 1,
+          "tier": 2,
+          "effect": {
+            "slow": 0.1
+          }
+        },
+        {
+          "id": "mage.freeze",
+          "kind": "debuff",
+          "power": 1,
+          "branch": 1,
+          "tier": 3,
+          "effect": {
+            "stun": 0.05
+          }
+        },
+        {
+          "id": "mage.ward",
+          "kind": "buff",
+          "power": 1,
+          "branch": 2,
+          "tier": 1,
+          "effect": {
+            "partyGuard": 0.03
+          }
+        },
+        {
+          "id": "mage.flow",
+          "kind": "buff",
+          "power": 1,
+          "branch": 2,
+          "tier": 2,
+          "effect": {
+            "speed": 0.04
+          }
+        },
+        {
+          "id": "mage.amplify",
+          "kind": "buff",
+          "power": 1,
+          "branch": 2,
+          "tier": 3,
+          "effect": {
+            "partyAttack": 0.02
+          }
+        }
       ],
-      "potentialBias": { "str": 4, "agi": 8, "vit": 6, "int": 15, "wil": 7, "wis": 8 }
+      "potentialBias": {
+        "str": 4,
+        "agi": 8,
+        "vit": 6,
+        "int": 15,
+        "wil": 7,
+        "wis": 8
+      },
+      "branches": [
+        {
+          "id": "mage.fire",
+          "mastery": {
+            "burnPower": 0.5
+          }
+        },
+        {
+          "id": "mage.frost",
+          "mastery": {
+            "partyGuard": 0.02
+          }
+        },
+        {
+          "id": "mage.arcane",
+          "mastery": {
+            "pierce": 0.15
+          }
+        }
+      ]
     },
     {
       "id": "cleric",
@@ -96,12 +591,136 @@
       "defenseScale": 0.3,
       "healScale": 3.8,
       "skills": [
-        { "id": "cleric.smite", "kind": "attack", "power": 1 },
-        { "id": "cleric.heal", "kind": "heal", "power": 1, "effect": {"heal": 0.08} },
-        { "id": "cleric.bless", "kind": "buff", "power": 1, "effect": {"partyAttack": 0.02} },
-        { "id": "cleric.purify", "kind": "heal", "power": 1.1, "effect": {"cleanse": true} }
+        {
+          "id": "cleric.smite",
+          "kind": "attack",
+          "power": 1
+        },
+        {
+          "id": "cleric.heal",
+          "kind": "heal",
+          "power": 1,
+          "branch": 0,
+          "tier": 1,
+          "effect": {
+            "heal": 0.08
+          }
+        },
+        {
+          "id": "cleric.renew",
+          "kind": "heal",
+          "power": 1,
+          "branch": 0,
+          "tier": 2,
+          "effect": {
+            "regen": 0.01
+          }
+        },
+        {
+          "id": "cleric.miracle",
+          "kind": "heal",
+          "power": 1,
+          "branch": 0,
+          "tier": 3,
+          "effect": {
+            "revive": 0.3
+          }
+        },
+        {
+          "id": "cleric.purify",
+          "kind": "heal",
+          "power": 1.1,
+          "branch": 1,
+          "tier": 1,
+          "effect": {
+            "cleanse": true
+          }
+        },
+        {
+          "id": "cleric.consecrate",
+          "kind": "buff",
+          "power": 1,
+          "branch": 1,
+          "tier": 2,
+          "effect": {
+            "partyGuard": 0.03
+          }
+        },
+        {
+          "id": "cleric.aegis",
+          "kind": "buff",
+          "power": 1,
+          "branch": 1,
+          "tier": 3,
+          "effect": {
+            "shield": 0.05
+          },
+          "when": {
+            "personality": "gentle",
+            "bonus": {
+              "shield": 0.02
+            }
+          }
+        },
+        {
+          "id": "cleric.bless",
+          "kind": "buff",
+          "power": 1,
+          "branch": 2,
+          "tier": 1,
+          "effect": {
+            "partyAttack": 0.02
+          }
+        },
+        {
+          "id": "cleric.wrath",
+          "kind": "attack",
+          "power": 1,
+          "branch": 2,
+          "tier": 2,
+          "effect": {
+            "attack": 0.1
+          }
+        },
+        {
+          "id": "cleric.exorcise",
+          "kind": "attack",
+          "power": 1,
+          "branch": 2,
+          "tier": 3,
+          "effect": {
+            "holy": 0.25
+          }
+        }
       ],
-      "potentialBias": { "str": 5, "agi": 6, "vit": 10, "int": 7, "wil": 11, "wis": 15 }
+      "potentialBias": {
+        "str": 5,
+        "agi": 6,
+        "vit": 10,
+        "int": 7,
+        "wil": 11,
+        "wis": 15
+      },
+      "branches": [
+        {
+          "id": "cleric.mercy",
+          "mastery": {
+            "heal": 0.08
+          }
+        },
+        {
+          "id": "cleric.sanctuary",
+          "mastery": {
+            "shield": 0.03
+          }
+        },
+        {
+          "id": "cleric.judgment",
+          "mastery": {
+            "partyHoly": 0.1
+          }
+        }
+      ]
     },
     {
       "id": "bard",
@@ -116,12 +735,140 @@
       "defenseScale": 0.26,
       "healScale": 0,
       "skills": [
-        { "id": "bard.note", "kind": "attack", "power": 1 },
-        { "id": "bard.anthem", "kind": "buff", "power": 1, "effect": {"partyAttack": 0.02} },
-        { "id": "bard.hymn", "kind": "heal", "power": 0.6, "effect": {"regen": 0.01} },
-        { "id": "bard.discord", "kind": "debuff", "power": 1, "effect": {"weaken": 0.08} }
+        {
+          "id": "bard.note",
+          "kind": "attack",
+          "power": 1
+        },
+        {
+          "id": "bard.anthem",
+          "kind": "buff",
+          "power": 1,
+          "branch": 0,
+          "tier": 1,
+          "effect": {
+            "partyAttack": 0.02
+          },
+          "when": {
+            "bonded": true,
+            "bonus": {
+              "partyAttack": 0.01
+            }
+          }
+        },
+        {
+          "id": "bard.drum",
+          "kind": "buff",
+          "power": 1,
+          "branch": 0,
+          "tier": 2,
+          "effect": {
+            "partySpeed": 0.03
+          }
+        },
+        {
+          "id": "bard.saga",
+          "kind": "buff",
+          "power": 1,
+          "branch": 0,
+          "tier": 3,
+          "effect": {},
+          "when": {
+            "moraleAbove": 70,
+            "bonus": {
+              "partyAttack": 0.03
+            }
+          }
+        },
+        {
+          "id": "bard.hymn",
+          "kind": "heal",
+          "power": 0.6,
+          "branch": 1,
+          "tier": 1,
+          "effect": {
+            "regen": 0.01
+          }
+        },
+        {
+          "id": "bard.lullaby",
+          "kind": "debuff",
+          "power": 1,
+          "branch": 1,
+          "tier": 2,
+          "effect": {
+            "slow": 0.08
+          }
+        },
+        {
+          "id": "bard.solace",
+          "kind": "buff",
+          "power": 1,
+          "branch": 1,
+          "tier": 3,
+          "effect": {
+            "fatigueCut": 0.1
+          }
+        },
+        {
+          "id": "bard.discord",
+          "kind": "debuff",
+          "power": 1,
+          "branch": 2,
+          "tier": 1,
+          "effect": {
+            "weaken": 0.08
+          }
+        },
+        {
+          "id": "bard.scream",
+          "kind": "debuff",
+          "power": 1,
+          "branch": 2,
+          "tier": 2,
+          "effect": {
+            "volleyEvery": 6
+          }
+        },
+        {
+          "id": "bard.confuse",
+          "kind": "debuff",
+          "power": 1,
+          "branch": 2,
+          "tier": 3,
+          "effect": {
+            "enemyMiss": 0.04
+          }
+        }
       ],
-      "potentialBias": { "str": 5, "agi": 9, "vit": 8, "int": 8, "wil": 14, "wis": 8 }
+      "potentialBias": {
+        "str": 5,
+        "agi": 9,
+        "vit": 8,
+        "int": 8,
+        "wil": 14,
+        "wis": 8
+      },
+      "branches": [
+        {
+          "id": "bard.valor",
+          "mastery": {
+            "partyCrit": 0.03
+          }
+        },
+        {
+          "id": "bard.calm",
+          "mastery": {
+            "regen": 0.005
+          }
+        },
+        {
+          "id": "bard.discord",
+          "mastery": {
+            "weakenPower": 0.3
+          }
+        }
+      ]
     },
     {
       "id": "dancer",
@@ -136,12 +883,137 @@
       "defenseScale": 0.22,
       "healScale": 0,
       "skills": [
-        { "id": "dancer.step", "kind": "attack", "power": 1 },
-        { "id": "dancer.veil", "kind": "debuff", "power": 1, "effect": {"partyGuard": 0.03} },
-        { "id": "dancer.flourish", "kind": "attack", "power": 1.05, "effect": {"attack": 0.06} },
-        { "id": "dancer.encore", "kind": "debuff", "power": 1, "effect": {"speed": 0.04} }
+        {
+          "id": "dancer.step",
+          "kind": "attack",
+          "power": 1
+        },
+        {
+          "id": "dancer.veil",
+          "kind": "debuff",
+          "power": 1,
+          "branch": 0,
+          "tier": 1,
+          "effect": {
+            "partyGuard": 0.03
+          }
+        },
+        {
+          "id": "dancer.charm",
+          "kind": "debuff",
+          "power": 1,
+          "branch": 0,
+          "tier": 2,
+          "effect": {
+            "enemyMiss": 0.04
+          },
+          "when": {
+            "personality": "social",
+            "bonus": {
+              "enemyMiss": 0.01
+            }
+          }
+        },
+        {
+          "id": "dancer.tempt",
+          "kind": "buff",
+          "power": 1,
+          "branch": 0,
+          "tier": 3,
+          "effect": {
+            "dodge": 0.1,
+            "threat": 15
+          }
+        },
+        {
+          "id": "dancer.flourish",
+          "kind": "attack",
+          "power": 1.05,
+          "branch": 1,
+          "tier": 1,
+          "effect": {
+            "attack": 0.06
+          }
+        },
+        {
+          "id": "dancer.bladedance",
+          "kind": "attack",
+          "power": 1,
+          "branch": 1,
+          "tier": 2,
+          "effect": {
+            "bleed": 3
+          }
+        },
+        {
+          "id": "dancer.climax",
+          "kind": "attack",
+          "power": 1,
+          "branch": 1,
+          "tier": 3,
+          "effect": {
+            "crit": 0.1
+          }
+        },
+        {
+          "id": "dancer.encore",
+          "kind": "debuff",
+          "power": 1,
+          "branch": 2,
+          "tier": 1,
+          "effect": {
+            "speed": 0.04
+          }
+        },
+        {
+          "id": "dancer.gale",
+          "kind": "buff",
+          "power": 1,
+          "branch": 2,
+          "tier": 2,
+          "effect": {
+            "partySpeed": 0.03
+          }
+        },
+        {
+          "id": "dancer.whirl",
+          "kind": "attack",
+          "power": 1,
+          "branch": 2,
+          "tier": 3,
+          "effect": {
+            "volleyEvery": 6
+          }
+        }
       ],
-      "potentialBias": { "str": 5, "agi": 14, "vit": 7, "int": 6, "wil": 12, "wis": 7 }
+      "potentialBias": {
+        "str": 5,
+        "agi": 14,
+        "vit": 7,
+        "int": 6,
+        "wil": 12,
+        "wis": 7
+      },
+      "branches": [
+        {
+          "id": "dancer.charm",
+          "mastery": {
+            "enemyMiss": 0.02
+          }
+        },
+        {
+          "id": "dancer.blade",
+          "mastery": {
+            "critDamage": 0.3
+          }
+        },
+        {
+          "id": "dancer.wind",
+          "mastery": {
+            "speed": 0.04
+          }
+        }
+      ]
     }
   ]
 }

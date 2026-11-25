@@ -1,4 +1,4 @@
-import { ageBands, ageMultiplier, bandForAge, classById, classList, maxAge, names, personalityRules, progression, traits } from './data'
+import { ageBands, ageMultiplier, bandForAge, classById, classList, giftRules, maxAge, names, personalityRules, progression, traits } from './data'
 import { normalizeGear } from './gear'
 import { normalizeLearned } from './skills'
 import { hashString, isGenes, type Genes } from './genes'
@@ -13,6 +13,7 @@ import {
   type Stats,
   type TraitId,
   type PersonalityId,
+  type GiftId,
 } from './types'
 
 export type HeroDraft = {
@@ -36,6 +37,7 @@ export type HeroDraft = {
   prodigy?: boolean
   school?: Hero['school']
   personality?: Hero['personality']
+  gift?: GiftId
   losses?: number
   benched?: number
   gear?: Array<Partial<Gear>>
@@ -68,6 +70,28 @@ export function personalityFor(id: string): PersonalityId {
   return createRng(hashString(`personality:${id}`)).pick(personalityRules.ids as PersonalityId[])
 }
 
+export function isGift(value: unknown): value is GiftId {
+  return typeof value === 'string' && giftRules.gifts.some((gift) => gift.id === value)
+}
+
+// A newcomer's gift (Docs/identity.md 5a), drawn on its own stream so no other roll changes.
+export function rollGift(id: string, chance: number): GiftId | undefined {
+  const rng = createRng(hashString(`gift:${id}`))
+  return rng.next() < chance ? rng.pick(giftRules.gifts).id : undefined
+}
+
+// The hero's blood gift lifts every potential once, when the hero is made.
+export function withGiftPotentials(potentials: Stats, gift: GiftId | undefined): Stats {
+  if (gift !== 'heroBlood') {
+    return potentials
+  }
+  const lifted = { ...potentials }
+  for (const key of STAT_KEYS) {
+    lifted[key] += giftRules.heroBlood
+  }
+  return lifted
+}
+
 export function createHero(draft: HeroDraft): Hero {
   const age = clampAge(draft.age)
   const training = clampTraining(draft.training ?? 0)
@@ -94,6 +118,7 @@ export function createHero(draft: HeroDraft): Hero {
     ...(draft.prodigy ? { prodigy: true } : {}),
     ...(draft.school ? { school: draft.school } : {}),
     personality: draft.personality ?? personalityFor(draft.id),
+    ...(isGift(draft.gift) ? { gift: draft.gift } : {}),
     ...(draft.losses ? { losses: draft.losses } : {}),
     ...(draft.benched ? { benched: draft.benched } : {}),
     gear: draft.gear ? draft.gear.map((item) => normalizeGear(item, draft.classId)) : [normalizeGear(undefined, draft.classId)],
@@ -212,7 +237,7 @@ export function restHero(hero: Hero, bonus = 0): Hero {
 
 // `forced` sets the class (the inn sending what the village lacks); the
 // draws stay the same so other visitors from the seed are unchanged.
-export function generateHero(rng: Rng, id: string, potentialBonus = 0, femaleChance = 0.5, forced?: ClassId): Hero {
+export function generateHero(rng: Rng, id: string, potentialBonus = 0, femaleChance = 0.5, forced?: ClassId, giftBonus = 0): Hero {
   const drawn: Gender = rng.next() < 1 - femaleChance ? 'male' : 'female'
   const gender: Gender = forced && classById(forced).femaleOnly ? 'female' : drawn
   const pool = classList.filter((klass) => gender === 'female' || !klass.femaleOnly)
@@ -228,15 +253,17 @@ export function generateHero(rng: Rng, id: string, potentialBonus = 0, femaleCha
     potentials[key] = Math.max(1, Math.round(classDef.potentialBias[key] * scale) + rng.int(progression.potentialSpread))
   }
   const traitIds = [rng.pick(traits).id]
+  const gift = rollGift(id, giftRules.chance + giftBonus)
   return createHero({
     id,
     name: rng.pick(names[gender]),
     gender,
     classId,
     age,
-    potentials,
+    potentials: withGiftPotentials(potentials, gift),
     potential,
     traitIds,
+    gift,
   })
 }
 
@@ -246,9 +273,10 @@ export function generateVisitors(
   potentialBonus = 0,
   femaleChance = 0.5,
   forced: ClassId[] = [],
+  giftBonus = 0,
 ): Hero[] {
   const rng = createRng(seed)
-  return Array.from({ length: count }, (_, index) => generateHero(rng, `${seed}-${index}`, potentialBonus, femaleChance, forced[index]))
+  return Array.from({ length: count }, (_, index) => generateHero(rng, `${seed}-${index}`, potentialBonus, femaleChance, forced[index], giftBonus))
 }
 
 function clampAge(age: number): number {

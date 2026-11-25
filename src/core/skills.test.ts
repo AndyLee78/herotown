@@ -20,14 +20,14 @@ function hero(id: string, classId: ClassId, level = 8, learned?: string[]): Hero
 }
 
 describe('learning skills', () => {
-  it('opens one pick at Lv3 and another at Lv7, and keeps two of the three', () => {
-    expect([1, 3, 6, 7, 20].map(skillPicks)).toEqual([0, 1, 1, 2, 2])
-    const [starter, a, b, c] = ids('warrior')
+  it('opens picks at Lv3, 7, 11, 15, 20 and 25, and keeps branch steps in order', () => {
+    expect([1, 3, 6, 7, 11, 20, 25, 40].map(skillPicks)).toEqual([0, 1, 1, 2, 3, 5, 6, 6])
+    const starter = ids('warrior')[0]!
     expect(hero('w', 'warrior', 2).skillPoints).toBe(0)
     expect(hero('w', 'warrior', 3).skillPoints).toBe(1)
-    // An older save that learned all three keeps the first two it learned.
-    const old = normalizeLearned('warrior', [starter!, c!, a!, b!], 10)
-    expect(old).toEqual({ learned: [starter, c, a], skillPoints: 0 })
+    // A step whose earlier step is missing is dropped (Docs/identity.md 5a).
+    const old = normalizeLearned('warrior', [starter, 'warrior.counter', 'warrior.guard', 'warrior.slam'], 10)
+    expect(old).toEqual({ learned: [starter, 'warrior.guard', 'warrior.slam'], skillPoints: 0 })
   })
 
   it('learns with a point and refuses a third pick', () => {
@@ -50,35 +50,30 @@ describe('skill effects in battle', () => {
   })
 
   it('guards, sweeps and weakens when learned', () => {
-    const [, taunt, guard, slam] = ids('warrior')
-    const warrior = createHeroUnit({ hero: hero('w', 'warrior', 8, [ids('warrior')[0]!, guard!, slam!]), row: 'front' }, 0)
+    const warrior = createHeroUnit({ hero: hero('w', 'warrior', 8, [ids('warrior')[0]!, 'warrior.guard', 'warrior.slam']), row: 'front' }, 0)
     expect(warrior.guard).toBeGreaterThan(0)
     expect(warrior.volleyEvery).toBeGreaterThan(0)
-    expect(taunt).toBeDefined()
     const log: LogEntry[] = []
     simulateFloor([warrior], ['wolf', 'wolf', 'boar'], DEFAULT_TACTICS, createRng(2), log, 1)
     expect(log.some((entry) => entry.key === 'log.volley')).toBe(true)
-    const [, , poison] = ids('rogue')
-    const rogue = createHeroUnit({ hero: hero('r', 'rogue', 8, [ids('rogue')[0]!, poison!]), row: 'front' }, 0)
+    const rogue = createHeroUnit({ hero: hero('r', 'rogue', 8, [ids('rogue')[0]!, 'rogue.poison']), row: 'front' }, 0)
     expect(rogue.weaken).toBeGreaterThan(0)
   })
 
   it('lets purify halve poison and hymn heal everyone a little', () => {
-    const [, , , purify] = ids('cleric')
-    const cleric = createHeroUnit({ hero: hero('c', 'cleric', 8, [ids('cleric')[0]!, purify!]), row: 'back' }, 1)
+    const cleric = createHeroUnit({ hero: hero('c', 'cleric', 8, [ids('cleric')[0]!, 'cleric.purify']), row: 'back' }, 1)
     const tank = createHeroUnit({ hero: hero('w', 'warrior'), row: 'front' }, 0)
     tank.hp = Math.round(tank.maxHp * 0.3)
     tank.dot = 12
     const log: LogEntry[] = []
     simulateFloor([tank, cleric], ['slime'], DEFAULT_TACTICS, createRng(1), log, 1)
     expect(log.some((entry) => entry.key === 'log.cleanse')).toBe(true)
-    const [, , hymn] = ids('bard')
-    const bard = createHeroUnit({ hero: hero('b', 'bard', 8, [ids('bard')[0]!, hymn!]), row: 'back' }, 0)
+    const bard = createHeroUnit({ hero: hero('b', 'bard', 8, [ids('bard')[0]!, 'bard.hymn']), row: 'back' }, 0)
     expect(bard.regen).toBeGreaterThan(0)
   })
 
   it('applies party-wide skills when the party sets out, up to a cap', () => {
-    const [, , ward] = ids('mage')
+    const ward = 'mage.ward'
     const units = [hero('m1', 'mage', 8, [ids('mage')[0]!, ward!]), hero('m2', 'mage', 8, [ids('mage')[0]!, ward!]), hero('m3', 'mage', 8, [ids('mage')[0]!, ward!]), hero('w', 'warrior')].map((entry, index) =>
       createHeroUnit({ hero: entry, row: 'back' }, index),
     )
@@ -119,13 +114,16 @@ describe('the training ground', () => {
   })
 
   it('forgets a learned skill for gold and gives the point back', () => {
-    const [starter, a, b] = ids('warrior')
-    const state = { ...town(), roster: [hero('w', 'warrior', 8, [starter!, a!, b!])] }
+    const starter = ids('warrior')[0]!
+    const state = { ...town(), roster: [hero('w', 'warrior', 8, [starter, 'warrior.guard', 'warrior.slam'])] }
     expect(state.roster[0]!.skillPoints).toBe(0)
-    const forgot = reduce(state, { type: 'forget', heroId: 'w', skillId: a! })
+    const forgot = reduce(state, { type: 'forget', heroId: 'w', skillId: 'warrior.guard' })
     expect(forgot.gold).toBe(state.gold - trainingRules.forgetGold)
-    expect(forgot.roster[0]).toMatchObject({ learned: [starter, b], skillPoints: 1 })
-    expect(reduce(state, { type: 'forget', heroId: 'w', skillId: starter! }).notice).toBe('skill')
+    expect(forgot.roster[0]).toMatchObject({ learned: [starter, 'warrior.slam'], skillPoints: 1 })
+    expect(reduce(state, { type: 'forget', heroId: 'w', skillId: starter }).notice).toBe('skill')
+    // Only a branch's last learned step can go.
+    const stepped = { ...state, roster: [hero('w', 'warrior', 8, [starter, 'warrior.guard', 'warrior.wall'])] }
+    expect(reduce(stepped, { type: 'forget', heroId: 'w', skillId: 'warrior.guard' }).notice).toBe('skill')
   })
 
   it('opens a version 13 save with nobody training', () => {
@@ -147,7 +145,7 @@ describe('review 8e25753 fixes', () => {
   })
 
   it('gives no early pick back when a kept low-level skill is forgotten', () => {
-    const [starter, taunt, guard] = ids('warrior')
+    const [starter, taunt, guard] = [ids('warrior')[0], 'warrior.taunt', 'warrior.guard']
     const base = freshState(5, now)
     const kept = { ...hero('w', 'warrior', 2), learned: [starter!, taunt!], skillPoints: 0 }
     const state = { ...base, gold: 500, buildings: { ...base.buildings, training: 1 }, roster: [kept] }
@@ -158,7 +156,7 @@ describe('review 8e25753 fixes', () => {
   })
 
   it('shaves small blows too, since guard applies before rounding', () => {
-    const [starter, , guard] = ids('warrior')
+    const [starter, guard] = [ids('warrior')[0], 'warrior.guard']
     const plain = createHeroUnit({ hero: hero('p', 'warrior', 8), row: 'front' }, 0)
     const guarded = createHeroUnit({ hero: hero('g', 'warrior', 8, [starter!, guard!]), row: 'front' }, 0)
     const hit = (target: typeof plain) => {
