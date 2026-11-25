@@ -131,10 +131,10 @@ Claude Code, Cursor, GPT(Codex)가 함께 쓰는 작업 목록이다. 작업 하
 | 89 | 명예의 전당 화면 | GPT | `src/ui/App.tsx`, `src/ui/game/*.tsx`, `src/ui/styles.css`, `src/locales/*` | 완료 (24a56ef) |
 | 90 | 명예의 전당 core 코드 리뷰 (4c3aec1) | GPT | `Docs/reviews/4c3aec1.md` (새 파일만) | 완료 (3b65093) |
 | 91 | 마을 Lv7까지 전체 흐름 점검 | GPT | `tools/*`, `Docs/balance.md`(새 파일) | 완료 (4075ab5) |
-| 92 | 상위 레벨 건물·영웅·전설 장비 3D | Cursor | `src/ui/voxel/*` | 대기 (93과 함께 가능) |
-| 93 | 마을 Lv8–10·상위 레벨·전설 장비 화면 | GPT | `src/ui/App.tsx`, `src/ui/game/*.tsx`, `src/ui/styles.css`, `src/locales/*` | 대기 (92와 함께 가능) |
-| 94 | 4a core 코드 리뷰 (d89e486) | GPT | `Docs/reviews/d89e486.md` (새 파일만) | 대기 (93 뒤) |
-| 95 | 4a 측정: Lv8–10 도달·후반 재료·전설 장비 | GPT | `tools/*`, `Docs/endgame.md`의 측정 절 | 대기 (94 뒤) |
+| 92 | 상위 레벨 건물·영웅·전설 장비 3D | Cursor | `src/ui/voxel/*` | 대기 (지금 시작 가능) |
+| 93 | 마을 Lv8–10·상위 레벨·전설 장비 화면 | GPT | `src/ui/App.tsx`, `src/ui/game/*.tsx`, `src/ui/styles.css`, `src/locales/*` | 보류 (4b에서 다시 씀, Docs/endgame.md) |
+| 94 | 4a core 코드 리뷰 (d89e486) | GPT | `Docs/reviews/d89e486.md` (새 파일만) | 보류 (4b에서 다시 씀) |
+| 95 | 4a 측정: Lv8–10 도달·후반 재료·전설 장비 | GPT | `tools/*`, `Docs/endgame.md`의 측정 절 | 보류 (4b에서 다시 씀) |
 
 ---
 
