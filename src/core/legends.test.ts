@@ -2,12 +2,12 @@ import { describe, expect, it } from 'vitest'
 import { createHeroUnit } from './combat'
 import { familyRules, legendsRules, moraleRules, smithRules } from './data'
 import { legendBonus } from './family'
-import { freshState, migrate, reduce, type GameState } from './game'
+import { freshState, migrate, reduce, type GameState, type Grave } from './game'
 import { forgeGear } from './gear'
 import { createHero } from './hero'
 import { blessing, livingLegends, shrineMorale, shrineSlots } from './legends'
 import { driftMorale, moraleOf } from './morale'
-import type { Grave, Hero } from './types'
+import type { Hero } from './types'
 
 // Docs/legends.md: the hall of fame.
 
