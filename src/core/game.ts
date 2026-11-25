@@ -5,6 +5,7 @@ import { deliver, ensureBoard, expeditionSlotsFor, guildLevel, progressClear, re
 import { cheer, driftMorale, lowMorale, mourn, shiftMorale } from './morale'
 import { arrive, interview, type Interviews } from './scouting'
 import { enroll, graduate, teachSeason, unenroll } from './school'
+import { buyOffer, freshMarket, sellGear, sellPotion, trade, updateMerchant, type Market, type MerchantOffer } from './market'
 import { forgetSkill, readDrills, runDrills, startDrill, type Drill } from './drill'
 import { buyIntel, finishScout, isNest, nestSeason, readScout, seasonKey, startScout, type ScoutJob } from './nest'
 import { TRINKET_IDS, enchantTime, finishEnchant, readMagicJob, startEnchant, type MagicJob } from './magic'
@@ -19,7 +20,7 @@ import type { Rng } from './rng'
 import type { Genes } from './genes'
 import type { Bond, ClassId, CombatError, DungeonReport, Gear, GearSlot, Gender, Hero, PartyMember, PotionId, Proposal, Role, Row, Supplies, Tactics, TrinketId , StatKey } from './types'
 
-export const SAVE_VERSION = 19
+export const SAVE_VERSION = 20
 
 export type SeasonId = 'spring' | 'summer' | 'autumn' | 'winter'
 
@@ -58,7 +59,7 @@ export type SmithJob = {
   finishAt: number
 }
 
-export type BuildingId = 'hall' | 'inn' | 'house' | 'guild' | 'smith' | 'temple' | 'fountain' | 'alchemy' | 'magic' | 'training' | 'school'
+export type BuildingId = 'hall' | 'inn' | 'house' | 'guild' | 'smith' | 'temple' | 'fountain' | 'alchemy' | 'magic' | 'training' | 'school' | 'market'
 export type MaterialName = 'wood' | 'stone' | 'iron' | 'bone' | 'herb' | 'crystal'
 
 export type AutoPolicy = 'material' | 'safe' | 'fixed'
@@ -169,6 +170,10 @@ export type GameNotice =
   | 'tooYoung'
   | 'schoolFull'
   | 'career'
+  | 'noMarket'
+  | 'noMaterial'
+  | 'noMerchant'
+  | 'soldOut'
   | 'drillHero'
   | 'trainingFull'
   | 'scoutBusy'
@@ -251,6 +256,8 @@ export type GameState = {
   automation: Automation
   // Interviews used this season (Docs/scouting.md).
   interviews: Interviews | null
+  // The market's prices and the wandering merchant (Docs/market.md).
+  market: Market
 }
 
 export type QueueBuilding = 'smith' | 'alchemy' | 'magic'
@@ -325,6 +332,10 @@ export type GameAction =
   | { type: 'interview'; id: string }
   | { type: 'enroll'; heroId: string; focus: StatKey | null; career: ClassId | null }
   | { type: 'unenroll'; heroId: string }
+  | { type: 'trade'; material: MaterialName; amount: number }
+  | { type: 'sellGear'; gearId: string }
+  | { type: 'sellPotion'; potionId: PotionId; count: number }
+  | { type: 'buyOffer'; offerId: string }
   | { type: 'declineProposal'; a: string; b: string; now?: number }
   | { type: 'wish'; now: number }
   | { type: 'brew'; potionId: PotionId; now: number }
@@ -383,6 +394,7 @@ export function freshState(seed: number, now: number): GameState {
     festival: null,
     automation: freshAutomation(),
     interviews: null,
+    market: freshMarket(now),
   }
 }
 
@@ -644,6 +656,18 @@ function apply(state: GameState, action: GameAction): GameState {
   if (action.type === 'buyIntel') {
     return buyIntel(state)
   }
+  if (action.type === 'trade') {
+    return trade(state, action.material, action.amount)
+  }
+  if (action.type === 'sellGear') {
+    return sellGear(state, action.gearId)
+  }
+  if (action.type === 'sellPotion') {
+    return sellPotion(state, action.potionId, action.count)
+  }
+  if (action.type === 'buyOffer') {
+    return buyOffer(state, action.offerId)
+  }
   if (action.type === 'enroll') {
     return enroll(state, action.heroId, action.focus, action.career)
   }
@@ -734,6 +758,8 @@ function advance(state: GameState, now: number): GameState {
     next = finishCare(next, until)
     next = recoverRoster(next, piece, until)
     next = updateVisitors(next, until, visitors)
+    // The wandering merchant comes and goes (Docs/market.md).
+    next = updateMerchant(next, until)
     const out = next.expeditions
     next = returnExpeditions(next, until, returned)
     // The wounded who come home start treatment as they arrive.
@@ -2037,6 +2063,7 @@ function normalize(record: Record<string, unknown>, now: number): GameState {
     festival: readFestival(record.festival),
     automation: readAutomation(record.automation),
     interviews: readInterviews(record.interviews),
+    market: readMarket(record.market, numberOr(record.lastTickAt, now)),
     auto: isAuto(record.auto) ? record.auto : base.auto,
     notice: null,
   }
@@ -2382,6 +2409,33 @@ function drillReserved(state: GameState): Set<string> {
     taken += 1
   }
   return reserved
+}
+
+// Saves before version 20 have no market yet (Docs/market.md).
+function readMarket(value: unknown, now: number): Market {
+  if (value == null || typeof value !== 'object') {
+    return freshMarket(now)
+  }
+  const record = value as Partial<Market>
+  const fresh = freshMarket(now)
+  const pressure: Market['pressure'] = {}
+  for (const [key, amount] of Object.entries(record.pressure ?? {})) {
+    if (typeof amount === 'number' && Number.isFinite(amount)) {
+      pressure[key as MaterialName] = amount
+    }
+  }
+  const merchant = record.merchant
+  const okMerchant =
+    merchant != null && typeof merchant.arriveAt === 'number' && typeof merchant.leaveAt === 'number' && Array.isArray(merchant.offers)
+      ? { arriveAt: merchant.arriveAt, leaveAt: merchant.leaveAt, offers: merchant.offers as MerchantOffer[] }
+      : null
+  return {
+    pressure,
+    pressureAt: numberOr(record.pressureAt, now),
+    merchant: okMerchant,
+    nextMerchantAt: numberOr(record.nextMerchantAt, fresh.nextMerchantAt),
+    merchantNonce: numberOr(record.merchantNonce, 0),
+  }
 }
 
 function readInterviews(value: unknown): Interviews | null {

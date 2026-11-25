@@ -12,6 +12,7 @@
     "alchemy": 0.2,
     "magic": 0.2,
     "training": 0.2,
-    "school": 0.3
+    "school": 0.3,
+    "market": 0.1
   }
 }

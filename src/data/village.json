@@ -475,6 +475,37 @@
           "ms": 3600000
         }
       ]
+    },
+    {
+      "id": "market",
+      "unlockLevel": 3,
+      "startLevel": 0,
+      "levels": [
+        {
+          "level": 1,
+          "gold": 100,
+          "wood": 40,
+          "stone": 30,
+          "iron": 0,
+          "ms": 900000
+        },
+        {
+          "level": 2,
+          "gold": 200,
+          "wood": 60,
+          "stone": 50,
+          "iron": 10,
+          "ms": 1800000
+        },
+        {
+          "level": 3,
+          "gold": 320,
+          "wood": 80,
+          "stone": 80,
+          "iron": 20,
+          "ms": 3600000
+        }
+      ]
     }
   ]
 }

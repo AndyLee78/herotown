@@ -234,7 +234,8 @@
     "alchemy": "Alchemy Workshop",
     "magic": "Magic Workshop",
     "training": "Training Ground",
-    "school": "School"
+    "school": "School",
+    "market": "Market"
   },
   "buildingHint": {
     "hall": "See your village level and next goal.",
@@ -247,7 +248,8 @@
     "alchemy": "Brews potions. They go into the village stock, and parties carry them out.",
     "magic": "Makes trinkets. Each hero can wear two.",
     "training": "Brings heroes who fall behind up to speed. Learned skills can be swapped here.",
-    "school": "Teaches children: grows a stat and their potential, and lets them pick the class they take when they come of age."
+    "school": "Teaches children: grows a stat and their potential, and lets them pick the class they take when they come of age.",
+    "market": "Buy and sell materials, and sell spare gear and potions. A wandering merchant drops by now and then."
   },
   "resource": {
     "wood": "Wood {{amount}}",
@@ -361,7 +363,11 @@
     "interviewed": "You have already interviewed this visitor.",
     "noSchool": "There is no school yet.",
     "schoolFull": "The school is full.",
-    "career": "Only girls can choose to become dancers."
+    "career": "Only girls can choose to become dancers.",
+    "noMarket": "There is no market yet.",
+    "noMaterial": "Not enough materials.",
+    "noMerchant": "The merchant is not in town.",
+    "soldOut": "That has already been sold."
   },
   "defeat": {
     "noHealer": "Bring a healer to keep the party going.",
@@ -1030,7 +1036,8 @@
       "alchemy": "Brewing time −{{value}}%",
       "magic": "Trinket making time −{{value}}%",
       "training": "Training time −{{value}}%",
-      "school": "Tuition −{{value}}%"
+      "school": "Tuition −{{value}}%",
+      "market": "Selling prices +{{value}}%"
     }
   },
   "trinket": {

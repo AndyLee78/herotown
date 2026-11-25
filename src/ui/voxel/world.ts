@@ -21,6 +21,8 @@ export const LOTS: Record<BuildingId, Lot> = {
   magic: { x: -10.5, z: 1, w: 3, d: 2.6 },
   house: { x: -9, z: 5.8, w: 3, d: 2.6 },
   school: { x: -10.5, z: 10.6, w: 3.2, d: 2.6 },
+  // Placeholder spot for the market on the east side of the square until it gets a model (Docs/market.md).
+  market: { x: 10.3, z: -2.4, w: 3, d: 2.4 },
   // South-west of the square: the training yard, in plain view.
   training: { x: -5.6, z: 8.4, w: 3.6, d: 3.2 },
   // East and south-east.

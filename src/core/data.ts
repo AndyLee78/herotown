@@ -11,6 +11,7 @@ import moraleFile from '../data/morale.json'
 import automationFile from '../data/automation.json'
 import scoutingFile from '../data/scouting.json'
 import schoolFile from '../data/school.json'
+import marketFile from '../data/market.json'
 import smithFile from '../data/smith.json'
 import combatFile from '../data/combat.json'
 import dungeonsFile from '../data/dungeons.json'
@@ -131,7 +132,7 @@ export function validateGameData(data: GameData): void {
   if (data.dungeons.length < 2) {
     throw new Error('Need at least 2 dungeons')
   }
-  const needed = ['hall', 'inn', 'house', 'guild', 'smith', 'temple', 'fountain', 'alchemy', 'magic', 'training', 'school']
+  const needed = ['hall', 'inn', 'house', 'guild', 'smith', 'temple', 'fountain', 'alchemy', 'magic', 'training', 'school', 'market']
   if (data.village.buildings.length !== needed.length || needed.some((id) => !data.village.buildings.some((building) => building.id === id))) {
     throw new Error(`The town needs exactly these buildings: ${needed.join(', ')}`)
   }
@@ -224,6 +225,7 @@ export const moraleRules = moraleFile
 export const automationRules = automationFile
 export const scoutingRules = scoutingFile
 export const schoolRules = schoolFile
+export const marketRules = marketFile
 export const guildRules = guildFile as typeof guildFile & { deliverAmount: Record<string, number>; materialValue: Record<string, number> }
 export const nestRules = nestFile as typeof nestFile & { floors: string[][][] }
 export const fountainRules = fountainFile
