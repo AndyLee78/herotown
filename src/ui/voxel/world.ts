@@ -957,6 +957,158 @@ export function buildTownDecor(townLevel: number): THREE.Group {
   return root
 }
 
+export type MonumentStages = { statue?: number; lighthouse?: number; walls?: number; arch?: number }
+
+// Late monuments (Docs/endgame.md 4d). Stage 0 is absent; 1–3 grow in place.
+// Kept clear of lots: statue by the plaza, lighthouse on the east rim, towers
+// on the town wall line, arch over the south gate.
+export function buildMonuments(stages: MonumentStages): THREE.Group {
+  const root = new THREE.Group()
+  root.name = 'monuments'
+  const b = new Builder()
+  const statue = Math.max(0, Math.min(3, stages.statue ?? 0))
+  const lighthouse = Math.max(0, Math.min(3, stages.lighthouse ?? 0))
+  const walls = Math.max(0, Math.min(3, stages.walls ?? 0))
+  const arch = Math.max(0, Math.min(3, stages.arch ?? 0))
+  if (statue > 0) {
+    const x = 4.4
+    const z = -4.6
+    const scale = 0.85 + statue * 0.2
+    const trim = statue >= 3 ? '#d9b54a' : statue >= 2 ? '#c9a36b' : '#c9c5bb'
+    b.box(0.9 * scale, 0.2, 0.9 * scale, '#8a8580', x, 0.12, z)
+    b.box(0.7 * scale, 0.18, 0.7 * scale, trim, x, 0.28, z)
+    b.box(0.28 * scale, 0.55 * scale, 0.22 * scale, '#d4d0c6', x, 0.55 * scale, z)
+    b.box(0.42 * scale, 0.5 * scale, 0.28 * scale, '#e8e4da', x, 0.95 * scale, z)
+    b.box(0.32 * scale, 0.32 * scale, 0.32 * scale, '#efeae0', x, 1.3 * scale, z)
+    if (statue >= 2) {
+      b.box(0.5 * scale, 0.08, 0.08, trim, x, 1.05 * scale, z)
+    }
+    if (statue >= 3) {
+      b.box(0.18, 0.18, 0.08, '#ffe27a', x, 1.55 * scale, z, { glow: true })
+    }
+  }
+  if (lighthouse > 0) {
+    const x = 14.2
+    const z = 1.2
+    const h = 2.4 + lighthouse * 0.85
+    b.box(1.1, 0.25, 1.1, '#8a8580', x, 0.14, z)
+    b.box(0.85, h, 0.85, '#c9c5bb', x, h / 2 + 0.2, z)
+    b.box(1.05, 0.2, 1.05, '#6e675f', x, h + 0.25, z)
+    b.box(0.55, 0.55, 0.55, lighthouse >= 3 ? '#ffe27a' : '#ffb85a', x, h + 0.65, z, { glow: true })
+    if (lighthouse >= 2) {
+      b.box(0.2, 0.9, 0.2, '#d9b54a', x, h + 1.15, z)
+    }
+  }
+  if (walls > 0) {
+    const towers: [number, number][] =
+      walls === 1
+        ? [
+            [-13.4, -13.4],
+            [13.4, 13.4],
+          ]
+        : walls === 2
+          ? [
+              [-13.4, -13.4],
+              [13.4, -13.4],
+              [-13.4, 13.4],
+              [13.4, 13.4],
+            ]
+          : [
+              [-13.4, -13.4],
+              [13.4, -13.4],
+              [-13.4, 13.4],
+              [13.4, 13.4],
+              [-13.4, 0],
+              [13.4, 0],
+            ]
+    for (const [x, z] of towers) {
+      const th = 1.6 + walls * 0.25
+      b.box(0.85, th, 0.85, '#8d8680', x, th / 2, z)
+      b.box(1.05, 0.18, 1.05, '#6e675f', x, th + 0.05, z)
+      if (walls >= 2) {
+        b.box(0.1, 1.1, 0.1, WOOD, x + 0.35, th + 0.6, z + 0.35)
+        b.box(0.45, 0.55, 0.05, x < 0 ? '#c0392b' : '#3f6fa8', x + 0.55, th + 0.95, z + 0.35)
+      }
+      if (walls >= 3) {
+        b.box(0.2, 0.2, 0.2, '#ffe27a', x, th + 0.35, z, { glow: true })
+      }
+    }
+  }
+  if (arch > 0) {
+    const z = GATE.z - 0.15
+    const h = 2.5 + arch * 0.25
+    const trim = arch >= 3 ? '#d9b54a' : arch >= 2 ? '#c9a36b' : '#8a8580'
+    b.box(0.55, h, 0.55, '#9a948a', -2.15, h / 2, z)
+    b.box(0.55, h, 0.55, '#9a948a', 2.15, h / 2, z)
+    b.box(4.9, 0.4, 0.55, trim, 0, h + 0.15, z)
+    b.box(3.6, 0.28, 0.4, '#6e675f', 0, h + 0.45, z)
+    if (arch >= 2) {
+      b.box(0.35, 0.55, 0.2, trim, -1.1, h + 0.7, z)
+      b.box(0.35, 0.55, 0.2, trim, 1.1, h + 0.7, z)
+    }
+    if (arch >= 3) {
+      b.box(0.35, 0.35, 0.2, '#ffe27a', 0, h + 0.75, z, { glow: true })
+      b.box(0.7, 0.12, 0.12, '#d9b54a', 0, h + 0.2, z + 0.25)
+    }
+  }
+  if (!b.empty) {
+    root.add(b.build())
+  }
+  if (lighthouse > 0) {
+    const beam = new THREE.Mesh(
+      new THREE.BoxGeometry(0.18, 0.18, 3.2 + lighthouse * 0.4),
+      new THREE.MeshBasicMaterial({ color: '#ffe27a', transparent: true, opacity: 0.55 }),
+    )
+    beam.name = 'lighthouseBeam'
+    beam.position.set(14.2, 2.4 + lighthouse * 0.85 + 0.65, 1.2)
+    root.add(beam)
+  }
+  return root
+}
+
+// Prosperity path props: lanterns, flags and flowers that thicken at 10 / 20 / 30.
+export function buildProsperityDecor(rank: number): THREE.Group {
+  const root = new THREE.Group()
+  root.name = 'prosperity'
+  const level = rank >= 30 ? 3 : rank >= 20 ? 2 : rank >= 10 ? 1 : 0
+  if (level < 1) {
+    return root
+  }
+  const b = new Builder()
+  const lanterns = level === 1 ? [5.0, 8.5] : level === 2 ? [4.0, 6.5, 9.0, 11.0] : [3.2, 5.2, 7.2, 9.2, 11.0]
+  for (const z of lanterns) {
+    for (const side of [-1.55, 1.55] as const) {
+      b.box(0.08, 1.15, 0.08, WOOD, side, 0.6, z)
+      b.box(0.18, 0.18, 0.18, '#ffe27a', side, 1.25, z, { glow: true })
+    }
+  }
+  if (level >= 2) {
+    for (const z of [4.5, 7.5, 10.5]) {
+      b.box(0.08, 1.2, 0.08, WOOD, -2.4, 0.7, z)
+      b.box(0.4, 0.45, 0.05, '#c0392b', -2.1, 1.15, z)
+      b.box(0.08, 1.2, 0.08, WOOD, 2.4, 0.7, z)
+      b.box(0.4, 0.45, 0.05, '#3f6fa8', 2.1, 1.15, z)
+    }
+  }
+  if (level >= 3) {
+    for (const [x, z] of [
+      [-3.6, -3.2],
+      [3.6, -3.2],
+      [-3.4, 3.4],
+      [3.4, 3.4],
+      [-2.0, 0],
+      [2.0, 0],
+    ] as const) {
+      b.box(0.28, 0.12, 0.28, '#c9a36b', x, 0.1, z)
+      b.box(0.12, 0.12, 0.12, '#f278a8', x - 0.06, 0.2, z)
+      b.box(0.12, 0.12, 0.12, '#ffe08a', x + 0.06, 0.2, z)
+      b.box(0.1, 0.1, 0.1, '#9fd36b', x, 0.24, z)
+    }
+  }
+  root.add(b.build())
+  return root
+}
+
 // Short-lived light pillar and rising banners over the hall for a promotion.
 export function buildPromoteFx(townLevel: number): THREE.Group {
   const root = new THREE.Group()

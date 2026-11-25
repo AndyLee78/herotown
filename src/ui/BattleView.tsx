@@ -37,6 +37,7 @@ export function BattleView({ report, describe }: { report: DungeonReport; descri
     }, {
       special: dungeon?.special,
       element: dungeon?.element,
+      season: dungeon?.season,
       difficulty: dungeon?.difficulty,
       raidBossId: raid?.bossId,
       raid: raid ? { start: raid.start, left: raid.left, max: raid.max } : undefined,

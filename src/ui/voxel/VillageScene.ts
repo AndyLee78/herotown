@@ -28,7 +28,9 @@ import {
   buildInvasionCamp,
   buildLot,
   buildMerchantCart,
+  buildMonuments,
   buildPromoteFx,
+  buildProsperityDecor,
   buildShrineRelic,
   buildTerrain,
   buildToastTable,
@@ -41,6 +43,7 @@ import {
   tavernYard,
   trainingPad,
   type FestivalKind,
+  type MonumentStages,
 } from './world'
 import { buildEnemy } from './enemies'
 
@@ -215,6 +218,10 @@ export class VillageScene {
   private invasionLastAt: number | null = null
   private invasionSceneTimer = 0
   private invasionSky: THREE.Color | null = null
+  private monumentsKey = ''
+  private monumentsRoot: THREE.Group | null = null
+  private prosperityKey = -1
+  private prosperityRoot: THREE.Group | null = null
   private legendsLevel = 0
   private statuesKey = ''
   private statuesRoot: THREE.Group | null = null
@@ -310,6 +317,8 @@ export class VillageScene {
     this.syncFestival(props.festival)
     this.syncTown(props.townLevel)
     this.syncInvasion(props.invasion)
+    this.syncMonuments(props.monuments)
+    this.syncProsperity(props.prosperity)
     this.legendsLevel = props.buildings.legends ?? 0
     this.syncLegendStatues(props.legends)
     this.syncShrine(props.shrine)
@@ -344,6 +353,8 @@ export class VillageScene {
     this.clearTownDecor()
     this.clearPromoteFx()
     this.clearInvasionFx()
+    this.clearMonuments()
+    this.clearProsperity()
     this.clearLegendStatues()
     this.clearShrine()
     freeOwnMaterials(this.scene)
@@ -772,6 +783,69 @@ export class VillageScene {
     if (this.promoteTimer <= 0) {
       this.clearPromoteFx()
     }
+  }
+
+  private syncMonuments(stages: MonumentStages) {
+    const key = ['statue', 'lighthouse', 'walls', 'arch'].map((id) => stages[id as keyof MonumentStages] ?? 0).join(':')
+    if (key === this.monumentsKey) {
+      return
+    }
+    this.monumentsKey = key
+    this.clearMonuments()
+    const hasAny = Object.values(stages).some((stage) => (stage ?? 0) > 0)
+    if (!hasAny) {
+      return
+    }
+    const root = buildMonuments(stages)
+    this.scene.add(root)
+    this.monumentsRoot = root
+  }
+
+  private clearMonuments() {
+    if (!this.monumentsRoot) {
+      return
+    }
+    this.scene.remove(this.monumentsRoot)
+    freeOwnMaterials(this.monumentsRoot)
+    disposeTree(this.monumentsRoot)
+    this.monumentsRoot = null
+  }
+
+  private syncProsperity(rank: number) {
+    const band = rank >= 30 ? 30 : rank >= 20 ? 20 : rank >= 10 ? 10 : 0
+    if (band === this.prosperityKey) {
+      return
+    }
+    this.prosperityKey = band
+    this.clearProsperity()
+    if (band < 10) {
+      return
+    }
+    const root = buildProsperityDecor(rank)
+    this.scene.add(root)
+    this.prosperityRoot = root
+  }
+
+  private clearProsperity() {
+    if (!this.prosperityRoot) {
+      return
+    }
+    this.scene.remove(this.prosperityRoot)
+    freeOwnMaterials(this.prosperityRoot)
+    disposeTree(this.prosperityRoot)
+    this.prosperityRoot = null
+  }
+
+  private bobLighthouse(time: number) {
+    const beam = this.monumentsRoot?.getObjectByName('lighthouseBeam')
+    if (!beam) {
+      return
+    }
+    if (beam.userData.baseY == null) {
+      beam.userData.baseY = beam.position.y
+    }
+    beam.rotation.y = time * 1.4
+    beam.position.y = (beam.userData.baseY as number) + Math.sin(time * 2.2) * 0.06
   }
 
   // Warned camp beyond the gate, and a short fight replay when a result lands.
@@ -1809,6 +1883,7 @@ export class VillageScene {
     this.bobCrystals(time)
     this.bobToastCups(time)
     this.bobShrine(time)
+    this.bobLighthouse(time)
     this.endToastIfDone()
     this.stepPromoteFx(delta, time)
     this.stepInvasion(delta, time)

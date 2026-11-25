@@ -137,6 +137,7 @@ function LiveFight({ trip, phase }: { trip: Expedition; phase: Phase }) {
     }, {
       special: dungeon.special,
       element: dungeon.element,
+      season: dungeon.season,
       difficulty: dungeon.difficulty,
       abyssFrom: trip.abyssFrom,
       raidBossId: fromReport?.bossId ?? (raidRef ? raidBossIdOf(raidRef) ?? undefined : undefined),

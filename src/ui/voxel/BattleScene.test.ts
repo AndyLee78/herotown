@@ -28,4 +28,11 @@ describe('battleTheme', () => {
     expect(battleTheme(7, 'raid', { special: 'raid', raidBossId: 'titan' }).kind).toBe('titan')
     expect(battleTheme(6, 'invasion', { special: 'invasion' }).kind).toBe('invasion')
   })
+
+  it('picks a seasonal event arena', () => {
+    expect(battleTheme(6, 'event_spring', { special: 'event', season: 'spring' }).kind).toBe('spring')
+    expect(battleTheme(6, 'event_summer', { special: 'event', season: 'summer' }).kind).toBe('summer')
+    expect(battleTheme(6, 'event_autumn', { special: 'event', season: 'autumn' }).kind).toBe('autumn')
+    expect(battleTheme(6, 'event_winter', { special: 'event', season: 'winter' }).kind).toBe('winter')
+  })
 })

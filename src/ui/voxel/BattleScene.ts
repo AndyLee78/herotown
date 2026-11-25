@@ -8,9 +8,12 @@ import type { Hit, ReplayStep, StatusMark } from './replay'
 
 export type RaidBossId = 'wyrm' | 'lich' | 'titan'
 
+export type EventSeason = 'spring' | 'summer' | 'autumn' | 'winter'
+
 export type BattleBackdrop = {
   special?: 'weekday' | 'endless' | 'raid' | 'invasion' | 'event'
   element?: 'flame' | 'frost' | 'light'
+  season?: EventSeason
   difficulty?: 1 | 2 | 3
   abyssFrom?: number
   // Weekly raid boss and its health pool for the big bar on floor 2 (Docs/endgame.md 4c).
@@ -24,7 +27,7 @@ type BattleTheme = {
   wall: readonly string[]
   light: string
   crystal: string
-  kind: 'tier' | 'nest' | 'flame' | 'frost' | 'light' | 'abyss' | 'wyrm' | 'lich' | 'titan' | 'invasion'
+  kind: 'tier' | 'nest' | 'flame' | 'frost' | 'light' | 'abyss' | 'wyrm' | 'lich' | 'titan' | 'invasion' | EventSeason
   intensity: number
 }
 
@@ -157,6 +160,11 @@ const THEMES = {
   lich: { sky: '#0c1424', floor: ['#4a6078', '#3a5068', '#5a7088', '#2a4058'], wall: ['#2a3850', '#1a2840', '#3a4860'], light: '#9fe8ff', crystal: '#e6f4ff', kind: 'lich' as const, intensity: 2 },
   titan: { sky: '#1c1a18', floor: ['#6a6460', '#5a5450', '#7a746e', '#4a4440'], wall: ['#4a4440', '#3a3430', '#5a5450'], light: '#d9b54a', crystal: '#c9c5bb', kind: 'titan' as const, intensity: 2 },
   invasion: { sky: '#2a1010', floor: ['#5a3a30', '#4a2e28', '#6a4438', '#52342c'], wall: ['#3a2218', '#2a1810', '#4a2e24'], light: '#ff4a3a', crystal: '#ff8a3d', kind: 'invasion' as const, intensity: 2 },
+  // Seasonal event arenas (Docs/endgame.md 4d).
+  spring: { sky: '#1e2a1c', floor: ['#5a7a48', '#4a6a38', '#6a8a58', '#3a5a28'], wall: ['#3a5a30', '#2a4a20', '#4a6a40'], light: '#9fd36b', crystal: '#f4a0c0', kind: 'spring' as const, intensity: 2 },
+  summer: { sky: '#2a1c10', floor: ['#7a5a38', '#6a4a28', '#8a6a48', '#5a3a18'], wall: ['#5a3a22', '#4a2a12', '#6a4a32'], light: '#ff8a3d', crystal: '#ffe27a', kind: 'summer' as const, intensity: 2 },
+  autumn: { sky: '#2a1810', floor: ['#8a5a30', '#7a4a20', '#9a6a40', '#6a3a18'], wall: ['#5a3a1c', '#4a2a10', '#6a4a2c'], light: '#e2b340', crystal: '#c45c3a', kind: 'autumn' as const, intensity: 2 },
+  winter: { sky: '#141c28', floor: ['#7a8a9a', '#6a7a8a', '#8a9aaa', '#5a6a7a'], wall: ['#4a5a6a', '#3a4a5a', '#5a6a7a'], light: '#d7f4ff', crystal: '#9fe8ff', kind: 'winter' as const, intensity: 2 },
 } as const
 
 const AFFIX_COLOR: Record<AffixId, string> = {
@@ -196,6 +204,9 @@ export function battleTheme(tier: number, dungeonId?: string, backdrop?: BattleB
   }
   if (backdrop?.special === 'invasion') {
     return THEMES.invasion
+  }
+  if (backdrop?.special === 'event' && backdrop.season) {
+    return THEMES[backdrop.season]
   }
   return THEMES[(Math.min(3, Math.max(1, tier)) as 1 | 2 | 3)]
 }
@@ -269,20 +280,23 @@ export class BattleScene {
     const left = backdrop.raid?.left ?? fromReport?.left ?? null
     this.raidPool = this.raidSpecial && max != null && max > 0 ? { start: start ?? max, left: left ?? max, max } : null
     this.scene.background = new THREE.Color(theme.sky)
-    const warm = theme.kind === 'flame' || theme.kind === 'nest' || theme.kind === 'abyss' || theme.kind === 'wyrm' || theme.kind === 'invasion'
-    this.scene.add(new THREE.HemisphereLight(warm ? '#ffb080' : theme.kind === 'frost' || theme.kind === 'lich' ? '#d0e8ff' : '#ffffff', warm ? '#5a3020' : theme.kind === 'frost' || theme.kind === 'lich' ? '#405060' : '#6b6256', warm ? 1.2 : 1.5))
+    const warm = theme.kind === 'flame' || theme.kind === 'nest' || theme.kind === 'abyss' || theme.kind === 'wyrm' || theme.kind === 'invasion' || theme.kind === 'summer' || theme.kind === 'autumn'
+    const cool = theme.kind === 'frost' || theme.kind === 'lich' || theme.kind === 'winter'
+    this.scene.add(new THREE.HemisphereLight(warm ? '#ffb080' : cool ? '#d0e8ff' : theme.kind === 'spring' ? '#e8ffe0' : '#ffffff', warm ? '#5a3020' : cool ? '#405060' : theme.kind === 'spring' ? '#4a6a40' : '#6b6256', warm ? 1.2 : 1.5))
     const sun = new THREE.DirectionalLight(
-      theme.kind === 'flame' || theme.kind === 'nest' || theme.kind === 'wyrm' || theme.kind === 'invasion'
+      theme.kind === 'flame' || theme.kind === 'nest' || theme.kind === 'wyrm' || theme.kind === 'invasion' || theme.kind === 'summer'
         ? '#ff6a3a'
-        : theme.kind === 'light'
+        : theme.kind === 'light' || theme.kind === 'autumn'
           ? '#ffe8a8'
-          : theme.kind === 'frost' || theme.kind === 'lich'
+          : cool
             ? '#c8e8ff'
             : theme.kind === 'abyss'
               ? '#c79bff'
               : theme.kind === 'titan'
                 ? '#e8dcc0'
-                : '#fff1dc',
+                : theme.kind === 'spring'
+                  ? '#c8f0a0'
+                  : '#fff1dc',
       warm ? 1.6 : 2,
     )
     sun.position.set(warm ? -2 : 4, 12, 8)
@@ -293,8 +307,11 @@ export class BattleScene {
     sun.shadow.normalBias = 0.02
     this.scene.add(sun, sun.target, this.bars)
     this.scene.add(this.buildArena(theme))
-    if (this.nest || theme.kind === 'flame' || theme.kind === 'wyrm' || theme.kind === 'invasion') {
+    if (this.nest || theme.kind === 'flame' || theme.kind === 'wyrm' || theme.kind === 'invasion' || theme.kind === 'summer') {
       this.spawnEmbers(theme.light)
+    }
+    if (theme.kind === 'spring' || theme.kind === 'autumn' || theme.kind === 'winter') {
+      this.spawnDebris(theme.crystal)
     }
     if (theme.kind === 'abyss') {
       this.spawnDebris(theme.crystal)
@@ -528,6 +545,45 @@ export class BattleScene {
         b.box(0.45, 0.2, 0.45, '#3a2a20', -6 + index * 3.2, 0.15, 3.5)
         b.box(0.28, 0.55, 0.28, '#ff6a3a', -6 + index * 3.2, 0.55, 3.5, { glow: true })
       }
+    } else if (theme.kind === 'spring') {
+      for (let index = 0; index < 6; index += 1) {
+        const x = -7 + index * 2.4 + random() * 0.3
+        b.box(0.35, 0.12, 0.35, '#6a4a30', x, 0.12, 3.2 + random())
+        b.box(0.14, 0.14, 0.14, index % 2 ? '#f4a0c0' : '#ffe08a', x, 0.28, 3.2)
+        b.box(0.12, 0.12, 0.12, '#9fd36b', x + 0.12, 0.26, 3.3)
+      }
+      for (let index = 0; index < 4; index += 1) {
+        b.box(0.2, 1.0, 0.2, '#4a6a38', -6 + index * 3.5, 0.6, -3.4)
+        b.box(0.55, 0.35, 0.55, '#6fbf4a', -6 + index * 3.5, 1.15, -3.4)
+      }
+    } else if (theme.kind === 'summer') {
+      for (let index = 0; index < 4; index += 1) {
+        const x = -6 + index * 3.5
+        b.box(0.1, 1.4, 0.1, '#6b4a30', x, 0.8, -3.4)
+        b.box(0.45, 0.55, 0.05, '#e2b340', x + 0.3, 1.35, -3.4)
+        b.box(0.5, 0.2, 0.5, '#3a2a20', x, 0.15, 3.6)
+        b.box(0.3, 0.55, 0.3, '#ff8a3d', x, 0.55, 3.6, { glow: true })
+      }
+    } else if (theme.kind === 'autumn') {
+      for (let index = 0; index < 5; index += 1) {
+        const x = -7 + index * 3
+        b.box(0.55, 0.45, 0.55, '#c45c3a', x, 0.35, 3.4)
+        b.box(0.35, 0.2, 0.35, '#e2b340', x, 0.65, 3.4)
+        b.box(0.25, 0.08, 0.4, '#8a3a1a', -6.5 + index * 2.8, 0.1, -2.8 + random())
+      }
+      for (let index = 0; index < 3; index += 1) {
+        b.box(0.25, 1.2, 0.25, '#6a4a28', -5 + index * 4, 0.7, -3.5)
+        b.box(0.7, 0.4, 0.7, '#c45c3a', -5 + index * 4, 1.35, -3.5)
+      }
+    } else if (theme.kind === 'winter') {
+      for (let index = 0; index < 5; index += 1) {
+        const x = -7 + index * 2.8
+        const h = 0.7 + random() * 0.6
+        b.box(0.22, h, 0.22, '#e6f4ff', x, h / 2, -3.3, { glow: true })
+        b.box(0.9, 0.1, 0.7, '#d0e0f0', -6 + index * 3, 0.08, 3.5)
+      }
+      b.box(1.6, 0.9, 0.9, '#8a9aac', 2.4, 0.55, 1.0)
+      b.box(1.2, 0.2, 0.7, '#d7f4ff', 2.4, 1.1, 1.0, { glow: true })
     }
   }
 
