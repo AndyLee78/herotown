@@ -148,9 +148,9 @@ Claude Code, Cursor, GPT(Codex)가 함께 쓰는 작업 목록이다. 작업 하
 | 106 | 4c core 코드 리뷰 (1650b75) | GPT | `Docs/reviews/1650b75.md` (새 파일만) | 완료 (58eea1f) |
 | 107 | 4c 측정: Lv9·10 승격·레이드 주기·침공 | GPT | `tools/*`, `Docs/endgame.md`의 측정 절 | 완료 (32d2605) |
 | 108 | 기념물·계절 이벤트·번영 3D | Cursor | `src/ui/voxel/*`, `src/ui/BattleView.tsx`, `src/ui/ExpeditionPanel.tsx` | 완료 (7c5a6b9) |
-| 109 | 이벤트·기념물·강화 확장·레이드 단계·번영 화면 | GPT | `src/ui/App.tsx`, `src/ui/game/*.tsx`, `src/ui/styles.css`, `src/locales/*` | 대기 (108과 함께 가능) |
-| 110 | 4d core 코드 리뷰 (1eeb27b) | GPT | `Docs/reviews/1eeb27b.md` (새 파일만) | 대기 (109 뒤) |
-| 111 | 4d 측정: Lv10 이후 한 달 | GPT | `tools/*`, `Docs/endgame.md`의 측정 절 | 대기 (110 뒤) |
+| 109 | 이벤트·기념물·강화 확장·레이드 단계·번영 화면 | GPT | `src/ui/App.tsx`, `src/ui/game/*.tsx`, `src/ui/styles.css`, `src/locales/*` | 완료 (07cc847) |
+| 110 | 4d core 코드 리뷰 (1eeb27b) | GPT | `Docs/reviews/1eeb27b.md` (새 파일만) | 완료 (a2712d6) |
+| 111 | 4d 측정: Lv10 이후 한 달 | GPT | `tools/*`, `Docs/endgame.md`의 측정 절 | 완료 (4a39b9d) |
 
 ---
 
@@ -2671,6 +2671,8 @@ core에 이미 있는 것('../../core'에서 export):
 
 **메모**
 
+375px Chrome에서 이벤트 상품 구매, 기념물 1–3단계, 번영 1등급, 레이드 2단계 표시, 옵션 변경, +4 강화 주문과 창 가로 폭을 확인했다. +4 강화 완료는 디버그 상태를 시간 정산해 검증했다.
+
 ---
 
 ## 110. 4d core 코드 리뷰 (GPT)
@@ -2685,6 +2687,8 @@ core에 이미 있는 것('../../core'에서 export):
 ```
 
 **메모**
+
+레이드 이전 단계 귀환 피해, 구버전 처치 상태, 소수 강화 정규화, 기념물 경험치 기록 차이를 `Docs/reviews/1eeb27b.md`에 기록했다.
 
 ---
 
@@ -2705,3 +2709,5 @@ core에 이미 있는 것('../../core'에서 export):
 ```
 
 **메모**
+
+20시드의 Lv10 이후 30일을 측정했다. 기념물·번영 중앙값은 1, 영웅 장비 강화 중앙값은 +5, 레이드 3단계 처치율은 46.75%였다. 타입 검사·테스트 391개·빌드 통과.
