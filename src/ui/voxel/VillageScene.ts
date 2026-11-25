@@ -20,6 +20,7 @@ import {
   LOTS,
   PLAZA,
   buildCemetery,
+  buildFestivalDecor,
   buildLot,
   buildMerchantCart,
   buildTerrain,
@@ -29,6 +30,7 @@ import {
   tavernTableSpot,
   tavernYard,
   trainingPad,
+  type FestivalKind,
 } from './world'
 
 export type VillageSceneProps = {
@@ -169,6 +171,10 @@ export class VillageScene {
   private toastCups: THREE.Object3D | null = null
   private toastCenter = new THREE.Vector3()
   private toasting = false
+  private festivalBooted = false
+  private festivalKind: FestivalKind | null = null
+  private festivalWithYard = false
+  private festivalDecor: THREE.Group | null = null
   private readonly childIds = new Set<string>()
   private readonly moodSlots: MoodSlot[] = []
 
@@ -256,6 +262,7 @@ export class VillageScene {
     }
     this.syncMerchant(props.merchant)
     this.syncTavernRound(props.tavernRound)
+    this.syncFestival(props.festival)
     const party = new Set(props.partyIds)
     for (const walker of this.walkers.values()) {
       this.setMarker(walker, walker.kind === 'roster' && party.has(walker.id))
@@ -283,6 +290,7 @@ export class VillageScene {
       this.toastTable = null
       this.toastCups = null
     }
+    this.clearFestivalDecor()
     freeOwnMaterials(this.scene)
     disposeTree(this.scene)
     this.renderer.dispose()
@@ -579,24 +587,80 @@ export class VillageScene {
     }
   }
 
-  private burst(x: number, y: number, z: number, kind: 'wedding' | 'star') {
+  private burst(x: number, y: number, z: number, kind: 'wedding' | 'star' | 'festival') {
     const group = new THREE.Group()
     group.position.set(x, y, z)
-    const colors = kind === 'star' ? ['#ffe08a', '#fff6c8', '#ffd84d'] : ['#e0584f', '#ff8fa3', '#f4b4c4', '#fff4ea']
-    const count = kind === 'star' ? 8 : 16
+    const colors =
+      kind === 'star'
+        ? ['#ffe08a', '#fff6c8', '#ffd84d']
+        : kind === 'festival'
+          ? ['#f4a0c0', '#ffe08a', '#9fd36b', '#8fd4ef', '#fff4ea', '#e0584f']
+          : ['#e0584f', '#ff8fa3', '#f4b4c4', '#fff4ea']
+    const count = kind === 'star' ? 8 : kind === 'festival' ? 14 : 16
     for (let index = 0; index < count; index += 1) {
-      const size = kind === 'star' ? 0.22 : 0.16 + (index % 3) * 0.04
+      const size = kind === 'star' ? 0.22 : kind === 'festival' ? 0.12 + (index % 3) * 0.04 : 0.16 + (index % 3) * 0.04
       const mesh = new THREE.Mesh(
         new THREE.BoxGeometry(size, kind === 'star' ? size : size * 0.45, size * 0.7),
         new THREE.MeshBasicMaterial({ color: colors[index % colors.length] }),
       )
       const angle = (index / count) * Math.PI * 2
-      const speed = kind === 'star' ? 0.35 : 0.7
+      const speed = kind === 'star' ? 0.35 : kind === 'festival' ? 0.55 : 0.7
       mesh.userData.velocity = new THREE.Vector3(Math.cos(angle) * speed * 0.55, 0.8 + (index % 4) * 0.15, Math.sin(angle) * speed * 0.55)
+      if (kind === 'festival' && index % 3 === 0) {
+        mesh.userData.float = true
+        mesh.userData.velocity.y *= 0.45
+      }
       group.add(mesh)
     }
     this.scene.add(group)
-    this.bursts.push({ group, life: 2.6 })
+    this.bursts.push({ group, life: kind === 'festival' ? 2.0 : 2.6 })
+  }
+
+  // First paint with an old festival only shows props; null → kind fires confetti.
+  private syncFestival(kind: FestivalKind | null) {
+    const withYard = this.tavernOpen
+    if (!this.festivalBooted) {
+      this.festivalBooted = true
+      this.festivalKind = kind
+      this.festivalWithYard = withYard
+      if (kind) {
+        this.setFestivalDecor(kind, withYard)
+      }
+      return
+    }
+    if (kind === this.festivalKind && withYard === this.festivalWithYard) {
+      return
+    }
+    const opened = this.festivalKind == null && kind != null
+    this.festivalKind = kind
+    this.festivalWithYard = withYard
+    if (!kind) {
+      this.clearFestivalDecor()
+      return
+    }
+    this.setFestivalDecor(kind, withYard)
+    if (opened) {
+      this.burst(0, 1.45, 0, 'festival')
+      this.burst(1.4, 1.25, -1.1, 'festival')
+      this.burst(-1.2, 1.25, 1.0, 'festival')
+    }
+  }
+
+  private setFestivalDecor(kind: FestivalKind, withYard: boolean) {
+    this.clearFestivalDecor()
+    const decor = buildFestivalDecor(kind, withYard)
+    this.scene.add(decor)
+    this.festivalDecor = decor
+  }
+
+  private clearFestivalDecor() {
+    if (!this.festivalDecor) {
+      return
+    }
+    this.scene.remove(this.festivalDecor)
+    freeOwnMaterials(this.festivalDecor)
+    disposeTree(this.festivalDecor)
+    this.festivalDecor = null
   }
 
   private stepBursts(delta: number) {

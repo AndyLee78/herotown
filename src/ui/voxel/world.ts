@@ -778,6 +778,155 @@ export function buildToastTable(): THREE.Group {
   return root
 }
 
+export type FestivalKind = 'spring' | 'summer' | 'autumn' | 'winter'
+
+// Seasonal festival props for the plaza (and the tavern yard when it is open).
+// One merged mesh per season; world-space coordinates (Docs/morale.md, Docs/tavern.md).
+export function buildFestivalDecor(kind: FestivalKind, withYard: boolean): THREE.Group {
+  const b = new Builder()
+  const corners: [number, number][] = [
+    [PLAZA.min + 0.55, PLAZA.min + 0.55],
+    [PLAZA.max - 0.55, PLAZA.min + 0.55],
+    [PLAZA.min + 0.55, PLAZA.max - 0.55],
+    [PLAZA.max - 0.55, PLAZA.max - 0.55],
+  ]
+  if (kind === 'spring') {
+    for (const [x, z] of corners) {
+      b.box(0.08, 1.15, 0.08, WOOD, x, 0.65, z)
+      for (const t of [0.35, 0.55, 0.75, 0.95]) {
+        b.box(0.22, 0.08, 0.08, t % 0.4 < 0.2 ? '#f4a0c0' : '#ffe08a', x, t + 0.2, z)
+        b.box(0.08, 0.08, 0.22, t % 0.4 < 0.2 ? '#ff8fb8' : '#fff0a8', x, t + 0.2, z)
+      }
+    }
+    for (const [x, z] of [
+      [-2.4, -2.1],
+      [2.4, -2.1],
+      [-2.2, 2.3],
+      [2.2, 2.3],
+    ] as [number, number][]) {
+      b.box(0.34, 0.14, 0.34, '#c9a36b', x, 0.12, z)
+      b.box(0.12, 0.12, 0.12, '#f278a8', x - 0.08, 0.24, z - 0.05)
+      b.box(0.12, 0.12, 0.12, '#ffe08a', x + 0.08, 0.24, z + 0.05)
+      b.box(0.1, 0.1, 0.1, '#9fd36b', x, 0.28, z)
+    }
+    // Flower ropes along the north plaza edge.
+    for (let i = 0; i < 7; i += 1) {
+      const x = -3.2 + i * 1.05
+      b.box(0.18, 0.1, 0.1, i % 2 === 0 ? '#f4a0c0' : '#ffe08a', x, 1.05, PLAZA.min + 0.35)
+    }
+  } else if (kind === 'summer') {
+    const banners = ['#c0392b', '#3f6fa8', '#e2b340', '#3f8f5a']
+    corners.forEach(([x, z], index) => {
+      const color = banners[index % banners.length]!
+      b.box(0.08, 1.4, 0.08, WOOD, x, 0.75, z)
+      b.box(0.42, 0.55, 0.06, color, x + 0.22, 1.15, z)
+      b.box(0.42, 0.08, 0.06, '#efe6d4', x + 0.22, 1.4, z)
+    })
+    // Small archery targets facing the plaza centre.
+    for (const [x, z] of [
+      [-3.6, 0.8],
+      [3.6, -0.6],
+    ] as [number, number][]) {
+      b.box(0.08, 0.9, 0.08, WOOD, x, 0.5, z)
+      b.box(0.5, 0.5, 0.06, '#efe6d4', x, 0.85, z + (x < 0 ? 0.05 : -0.05))
+      b.box(0.32, 0.32, 0.05, '#c0392b', x, 0.85, z + (x < 0 ? 0.07 : -0.07))
+      b.box(0.14, 0.14, 0.05, '#efe6d4', x, 0.85, z + (x < 0 ? 0.09 : -0.09))
+      b.box(0.06, 0.06, 0.05, '#2a2a2a', x, 0.85, z + (x < 0 ? 0.11 : -0.11))
+    }
+  } else if (kind === 'autumn') {
+    for (const [x, z] of [
+      [-4.2, -3.4],
+      [4.0, -3.6],
+      [-3.8, 3.5],
+      [3.9, 3.4],
+    ] as [number, number][]) {
+      // Grain sheaf.
+      b.box(0.28, 0.7, 0.28, '#d9b54a', x, 0.4, z)
+      b.box(0.34, 0.18, 0.34, '#c9a036', x, 0.78, z)
+      b.box(0.1, 0.2, 0.1, '#8a5a32', x, 0.12, z)
+    }
+    for (const [x, z] of [
+      [-2.6, 3.8],
+      [-1.9, 4.0],
+      [2.4, 3.7],
+    ] as [number, number][]) {
+      b.box(0.28, 0.24, 0.28, '#e07b2a', x, 0.18, z)
+      b.box(0.08, 0.1, 0.08, '#3f8f5a', x, 0.32, z)
+    }
+    // Fruit cart near the south plaza edge.
+    b.box(0.9, 0.12, 0.5, WOOD, 0.4, 0.35, 4.55)
+    b.box(0.12, 0.28, 0.12, WOOD, 0.05, 0.18, 4.35)
+    b.box(0.12, 0.28, 0.12, WOOD, 0.75, 0.18, 4.35)
+    b.box(0.12, 0.28, 0.12, WOOD, 0.05, 0.18, 4.75)
+    b.box(0.12, 0.28, 0.12, WOOD, 0.75, 0.18, 4.75)
+    b.box(0.18, 0.18, 0.18, '#c0392b', 0.2, 0.48, 4.5)
+    b.box(0.16, 0.16, 0.16, '#e2b340', 0.42, 0.48, 4.55)
+    b.box(0.16, 0.16, 0.16, '#e07b2a', 0.62, 0.46, 4.48)
+  } else {
+    // Winter remembrance: lantern poles and candles.
+    for (const [x, z] of corners) {
+      b.box(0.08, 1.2, 0.08, WOOD, x, 0.7, z)
+      b.box(0.28, 0.2, 0.28, '#5d4433', x, 1.35, z)
+      b.box(0.18, 0.18, 0.18, '#ffe27a', x, 1.35, z, { glow: true })
+    }
+    for (const [x, z] of [
+      [-1.9, -1.7],
+      [1.9, -1.7],
+      [-1.9, 1.7],
+      [1.9, 1.7],
+      [0, -2.2],
+      [0, 2.2],
+    ] as [number, number][]) {
+      b.box(0.1, 0.18, 0.1, '#efe6d4', x, 0.16, z)
+      b.box(0.06, 0.1, 0.06, '#ffe27a', x, 0.3, z, { glow: true })
+    }
+  }
+
+  if (withYard) {
+    const yard = tavernYard()
+    const cx = (yard.minX + yard.maxX) / 2
+    const cz = (yard.minZ + yard.maxZ) / 2
+    if (kind === 'spring') {
+      b.box(0.08, 1.0, 0.08, WOOD, yard.minX + 0.2, 0.55, yard.minZ + 0.2)
+      b.box(0.08, 1.0, 0.08, WOOD, yard.maxX - 0.2, 0.55, yard.minZ + 0.2)
+      for (let i = 0; i < 5; i += 1) {
+        const x = yard.minX + 0.25 + i * ((yard.maxX - yard.minX - 0.5) / 4)
+        b.box(0.16, 0.1, 0.1, i % 2 === 0 ? '#f4a0c0' : '#9fd36b', x, 1.0, yard.minZ + 0.2)
+      }
+      b.box(0.32, 0.14, 0.32, '#c9a36b', cx + 0.55, 0.12, cz + 0.15)
+      b.box(0.12, 0.12, 0.12, '#f278a8', cx + 0.55, 0.24, cz + 0.15)
+    } else if (kind === 'summer') {
+      b.box(0.08, 1.25, 0.08, WOOD, yard.minX + 0.15, 0.7, cz)
+      b.box(0.38, 0.5, 0.06, '#3f6fa8', yard.minX + 0.35, 1.1, cz)
+      b.box(0.08, 1.25, 0.08, WOOD, yard.maxX - 0.15, 0.7, cz)
+      b.box(0.38, 0.5, 0.06, '#c0392b', yard.maxX - 0.35, 1.1, cz)
+      b.box(0.4, 0.4, 0.06, '#efe6d4', cx, 0.7, yard.maxZ - 0.15)
+      b.box(0.24, 0.24, 0.05, '#c0392b', cx, 0.7, yard.maxZ - 0.12)
+    } else if (kind === 'autumn') {
+      b.box(0.26, 0.65, 0.26, '#d9b54a', yard.minX + 0.35, 0.38, cz)
+      b.box(0.3, 0.16, 0.3, '#c9a036', yard.minX + 0.35, 0.72, cz)
+      b.box(0.26, 0.22, 0.26, '#e07b2a', cx + 0.45, 0.16, yard.maxZ - 0.25)
+      b.box(0.7, 0.1, 0.4, WOOD, cx - 0.1, 0.32, yard.minZ + 0.35)
+      b.box(0.14, 0.14, 0.14, '#c0392b', cx - 0.25, 0.44, yard.minZ + 0.35)
+      b.box(0.14, 0.14, 0.14, '#e2b340', cx, 0.44, yard.minZ + 0.4)
+    } else {
+      b.box(0.08, 1.1, 0.08, WOOD, yard.minX + 0.2, 0.6, yard.minZ + 0.25)
+      b.box(0.22, 0.18, 0.22, '#5d4433', yard.minX + 0.2, 1.2, yard.minZ + 0.25)
+      b.box(0.14, 0.14, 0.14, '#ffe27a', yard.minX + 0.2, 1.2, yard.minZ + 0.25, { glow: true })
+      b.box(0.08, 1.1, 0.08, WOOD, yard.maxX - 0.2, 0.6, yard.minZ + 0.25)
+      b.box(0.22, 0.18, 0.22, '#5d4433', yard.maxX - 0.2, 1.2, yard.minZ + 0.25)
+      b.box(0.14, 0.14, 0.14, '#ffe27a', yard.maxX - 0.2, 1.2, yard.minZ + 0.25, { glow: true })
+      b.box(0.1, 0.16, 0.1, '#efe6d4', cx, 0.14, cz + 0.2)
+      b.box(0.06, 0.1, 0.06, '#ffe27a', cx, 0.28, cz + 0.2, { glow: true })
+    }
+  }
+
+  const root = new THREE.Group()
+  root.name = `festival-${kind}`
+  root.add(b.build())
+  return root
+}
+
 // Covered cart and donkey for the wandering merchant (Docs/market.md).
 export function buildMerchantCart(): THREE.Group {
   const root = new THREE.Group()
