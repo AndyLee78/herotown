@@ -1,4 +1,6 @@
 // Run: npx tsx tools/endgame-4a.ts [--4b|--4c [days=32] [seeds=20] [Lv9-shards,Lv10-shards]]
+//      npx tsx tools/endgame-4a.ts --4d [days-to-reach-Lv10=65] [seeds=20]
+//      npx tsx tools/endgame-4a.ts --4d [days-to-reach-Lv10=65] [seeds=20]
 import { classById, endgameRules, lifeRules, specialDungeons, villageRules } from '../src/core/data'
 import { DEFAULT_TACTICS, runDungeon } from '../src/core/dungeon'
 import { freshState, presetById, reduce, type GameState } from '../src/core/game'
@@ -7,7 +9,7 @@ import { canDeploy, createHero } from '../src/core/hero'
 import { ESSENCES, todayElement, trialsLeft } from '../src/core/trials'
 import type { PartyMember } from '../src/core/types'
 import { starterParties } from './curve'
-import { simulateVillage, vaultKeys, villageCheckpoint } from './village-balance'
+import { lateResources, simulateVillage, vaultKeys, villageCheckpoint } from './village-balance'
 
 const hour = 3_600_000
 const day = 24 * hour
@@ -241,8 +243,61 @@ function measureVillage(days: number, seedCount: number, raidAndInvasion: boolea
   }))
 }
 
-const mode = process.argv.findIndex((arg, index) => index > 0 && (arg === '--4b' || arg === '--4c'))
-if (mode >= 0) {
+function measure4d(days: number, seedCount: number) {
+  if (!Number.isSafeInteger(days) || days < 1 || !Number.isSafeInteger(seedCount) || seedCount < 1) throw new Error('Expected positive integer days and seeds')
+  const runs = Array.from({ length: seedCount }, (_, index) => {
+    const run = simulateVillage(index + 1, days, undefined, true, true, 30)
+    if (run.late) {
+      for (const key of lateResources) {
+        const { initial, final, income, spent } = run.late
+        if (initial[key] + (income[key] ?? 0) - (spent[key] ?? 0) !== final[key]) throw new Error(`Seed ${index + 1}: unexpected ${key} flow`)
+      }
+    }
+    console.log(`Seed ${index + 1}/${seedCount}: Lv10 day ${run.late?.startDay.toFixed(2) ?? 'unreached'}, prosperity ${run.state.prosperity}`)
+    return run
+  })
+  const finished = runs.flatMap((run) => run.late ? [{ state: run.state, late: run.late }] : [])
+  if (!finished.length) return
+  const samples = finished.map(({ late }) => late)
+  console.log('Lv10 day median', median(samples.map(({ startDay }) => startDay)), 'completed windows', finished.length)
+  console.table([...endgameRules.monuments.list.map(({ id }) => id), 'prosperity'].map((system) => {
+    const progress = finished.map(({ state }) => system === 'prosperity' ? state.prosperity : state.monuments[system as keyof typeof state.monuments] ?? 0)
+    return { system, median: median(progress), min: Math.min(...progress), max: Math.max(...progress) }
+  }))
+  console.table(lateResources.map((key) => ({
+    resource: key, initial: median(samples.map(({ initial }) => initial[key])),
+    income: median(samples.map(({ income }) => income[key] ?? 0)), spent: median(samples.map(({ spent }) => spent[key] ?? 0)),
+    final: median(samples.map(({ final }) => final[key])),
+  })))
+  const enhancements = samples.flatMap(({ enhancements }) => enhancements)
+  const costKeys = ['gold', 'iron', 'flame', 'frost', 'abyss'] as const
+  console.table([...new Set(enhancements.map(({ recipe }) => recipe))].sort().map((recipe) => {
+    const items = enhancements.filter((item) => item.recipe === recipe)
+    return {
+      recipe, items: items.length, initial: median(items.map(({ initial }) => initial)), best: median(items.map(({ best }) => best)),
+      max: Math.max(...items.map(({ best }) => best)), attempts: median(items.map(({ attempts }) => attempts)),
+      'actual (gold/iron/flame/frost/abyss)': costKeys.map((key) => median(items.map(({ spent }) => spent[key] ?? 0))).join('/'),
+      'expected (gold/iron/flame/frost/abyss)': costKeys.map((key) => median(items.map(({ expected }) => expected[key] ?? 0))).join('/'),
+    }
+  }))
+  console.log('Median online %', {
+    'routine only': median(samples.map(({ activity }) => 100 * activity.routine / activity.minutes)),
+    'material surplus': median(samples.map(({ activity }) => 100 * activity.surplus / activity.minutes)),
+    'event runs': median(samples.map(({ activity }) => activity.eventRuns)),
+  })
+  const tiers = samples.flatMap(({ tiers }) => tiers)
+  console.table(endgameRules.raid.tiers.map((_, index) => {
+    const eligible = tiers.filter(({ tier }) => tier === index + 1)
+    return { tier: index + 1, available: eligible.length, defeated: eligible.filter(({ won }) => won).length }
+  }))
+  const ids = [...new Set(samples.flatMap(({ purchases }) => Object.keys(purchases)))].sort()
+  console.table(ids.map((id) => ({ id, purchases: samples.reduce((total, sample) => total + (sample.purchases[id] ?? 0), 0) })))
+}
+
+const mode = process.argv.findIndex((arg, index) => index > 0 && (arg === '--4b' || arg === '--4c' || arg === '--4d'))
+if (process.argv[mode] === '--4d') {
+  measure4d(Number(process.argv[mode + 1] ?? 65), Number(process.argv[mode + 2] ?? 20))
+} else if (mode >= 0) {
   const override = process.argv[mode + 3]
   if (override != null) {
     if (!/^\d+,\d+$/.test(override)) throw new Error('Expected comma-separated shard offerings for Lv9 and Lv10')
