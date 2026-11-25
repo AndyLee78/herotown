@@ -12,6 +12,7 @@ import automationFile from '../data/automation.json'
 import scoutingFile from '../data/scouting.json'
 import schoolFile from '../data/school.json'
 import marketFile from '../data/market.json'
+import personalityFile from '../data/personality.json'
 import smithFile from '../data/smith.json'
 import combatFile from '../data/combat.json'
 import dungeonsFile from '../data/dungeons.json'
@@ -226,6 +227,16 @@ export const automationRules = automationFile
 export const scoutingRules = scoutingFile
 export const schoolRules = schoolFile
 export const marketRules = marketFile
+export const personalityRules = personalityFile as {
+  ids: string[]
+  emotion: Record<import('./types').PersonalityId, Record<'grief' | 'joy' | 'pride' | 'anxiety' | 'resentment', number>>
+  bondGrowth: Record<import('./types').PersonalityId, number>
+  pairs: { a: string; b: string; affinity: number; party: number }[]
+  partyMin: number
+  inherit: number
+  anxiety: { lossStreak: number; loss: number; familyCritical: number }
+  resentment: { benchedTrips: number; loss: number }
+}
 export const guildRules = guildFile as typeof guildFile & { deliverAmount: Record<string, number>; materialValue: Record<string, number> }
 export const nestRules = nestFile as typeof nestFile & { floors: string[][][] }
 export const fountainRules = fountainFile

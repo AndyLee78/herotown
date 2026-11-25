@@ -1,4 +1,4 @@
-export { adRules, alchemyRules, potionById, magicRules, nestRules, trainingRules, guildRules, moraleRules, scoutingRules, schoolRules, marketRules, trinketById, expeditionRules, familyRules, fountainRules, retirementRules, ageBands, classById, classList, combatRules, dungeonById, dungeons, lifeRules, maxAge, monsterById, monsters, progression, smithRules, timeRules, traits, validateGameData, villageRules } from './data'
+export { adRules, alchemyRules, potionById, magicRules, nestRules, trainingRules, guildRules, moraleRules, scoutingRules, schoolRules, marketRules, personalityRules, trinketById, expeditionRules, familyRules, fountainRules, retirementRules, ageBands, classById, classList, combatRules, dungeonById, dungeons, lifeRules, maxAge, monsterById, monsters, progression, smithRules, timeRules, traits, validateGameData, villageRules } from './data'
 export { SAVE_VERSION, adsRemaining, bedCount, busyHeroIds, retireeBonus, retirementAdvised, dungeonUnlocked, presetById, catchUp, expeditionSlots, exportSave, freshState, importSave, localDateKey, migrate, reduce, restBonus, townLevel, visitorCap, visitorStay } from './game'
 export { DEFAULT_TACTICS, applyReport, heroPower, runDungeon } from './dungeon'
 export { ageUp, canDeploy, deployAge, isChild, createHero, deriveStats, generateVisitors, grantXp, hireCost, potentialBand, restHero, statRange, train, withAge } from './hero'
@@ -8,6 +8,7 @@ export { POTION_IDS, brewTime } from './alchemy'
 export { TRINKET_IDS, enchantTime, heroTrinkets, trinketOf } from './magic'
 export { lowMorale, moraleOf, moraleScale } from './morale'
 export { pupils, schoolSeats, tuition } from './school'
+export { PERSONALITY_IDS, affinityScale, emotionScale, partyFit, personalityOf } from './personality'
 export { MARKET_MATERIALS, buyQuote, gearValue, merchantHere, potionValue, pressureOf, seasonDeal, sellQuote, type Merchant, type MerchantOffer } from './market'
 export { heroBusy, partiesOf, readiness, type HeroBusy, type HeroReadiness } from './readiness'
 export { houseRooms, type HouseView, type Room } from './rooms'
@@ -45,6 +46,7 @@ export type {
 } from './game'
 export type {
   AffixId,
+  PersonalityId,
   SkillEffect,
   PotionId,
   TrinketId,

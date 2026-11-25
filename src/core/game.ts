@@ -5,6 +5,7 @@ import { deliver, ensureBoard, expeditionSlotsFor, guildLevel, progressClear, re
 import { cheer, driftMorale, lowMorale, mourn, shiftMorale } from './morale'
 import { arrive, interview, type Interviews } from './scouting'
 import { enroll, graduate, teachSeason, unenroll } from './school'
+import { afterTrip, benchAtDeparture, feel } from './personality'
 import { buyOffer, freshMarket, sellGear, sellPotion, trade, updateMerchant, type Market, type MerchantOffer } from './market'
 import { forgetSkill, readDrills, runDrills, startDrill, type Drill } from './drill'
 import { buyIntel, finishScout, isNest, nestSeason, readScout, seasonKey, startScout, type ScoutJob } from './nest'
@@ -404,7 +405,7 @@ export function reduce(state: GameState, action: GameAction): GameState {
   // a building, a festival or a contract (Docs/morale.md, review b9036a0).
   const gained = townLevel(next.fame).level - townLevel(state.fame).level
   if (gained > 0 && next !== state) {
-    return { ...next, roster: next.roster.map((hero) => shiftMorale(hero, moraleRules.pride.townLevel * gained)) }
+    return { ...next, roster: next.roster.map((hero) => feel(hero, 'pride', moraleRules.pride.townLevel * gained)) }
   }
   return next
 }
@@ -1204,7 +1205,7 @@ function autoMembers(state: GameState, presetId = state.presetId): PartyMember[]
 // Friends and lovers fight better side by side.
 function withBonds(state: GameState, members: PartyMember[]): PartyMember[] {
   const bonus = partyBonus(state, members.map((member) => member.hero.id))
-  return members.map((member) => ((bonus[member.hero.id] ?? 0) > 0 ? { ...member, bonus: bonus[member.hero.id] } : member))
+  return members.map((member) => ((bonus[member.hero.id] ?? 0) !== 0 ? { ...member, bonus: bonus[member.hero.id] } : member))
 }
 
 function runAuto(state: GameState, elapsed: number, tally: { runs: number; gold: number }): GameState {
@@ -1310,7 +1311,7 @@ function autoRun(state: GameState, members: PartyMember[], presetId: string, dun
   const heroIds = members.map((member) => member.hero.id)
   const settled = settleParty(next, report, battleSeed, next.lastTickAt, heroIds, dungeonId)
   const goldGain = report.victory ? Math.floor(result.report.gold * scale) : 0
-  next = dropFromPresets(grantVictoryRewards(bondParty({ ...next, ...settled, gold: next.gold + goldGain }, heroIds, report.victory), report, dungeonId, scale))
+  next = dropFromPresets(grantVictoryRewards(afterTrip(bondParty({ ...next, ...settled, gold: next.gold + goldGain }, heroIds, report.victory), heroIds, report.victory), report, dungeonId, scale))
   tally.runs += 1
   tally.gold += goldGain
   return next
@@ -1343,7 +1344,7 @@ function grantVictoryRewards(state: GameState, report: DungeonReport, dungeonId:
   }
   const party = (report.party ?? []).map((member) => member.id)
   // Pride (up to the everyday cap), then joy on top for a village first (review b9036a0).
-  let roster = cheer(state.roster, party, moraleRules.pride.victory, moraleRules.pride.victoryCap)
+  let roster = cheer(state.roster, party, moraleRules.pride.victory, moraleRules.pride.victoryCap, 'pride')
   if (first) {
     roster = cheer(roster, party, moraleRules.joy.firstClear)
   }
@@ -1693,7 +1694,9 @@ function startExpedition(state: GameState, presetId: string, confirm: boolean, n
     ...(Object.keys(carry.taken).length > 0 ? { supplies: carry.taken } : {}),
     ...(isNest(state.dungeonId) ? { nestKey: seasonKey(state.calendar) } : {}),
   }
-  return { ...state, notice: null, potions: carry.stock, expeditionNonce: state.expeditionNonce + 1, expeditions: [...state.expeditions, expedition] }
+  // Friends left at home notice who went without them (Docs/personality.md).
+  const benched = benchAtDeparture(state, expedition.heroIds, away)
+  return { ...benched, notice: null, potions: carry.stock, expeditionNonce: state.expeditionNonce + 1, expeditions: [...state.expeditions, expedition] }
 }
 
 function returnExpeditions(state: GameState, now: number, returned: AbsenceReport['returned']): GameState {
@@ -1740,7 +1743,7 @@ function settleExpedition(state: GameState, expedition: Expedition): GameState {
     expedition.heroIds,
     report.victory,
   )
-  const next = dropFromPresets(grantVictoryRewards(home, report, dungeonId))
+  const next = dropFromPresets(grantVictoryRewards(afterTrip(home, expedition.heroIds, report.victory), report, dungeonId))
   const materials: Partial<Materials> = {}
   for (const key of ['wood', 'stone', 'iron', 'bone', 'herb', 'crystal'] as const) {
     const diff = next.materials[key] - state.materials[key]
@@ -2190,7 +2193,7 @@ function holdFestival(state: GameState): GameState {
   }
   const kind = state.calendar.season
   const rules = moraleRules.festival
-  let roster = state.roster.map((hero) => shiftMorale(hero, rules.morale))
+  let roster = state.roster.map((hero) => feel(hero, 'joy', rules.morale))
   let materials = state.materials
   if (kind === 'summer') {
     roster = roster.map((hero) => (isChild(hero) || hero.condition === 'dead' ? hero : gainXp(hero, Math.round(hero.level * progression.xpPerLevel * rules.xpShare))))

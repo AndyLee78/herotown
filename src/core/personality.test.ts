@@ -1,0 +1,109 @@
+import { describe, expect, it } from 'vitest'
+import { familyRules, moraleRules, personalityRules } from './data'
+import { bondOf, bondParty, partyBonus } from './family'
+import { freshState, migrate, type GameState } from './game'
+import { createHero } from './hero'
+import { moraleOf } from './morale'
+import { afterTrip, affinityScale, benchAtDeparture, emotionScale, feel, inheritPersonality, PERSONALITY_IDS, personalityFor } from './personality'
+import type { Hero, PersonalityId } from './types'
+
+// Docs/personality.md: personalities, the new emotions, matches and clashes.
+
+const now = 1_700_000_000_000
+const stats = { str: 12, agi: 12, vit: 12, int: 12, wil: 12, wis: 12 }
+
+function hero(id: string, personality: PersonalityId, extra: Partial<Hero> = {}): Hero {
+  return { ...createHero({ id, name: id, gender: 'male', classId: 'warrior', age: 25, potentials: stats, personality }), ...extra }
+}
+
+function town(roster: Hero[], extra: Partial<GameState> = {}): GameState {
+  return { ...freshState(5, now), roster, ...extra }
+}
+
+describe('personalities', () => {
+  it('gives every hero one, steady for the same id and spread across all six', () => {
+    expect(personalityFor('abc')).toBe(personalityFor('abc'))
+    const seen = new Set(Array.from({ length: 200 }, (_, index) => personalityFor(`h${index}`)))
+    expect(seen.size).toBe(PERSONALITY_IDS.length)
+    expect(createHero({ id: 'x', name: 'x', gender: 'male', classId: 'warrior', age: 20, potentials: stats }).personality).toBe(personalityFor('x'))
+  })
+
+  it('passes to children most of the time', () => {
+    const mother = hero('m', 'gentle')
+    const father = hero('f', 'gentle')
+    const kids = Array.from({ length: 200 }, (_, index) => inheritPersonality(`kid${index}`, mother, father))
+    const gentle = kids.filter((id) => id === 'gentle').length / kids.length
+    expect(gentle).toBeGreaterThan(personalityRules.inherit)
+    expect(gentle).toBeLessThan(1)
+  })
+
+  it('makes the same event felt more or less strongly', () => {
+    const ambitious = feel(hero('a', 'ambitious'), 'pride', 10)
+    const gentle = feel(hero('g', 'gentle'), 'pride', 10)
+    expect(moraleOf(ambitious)).toBeGreaterThan(moraleOf(gentle))
+    expect(moraleOf(ambitious)).toBeCloseTo(moraleRules.base + 10 * emotionScale(ambitious, 'pride'))
+  })
+
+  it('lets matching personalities grow close faster than clashing ones', () => {
+    expect(affinityScale(hero('a', 'social'), hero('b', 'social'))).toBeGreaterThan(affinityScale(hero('c', 'hotheaded'), hero('d', 'timid')))
+    const state = town([hero('a', 'social'), hero('b', 'gentle'), hero('c', 'hotheaded'), hero('d', 'hotheaded')])
+    const after = bondParty(bondParty(state, ['a', 'b'], true), ['c', 'd'], true)
+    expect(bondOf(after, 'a', 'b')).toBeGreaterThan(bondOf(after, 'c', 'd'))
+  })
+
+  it('lifts or drags a party by how its members get on', () => {
+    const calm = partyBonus(town([hero('a', 'social'), hero('b', 'gentle')]), ['a', 'b'])
+    const clash = partyBonus(town([hero('c', 'hotheaded'), hero('d', 'timid')]), ['c', 'd'])
+    expect(calm.a).toBeGreaterThan(0)
+    expect(clash.c).toBeLessThan(0)
+    expect(clash.c).toBeGreaterThanOrEqual(personalityRules.partyMin)
+  })
+})
+
+describe('anxiety', () => {
+  it('builds after defeats in a row and clears with a win', () => {
+    let state = town([hero('a', 'timid')])
+    state = afterTrip(state, ['a'], false)
+    expect(moraleOf(state.roster[0]!)).toBe(moraleRules.base)
+    state = afterTrip(state, ['a'], false)
+    expect(moraleOf(state.roster[0]!)).toBeCloseTo(moraleRules.base - personalityRules.anxiety.loss * personalityRules.emotion.timid.anxiety)
+    state = afterTrip(state, ['a'], true)
+    expect(state.roster[0]!.losses).toBeUndefined()
+  })
+
+  it('worries a family member brought home critical', () => {
+    const state = town([hero('w', 'gentle', { spouseId: 'h' }), hero('h', 'timid', { spouseId: 'w', condition: 'critical' }), hero('x', 'gentle')])
+    const after = afterTrip(state, ['h'], true)
+    expect(moraleOf(after.roster[0]!)).toBeLessThan(moraleRules.base)
+    expect(moraleOf(after.roster[2]!)).toBe(moraleRules.base)
+  })
+})
+
+describe('feeling left out', () => {
+  it('stings after friends leave without them a few times in a row', () => {
+    const bonds = [{ a: 'f', b: 's', affinity: familyRules.friendAt + 5 }]
+    let state = town([hero('f', 'social'), hero('s', 'social'), hero('stranger', 'social')], { bonds })
+    for (let trip = 1; trip < personalityRules.resentment.benchedTrips; trip += 1) {
+      state = benchAtDeparture(state, ['f'], new Set())
+    }
+    expect(state.roster[1]!.benched).toBe(personalityRules.resentment.benchedTrips - 1)
+    state = benchAtDeparture(state, ['f'], new Set())
+    expect(moraleOf(state.roster[1]!)).toBeLessThan(moraleRules.base)
+    expect(state.roster[1]!.benched).toBeUndefined()
+    expect(moraleOf(state.roster[2]!)).toBe(moraleRules.base)
+  })
+
+  it('does not count heroes who are busy, tired or hurt', () => {
+    const bonds = [{ a: 'f', b: 's', affinity: familyRules.friendAt + 5 }]
+    const state = town([hero('f', 'social'), hero('s', 'social', { fatigue: 80 })], { bonds })
+    expect(benchAtDeparture(state, ['f'], new Set()).roster[1]!.benched).toBeUndefined()
+  })
+})
+
+describe('saves', () => {
+  it('gives heroes from an older save the personality their id draws', () => {
+    const old = JSON.parse(JSON.stringify(town([hero('a', 'social')]))) as Record<string, unknown>
+    delete ((old.roster as Record<string, unknown>[])[0] as Record<string, unknown>).personality
+    expect(migrate(old, now).roster[0]?.personality).toBe(personalityFor('a'))
+  })
+})

@@ -11,6 +11,8 @@ export type Reach = 'melee' | 'ranged'
 export type Row = 'front' | 'back'
 export type SkillKind = 'attack' | 'taunt' | 'heal' | 'buff' | 'debuff'
 export type TraitId = 'tough' | 'coward' | 'nocturnal' | 'treasure' | 'ironWill' | 'frail'
+// Docs/personality.md
+export type PersonalityId = 'social' | 'loner' | 'ambitious' | 'gentle' | 'hotheaded' | 'timid'
 export type Condition = 'healthy' | 'fatigued' | 'injured' | 'critical' | 'dead'
 export type TargetPriority = 'lowestHp' | 'backRow' | 'boss'
 export type DefeatReason = 'noTank' | 'noHealer' | 'retreated' | 'wiped' | 'outmatched' | 'tooWeak' | 'poisoned' | 'paralyzed' | 'silenced' | 'trapped' | 'ambushed' | 'blasted'
@@ -171,6 +173,11 @@ export type Hero = {
   prodigy?: boolean
   // A child at school (Docs/school.md).
   school?: { focus?: StatKey; career?: ClassId; seasons: number; carry: number }
+  // Missing on heroes from before personalities: personalityOf derives one from the id.
+  personality?: PersonalityId
+  // Defeats in a row, and trips watched from home while friends went (Docs/personality.md).
+  losses?: number
+  benched?: number
   gear: Gear[]
   clears: string[]
   deaths: number

@@ -171,7 +171,8 @@ export function createHeroUnit(member: PartyMember, index: number): BattleUnit {
         : 0
   const fatigueScale = 1 - fatiguePenalty
   const injuryScale = 1 - injuryPenalty
-  const bondScale = 1 + Math.max(0, member.bonus ?? 0)
+  // Bonds and personalities: a lift beside friends, a small drag beside a clash (Docs/personality.md).
+  const bondScale = 1 + (member.bonus ?? 0)
   const maxHp = Math.max(1, Math.round(baseHp * injuryScale))
   const trinkets = heroTrinkets(hero)
   const learned = heroSkillEffects(hero)

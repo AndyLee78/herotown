@@ -4,6 +4,7 @@ import { moraleRules, progression, villageRules } from './data'
 import { festivalCost, freshState, migrate, reduce, type GameState } from './game'
 import { createHero } from './hero'
 import { cheer, driftMorale, griefFor, lowMorale, moraleOf, mourn } from './morale'
+import { emotionScale } from './personality'
 import type { ClassId, Hero } from './types'
 
 // Docs/morale.md: morale, grief, joy, pride and seasonal festivals.
@@ -11,8 +12,10 @@ import type { ClassId, Hero } from './types'
 const now = 1_700_000_000_000
 const stats = { str: 14, agi: 12, vit: 14, int: 12, wil: 12, wis: 14 }
 
+// Timid heroes feel joy at its plain size, so the numbers below read as written;
+// grief and pride go through emotionScale (Docs/personality.md).
 function hero(id: string, classId: ClassId = 'warrior', extra: Partial<Hero> = {}): Hero {
-  return { ...createHero({ id, name: id, gender: 'male', classId, age: 30, potentials: stats, level: 5, training: 4 }), ...extra }
+  return { ...createHero({ id, name: id, gender: 'male', classId, age: 30, potentials: stats, level: 5, training: 4, personality: 'timid' }), ...extra }
 }
 
 function town(roster: Hero[], season: 'spring' | 'summer' | 'autumn' | 'winter' = 'spring'): GameState {
@@ -60,7 +63,8 @@ describe('emotions', () => {
     expect(griefFor(friend, gone, bonds)).toBe(moraleRules.grief.friend)
     expect(griefFor(stranger, gone, bonds)).toBe(0)
     const after = mourn([widow, child, friend, stranger], [gone], bonds)
-    expect(after.map(moraleOf)).toEqual([moraleRules.base - 50, moraleRules.base - 40, moraleRules.base - 25, moraleRules.base])
+    const grief = emotionScale(widow, 'grief')
+    after.map(moraleOf).forEach((value, index) => expect(value).toBeCloseTo(moraleRules.base - [50, 40, 25, 0][index]! * grief))
   })
 
   it('caps everyday cheer below the high mark', () => {
@@ -115,7 +119,7 @@ describe('review b9036a0 fixes', () => {
   it('cheers everyone when a festival lifts the town a level', () => {
     const state = { ...town([hero('a')]), fame: 11 }
     const held = reduce(state, { type: 'festival' })
-    expect(moraleOf(held.roster[0]!)).toBe(moraleRules.base + moraleRules.festival.morale + moraleRules.pride.townLevel)
+    expect(moraleOf(held.roster[0]!)).toBeCloseTo(moraleRules.base + moraleRules.festival.morale + moraleRules.pride.townLevel * emotionScale(held.roster[0]!, 'pride'))
   })
 
   it("adds a first clear's joy on top of the victory's pride", () => {

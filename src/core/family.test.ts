@@ -11,7 +11,9 @@ const now = 1_700_000_000_000
 const stats: Stats = { str: 10, agi: 10, vit: 10, int: 10, wil: 10, wis: 10 }
 
 function hero(id: string, gender: 'male' | 'female', extra: Partial<HeroDraft> = {}): Hero {
-  return createHero({ id, name: id, gender, classId: gender === 'female' ? 'cleric' : 'warrior', age: 24, potentials: stats, ...extra })
+  // Timid heroes have no personality match or clash with each other, so bond
+  // numbers read as written (Docs/personality.md).
+  return createHero({ id, name: id, gender, classId: gender === 'female' ? 'cleric' : 'warrior', age: 24, potentials: stats, personality: 'timid', ...extra })
 }
 
 function town(roster: Hero[], extra: Partial<GameState> = {}): GameState {

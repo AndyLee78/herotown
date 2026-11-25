@@ -1,7 +1,7 @@
-import { ageBands, ageMultiplier, bandForAge, classById, classList, maxAge, names, progression, traits } from './data'
+import { ageBands, ageMultiplier, bandForAge, classById, classList, maxAge, names, personalityRules, progression, traits } from './data'
 import { normalizeGear } from './gear'
 import { normalizeLearned } from './skills'
-import { isGenes, type Genes } from './genes'
+import { hashString, isGenes, type Genes } from './genes'
 import { createRng, type Rng } from './rng'
 import {
   STAT_KEYS,
@@ -12,6 +12,7 @@ import {
   type Hero,
   type Stats,
   type TraitId,
+  type PersonalityId,
 } from './types'
 
 export type HeroDraft = {
@@ -34,6 +35,9 @@ export type HeroDraft = {
   interviewed?: number
   prodigy?: boolean
   school?: Hero['school']
+  personality?: Hero['personality']
+  losses?: number
+  benched?: number
   gear?: Array<Partial<Gear>>
   clears?: string[]
   deaths?: number
@@ -56,6 +60,12 @@ export function deriveStats(age: number, training: number, potentials: Stats): S
     stats[key] = Math.max(1, Math.round(potentials[key] * ageMultiplier(age, key) + bonus))
   }
   return stats
+}
+
+// Every hero has a personality (Docs/personality.md), drawn from the id on its
+// own random stream so no other roll changes.
+export function personalityFor(id: string): PersonalityId {
+  return createRng(hashString(`personality:${id}`)).pick(personalityRules.ids as PersonalityId[])
 }
 
 export function createHero(draft: HeroDraft): Hero {
@@ -83,6 +93,9 @@ export function createHero(draft: HeroDraft): Hero {
     ...(draft.interviewed ? { interviewed: draft.interviewed } : {}),
     ...(draft.prodigy ? { prodigy: true } : {}),
     ...(draft.school ? { school: draft.school } : {}),
+    personality: draft.personality ?? personalityFor(draft.id),
+    ...(draft.losses ? { losses: draft.losses } : {}),
+    ...(draft.benched ? { benched: draft.benched } : {}),
     gear: draft.gear ? draft.gear.map((item) => normalizeGear(item, draft.classId)) : [normalizeGear(undefined, draft.classId)],
     clears: [...(draft.clears ?? [])],
     deaths: draft.deaths ?? 0,

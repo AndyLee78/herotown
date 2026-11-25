@@ -1,5 +1,12 @@
-import { moraleRules } from './data'
-import type { Bond, Hero } from './types'
+import { moraleRules, personalityRules } from './data'
+import type { Bond, Hero, PersonalityId } from './types'
+
+// How strongly a hero feels an emotion (Docs/personality.md). Kept here, not in
+// personality.ts, so morale has no import cycle.
+function scale(hero: Hero, emotion: 'grief' | 'joy' | 'pride'): number {
+  const id = hero.personality as PersonalityId | undefined
+  return id ? personalityRules.emotion[id][emotion] : 1
+}
 
 // Morale and emotions (Docs/morale.md). Pure helpers over heroes; the game
 // decides when they run.
@@ -43,7 +50,7 @@ export function moraleScale(hero: Hero): { attack: number; speed: number } {
 }
 
 // Raises the named heroes' morale; a cap keeps everyday wins from carrying it past the high mark.
-export function cheer(heroes: Hero[], ids: Iterable<string>, amount: number, cap = 100): Hero[] {
+export function cheer(heroes: Hero[], ids: Iterable<string>, amount: number, cap = 100, emotion: 'joy' | 'pride' = 'joy'): Hero[] {
   const set = new Set(ids)
   if (!set.size) {
     return heroes
@@ -52,7 +59,7 @@ export function cheer(heroes: Hero[], ids: Iterable<string>, amount: number, cap
     if (!set.has(hero.id)) {
       return hero
     }
-    const raised = shiftMorale(hero, Math.max(0, Math.min(amount, cap - moraleOf(hero))))
+    const raised = shiftMorale(hero, Math.max(0, Math.min(amount * scale(hero, emotion), cap - moraleOf(hero))))
     return raised
   })
 }
@@ -82,6 +89,6 @@ export function mourn(heroes: Hero[], departed: Departed[], bonds: Bond[]): Hero
   return heroes.map((hero) => {
     // The deepest loss counts; several at once do not stack past it.
     const loss = Math.max(0, ...departed.map((gone) => griefFor(hero, gone, bonds)))
-    return loss > 0 ? shiftMorale(hero, -loss) : hero
+    return loss > 0 ? shiftMorale(hero, -loss * scale(hero, 'grief')) : hero
   })
 }

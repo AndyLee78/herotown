@@ -1,0 +1,27 @@
+{
+  "ids": ["social", "loner", "ambitious", "gentle", "hotheaded", "timid"],
+  "emotion": {
+    "social": { "grief": 1, "joy": 1.3, "pride": 1, "anxiety": 0.8, "resentment": 1.3 },
+    "loner": { "grief": 0.8, "joy": 0.8, "pride": 0.9, "anxiety": 0.8, "resentment": 0.5 },
+    "ambitious": { "grief": 0.9, "joy": 1, "pride": 1.6, "anxiety": 1, "resentment": 1.5 },
+    "gentle": { "grief": 1.2, "joy": 1.2, "pride": 0.7, "anxiety": 0.9, "resentment": 0.6 },
+    "hotheaded": { "grief": 1.1, "joy": 1.1, "pride": 1.3, "anxiety": 0.7, "resentment": 1.4 },
+    "timid": { "grief": 1.2, "joy": 1, "pride": 0.8, "anxiety": 1.6, "resentment": 1 }
+  },
+  "bondGrowth": { "social": 1.2, "loner": 0.8, "ambitious": 1, "gentle": 1.1, "hotheaded": 1, "timid": 1 },
+  "pairs": [
+    { "a": "social", "b": "social", "affinity": 1.3, "party": 0.02 },
+    { "a": "social", "b": "gentle", "affinity": 1.3, "party": 0.02 },
+    { "a": "gentle", "b": "timid", "affinity": 1.3, "party": 0.02 },
+    { "a": "gentle", "b": "hotheaded", "affinity": 1.2, "party": 0.01 },
+    { "a": "ambitious", "b": "loner", "affinity": 1.1, "party": 0.02 },
+    { "a": "ambitious", "b": "ambitious", "affinity": 0.6, "party": -0.03 },
+    { "a": "hotheaded", "b": "hotheaded", "affinity": 0.6, "party": -0.03 },
+    { "a": "hotheaded", "b": "timid", "affinity": 0.6, "party": -0.03 },
+    { "a": "social", "b": "loner", "affinity": 0.7, "party": -0.02 }
+  ],
+  "partyMin": -0.06,
+  "inherit": 0.7,
+  "anxiety": { "lossStreak": 2, "loss": 10, "familyCritical": 15 },
+  "resentment": { "benchedTrips": 3, "loss": 12 }
+}

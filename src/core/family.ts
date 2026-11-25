@@ -1,7 +1,8 @@
-import { bandForAge, ageBands, classById, dungeons, familyRules, maxAge, moraleRules, names, timeRules, traits, villageRules } from './data'
+import { bandForAge, ageBands, classById, dungeons, familyRules, maxAge, moraleRules, names, timeRules, traits, villageRules, personalityRules } from './data'
 import { genesFor, inheritGenes } from './genes'
 import { createHero } from './hero'
-import { cheer, mourn, shiftMorale } from './morale'
+import { cheer, mourn } from './morale'
+import { affinityScale, feel, inheritPersonality, partyFit } from './personality'
 import { createRng, type Rng } from './rng'
 import type { GameState, Grave } from './game'
 import { STAT_KEYS, type Bond, type BondStage, type Gender, type Hero, type Proposal, type Stats, type TraitId } from './types'
@@ -155,8 +156,16 @@ export function population(state: GameState): Population {
 }
 
 // Each hero's bonus from friends and lovers in the same party.
+// How well two personalities get on: some grow close fast, some slowly (Docs/personality.md).
+function matchOf(state: GameState, a: string, b: string): number {
+  const first = heroById(state, a)
+  const second = heroById(state, b)
+  return first && second ? affinityScale(first, second) : 1
+}
+
 export function partyBonus(state: GameState, ids: string[]): Record<string, number> {
   const bonus: Record<string, number> = {}
+  const members = ids.map((id) => heroById(state, id)).filter((hero): hero is Hero => hero != null)
   for (const id of ids) {
     let total = 0
     for (const other of ids) {
@@ -166,7 +175,10 @@ export function partyBonus(state: GameState, ids: string[]): Record<string, numb
       const stage = bondStage(state, id, other)
       total += stage === 'spouse' || stage === 'lover' ? familyRules.loverBonus : stage === 'friend' ? familyRules.friendBonus : 0
     }
-    bonus[id] = Math.min(familyRules.maxBonus, total)
+    // Personalities that clash can pull the total below zero (Docs/personality.md).
+    const hero = members.find((entry) => entry.id === id)
+    const fit = hero ? partyFit(hero, members) : 0
+    bonus[id] = Math.max(personalityRules.partyMin, Math.min(familyRules.maxBonus, total + fit))
   }
   return bonus
 }
@@ -216,7 +228,7 @@ export function bondParty(state: GameState, ids: string[], victory: boolean): Ga
   let bonds = state.bonds ?? []
   for (let i = 0; i < present.length; i += 1) {
     for (let j = i + 1; j < present.length; j += 1) {
-      bonds = addAffinity(bonds, present[i] as string, present[j] as string, amount)
+      bonds = addAffinity(bonds, present[i] as string, present[j] as string, amount * matchOf(state, present[i] as string, present[j] as string))
     }
   }
   return { ...state, bonds }
@@ -242,7 +254,7 @@ function growTogether(state: GameState): GameState {
   const ids = state.roster.filter((hero) => hero.age >= familyRules.adultAge).map((hero) => hero.id)
   for (let i = 0; i < ids.length; i += 1) {
     for (let j = i + 1; j < ids.length; j += 1) {
-      bonds = addAffinity(bonds, ids[i] as string, ids[j] as string, amount)
+      bonds = addAffinity(bonds, ids[i] as string, ids[j] as string, amount * matchOf(state, ids[i] as string, ids[j] as string))
     }
   }
   return { ...state, bonds }
@@ -376,6 +388,8 @@ export function makeChild(rng: Rng, id: string, mother: Hero, father: Hero, bonu
     potentials,
     potential,
     traitIds: traitIds.slice(0, familyRules.maxTraits),
+    // Children usually take after a parent (Docs/personality.md).
+    personality: inheritPersonality(id, mother, father),
     family: father.family ?? father.name,
     parents: [mother.id, father.id],
     genes,
@@ -401,7 +415,7 @@ export function acceptProposal(state: GameState, a: string, b: string, now: numb
   }
   const wed = (hero: Hero): Hero =>
     hero.id === first.id || hero.id === second.id
-      ? shiftMorale({ ...hero, spouseId: hero.id === first.id ? second.id : first.id, widowedAt: undefined }, moraleRules.joy.marriage)
+      ? feel({ ...hero, spouseId: hero.id === first.id ? second.id : first.id, widowedAt: undefined }, 'joy', moraleRules.joy.marriage)
       : hero
   return {
     ...state,
