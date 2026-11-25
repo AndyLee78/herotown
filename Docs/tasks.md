@@ -151,6 +151,10 @@ Claude Code, Cursor, GPT(Codex)가 함께 쓰는 작업 목록이다. 작업 하
 | 109 | 이벤트·기념물·강화 확장·레이드 단계·번영 화면 | GPT | `src/ui/App.tsx`, `src/ui/game/*.tsx`, `src/ui/styles.css`, `src/locales/*` | 완료 (07cc847) |
 | 110 | 4d core 코드 리뷰 (1eeb27b) | GPT | `Docs/reviews/1eeb27b.md` (새 파일만) | 완료 (a2712d6) |
 | 111 | 4d 측정: Lv10 이후 한 달 | GPT | `tools/*`, `Docs/endgame.md`의 측정 절 | 완료 (4a39b9d) |
+| 112 | 정예·강령술사·새 전투 효과 3D | Cursor | `src/ui/voxel/*`, `src/ui/BattleView.tsx`, `src/ui/ExpeditionPanel.tsx` | 대기 (113과 함께 가능) |
+| 113 | 스킬 갈래·천부·몬스터 특성 화면 | GPT | `src/ui/App.tsx`, `src/ui/game/*.tsx`, `src/ui/styles.css`, `src/locales/*` | 대기 (112와 함께 가능) |
+| 114 | 5a core 코드 리뷰 (318455b) | GPT | `Docs/reviews/318455b.md` (새 파일만) | 대기 (113 뒤) |
+| 115 | 5a 측정: 갈래 조합·천부·몬스터 세기 | GPT | `tools/*`, `Docs/identity.md`의 측정 절 | 대기 (114 뒤) |
 
 ---
 
@@ -2711,3 +2715,109 @@ core에 이미 있는 것('../../core'에서 export):
 **메모**
 
 20시드의 Lv10 이후 30일을 측정했다. 기념물·번영 중앙값은 1, 영웅 장비 강화 중앙값은 +5, 레이드 3단계 처치율은 46.75%였다. 타입 검사·테스트 391개·빌드 통과.
+
+---
+
+## 112. 정예·강령술사·새 전투 효과 3D (Cursor)
+
+**지금 시작할 수 있다. 작업 113(GPT)과 파일이 겹치지 않아 함께 돌릴 수 있다(같은 폴더에서 동시에 돌리려면 git worktree로 나눈다).** 설계: `Docs/identity.md` 5a.
+
+**전달할 내용**
+
+```
+Docs/identity.md의 5a(특히 "몬스터"와 "구현 메모")를 읽고 전투 3D를 만든다. src/ui/voxel/*, src/ui/BattleView.tsx, src/ui/ExpeditionPanel.tsx만 고친다. core, App.tsx, src/ui/game/*, src/locales/*는 고치지 않는다.
+
+이미 있는 것:
+- 리플레이 유닛(ReplayUnit)에 elite?: true. 4티어 이상 던전의 일반 몬스터가 10%로 정예가 된다(체력 ×1.6, 특성 하나 더).
+- 새 몬스터 necromancer(강령술사, 언데드, 뒷줄, 원거리, 동료를 회복). 가라앉은 지하묘지 2층.
+- 몬스터 데이터에 kind(beast/undead/human/construct/dragon/spirit)와 traits(armor/evasive/nodot/fireproof/healer/thorns/purge).
+- 새 전투 로그: log.miss(빗나감), log.crit(치명타, 바로 뒤에 log.attack), log.burn(화상 피해), log.thorns(가시 반사), log.counter(반격, 바로 뒤에 반격 log.attack), log.twin(한 번 더), log.enrage(보스 분노), log.purge(보스가 약화를 지움), log.revive(성직자가 쓰러진 동료를 일으킴), log.undying(체력 1로 버팀), log.guardian(파티 전원이 일어남). 몬스터가 동료를 회복하면 log.heal(actor가 몬스터).
+- log.attack 등 피해 로그의 params.absorbed: 보호막이 막은 양.
+
+1. 정예 몬스터: 조금 더 크게, 붉은 테두리나 빛 같은 눈에 띄는 표시(과하지 않게).
+2. 강령술사 복셀 모델(지팡이, 두건, 녹색 빛).
+3. 전투 효과:
+   - 빗나감: 맞는 쪽이 옆으로 비키고 "빗나감" 대신 작은 휙 효과.
+   - 치명타: 큰 숫자, 짧은 화면 흔들림.
+   - 화상: 주황 불꽃 입자(중독의 초록과 구분).
+   - 가시·반격: 맞은 쪽에서 때린 쪽으로 짧은 반격 모션.
+   - 보호막: 막은 양이 있으면 영웅 둘레에 푸른 막이 번쩍.
+   - 부활·불굴·수호천사: 빛 기둥(부활), 무릎 꿇었다 일어남(불굴), 파티 전체 금빛(수호천사).
+   - 분노: 보스가 붉게 빛나며 커짐. 약화 해제: 보스 둘레에 흰 빛.
+   - 몬스터 회복: 대상에게 초록 빛.
+4. 성능: 효과는 기존 입자 풀을 재사용한다.
+
+확인: npm run dev에서 디버그 세이브(Lv25 영웅, 지하묘지·도적 요새·용의 둥지)로 리플레이를 본다. tsc·test·build 통과. 확인한 내용을 메모에.
+```
+
+**메모**
+
+---
+
+## 113. 스킬 갈래·천부·몬스터 특성 화면 (GPT)
+
+**지금 시작할 수 있다. 작업 112(Cursor)와 함께 돌릴 수 있다.** 설계: `Docs/identity.md` 5a.
+
+**전달할 내용**
+
+```
+Docs/identity.md의 5a를 화면에 보인다. src/ui/App.tsx, src/ui/game/*.tsx, src/ui/styles.css, src/locales/*만 고친다. core, src/ui/voxel/*, src/ui/BattleView.tsx, src/ui/ExpeditionPanel.tsx는 고치지 않는다.
+
+core에 이미 있는 것('../../core'에서 export):
+- classById(id).skills: 10개. 첫 스킬은 기본기, 나머지는 branch(0–2)와 tier(1–3), effect, when?({ personality?, moraleAbove?, moraleBelow?, withClass?, bonded?, bonus }). classById(id).branches: [{ id(예: 'warrior.bulwark'), mastery }].
+- canLearn(hero, id), canForget(hero, id), skillPrerequisite(classId, id), masteries(hero), suitedBranches(personality), heroSkillEffects(hero, { allies?, bonded? }), trainingRules.pickLevels([3, 7, 11, 15, 20, 25]).
+- Hero.gift?: GiftId(undying, vanguard, twinStrike, farsight, ironBody, healingHands, dragonBlood, marksman, lucky, tactician, lateBloomer, heroBlood, guardian, songbird). giftEffect(gift).
+- 몬스터: monsterById(id).kind, .traits(armor, evasive, nodot, fireproof, healer, thorns, purge). 3티어 이상 보스는 분노, 모든 보스는 기절·감속에 강하다.
+- 리플레이 유닛 elite?: true.
+- 새 효과 키(SkillEffect): hp, crit, critDamage, pierce, lifesteal, execute, bossDamage, counter, dodge, stun, slow, burn, shield, firstStrike, lastStand, revive, partySpeed, partyCrit, enemyMiss, holy, partyHoly, aoePower, weakenPower, burnPower, partyFirstStrike, fatigueCut, selfFatigueCut, healTaken, dotGuard, twinStrike, lucky, trapGuard, steadfast, alert, farsight, undying, vanguard, guardian.
+- 새 전투 로그 키: log.miss, log.crit, log.burn, log.thorns, log.counter, log.twin, log.enrage, log.purge, log.revive, log.undying, log.guardian, 그리고 params.absorbed.
+
+1. 스킬 화면을 갈래 셋으로 나눈다(좁은 화면에서는 세로로 쌓기). 갈래 이름, 1→2→3 단계, 잠김(앞 단계 필요)·배움·배울 수 있음, 숙련 효과(다 배우면 켜짐). 성격과 맞는 갈래에 "잘 맞음 +20%" 표시. 조건부 효과는 "조건: …"으로 보인다.
+2. 남은 선택 안내: "Lv3·7·11·15·20·25에 하나씩, 아홉 중 여섯". 훈련소 다시 고르기는 canForget인 스킬에만 버튼.
+3. 스킬 이름: 기존 스킬 이름은 그대로 두고, 새 스킬·갈래·숙련 이름을 ko/en에 더한다(Docs/identity.md 표의 이름을 쓴다). 새 효과 키마다 설명 문구.
+4. 천부: 영웅 카드·상세·방문자 카드·아이에 금빛 표시와 이름, 눌러서 설명. 천부 14종 이름·설명 ko/en.
+5. 던전 정보의 몬스터 목록에 종류와 특성 아이콘(툴팁으로 설명). 보스에는 "분노"·"제어에 강함". 원정 기록·리플레이 목록에서 정예 몬스터에 "정예" 표시.
+6. 전투 로그 문구 ko/en(새 로그 키, 보호막이 막은 양).
+7. 문구 ko/en 같은 키. 좁은 화면(375px)에서 넘치지 않게.
+
+확인: npm run dev에서 디버그 세이브(Lv25 영웅 직업별, 천부 있는 영웅, 방문자)로 스킬 갈래 배우기·숙련·다시 고르기, 천부 표시, 몬스터 특성, 전투 로그를 본다. tsc·test·build 통과. 확인한 내용을 메모에.
+```
+
+**메모**
+
+---
+
+## 114. 5a core 코드 리뷰 (GPT)
+
+**작업 113 뒤에 시작한다(같은 도구라 순서대로).** core 커밋은 **318455b**다.
+
+**전달할 내용**
+
+```
+5a core 커밋 318455b를 리뷰한다. 코드는 고치지 않고 Docs/reviews/318455b.md 새 파일 하나에만 쓴다(Docs/reviews/README.md 형식).
+볼 것: Docs/identity.md 5a와 차이, 갈래 순서(배우기·잊기·세이브 정규화), 숙련, 성격 궁합 배율이 붙는 곳, 조건부 효과(언제 판정하는지, 파티 정보가 빠지는 경로: 자동 출정·침공·레이드·심연·훈련 등), 천부(방문자·아이·신동·세이브 27, 영웅의 핏줄이 두 번 붙는 경로가 없는지, 늦깎이 경험치), 전투(새 rng 굴림이 기존 전투를 바꾸는지, 회피·치명·방어구·관통 순서, 보호막과 불굴·부활·수호천사가 겹칠 때, 정예와 소환, 분노·약화 해제, 몬스터 기절 처리), 피로·골드 보정, 파티 효과 상한.
+```
+
+**메모**
+
+---
+
+## 115. 5a 측정: 갈래 조합·천부·몬스터 세기 (GPT)
+
+**작업 114 뒤에 시작한다.**
+
+**전달할 내용**
+
+```
+Docs/identity.md 5a의 "세기 조정"을 측정한다. core는 고치지 않는다. 결과는 Docs/identity.md 끝에 "5a 측정 (날짜)" 절로 적는다.
+
+1. 직업마다 갈래 조합(한 갈래 몰기 ×3, 두 갈래 숙련, 고르게)을 Lv11·15·20·25에서 일반 던전(티어 3–7)과 특수 던전(시련·심연·레이드·침공)에 돌린다. 하위 25% 승률과 중앙값.
+2. 같은 직업 안에서 가장 센 조합과 가장 약한 조합의 차이를 "레벨 몇 차이"로 바꿔 적는다(목표: 2 이하). 던전마다 1등 조합이 무엇인지.
+3. 성격 궁합 +20%가 있을 때와 없을 때 차이.
+4. 천부별 효과 크기(같은 영웅에 천부만 바꿔서).
+5. 권장 레벨에서, 그 레벨의 스킬 수를 배운 파티의 하위 25% 승률(목표 약 80%). 티어별로 몬스터 체력·공격 배율을 얼마로 하면 맞는지(첫 추정 3–4티어 ×1.1, 5티어 ×1.2, 6–7티어 ×1.3).
+6. 분노가 레이드(단계별 처치까지 걸리는 시도 수)와 심연 진행에 주는 영향. 정예가 4티어 이상 승률에 주는 영향.
+7. 숫자를 바꿀 제안은 파일·키·값으로 적는다(고치지는 않는다).
+```
+
+**메모**
