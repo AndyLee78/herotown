@@ -81,6 +81,9 @@ export type VillageSceneProps = {
   shrine: ShrineProp[]
   // The town level with promotions (Docs/endgame.md 4b), for the town's look and the promotion scene (task 100).
   townLevel: number
+  // Monument stages 0-3 and the prosperity rank (Docs/endgame.md 4d, task 108).
+  monuments: { statue?: number; lighthouse?: number; walls?: number; arch?: number }
+  prosperity: number
   // The coming invasion: warned (within six hours), when it hits, and the last result (Docs/endgame.md 4c, task 104).
   invasion: { warned: boolean; at: number; last: { at: number; won: boolean } | null } | null
 }

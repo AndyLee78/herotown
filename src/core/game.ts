@@ -10,8 +10,11 @@ import { festivalScale, gather, type TavernState } from './tavern'
 import { bequeath, bequeathed, comfortHeir, heirloomMods } from './heirloom'
 import { blessing, enshrine, fitShrine, shrineMorale, unshrine, type Shrine } from './legends'
 import { abyssFloors, freshVault, settleSpecial, specialBlock, spendTrial, type Abyss, type Trials, type Vault, type VaultKey } from './trials'
-import { currentRaid, raidVariant, settleRaid, type Raid } from './raid'
+import { currentRaid, raidVariant, rewardBonus, settleRaid, type Raid } from './raid'
 import { resolveInvasion, setDefenders, type Invasion } from './invasion'
+import { buyEvent, eventBlock, settleEvent, spendEvent, type EventState } from './events'
+import { lighthousePotential, raiseMonument, statueXp, type MonumentId } from './monuments'
+import { prosper } from './prosperity'
 import { buyOffer, freshMarket, sellGear, sellPotion, trade, updateMerchant, type Market, type MerchantOffer } from './market'
 import { forgetSkill, readDrills, runDrills, startDrill, type Drill } from './drill'
 import { buyIntel, finishScout, isNest, nestSeason, readScout, seasonKey, startScout, type ScoutJob } from './nest'
@@ -27,7 +30,7 @@ import type { Rng } from './rng'
 import type { Genes } from './genes'
 import type { Bond, ClassId, CombatError, DungeonReport, Gear, GearSlot, Gender, Hero, PartyMember, PotionId, Proposal, Role, Row, Supplies, Tactics, TrinketId , StatKey } from './types'
 
-export const SAVE_VERSION = 25
+export const SAVE_VERSION = 26
 
 // Town levels up to here come with fame alone (Docs/endgame.md 4b).
 export const PROMOTION_FREE = 7
@@ -206,6 +209,8 @@ export type GameNotice =
   | 'promoteMax'
   | 'raidDone'
   | 'noInvasion'
+  | 'eventSeason'
+  | 'eventUsed'
   | 'drillHero'
   | 'trainingFull'
   | 'scoutBusy'
@@ -304,6 +309,10 @@ export type GameState = {
   raid: Raid | null
   raidKills: number
   invasion: Invasion | null
+  // Seasonal event runs and shop, monuments, prosperity rank (Docs/endgame.md 4d).
+  event: EventState | null
+  monuments: Partial<Record<MonumentId, number>>
+  prosperity: number
 }
 
 export type QueueBuilding = 'smith' | 'alchemy' | 'magic'
@@ -386,6 +395,10 @@ export type GameAction =
   | { type: 'bequeath'; retireeId: string; gearId: string; toId: string | null }
   | { type: 'promote' }
   | { type: 'defend'; presetIds: string[] }
+  | { type: 'buyEvent'; itemId: string }
+  | { type: 'raiseMonument'; id: MonumentId }
+  | { type: 'prosper' }
+  | { type: 'setOption'; gearId: string; option: 'power' | 'guard' }
   | { type: 'enshrine'; gearId: string }
   | { type: 'unshrine'; gearId: string }
   | { type: 'declineProposal'; a: string; b: string; now?: number }
@@ -456,6 +469,9 @@ export function freshState(seed: number, now: number): GameState {
     raid: null,
     raidKills: 0,
     invasion: null,
+    event: null,
+    monuments: {},
+    prosperity: 0,
   }
 }
 
@@ -669,7 +685,7 @@ function apply(state: GameState, action: GameAction): GameState {
     const visitors = generateVisitors(
       state.seed + visitorNonce * progression.visitorNonceStride,
       visitorCap(state.buildings.inn),
-      townLevelOf(state).visitorPotential + retireeBonus(state, 'inn'),
+      townLevelOf(state).visitorPotential + retireeBonus(state, 'inn') + lighthousePotential(state),
       femaleChance(state),
       neededClasses(state, []),
     ).map((hero) => ({ ...hero, arrivedAt: now }))
@@ -717,6 +733,18 @@ function apply(state: GameState, action: GameAction): GameState {
   }
   if (action.type === 'buyIntel') {
     return buyIntel(state)
+  }
+  if (action.type === 'buyEvent') {
+    return buyEvent(state, action.itemId)
+  }
+  if (action.type === 'raiseMonument') {
+    return raiseMonument(state, action.id)
+  }
+  if (action.type === 'prosper') {
+    return prosper(state)
+  }
+  if (action.type === 'setOption') {
+    return setOption(state, action.gearId, action.option)
   }
   if (action.type === 'defend') {
     return setDefenders(state, action.presetIds)
@@ -1167,7 +1195,7 @@ function updateVisitors(state: GameState, now: number, arrived: string[]): GameS
   let nextVisitorAt = state.nextVisitorAt
   let nonce = state.visitorNonce
   const cap = visitorCap(state.buildings.inn)
-  const bonus = townLevelOf(state).visitorPotential + retireeBonus(state, 'inn')
+  const bonus = townLevelOf(state).visitorPotential + retireeBonus(state, 'inn') + lighthousePotential(state)
   if (visitors.length < state.visitors.length && visitors.length < cap) {
     nextVisitorAt = Math.min(nextVisitorAt, now)
   }
@@ -1394,7 +1422,7 @@ function autoRun(state: GameState, members: PartyMember[], presetId: string, dun
   }
   const heroIds = members.map((member) => member.hero.id)
   const settled = settleParty(next, report, battleSeed, next.lastTickAt, heroIds, dungeonId)
-  const goldGain = report.victory ? Math.floor(result.report.gold * scale) : 0
+  const goldGain = report.victory ? Math.floor(result.report.gold * scale * (1 + rewardBonus(next))) : 0
   next = dropFromPresets(grantVictoryRewards(afterTrip(bondParty({ ...next, ...settled, gold: next.gold + goldGain }, heroIds, report.victory), heroIds, report.victory), report, dungeonId, scale))
   tally.runs += 1
   tally.gold += goldGain
@@ -1424,7 +1452,7 @@ function grantVictoryRewards(state: GameState, report: DungeonReport, dungeonId:
   let fame = state.fame
   const cleared = state.cleared.includes(dungeonId) ? state.cleared : [...state.cleared, dungeonId]
   if (first) {
-    fame += drop.fame
+    fame += Math.round(drop.fame * (1 + rewardBonus(state)))
   }
   const party = (report.party ?? []).map((member) => member.id)
   // Pride (up to the everyday cap), then joy on top for a village first (review b9036a0).
@@ -1577,6 +1605,11 @@ function settleParty(
 ): Pick<GameState, 'roster' | 'graveyard' | 'stash'> {
   const rng = createRng(seed + 17)
   const partyIds = new Set(heroIds)
+  // The statue of heroes speeds learning (Docs/endgame.md 4d).
+  const bonus = statueXp(state)
+  if (bonus > 0) {
+    report = { ...report, xp: Math.round(report.xp * (1 + bonus)) }
+  }
   const alliesLived = report.conditions.filter((entry) => entry.condition !== 'dead').length > 0
   const roster: Hero[] = []
   const graveyard = [...state.graveyard]
@@ -1698,7 +1731,11 @@ export function dungeonUnlocked(state: GameState, id: string): boolean {
     if (special.special === 'invasion') {
       return false
     }
-    const unlock = special.special === 'weekday' ? endgameRules.weekday.unlockTown : special.special === 'raid' ? endgameRules.raid.unlockTown : endgameRules.abyss.unlockTown
+    const unlock =
+      special.special === 'weekday' ? endgameRules.weekday.unlockTown
+      : special.special === 'raid' ? endgameRules.raid.unlockTown
+      : special.special === 'event' ? endgameRules.event.unlockTown
+      : endgameRules.abyss.unlockTown
     return townLevelOf(state).level >= unlock
   }
   const dungeon = dungeons.find((entry) => entry.id === id)
@@ -1746,7 +1783,7 @@ function startExpedition(state: GameState, presetId: string, confirm: boolean, n
     return { ...state, notice: 'lockedDungeon' }
   }
   // Today's trial only, three a day (Docs/endgame.md 4a).
-  const blocked = specialBlock(state, state.dungeonId, now)
+  const blocked = specialBlock(state, state.dungeonId, now) ?? (dungeonById(state.dungeonId).special === 'event' ? eventBlock(state, state.dungeonId) : null)
   if (blocked) {
     return { ...state, notice: blocked }
   }
@@ -1808,7 +1845,7 @@ function startExpedition(state: GameState, presetId: string, confirm: boolean, n
     ...(raid && raidPlan ? { raid: { week: raid.week, start: raid.hp, left: raidPlan.raid.left, max: raidPlan.raid.max } } : {}),
   }
   // Friends left at home notice who went without them (Docs/personality.md).
-  const spent = dungeon.special === 'weekday' ? spendTrial(state, now) : raid ? { ...state, raid } : state
+  const spent = dungeon.special === 'weekday' ? spendTrial(state, now) : dungeon.special === 'event' ? spendEvent(state) : raid ? { ...state, raid } : state
   const benched = benchAtDeparture(spent, expedition.heroIds, away)
   return { ...benched, notice: null, potions: carry.stock, expeditionNonce: state.expeditionNonce + 1, expeditions: [...state.expeditions, expedition] }
 }
@@ -1845,7 +1882,8 @@ function settleExpedition(state: GameState, expedition: Expedition): GameState {
       : expedition.report
   const settled = settleParty(state, report, expedition.seed, expedition.returnAt, expedition.heroIds, dungeonId)
   const repeat = state.cleared.includes(dungeonId)
-  const goldGain = repeat ? Math.floor(report.gold * villageRules.repeatReward) : report.gold
+  // The arch and prosperity add to what comes home (Docs/endgame.md 4d).
+  const goldGain = Math.floor((repeat ? report.gold * villageRules.repeatReward : report.gold) * (1 + rewardBonus(state)))
   const home: GameState = bondParty(
     {
       ...state,
@@ -1858,7 +1896,8 @@ function settleExpedition(state: GameState, expedition: Expedition): GameState {
     report.victory,
   )
   const special = settleSpecial(grantVictoryRewards(afterTrip(home, expedition.heroIds, report.victory), report, dungeonId), dungeonId, report.floorsCleared, report.victory, expedition.abyssFrom)
-  const rewarded = expedition.raid ? settleRaid(special, expedition.raid.week, expedition.raid.start, expedition.raid.left, expedition.raid.max, expedition.returnAt) : special
+  const raided = expedition.raid ? settleRaid(special, expedition.raid.week, expedition.raid.start, expedition.raid.left, expedition.raid.max, expedition.returnAt) : special
+  const rewarded = dungeonById(dungeonId).special === 'event' ? settleEvent(raided, report.victory) : raided
   const next = dropFromPresets(rewarded)
   const materials: Partial<Materials> = {}
   for (const key of ['wood', 'stone', 'iron', 'bone', 'herb', 'crystal'] as const) {
@@ -2064,6 +2103,38 @@ function startCraft(state: GameState, recipeId: string, now: number): GameState 
   }
 }
 
+// Heroic and legendary gear goes past +3 up to +10 (Docs/endgame.md 4d).
+export function enhanceLimit(gear: Gear): number {
+  return (smithRules.lateEnhance.grades as string[]).includes(gear.grade) ? smithRules.lateEnhance.max : smithRules.enhanceMax
+}
+
+export function enhanceCostFor(gear: Gear): Cost & { ms: number } {
+  if (gear.enhance < smithRules.enhanceMax) {
+    return smithRules.enhanceCost
+  }
+  const late = smithRules.lateEnhance
+  const step = gear.enhance - smithRules.enhanceMax + 1
+  const essence = gear.slot === 'armor' ? 'frost' : 'flame'
+  return { gold: late.gold * step, wood: 0, stone: 0, iron: late.iron * step, [essence]: late.essencePerStep * step, abyss: late.abyssPerStep * step, ms: smithRules.enhanceCost.ms }
+}
+
+// Valour buys a new option on rare and better gear (Docs/endgame.md 4d).
+function setOption(state: GameState, gearId: string, option: 'power' | 'guard'): GameState {
+  const gear = state.stash.find((item) => item.id === gearId)
+  if (!gear || !(['rare', 'epic', 'legend'] as string[]).includes(gear.grade) || gear.option === option) {
+    return { ...state, notice: 'missing' }
+  }
+  if ((state.vault?.valor ?? 0) < smithRules.optionValor) {
+    return { ...state, notice: 'resources' }
+  }
+  return {
+    ...state,
+    notice: null,
+    vault: { ...state.vault, valor: state.vault.valor - smithRules.optionValor },
+    stash: state.stash.map((item) => (item.id === gearId ? { ...item, option } : item)),
+  }
+}
+
 function startEnhance(state: GameState, gearId: string, now: number): GameState {
   if (state.buildings.smith < 1) {
     return { ...state, notice: 'noSmith' }
@@ -2073,14 +2144,15 @@ function startEnhance(state: GameState, gearId: string, now: number): GameState 
   }
   const gear = state.stash.find((item) => item.id === gearId)
   // Trinkets have fixed effects (Docs/depth.md 3b): the smith cannot enhance them.
-  if (!gear || gear.slot === 'trinket' || gear.enhance >= smithRules.enhanceMax) {
+  if (!gear || gear.slot === 'trinket' || gear.enhance >= enhanceLimit(gear)) {
     return { ...state, notice: 'recipe' }
   }
-  if (!affordable(state, smithRules.enhanceCost)) {
+  const cost = enhanceCostFor(gear)
+  if (!affordable(state, cost)) {
     return { ...state, notice: 'resources' }
   }
   return {
-    ...pay(state, smithRules.enhanceCost),
+    ...pay(state, cost),
     stash: state.stash.filter((item) => item.id !== gearId),
     smith: { kind: 'enhance', recipeId: gear.recipeId, gear, finishAt: now + smithRules.enhanceCost.ms },
   }
@@ -2106,9 +2178,11 @@ function finishSmith(state: GameState, now: number, crafted: string[]): GameStat
   if (!job.gear) {
     return { ...state, smith: null, craftNonce }
   }
-  // Past the table the last chance holds (review c89e043).
+  // Past the table the last chance holds (review c89e043). Past +3 the late
+  // table takes over, lower with each step (Docs/endgame.md 4d).
   const table = smithRules.successByLevel
-  const chance = Math.min(1, (table[Math.min(state.buildings.smith, table.length - 1)] ?? 0) + retireeBonus(state, 'smith'))
+  const late = job.gear.enhance >= smithRules.enhanceMax ? smithRules.lateEnhance.chance[job.gear.enhance - smithRules.enhanceMax] ?? 0 : null
+  const chance = Math.min(1, (late ?? table[Math.min(state.buildings.smith, table.length - 1)] ?? 0) + retireeBonus(state, 'smith'))
   const success = rng.next() < chance
   const gear = success ? { ...job.gear, enhance: job.gear.enhance + 1 } : job.gear
   return {
@@ -2281,6 +2355,9 @@ function normalize(record: Record<string, unknown>, now: number): GameState {
     raid: readRaid(record.raid),
     raidKills: numberOr(record.raidKills, 0),
     invasion: readInvasion(record.invasion),
+    event: readEvent(record.event),
+    monuments: readMonuments(record.monuments),
+    prosperity: Math.max(0, Math.min(endgameRules.prosperity.maxRank, Math.floor(numberOr(record.prosperity, 0)))),
     promoted: typeof record.promoted === 'number' && Number.isFinite(record.promoted) ? Math.max(PROMOTION_FREE, Math.min(10, Math.floor(record.promoted))) : PROMOTION_FREE,
     auto: isAuto(record.auto) ? record.auto : base.auto,
     notice: null,
@@ -2654,7 +2731,35 @@ function readRaid(value: unknown): Raid | null {
     return null
   }
   const num = (entry: unknown) => (typeof entry === 'number' && Number.isFinite(entry) ? Math.max(0, entry) : null)
-  return { week: record.week, bossId: record.bossId, hp: num(record.hp), max: num(record.max), killed: record.killed === true }
+  const tier = typeof record.tier === 'number' ? Math.max(1, Math.min(endgameRules.raid.tiers.length, Math.floor(record.tier))) : 1
+  return { week: record.week, bossId: record.bossId, hp: num(record.hp), max: num(record.max), killed: record.killed === true, tier }
+}
+
+function readEvent(value: unknown): EventState | null {
+  const record = value as Partial<EventState> | null
+  if (!record || typeof record.season !== 'string') {
+    return null
+  }
+  const bought: Record<string, number> = {}
+  for (const [key, amount] of Object.entries(record.bought ?? {})) {
+    if (typeof amount === 'number' && Number.isFinite(amount)) {
+      bought[key] = Math.max(0, Math.floor(amount))
+    }
+  }
+  return { season: record.season, used: Math.max(0, Math.floor(numberOr(record.used, 0))), bought }
+}
+
+function readMonuments(value: unknown): Partial<Record<MonumentId, number>> {
+  const out: Partial<Record<MonumentId, number>> = {}
+  if (value && typeof value === 'object') {
+    for (const def of endgameRules.monuments.list) {
+      const stage = (value as Record<string, unknown>)[def.id]
+      if (typeof stage === 'number' && Number.isFinite(stage)) {
+        out[def.id as MonumentId] = Math.max(0, Math.min(def.stages.length, Math.floor(stage)))
+      }
+    }
+  }
+  return out
 }
 
 function readInvasion(value: unknown): Invasion | null {

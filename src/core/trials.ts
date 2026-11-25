@@ -10,7 +10,7 @@ import type { DungeonFloor, Essence } from './types'
 // add raid spoils, valour and event tokens to.
 
 // Raid spoils (dragon scale, lich crown, titan core) and valour from invasions came with 4c.
-export type VaultKey = Essence | 'abyss' | 'scale' | 'crown' | 'core' | 'valor'
+export type VaultKey = Essence | 'abyss' | 'scale' | 'crown' | 'core' | 'valor' | 'token'
 export type Vault = Record<VaultKey, number>
 export type Trials = { date: string; used: number }
 export type Abyss = { best: number; checkpoint: number }
@@ -18,7 +18,7 @@ export type Abyss = { best: number; checkpoint: number }
 export const ESSENCES: Essence[] = ['flame', 'frost', 'light']
 
 export function freshVault(): Vault {
-  return { flame: 0, frost: 0, light: 0, abyss: 0, scale: 0, crown: 0, core: 0, valor: 0 }
+  return { flame: 0, frost: 0, light: 0, abyss: 0, scale: 0, crown: 0, core: 0, valor: 0, token: 0 }
 }
 
 // Which essence today's trial gives; on Sundays the player picks.

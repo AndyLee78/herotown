@@ -530,7 +530,9 @@
     "promoteOffering": "바칠 정수나 심연석이 모자랍니다.",
     "promoteMax": "마을이 이미 최고 레벨입니다.",
     "raidDone": "이번 주 레이드 보스는 이미 쓰러졌습니다.",
-    "noInvasion": "아직 침공이 없습니다."
+    "noInvasion": "아직 침공이 없습니다.",
+    "eventSeason": "이 이벤트 던전은 지금 계절이 아닙니다.",
+    "eventUsed": "이번 계절 이벤트 던전을 모두 돌았습니다."
   },
   "defeat": {
     "noHealer": "치유사가 없어 피해를 버티지 못했다.",

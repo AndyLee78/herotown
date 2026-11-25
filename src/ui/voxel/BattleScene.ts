@@ -9,7 +9,7 @@ import type { Hit, ReplayStep, StatusMark } from './replay'
 export type RaidBossId = 'wyrm' | 'lich' | 'titan'
 
 export type BattleBackdrop = {
-  special?: 'weekday' | 'endless' | 'raid' | 'invasion'
+  special?: 'weekday' | 'endless' | 'raid' | 'invasion' | 'event'
   element?: 'flame' | 'frost' | 'light'
   difficulty?: 1 | 2 | 3
   abyssFrom?: number

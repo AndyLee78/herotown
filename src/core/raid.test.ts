@@ -57,11 +57,15 @@ describe('the weekly raid', () => {
   it('gives the spoils and a kill when the pool runs out, then waits for next week', () => {
     const week = raidWeek(monday)
     const boss = raidBoss(week)
-    const state = { ...town(8), raid: { week, bossId: boss.id, hp: 100, max: 10_000, killed: false } }
+    // The first tier opens the next, harder one the same week (Docs/endgame.md 4d).
+    const first = settleRaid({ ...town(8), raid: { week, bossId: boss.id, hp: 100, max: 10_000, killed: false, tier: 1 } }, week, 150, 0, 10_000)
+    expect(first.raid).toMatchObject({ killed: false, tier: 2, hp: null })
+    expect(first.vault[boss.spoil as 'scale']).toBe(endgameRules.raid.tiers[0]!.spoils)
+    const state = { ...town(8), raid: { week, bossId: boss.id, hp: 100, max: 10_000, killed: false, tier: endgameRules.raid.tiers.length } }
     const killed = settleRaid(state, week, 150, 0, 10_000)
     expect(killed.raid?.killed).toBe(true)
     expect(killed.raidKills).toBe(1)
-    expect(killed.vault[boss.spoil as 'scale']).toBe(endgameRules.raid.spoils)
+    expect(killed.vault[boss.spoil as 'scale']).toBe(endgameRules.raid.tiers[endgameRules.raid.tiers.length - 1]!.spoils)
     expect(killed.fame).toBe(state.fame + endgameRules.raid.fame)
     expect(reduce({ ...killed, dungeonId: 'raid' }, { type: 'depart', presetId: 'p1', confirm: true, now: monday }).notice).toBe('raidDone')
     expect(currentRaid(killed, monday + 7 * 86_400_000).killed).toBe(false)
@@ -104,7 +108,7 @@ describe('town invasions', () => {
 
   it('makes level 9 wait for a raid kill and level 10 for an invasion held', () => {
     const fame9 = villageRules.levels.find((entry) => entry.level === 9)!.fame
-    const rich = { flame: 999, frost: 999, light: 999, abyss: 999, scale: 0, crown: 0, core: 0, valor: 0 }
+    const rich = { flame: 999, frost: 999, light: 999, abyss: 999, scale: 0, crown: 0, core: 0, valor: 0, token: 0 }
     const ready = { ...town(8), fame: fame9, promoted: 8, vault: rich, abyss: { best: 50, checkpoint: 50 } }
     expect(reduce(ready, { type: 'promote' }).notice).toBe('promoteDeed')
     expect(reduce({ ...ready, raidKills: 1 }, { type: 'promote' }).promoted).toBe(9)
@@ -125,9 +129,9 @@ describe('town invasions', () => {
 describe('review 1650b75 fixes', () => {
   it('lets a party home after the week turned touch neither raid', () => {
     const week = raidWeek(monday)
-    const state = { ...town(8), raid: { week, bossId: raidBoss(week).id, hp: 1, max: 10_000, killed: false } }
+    const state = { ...town(8), raid: { week, bossId: raidBoss(week).id, hp: 1, max: 10_000, killed: false, tier: 1 } }
     expect(settleRaid(state, week, 1, 0, 10_000, monday + 7 * 86_400_000)).toBe(state)
-    expect(settleRaid(state, week, 1, 0, 10_000, monday + 86_400_000).raid?.killed).toBe(true)
+    expect(settleRaid(state, week, 1, 0, 10_000, monday + 86_400_000).raidKills).toBe(1)
   })
 
   it('lets each hero defend only once, however many presets hold them', () => {

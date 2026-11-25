@@ -1,3 +1,4 @@
+import { statueXp } from './monuments'
 import { automationRules, progression, retirementRules, trainingRules } from './data'
 import { gainXp } from './dungeon'
 import type { GameState } from './game'
@@ -109,7 +110,7 @@ export function finishDrills(state: GameState, until: number): GameState {
   return {
     ...state,
     drills: state.drills.filter((drill) => drill.finishAt > until),
-    roster: state.roster.map((hero) => (gains.has(hero.id) && hero.condition !== 'dead' ? gainXp(hero, gains.get(hero.id)!) : hero)),
+    roster: state.roster.map((hero) => (gains.has(hero.id) && hero.condition !== 'dead' ? gainXp(hero, Math.round(gains.get(hero.id)! * (1 + statueXp(state)))) : hero)),
   }
 }
 

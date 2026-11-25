@@ -148,7 +148,21 @@
     ],
     "spoils": 3,
     "fame": 30,
-    "growthPerKill": 0.15
+    "growthPerKill": 0.15,
+    "tiers": [
+      {
+        "grow": 1,
+        "spoils": 3
+      },
+      {
+        "grow": 1.5,
+        "spoils": 5
+      },
+      {
+        "grow": 2.2,
+        "spoils": 8
+      }
+    ]
   },
   "invasion": {
     "unlockTown": 9,
@@ -179,5 +193,303 @@
     "pride": 5,
     "loss": 0.1,
     "dread": 10
+  },
+  "event": {
+    "unlockTown": 6,
+    "attemptsPerSeason": 6,
+    "tokens": 10,
+    "shop": {
+      "spring": [
+        {
+          "id": "spring.flame",
+          "cost": 15,
+          "stock": 3,
+          "vault": {
+            "flame": 10
+          }
+        },
+        {
+          "id": "spring.light",
+          "cost": 15,
+          "stock": 3,
+          "vault": {
+            "light": 10
+          }
+        },
+        {
+          "id": "spring.herb",
+          "cost": 10,
+          "stock": 2,
+          "materials": {
+            "herb": 30
+          }
+        },
+        {
+          "id": "spring.potions",
+          "cost": 12,
+          "stock": 2,
+          "potions": {
+            "heal": 6
+          }
+        }
+      ],
+      "summer": [
+        {
+          "id": "summer.abyss",
+          "cost": 20,
+          "stock": 3,
+          "vault": {
+            "abyss": 15
+          }
+        },
+        {
+          "id": "summer.frost",
+          "cost": 15,
+          "stock": 3,
+          "vault": {
+            "frost": 10
+          }
+        },
+        {
+          "id": "summer.blade",
+          "cost": 60,
+          "stock": 1,
+          "gear": "epic.blade"
+        },
+        {
+          "id": "summer.iron",
+          "cost": 10,
+          "stock": 2,
+          "materials": {
+            "iron": 40
+          }
+        }
+      ],
+      "autumn": [
+        {
+          "id": "autumn.wood",
+          "cost": 8,
+          "stock": 3,
+          "materials": {
+            "wood": 80,
+            "stone": 80
+          }
+        },
+        {
+          "id": "autumn.gold",
+          "cost": 10,
+          "stock": 3,
+          "gold": 300
+        },
+        {
+          "id": "autumn.mail",
+          "cost": 60,
+          "stock": 1,
+          "gear": "epic.mail"
+        },
+        {
+          "id": "autumn.bone",
+          "cost": 10,
+          "stock": 2,
+          "materials": {
+            "bone": 30,
+            "crystal": 15
+          }
+        }
+      ],
+      "winter": [
+        {
+          "id": "winter.valor",
+          "cost": 25,
+          "stock": 2,
+          "vault": {
+            "valor": 10
+          }
+        },
+        {
+          "id": "winter.essence",
+          "cost": 25,
+          "stock": 2,
+          "vault": {
+            "flame": 8,
+            "frost": 8,
+            "light": 8
+          }
+        },
+        {
+          "id": "winter.abyss",
+          "cost": 20,
+          "stock": 3,
+          "vault": {
+            "abyss": 15
+          }
+        },
+        {
+          "id": "winter.crystal",
+          "cost": 10,
+          "stock": 2,
+          "materials": {
+            "crystal": 30
+          }
+        }
+      ]
+    }
+  },
+  "monuments": {
+    "unlockTown": 9,
+    "list": [
+      {
+        "id": "statue",
+        "effect": [
+          0.05,
+          0.1,
+          0.15
+        ],
+        "stages": [
+          {
+            "gold": 400,
+            "stone": 150,
+            "flame": 20,
+            "light": 20,
+            "valor": 10
+          },
+          {
+            "gold": 700,
+            "stone": 250,
+            "flame": 40,
+            "light": 40,
+            "valor": 25,
+            "crown": 1
+          },
+          {
+            "gold": 1200,
+            "stone": 400,
+            "flame": 70,
+            "light": 70,
+            "valor": 45,
+            "crown": 2,
+            "token": 40
+          }
+        ]
+      },
+      {
+        "id": "lighthouse",
+        "effect": [
+          5,
+          10,
+          15
+        ],
+        "stages": [
+          {
+            "gold": 400,
+            "wood": 150,
+            "frost": 20,
+            "abyss": 20,
+            "valor": 10
+          },
+          {
+            "gold": 700,
+            "wood": 250,
+            "frost": 40,
+            "abyss": 40,
+            "valor": 25,
+            "scale": 1
+          },
+          {
+            "gold": 1200,
+            "wood": 400,
+            "frost": 70,
+            "abyss": 60,
+            "valor": 45,
+            "scale": 2,
+            "token": 40
+          }
+        ]
+      },
+      {
+        "id": "walls",
+        "effect": [
+          0.08,
+          0.16,
+          0.25
+        ],
+        "stages": [
+          {
+            "gold": 400,
+            "stone": 200,
+            "iron": 60,
+            "frost": 20,
+            "valor": 15
+          },
+          {
+            "gold": 700,
+            "stone": 300,
+            "iron": 100,
+            "frost": 40,
+            "valor": 30,
+            "core": 1
+          },
+          {
+            "gold": 1200,
+            "stone": 450,
+            "iron": 150,
+            "frost": 70,
+            "valor": 50,
+            "core": 2,
+            "token": 40
+          }
+        ]
+      },
+      {
+        "id": "arch",
+        "effect": [
+          0.1,
+          0.2,
+          0.3
+        ],
+        "stages": [
+          {
+            "gold": 500,
+            "stone": 150,
+            "wood": 100,
+            "flame": 20,
+            "valor": 10
+          },
+          {
+            "gold": 800,
+            "stone": 250,
+            "wood": 150,
+            "flame": 40,
+            "valor": 25,
+            "scale": 1,
+            "crown": 1
+          },
+          {
+            "gold": 1400,
+            "stone": 400,
+            "wood": 250,
+            "flame": 70,
+            "valor": 45,
+            "scale": 1,
+            "crown": 1,
+            "core": 1,
+            "token": 40
+          }
+        ]
+      }
+    ]
+  },
+  "prosperity": {
+    "fameStep": 300,
+    "bonusPerRank": 0.02,
+    "maxRank": 30,
+    "offeringPerRank": {
+      "flame": 15,
+      "frost": 15,
+      "light": 15,
+      "abyss": 10,
+      "valor": 5,
+      "token": 5
+    }
   }
 }

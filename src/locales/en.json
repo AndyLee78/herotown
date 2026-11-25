@@ -530,7 +530,9 @@
     "promoteOffering": "Not enough essence or abyss shards to offer.",
     "promoteMax": "The town is already at its highest level.",
     "raidDone": "This week's raid boss has already fallen.",
-    "noInvasion": "No invasion is coming yet."
+    "noInvasion": "No invasion is coming yet.",
+    "eventSeason": "This event dungeon is not open this season.",
+    "eventUsed": "This season's event runs are all used."
   },
   "defeat": {
     "noHealer": "Bring a healer to keep the party going.",

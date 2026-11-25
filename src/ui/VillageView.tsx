@@ -30,11 +30,13 @@ type Props = {
   legends: { id: string; name: string; classId: string; gender?: string; genes?: unknown }[]
   shrine: { id: string; slot: string; grade: string }[]
   townLevel: number
+  monuments: { statue?: number; lighthouse?: number; walls?: number; arch?: number }
+  prosperity: number
   invasion: { warned: boolean; at: number; last: { at: number; won: boolean } | null } | null
   onWish: () => void
 }
 
-export function VillageView({ roster, visitors, awayIds, drillIds, retirees, partyIds, selectedId, onSelect, onPickBuilding, villageLabel, buildings, constructing, buildingLabels, expeditions, active, graves, wishes, wishCap, wishAt, wishJackpot, merchant, tavernRound, festival, legends, shrine, townLevel, invasion, onWish }: Props) {
+export function VillageView({ roster, visitors, awayIds, drillIds, retirees, partyIds, selectedId, onSelect, onPickBuilding, villageLabel, buildings, constructing, buildingLabels, expeditions, active, graves, wishes, wishCap, wishAt, wishJackpot, merchant, tavernRound, festival, legends, shrine, townLevel, invasion, monuments, prosperity, onWish }: Props) {
   const canvasRef = useRef<HTMLCanvasElement>(null)
   const sceneRef = useRef<VillageScene | null>(null)
   const onSelectRef = useRef(onSelect)
@@ -110,6 +112,8 @@ export function VillageView({ roster, visitors, awayIds, drillIds, retirees, par
       legends,
       shrine,
       townLevel,
+      monuments,
+      prosperity,
       invasion,
     })
   })

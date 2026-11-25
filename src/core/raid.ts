@@ -3,13 +3,21 @@ import type { DungeonVariant } from './dungeon'
 import type { GameState } from './game'
 import { localDateKey } from './game'
 import { freshVault, type VaultKey } from './trials'
+import { archBonus } from './monuments'
+import { prosperityBonus } from './prosperity'
+
+// The share the arch and prosperity add to gold and fame brought home (Docs/endgame.md 4d).
+export function rewardBonus(state: GameState): number {
+  return archBonus(state) + prosperityBonus(state)
+}
 
 // The weekly raid (Docs/endgame.md 4c): one great boss a week with a deep
 // pool of health. Every party sent wears it down and the damage stays; the
 // party that brings it down wins the spoils. A new boss comes each Monday.
 
 export type RaidBoss = (typeof endgameRules.raid.bosses)[number]
-export type Raid = { week: string; bossId: string; hp: number | null; max: number | null; killed: boolean }
+// `tier` 1-3: after the boss falls it can be fought again, harder, the same week (Docs/endgame.md 4d).
+export type Raid = { week: string; bossId: string; hp: number | null; max: number | null; killed: boolean; tier: number }
 
 const DAY = 86_400_000
 
@@ -33,7 +41,7 @@ export function currentRaid(state: GameState, now: number): Raid {
   if (state.raid && state.raid.week === week) {
     return state.raid
   }
-  return { week, bossId: raidBoss(week).id, hp: null, max: null, killed: false }
+  return { week, bossId: raidBoss(week).id, hp: null, max: null, killed: false, tier: 1 }
 }
 
 // Each boss brought down makes the next week's stronger, so the raid keeps
@@ -46,7 +54,7 @@ export function raidGrowth(state: GameState): number {
 export function raidVariant(state: GameState, now: number): DungeonVariant & { raid: NonNullable<DungeonVariant['raid']> } {
   const raid = currentRaid(state, now)
   const boss = endgameRules.raid.bosses.find((entry) => entry.id === raid.bossId)!
-  const grow = raidGrowth(state)
+  const grow = raidGrowth(state) * (endgameRules.raid.tiers[(raid.tier ?? 1) - 1]?.grow ?? 1)
   return {
     floors: [
       { monsters: [...boss.minions], scale: boss.scale * 0.6 * grow },
@@ -70,13 +78,17 @@ export function settleRaid(state: GameState, week: string, start: number | null,
     return { ...state, raid: { ...raid, hp, max } }
   }
   const boss = endgameRules.raid.bosses.find((entry) => entry.id === raid.bossId)!
+  const tiers = endgameRules.raid.tiers
+  const tier = raid.tier ?? 1
   const vault = { ...(state.vault ?? freshVault()) }
-  vault[boss.spoil as VaultKey] += endgameRules.raid.spoils
+  vault[boss.spoil as VaultKey] += tiers[tier - 1]?.spoils ?? endgameRules.raid.spoils
+  // The next tier opens at once the same week; after the last the raid is done.
+  const next = tier < tiers.length ? { ...raid, hp: null, max: null, killed: false, tier: tier + 1 } : { ...raid, hp: 0, max, killed: true }
   return {
     ...state,
     vault,
-    fame: state.fame + endgameRules.raid.fame,
-    raid: { ...raid, hp: 0, max, killed: true },
+    fame: state.fame + Math.round(endgameRules.raid.fame * (1 + rewardBonus(state))),
+    raid: next,
     raidKills: (state.raidKills ?? 0) + 1,
   }
 }

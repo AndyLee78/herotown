@@ -701,6 +701,137 @@
       ],
       "monsterScale": 3.4,
       "special": "invasion"
+    },
+    {
+      "id": "event_spring",
+      "tier": 6,
+      "recommendedLevel": 15,
+      "betweenHeal": 0.4,
+      "gold": 80,
+      "xp": 260,
+      "floors": [
+        {
+          "monsters": [
+            "wisp",
+            "moss_golem",
+            "wisp"
+          ]
+        },
+        {
+          "monsters": [
+            "venom_toad",
+            "bog_leech",
+            "wisp"
+          ]
+        },
+        {
+          "monsters": [
+            "bog_queen",
+            "moss_golem"
+          ]
+        }
+      ],
+      "monsterScale": 3.0,
+      "special": "event",
+      "season": "spring"
+    },
+    {
+      "id": "event_summer",
+      "tier": 6,
+      "recommendedLevel": 15,
+      "betweenHeal": 0.4,
+      "gold": 80,
+      "xp": 260,
+      "floors": [
+        {
+          "monsters": [
+            "drake",
+            "kobold_mystic"
+          ]
+        },
+        {
+          "monsters": [
+            "cutthroat",
+            "crossbowman",
+            "drake"
+          ]
+        },
+        {
+          "monsters": [
+            "bandit_chief",
+            "wyvern"
+          ]
+        }
+      ],
+      "monsterScale": 3.6,
+      "special": "event",
+      "season": "summer"
+    },
+    {
+      "id": "event_autumn",
+      "tier": 6,
+      "recommendedLevel": 15,
+      "betweenHeal": 0.4,
+      "gold": 80,
+      "xp": 260,
+      "floors": [
+        {
+          "monsters": [
+            "boar",
+            "wolf",
+            "boar"
+          ]
+        },
+        {
+          "monsters": [
+            "brigand",
+            "spider",
+            "miner"
+          ]
+        },
+        {
+          "monsters": [
+            "mine_boss",
+            "boar"
+          ]
+        }
+      ],
+      "monsterScale": 9.0,
+      "special": "event",
+      "season": "autumn"
+    },
+    {
+      "id": "event_winter",
+      "tier": 6,
+      "recommendedLevel": 15,
+      "betweenHeal": 0.4,
+      "gold": 80,
+      "xp": 260,
+      "floors": [
+        {
+          "monsters": [
+            "wraith",
+            "specter",
+            "ghoul"
+          ]
+        },
+        {
+          "monsters": [
+            "skeleton",
+            "bone_archer",
+            "wraith"
+          ]
+        },
+        {
+          "monsters": [
+            "crypt_lord",
+            "specter"
+          ]
+        }
+      ],
+      "monsterScale": 4.6,
+      "special": "event",
+      "season": "winter"
     }
   ]
 }

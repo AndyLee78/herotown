@@ -5,6 +5,7 @@ import { busyHeroIds, presetById } from './game'
 import { canDeploy } from './hero'
 import { feel } from './personality'
 import { freshVault } from './trials'
+import { wallsCut } from './monuments'
 import type { DungeonFloor, PartyMember } from './types'
 
 // Town invasions (Docs/endgame.md 4c): from town level 9 a raiding band comes
@@ -27,9 +28,10 @@ export function setDefenders(state: GameState, presetIds: string[]): GameState {
   return { ...state, notice: null, invasion: { ...state.invasion, defenders: ids } }
 }
 
-function waves(count: number): DungeonFloor[] {
+function waves(count: number, cut = 0): DungeonFloor[] {
   const rules = endgameRules.invasion
-  const scale = rules.scale * (1 + rules.scalePerInvasion * count)
+  // Walls and towers weaken the raiders (Docs/endgame.md 4d).
+  const scale = rules.scale * (1 + rules.scalePerInvasion * count) * (1 - cut)
   return rules.waves.map((monsters) => ({ monsters: [...monsters], scale }))
 }
 
@@ -69,7 +71,7 @@ function nextDefenders(state: GameState, used: Set<string>, turn: number): Party
 export function resolveInvasion(state: GameState, settle: (state: GameState, report: import('./types').DungeonReport, heroIds: string[]) => GameState): GameState {
   const invasion = state.invasion!
   const rules = endgameRules.invasion
-  let floors = waves(invasion.count)
+  let floors = waves(invasion.count, wallsCut(state))
   let next = state
   let held = 0
   const used = new Set<string>()
@@ -106,8 +108,10 @@ export function resolveInvasion(state: GameState, settle: (state: GameState, rep
     }
   }
   // The raiders carry off a share of the gold and materials and leave the town shaken.
-  const gold = Math.floor(next.gold * rules.loss)
-  const taken = Object.fromEntries(Object.entries(next.materials).map(([key, amount]) => [key, Math.floor(amount * rules.loss)])) as GameState['materials']
+  // The walls also keep more of the town's goods safe.
+  const loss = Math.max(0, rules.loss * (1 - 2 * wallsCut(state)))
+  const gold = Math.floor(next.gold * loss)
+  const taken = Object.fromEntries(Object.entries(next.materials).map(([key, amount]) => [key, Math.floor(amount * loss)])) as GameState['materials']
   const materials = Object.fromEntries(Object.entries(next.materials).map(([key, amount]) => [key, amount - taken[key as keyof typeof taken]])) as GameState['materials']
   return {
     ...next,

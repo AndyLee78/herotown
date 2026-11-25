@@ -3,6 +3,7 @@ import type { GameState, MaterialName } from './game'
 import { forgeGear } from './gear'
 import { seasonKey } from './nest'
 import { createRng } from './rng'
+import { lighthouseOffers } from './monuments'
 import type { Gear, PotionId } from './types'
 
 // The market (Docs/market.md): materials bought and sold at prices that move
@@ -255,7 +256,8 @@ export function updateMerchant(state: GameState, now: number): GameState {
 function stockFor(state: GameState, nonce: number): MerchantOffer[] {
   const rng = createRng(state.seed + nonce * 7919 + 13)
   const rules = marketRules.merchant
-  const count = rules.offers[level(state)]!
+  // The lighthouse brings the merchant with more wares (Docs/endgame.md 4d).
+  const count = rules.offers[level(state)]! + lighthouseOffers(state)
   const pick = <T,>(list: readonly T[]): T => list[Math.floor(rng.next() * list.length)]!
   // Gear one step beyond what the smith can make yet, or the best it can.
   const smithLevel = state.buildings.smith
