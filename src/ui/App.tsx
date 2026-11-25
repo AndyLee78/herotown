@@ -17,6 +17,7 @@ import {
   residents,
   timeRules,
   townLevelOf,
+  warned,
   villageRules,
   visitorCap,
   visitorStay,
@@ -460,6 +461,7 @@ export function App() {
           legends={[...hallOfFame(save), ...livingLegends(save)].map((entry) => ({ id: entry.id, name: entry.name, classId: entry.classId, gender: entry.gender, genes: 'genes' in entry ? entry.genes : undefined }))}
           shrine={(save.shrine?.gear ?? []).map((item) => ({ id: item.id, slot: item.slot, grade: item.grade }))}
           townLevel={townLevelOf(save).level}
+          invasion={save.invasion ? { warned: warned(save, gameNow()), at: save.invasion.nextAt, last: save.invasion.last ? { at: save.invasion.last.at, won: save.invasion.last.won } : null } : null}
           festival={save.festival && save.festival.season === `${save.calendar.year}-${save.calendar.season}` ? save.festival.kind : null}
           onWish={() => apply({ type: 'wish', now: gameNow() })}
           active={!covered}
