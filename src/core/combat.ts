@@ -195,7 +195,7 @@ export function createHeroUnit(member: PartyMember, index: number): BattleUnit {
     maxHp,
     attack: (hero.stats[klass.attackStat] * klass.attackScale + gear.attack) * fatigueScale * injuryScale * bondScale * (1 + learned.attack) * spirit.attack,
     defense: hero.stats.vit * klass.defenseScale + gear.defense,
-    heal: hero.stats.wis * klass.healScale * bondScale * (1 + learned.heal),
+    heal: hero.stats.wis * klass.healScale * (1 + (member.healBonus ?? Math.max(0, member.bonus ?? 0))) * (1 + learned.heal),
     speed: Math.max(1, (hero.stats.agi + (hero.traitIds.includes('nocturnal') ? combatRules.nocturnalSpeed : 0)) * fatigueScale * (1 + learned.speed) * spirit.speed),
     gauge: 0,
     threat: (klass.role === 'tank' ? combatRules.tankThreat : combatRules.baseThreat) + learned.threat,

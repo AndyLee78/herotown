@@ -227,8 +227,10 @@ export type Tactics = {
 export type PartyMember = {
   hero: Hero
   row: Row
-  // Bonds with others in the party: attack and healing go up by this share.
+  // Bonds and personality fit with the party: attack goes up (or down) by this share.
   bonus?: number
+  // Healing goes up by the bond share only (review 49c92da); missing means the bonus, if positive.
+  healBonus?: number
 }
 
 export type LogEntry = {

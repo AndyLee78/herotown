@@ -164,7 +164,14 @@ function matchOf(state: GameState, a: string, b: string): number {
 }
 
 export function partyBonus(state: GameState, ids: string[]): Record<string, number> {
-  const bonus: Record<string, number> = {}
+  const parts = partyParts(state, ids)
+  return Object.fromEntries(Object.entries(parts).map(([id, part]) => [id, part.total]))
+}
+
+// The two halves of a party bonus: bonds (attack and healing) and the
+// personality fit on top (attack only, review 49c92da).
+export function partyParts(state: GameState, ids: string[]): Record<string, { bond: number; total: number }> {
+  const bonus: Record<string, { bond: number; total: number }> = {}
   const members = ids.map((id) => heroById(state, id)).filter((hero): hero is Hero => hero != null)
   for (const id of ids) {
     let total = 0
@@ -178,7 +185,7 @@ export function partyBonus(state: GameState, ids: string[]): Record<string, numb
     // Personalities that clash can pull the total below zero (Docs/personality.md).
     const hero = members.find((entry) => entry.id === id)
     const fit = hero ? partyFit(hero, members) : 0
-    bonus[id] = Math.max(personalityRules.partyMin, Math.min(familyRules.maxBonus, total + fit))
+    bonus[id] = { bond: Math.min(familyRules.maxBonus, total), total: Math.max(personalityRules.partyMin, Math.min(familyRules.maxBonus, total + fit)) }
   }
   return bonus
 }

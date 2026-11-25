@@ -64,6 +64,8 @@ export function afterTrip(state: GameState, heroIds: string[], victory: boolean)
   const party = new Set(heroIds)
   const rules = personalityRules.anxiety
   const critical = state.roster.filter((hero) => party.has(hero.id) && hero.condition === 'critical')
+  const worried = (hero: Hero) =>
+    critical.some((other) => other.id !== hero.id && (hero.spouseId === other.id || other.spouseId === hero.id || hero.parents?.includes(other.id) || other.parents?.includes(hero.id)))
   const roster = state.roster.map((hero) => {
     let next = hero
     if (party.has(hero.id)) {
@@ -75,10 +77,11 @@ export function afterTrip(state: GameState, heroIds: string[], victory: boolean)
       // Going out with the party ends the wait at home.
       next = { ...next, benched: undefined }
     }
-    const kin = critical.some((other) => other.id !== hero.id && (hero.spouseId === other.id || other.spouseId === hero.id || hero.parents?.includes(other.id) || other.parents?.includes(hero.id)))
-    return kin ? feel(next, 'anxiety', -rules.familyCritical) : next
+    return worried(next) ? feel(next, 'anxiety', -rules.familyCritical) : next
   })
-  return { ...state, roster }
+  // Retired kin worry too (review 49c92da).
+  const retirees = (state.retirees ?? []).map((retiree) => (worried(retiree.hero) ? { ...retiree, hero: feel(retiree.hero, 'anxiety', -rules.familyCritical) } : retiree))
+  return { ...state, roster, retirees }
 }
 
 // A party sets out by hand: fit heroes left at home while their friends go
@@ -89,7 +92,7 @@ export function benchAtDeparture(state: GameState, heroIds: string[], busy: Set<
   const friendOf = (id: string) =>
     (state.bonds ?? []).some((bond) => bond.affinity >= familyRules.friendAt && ((bond.a === id && going.has(bond.b)) || (bond.b === id && going.has(bond.a))))
   const roster = state.roster.map((hero) => {
-    if (going.has(hero.id) || busy.has(hero.id) || isChild(hero) || hero.condition !== 'healthy' || hero.fatigue >= lifeRules.fatigue.tiredAt || hero.expecting || !friendOf(hero.id)) {
+    if (going.has(hero.id) || busy.has(hero.id) || isChild(hero) || hero.condition === 'injured' || hero.condition === 'critical' || hero.condition === 'dead' || hero.fatigue >= lifeRules.fatigue.tiredAt || hero.expecting || !friendOf(hero.id)) {
       return hero
     }
     const benched = (hero.benched ?? 0) + 1

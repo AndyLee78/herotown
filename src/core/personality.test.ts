@@ -1,7 +1,8 @@
 import { describe, expect, it } from 'vitest'
 import { familyRules, moraleRules, personalityRules } from './data'
 import { bondOf, bondParty, partyBonus } from './family'
-import { freshState, migrate, type GameState } from './game'
+import { createHeroUnit } from './combat'
+import { freshState, migrate, reduce, type GameState } from './game'
 import { createHero } from './hero'
 import { moraleOf } from './morale'
 import { afterTrip, affinityScale, benchAtDeparture, emotionScale, feel, inheritPersonality, PERSONALITY_IDS, personalityFor } from './personality'
@@ -105,5 +106,37 @@ describe('saves', () => {
     const old = JSON.parse(JSON.stringify(town([hero('a', 'social')]))) as Record<string, unknown>
     delete ((old.roster as Record<string, unknown>[])[0] as Record<string, unknown>).personality
     expect(migrate(old, now).roster[0]?.personality).toBe(personalityFor('a'))
+  })
+})
+
+describe('review 49c92da fixes', () => {
+  it('comforts at the winter memorial whoever was low before the festival', () => {
+    const base = town([hero('s', 'social', { morale: 59 }), hero('l', 'loner', { morale: 63 })])
+    const state = { ...base, gold: 1000, calendar: { ...base.calendar, season: 'winter' as const } }
+    const held = reduce(state, { type: 'festival' })
+    const [social, loner] = held.roster
+    expect(moraleOf(social!)).toBeCloseTo(Math.min(100, 59 + (moraleRules.festival.morale + moraleRules.festival.memorial) * personalityRules.emotion.social.joy))
+    expect(moraleOf(loner!)).toBeCloseTo(63 + moraleRules.festival.morale * personalityRules.emotion.loner.joy)
+  })
+
+  it('lets a personality clash touch attack but not healing', () => {
+    const cleric = createHero({ id: 'c', name: 'c', gender: 'female', classId: 'cleric', age: 25, potentials: stats, personality: 'timid' })
+    const plain = createHeroUnit({ hero: cleric, row: 'back' }, 0)
+    const clash = createHeroUnit({ hero: cleric, row: 'back', bonus: personalityRules.partyMin, healBonus: 0 }, 0)
+    expect(clash.attack).toBeCloseTo(plain.attack * (1 + personalityRules.partyMin))
+    expect(clash.heal).toBeCloseTo(plain.heal)
+  })
+
+  it('worries retired kin too', () => {
+    const state = town([hero('h', 'timid', { spouseId: 'w', condition: 'critical' })], {
+      retirees: [{ hero: hero('w', 'timid', { spouseId: 'h', age: 60 }), retiredYear: 1, building: null }],
+    })
+    expect(moraleOf(afterTrip(state, ['h'], true).retirees[0]!.hero)).toBeLessThan(moraleRules.base)
+  })
+
+  it('counts a lightly tired hero as able to go', () => {
+    const bonds = [{ a: 'f', b: 's', affinity: familyRules.friendAt + 5 }]
+    const state = town([hero('f', 'social'), hero('s', 'social', { condition: 'fatigued', fatigue: 20 })], { bonds })
+    expect(benchAtDeparture(state, ['f'], new Set()).roster[1]!.benched).toBe(1)
   })
 })

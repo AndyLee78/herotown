@@ -2,7 +2,7 @@ import { chargeFountain, freshFountain, makeWish, readFountain, upgradeFountain,
 import { claimGuide, guideSteps } from './guide'
 import { skillPicks } from './skills'
 import { deliver, ensureBoard, expeditionSlotsFor, guildLevel, progressClear, readBoard, type GuildBoard } from './guild'
-import { cheer, driftMorale, lowMorale, mourn, shiftMorale } from './morale'
+import { cheer, driftMorale, lowMorale, mourn } from './morale'
 import { arrive, interview, type Interviews } from './scouting'
 import { enroll, graduate, teachSeason, unenroll } from './school'
 import { afterTrip, benchAtDeparture, feel } from './personality'
@@ -15,7 +15,7 @@ import { adRules, automationRules, potionById, trinketById, moraleRules, magicRu
 import { forgeGear, normalizeGear, recipeById } from './gear'
 import { applyReport, DEFAULT_TACTICS, gainXp, runDungeon } from './dungeon'
 import { canDeploy, generateHero, isChild, generateVisitors, normalizeHero, restHero, withAge } from './hero'
-import { acceptProposal, bedsTaken, bondParty, declineProposal, deliverBirths, femaleChance, graveFor, nextAge, partyBonus, passAway, readBonds, readProposals, tidyFamily, turnSeason, wageCount, type FamilyEvents } from './family'
+import { acceptProposal, bedsTaken, bondParty, declineProposal, deliverBirths, femaleChance, graveFor, nextAge, partyParts, passAway, readBonds, readProposals, tidyFamily, turnSeason, wageCount, type FamilyEvents } from './family'
 import { createRng } from './rng'
 import type { Rng } from './rng'
 import type { Genes } from './genes'
@@ -1204,8 +1204,11 @@ function autoMembers(state: GameState, presetId = state.presetId): PartyMember[]
 
 // Friends and lovers fight better side by side.
 function withBonds(state: GameState, members: PartyMember[]): PartyMember[] {
-  const bonus = partyBonus(state, members.map((member) => member.hero.id))
-  return members.map((member) => ((bonus[member.hero.id] ?? 0) !== 0 ? { ...member, bonus: bonus[member.hero.id] } : member))
+  const parts = partyParts(state, members.map((member) => member.hero.id))
+  return members.map((member) => {
+    const part = parts[member.hero.id]
+    return part && (part.total !== 0 || part.bond !== 0) ? { ...member, bonus: part.total, healBonus: part.bond } : member
+  })
 }
 
 function runAuto(state: GameState, elapsed: number, tally: { runs: number; gold: number }): GameState {
@@ -2193,6 +2196,7 @@ function holdFestival(state: GameState): GameState {
   }
   const kind = state.calendar.season
   const rules = moraleRules.festival
+  const before = new Map(state.roster.map((hero) => [hero.id, hero.morale ?? moraleRules.base]))
   let roster = state.roster.map((hero) => feel(hero, 'joy', rules.morale))
   let materials = state.materials
   if (kind === 'summer') {
@@ -2202,7 +2206,9 @@ function holdFestival(state: GameState): GameState {
     materials = { ...materials, wood: materials.wood + rules.harvest.wood, stone: materials.stone + rules.harvest.stone, iron: materials.iron + rules.harvest.iron }
   }
   if (kind === 'winter') {
-    roster = roster.map((hero) => ((hero.morale ?? moraleRules.base) < moraleRules.base + rules.morale ? shiftMorale(hero, rules.memorial) : hero))
+    // The memorial comforts whoever was below their usual spirits before the
+    // festival, felt like any joy (review 49c92da).
+    roster = roster.map((hero) => ((before.get(hero.id) ?? moraleRules.base) < moraleRules.base ? feel(hero, 'joy', rules.memorial) : hero))
   }
   return { ...state, notice: null, gold: state.gold - cost, fame: state.fame + rules.fame, roster, materials, festival: { season, kind } }
 }
