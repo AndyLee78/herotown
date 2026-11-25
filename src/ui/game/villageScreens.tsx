@@ -25,6 +25,8 @@ import {
   dungeons,
   enchantTime,
   endgameRules,
+  enhanceCostFor,
+  enhanceLimit,
   expeditionSlots,
   fountainLevel,
   fountainNextAt,
@@ -45,6 +47,7 @@ import {
   partyLevel,
   population,
   progression,
+  retireeBonus,
   pupils,
   schoolRules,
   schoolSeats,
@@ -76,6 +79,7 @@ import { GraveFace, bonusValue } from './heroScreens'
 import { Bar, Chip, CostList, Portrait, Res, SchoolInfo, VaultAmount, Window, affordable, formatEntry, gearGradeClass, itemLabel, useNow, vaultKinds, waitLabel } from './kit'
 import { josa } from '../josa'
 import { InvasionCard } from './invasion'
+import { Monuments, Prosperity } from './lateTown'
 import { SpecialRewardChips } from './specialDungeons'
 
 const BattleView = lazy(() => import('../BattleView').then((mod) => ({ default: mod.BattleView })))
@@ -258,8 +262,9 @@ export function Town({
         <button type="button" className="btn gold small" onClick={onFestival}>{t('morale.festival.open')}</button>
       </div>
 
-      {level.level >= PROMOTION_FREE ? <Promotion save={save} onAction={onAction} /> : null}
+      {!next ? <Prosperity save={save} onAction={onAction} /> : level.level >= PROMOTION_FREE ? <Promotion save={save} onAction={onAction} /> : null}
       <InvasionCard save={save} now={now} onAction={onAction} />
+      <Monuments save={save} onAction={onAction} />
 
       {save.construction ? (
         <div className="card building-now">
@@ -1161,19 +1166,29 @@ export function Smith({ save, onAction }: { save: GameState; onAction: Act }) {
           <h3 className="section-title">{t('label.stash')}</h3>
           {save.stash.length === 0 ? <p className="muted">{t('hint.emptyStash')}</p> : null}
           <ul className="plain">
-            {save.stash.map((item) => (
-              <li key={item.id} className="line">
+            {save.stash.map((item) => {
+              const cost = enhanceCostFor(item)
+              const limit = enhanceLimit(item)
+              const canEnhance = item.slot !== 'trinket' && item.enhance < limit
+              const lateChance = smithRules.lateEnhance.chance[item.enhance - smithRules.enhanceMax]
+              const canChange = item.grade === 'rare' || item.grade === 'epic' || item.grade === 'legend'
+              return <li key={item.id} className="card column">
                 <span className={gearGradeClass(item.grade)}>{itemLabel(t, item, 'warrior')}</span>
-                <button
-                  type="button"
-                  className="btn small"
-                  disabled={working || item.enhance >= smithRules.enhanceMax}
-                  onClick={() => onAction({ type: 'enhance', gearId: item.id, now: gameNow() })}
-                >
-                  {t('ui.enhance')} <Res kind="iron" amount={smithRules.enhanceCost.iron} light /> <Res kind="gold" amount={smithRules.enhanceCost.gold} light />
-                </button>
+                {item.slot !== 'trinket' ? <Chip>{t('lateSmith.progress', { current: item.enhance, max: limit })}</Chip> : null}
+                {canEnhance ? <>
+                  {lateChance != null ? <span>{t('lateSmith.chance', { chance: Math.round(Math.min(1, lateChance + retireeBonus(save, 'smith')) * 100) })}</span> : null}
+                  <CostList cost={cost} save={save} />
+                  <button type="button" className="btn small" disabled={working || save.buildings.smith < 1 || !affordable(cost, save)}
+                    onClick={() => onAction({ type: 'enhance', gearId: item.id, now: gameNow() })}>{t('lateSmith.enhance', { level: item.enhance + 1 })}</button>
+                </> : null}
+                {canChange ? <>
+                  <VaultAmount kind="valor" amount={smithRules.optionValor} />
+                  <div className="chips">{(['power', 'guard'] as const).filter((choice) => choice !== item.option).map((choice) => <button key={choice}
+                    type="button" className="btn small" disabled={save.vault.valor < smithRules.optionValor}
+                    onClick={() => onAction({ type: 'setOption', gearId: item.id, option: choice })}>{t('lateSmith.option', { option: t(`option.${choice}`) })}</button>)}</div>
+                </> : null}
               </li>
-            ))}
+            })}
           </ul>
         </div>
       </div>

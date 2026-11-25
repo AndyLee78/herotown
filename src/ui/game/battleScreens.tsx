@@ -18,6 +18,8 @@ import {
   heroTrinkets,
   busyHeroIds,
   currentRaid,
+  eventDungeonId,
+  eventRunsLeft,
   blessing,
   isNest,
   monsterById,
@@ -203,7 +205,7 @@ function DungeonBoard({ save, onAction, onPrepare }: { save: GameState; onAction
         </button>
       </div>
     </div>
-    <SpecialDungeons save={save} now={now} onSelect={(id) => {
+    <SpecialDungeons save={save} now={now} onAction={onAction} onSelect={(id) => {
       onAction({ type: 'dungeon', id })
       onPrepare()
     }} />
@@ -449,7 +451,10 @@ export function Prep({
   const busy = heroes.some((hero) => away.has(hero.id))
   const full = save.expeditions.length >= slots
   const [stamping, setStamping] = useState(false)
-  const special = dungeon.id === 'raid' && currentRaid(save, now).killed ? 'raidDone' : specialBlock(save, dungeon.id, now)
+  const eventNotice = dungeon.special === 'event'
+    ? dungeon.id !== eventDungeonId(save) ? 'eventSeason' : eventRunsLeft(save) === 0 ? 'eventUsed' : null
+    : null
+  const special = dungeon.id === 'raid' && currentRaid(save, now).killed ? 'raidDone' : specialBlock(save, dungeon.id, now) ?? eventNotice
   const blocked = special ? t(`result.${special}`) : heroes.length === 0 ? t('battle.emptyPreset') : busy ? t('result.busyHero') : full ? t('result.slotsFull') : !dungeonUnlocked(save, dungeon.id) ? t('result.lockedDungeon') : null
   const depart = () => {
     if (stamping || blocked) {

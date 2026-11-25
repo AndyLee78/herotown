@@ -1,5 +1,5 @@
 import { useTranslation } from 'react-i18next'
-import { busyHeroIds, canDeploy, endgameRules, warned, type GameAction, type GameState } from '../../core'
+import { MARKET_MATERIALS, busyHeroIds, canDeploy, endgameRules, warned, type GameAction, type GameState } from '../../core'
 import { Chip, Res, VaultAmount, waitLabel } from './kit'
 
 export function InvasionCard({ save, now, onAction }: { save: GameState; now: number; onAction: (action: GameAction) => void }) {
@@ -38,7 +38,10 @@ export function InvasionCard({ save, now, onAction }: { save: GameState; now: nu
       </div>
       {last.lost ? <div className="chips">
         <Res kind="gold" amount={`−${last.lost.gold}`} light />
-        <span>{t('invasion.materialLoss', { percent: rules.loss * 100 })}</span>
+        {last.lost.materials ? MARKET_MATERIALS.map((kind) => {
+          const amount = last.lost?.materials?.[kind] ?? 0
+          return amount > 0 ? <Res key={kind} kind={kind} amount={`−${amount}`} light /> : null
+        }) : <span>{t('invasion.materialLoss', { percent: rules.loss * 100 })}</span>}
       </div> : null}
     </div> : null}
   </section>

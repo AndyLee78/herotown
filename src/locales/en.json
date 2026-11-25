@@ -1,5 +1,6 @@
 {
   "vault": {
+    "token": "Event tokens",
     "scale": "Dragon scale",
     "crown": "Lich crown",
     "core": "Titan core",
@@ -9,7 +10,42 @@
     "light": "Light essence",
     "abyss": "Abyss shards"
   },
+  "event": {
+    "title": "Seasonal event",
+    "shop": "Event shop",
+    "stock": "Stock {{left}}/{{stock}}"
+  },
+  "monument": {
+    "title": "Monuments",
+    "statue": "Hero statue",
+    "lighthouse": "Great lighthouse",
+    "walls": "Walls and towers",
+    "arch": "Triumphal arch",
+    "stage": "Stage {{stage}}/{{max}}",
+    "current": "Current · {{effect}}",
+    "next": "Next · {{effect}}",
+    "raise": "Build stage",
+    "statueEffect": "Expedition and training XP +{{value}}%",
+    "lighthouseEffect": "Visitor potential +{{value}} · Merchant offers +{{offers}}",
+    "wallsEffect": "Invader strength −{{value}}% · Defeat losses −{{loss}}%",
+    "archEffect": "Expedition gold and fame +{{value}}%"
+  },
+  "prosperity": {
+    "rank": "Prosperity rank {{rank}}/{{max}}",
+    "bonus": "Expedition gold and fame +{{percent}}%",
+    "next": "Next prosperity rank {{rank}}",
+    "action": "Increase prosperity",
+    "max": "Maximum prosperity rank"
+  },
+  "lateSmith": {
+    "progress": "Enhancement +{{current}} / +{{max}}",
+    "chance": "Success chance {{chance}}%",
+    "enhance": "Enhance to +{{level}}",
+    "option": "Change option to {{option}}"
+  },
   "raid": {
+    "tier": "Tier {{tier}}",
+    "unlocked": "Tier {{tier}} unlocked!",
     "reset": "Changes Monday · {{time}} left",
     "guard": "Battle clue · Guards: {{names}}",
     "hp": "Health {{hp}}/{{max}}",
@@ -549,6 +585,22 @@
     "blasted": "The boss's blast went unbroken. Bring a warrior, rogue or archer, or set tactics to 'Brace'."
   },
   "dungeon": {
+    "event_spring": {
+      "name": "Spirits of spring",
+      "hint": "Spirits of spring"
+    },
+    "event_summer": {
+      "name": "Fire festival",
+      "hint": "Fire festival"
+    },
+    "event_autumn": {
+      "name": "Harvest hunt",
+      "hint": "Harvest hunt"
+    },
+    "event_winter": {
+      "name": "Frozen tomb",
+      "hint": "Frozen tomb"
+    },
     "raid": {
       "name": "Weekly raid",
       "hint": "Send expeditions to bring down the weekly boss."

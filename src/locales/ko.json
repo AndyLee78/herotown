@@ -1,5 +1,6 @@
 {
   "vault": {
+    "token": "이벤트 증표",
     "scale": "용비늘",
     "crown": "리치의 왕관",
     "core": "거신의 핵",
@@ -9,7 +10,42 @@
     "light": "빛 정수",
     "abyss": "심연석"
   },
+  "event": {
+    "title": "계절 이벤트",
+    "shop": "이벤트 상점",
+    "stock": "남은 재고 {{left}}/{{stock}}"
+  },
+  "monument": {
+    "title": "기념물",
+    "statue": "영웅의 상",
+    "lighthouse": "대등대",
+    "walls": "성벽과 망루",
+    "arch": "개선문",
+    "stage": "{{stage}}/{{max}}단계",
+    "current": "현재 · {{effect}}",
+    "next": "다음 · {{effect}}",
+    "raise": "세우기",
+    "statueEffect": "원정·훈련 경험치 +{{value}}%",
+    "lighthouseEffect": "방문자 잠재력 +{{value}} · 상인 물건 +{{offers}}",
+    "wallsEffect": "침공 적 세기 −{{value}}% · 패배 손실 −{{loss}}%",
+    "archEffect": "원정 골드·명성 +{{value}}%"
+  },
+  "prosperity": {
+    "rank": "번영 {{rank}}/{{max}}등급",
+    "bonus": "원정 골드·명성 +{{percent}}%",
+    "next": "다음 번영 {{rank}}등급",
+    "action": "번영",
+    "max": "최고 번영 등급"
+  },
+  "lateSmith": {
+    "progress": "강화 +{{current}} / +{{max}}",
+    "chance": "성공률 {{chance}}%",
+    "enhance": "+{{level}} 강화",
+    "option": "옵션 바꾸기 · {{option}}"
+  },
   "raid": {
+    "tier": "{{tier}}단계",
+    "unlocked": "{{tier}}단계가 열렸습니다!",
     "reset": "월요일에 바뀜 · {{time}} 남음",
     "guard": "공략 단서 · 호위 {{names}}",
     "hp": "남은 체력 {{hp}}/{{max}}",
@@ -549,6 +585,22 @@
     "blasted": "광역기를 끊지 못했다. 전사·도적·궁수를 데려가거나 작전을 '버티기'로 바꾸자."
   },
   "dungeon": {
+    "event_spring": {
+      "name": "꽃의 정령",
+      "hint": "꽃의 정령"
+    },
+    "event_summer": {
+      "name": "불꽃 축제",
+      "hint": "불꽃 축제"
+    },
+    "event_autumn": {
+      "name": "수확제 사냥",
+      "hint": "수확제 사냥"
+    },
+    "event_winter": {
+      "name": "얼음 무덤",
+      "hint": "얼음 무덤"
+    },
     "raid": {
       "name": "주간 레이드",
       "hint": "원정을 보내 주간 보스를 쓰러뜨리세요."

@@ -1,5 +1,5 @@
 import type { TFunction } from 'i18next'
-import { Award, Crown, Gem, Hexagon, Shield, X } from 'lucide-react'
+import { Award, Crown, Gem, Hexagon, Shield, Ticket, X } from 'lucide-react'
 import { lazy, Suspense, useEffect, useState, type ReactNode } from 'react'
 import { useTranslation } from 'react-i18next'
 import { ESSENCES, lifeRules, lowMorale, moraleOf, moraleRules, type GameState, type Gear, type Hero, type LogEntry, type VaultKey } from '../../core'
@@ -86,9 +86,9 @@ export function Res({ kind, amount, short = false, light = false }: { kind: Reso
   )
 }
 
-type Cost = { gold: number; wood?: number; stone?: number; iron?: number; bone?: number; herb?: number; crystal?: number } & Partial<Record<VaultKey, number>>
-export const vaultKinds = [...ESSENCES, 'abyss', 'scale', 'crown', 'core', 'valor'] as const
-const vaultIcons = { scale: Shield, crown: Crown, core: Hexagon, valor: Award }
+type Cost = Partial<Record<'gold' | 'wood' | 'stone' | 'iron' | 'bone' | 'herb' | 'crystal' | VaultKey, number>>
+export const vaultKinds = [...ESSENCES, 'abyss', 'scale', 'crown', 'core', 'valor', 'token'] as const
+const vaultIcons = { scale: Shield, crown: Crown, core: Hexagon, valor: Award, token: Ticket }
 
 export function VaultAmount({ kind, amount, short = false }: { kind: VaultKey; amount: number | string; short?: boolean }) {
   const { t } = useTranslation()
@@ -102,7 +102,7 @@ function isVaultKind(kind: ResourceKind | VaultKey): kind is VaultKey {
 
 function costParts(cost: Cost, save: GameState): [ResourceKind | VaultKey, number, number][] {
   return [
-    ['gold', cost.gold, save.gold],
+    ['gold', cost.gold ?? 0, save.gold],
     ['wood', cost.wood ?? 0, save.materials.wood],
     ['stone', cost.stone ?? 0, save.materials.stone],
     ['iron', cost.iron ?? 0, save.materials.iron],

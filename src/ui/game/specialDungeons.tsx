@@ -1,6 +1,6 @@
 import { useTranslation } from 'react-i18next'
-import { ESSENCES, abyssFloors, abyssShards, currentRaid, dungeonById, dungeonUnlocked, endgameRules, raidBoss, reduce, specialBlock, specialDungeons, todayElement, trialsLeft, type DungeonReport, type GameAction, type GameState, type VaultKey } from '../../core'
-import { Bar, Chip, VaultAmount, waitLabel } from './kit'
+import { ESSENCES, MARKET_MATERIALS, abyssFloors, abyssShards, currentRaid, dungeonById, dungeonUnlocked, endgameRules, eventDungeonId, eventRunsLeft, eventShop, raidBoss, reduce, specialBlock, specialDungeons, todayElement, trialsLeft, type DungeonReport, type GameAction, type GameState, type VaultKey } from '../../core'
+import { Bar, Chip, Res, VaultAmount, vaultKinds, waitLabel } from './kit'
 
 type SpecialReward = { key: VaultKey; amount: number; best?: number }
 type SpecialReport = DungeonReport & { specialReward?: SpecialReward }
@@ -45,13 +45,17 @@ export function SpecialRewardChips({ report }: { report: SpecialReport }) {
   const recorded = report.specialReward
   const reward = recorded ?? (dungeon?.element && report.victory
     ? { key: dungeon.element, amount: endgameRules.weekday.essence[(dungeon.difficulty ?? 1) - 1] ?? 0 } : undefined)
+  const vault = report.gained?.vault as Partial<Record<VaultKey, number>> | undefined
   return <>
-    {reward && reward.amount > 0 ? <VaultAmount kind={reward.key} amount={`+${reward.amount}`} /> : null}
+    {vault ? vaultKinds.map((kind) => {
+      const amount = vault[kind] ?? 0
+      return amount > 0 ? <VaultAmount key={kind} kind={kind} amount={`+${amount}`} /> : null
+    }) : reward && reward.amount > 0 ? <VaultAmount kind={reward.key} amount={`+${reward.amount}`} /> : null}
     {recorded?.best != null ? <Chip tone="good">{t('special.newBest', { floor: recorded.best })}</Chip> : null}
   </>
 }
 
-export function SpecialDungeons({ save, now, onSelect }: { save: GameState; now: number; onSelect: (id: string) => void }) {
+export function SpecialDungeons({ save, now, onSelect, onAction }: { save: GameState; now: number; onSelect: (id: string) => void; onAction: (action: GameAction) => void }) {
   const { t } = useTranslation()
   const element = todayElement(now)
   const allowed = element === 'choice' ? ESSENCES : [element]
@@ -96,6 +100,7 @@ export function SpecialDungeons({ save, now, onSelect }: { save: GameState; now:
       </>}
     </div>
     <RaidCard save={save} now={now} onSelect={onSelect} />
+    <EventCard save={save} onSelect={onSelect} onAction={onAction} />
   </section>
 }
 
@@ -116,11 +121,49 @@ export function RaidCard({ save, now, onSelect }: { save: GameState; now: number
       <Bar value={raid.hp ?? 1} max={raid.max ?? 1} tone="bad" />
     </div>
     <div className="chips">
-      <VaultAmount kind={boss.spoil as VaultKey} amount={`+${endgameRules.raid.spoils}`} />
+      <Chip tone="info">{t('raid.tier', { tier: raid.tier })}</Chip>
+      {raid.tier > 1 && !raid.killed ? <Chip tone="good">{t('raid.unlocked', { tier: raid.tier })}</Chip> : null}
       {raid.killed ? <Chip tone="good">{t('raid.killed')}</Chip> : null}
     </div>
+    <div className="chips">{endgameRules.raid.tiers.map(({ spoils }, index) => (
+      <span className="chips" key={index}>{t('raid.tier', { tier: index + 1 })} <VaultAmount kind={boss.spoil as VaultKey} amount={`+${spoils}`} /></span>
+    ))}</div>
     {locked ? <p className="muted">{t('special.unlock', { level: endgameRules.raid.unlockTown })}</p> : null}
     {!locked && !raid.killed ? <p className="muted">{t('raid.onReturn')}</p> : null}
     {onSelect && !locked && !raid.killed ? <button type="button" className="btn primary" onClick={() => onSelect('raid')}>{t('battle.prepare')}</button> : null}
+  </section>
+}
+
+function EventCard({ save, onSelect, onAction }: { save: GameState; onSelect: (id: string) => void; onAction: (action: GameAction) => void }) {
+  const { t } = useTranslation()
+  const id = eventDungeonId(save)
+  const left = eventRunsLeft(save)
+  const rules = endgameRules.event
+  const unlocked = dungeonUnlocked(save, id)
+  return <section className="card column">
+    <strong>{t('event.title')}</strong>
+    <span>{t(`season.${save.calendar.season}`)} · {t(`dungeon.${id}.name`)}</span>
+    {!unlocked ? <span className="muted">{t('special.unlock', { level: rules.unlockTown })}</span> : <>
+      <div className="chips">
+        <Chip>{t('special.attempts', { left, total: rules.attemptsPerSeason })}</Chip>
+        <VaultAmount kind="token" amount={`+${rules.tokens}`} />
+      </div>
+      <button type="button" className="btn primary" disabled={!left} onClick={() => onSelect(id)}>{t('battle.prepare')}</button>
+      <strong>{t('event.shop')}</strong>
+      <div className="grid">{eventShop(save).map((item) => <article className="card column" key={item.id}>
+        <div className="chips">
+          {item.gear ? <strong>{t(`item.${item.gear}`)}</strong> : null}
+          {item.gold ? <Res kind="gold" amount={item.gold} /> : null}
+          {vaultKinds.map((kind) => item.vault?.[kind] ? <VaultAmount key={kind} kind={kind} amount={item.vault[kind]} /> : null)}
+          {MARKET_MATERIALS.map((kind) => item.materials?.[kind] ? <span className="chips" key={kind}>{t(`material.${kind}`)} <Res kind={kind} amount={item.materials[kind]} light /></span> : null)}
+          {Object.entries(item.potions ?? {}).map(([key, value]) => <Chip key={key}>{t(`potion.${key}`)} ×{value}</Chip>)}
+        </div>
+        <div className="chips">
+          <VaultAmount kind="token" amount={item.cost} />
+          <Chip tone={item.left > 0 ? undefined : 'bad'}>{t('event.stock', { left: Math.max(0, item.left), stock: item.stock })}</Chip>
+        </div>
+        <button type="button" className="btn small" disabled={item.left <= 0 || save.vault.token < item.cost} onClick={() => onAction({ type: 'buyEvent', itemId: item.id })}>{t('market.buy')}</button>
+      </article>)}</div>
+    </>}
   </section>
 }
