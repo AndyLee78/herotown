@@ -156,6 +156,9 @@ export function createHeroUnit(member: PartyMember, index: number): BattleUnit {
   const skills = new Set(klass.skills.map((skill) => skill.kind))
   const baseHp = Math.max(1, Math.round((klass.hpBase + hero.stats.vit * klass.hpPerVit) * (tough ? combatRules.toughHp : 1)))
   const gear = heroGearMods(hero)
+  // Heirlooms in a descendant's hands (Docs/tavern.md).
+  gear.attack += member.heirloom?.attack ?? 0
+  gear.defense += member.heirloom?.defense ?? 0
   const element = hero.gear.find((item) => item.element)?.element
   const fatiguePenalty =
     hero.fatigue >= lifeRules.fatigue.exhaustedAt

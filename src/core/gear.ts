@@ -24,6 +24,24 @@ export function normalizeGear(item: Partial<Gear> | undefined, classId: ClassId)
     element,
     option,
     enhance: Math.max(0, Math.min(smithRules.enhanceMax, item?.enhance ?? 0)),
+    ...(readHeirloom(item?.heirloom) ? { heirloom: readHeirloom(item?.heirloom)! } : {}),
+  }
+}
+
+function readHeirloom(value: unknown): Gear['heirloom'] | null {
+  if (value == null || typeof value !== 'object') {
+    return null
+  }
+  const record = value as NonNullable<Gear['heirloom']>
+  if (typeof record.ownerId !== 'string' || typeof record.ownerName !== 'string' || typeof record.generations !== 'number') {
+    return null
+  }
+  return {
+    ownerId: record.ownerId,
+    ownerName: record.ownerName,
+    generations: Math.max(1, Math.min(3, Math.round(record.generations))),
+    ...(typeof record.family === 'string' ? { family: record.family } : {}),
+    ...(Array.isArray(record.comforted) ? { comforted: record.comforted.filter((id): id is string => typeof id === 'string') } : {}),
   }
 }
 

@@ -65,6 +65,8 @@ const BUILDING_SCREEN: Record<BuildingId, Screen> = {
   school: 'school',
   // The market screen comes with its own task (Docs/market.md); until then it opens the town.
   market: 'market',
+  // The tavern screen comes with its own task (Docs/tavern.md); until then it opens the town.
+  tavern: 'town',
   training: 'training',
 }
 

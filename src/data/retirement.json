@@ -13,6 +13,7 @@
     "magic": 0.2,
     "training": 0.2,
     "school": 0.3,
-    "market": 0.1
+    "market": 0.1,
+    "tavern": 0.3
   }
 }

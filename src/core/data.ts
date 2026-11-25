@@ -13,6 +13,7 @@ import scoutingFile from '../data/scouting.json'
 import schoolFile from '../data/school.json'
 import marketFile from '../data/market.json'
 import personalityFile from '../data/personality.json'
+import tavernFile from '../data/tavern.json'
 import smithFile from '../data/smith.json'
 import combatFile from '../data/combat.json'
 import dungeonsFile from '../data/dungeons.json'
@@ -133,7 +134,7 @@ export function validateGameData(data: GameData): void {
   if (data.dungeons.length < 2) {
     throw new Error('Need at least 2 dungeons')
   }
-  const needed = ['hall', 'inn', 'house', 'guild', 'smith', 'temple', 'fountain', 'alchemy', 'magic', 'training', 'school', 'market']
+  const needed = ['hall', 'inn', 'house', 'guild', 'smith', 'temple', 'fountain', 'alchemy', 'magic', 'training', 'school', 'market', 'tavern']
   if (data.village.buildings.length !== needed.length || needed.some((id) => !data.village.buildings.some((building) => building.id === id))) {
     throw new Error(`The town needs exactly these buildings: ${needed.join(', ')}`)
   }
@@ -227,6 +228,7 @@ export const automationRules = automationFile
 export const scoutingRules = scoutingFile
 export const schoolRules = schoolFile
 export const marketRules = marketFile
+export const tavernRules = tavernFile
 export const personalityRules = personalityFile as {
   ids: string[]
   emotion: Record<import('./types').PersonalityId, Record<'grief' | 'joy' | 'pride' | 'anxiety' | 'resentment', number>>

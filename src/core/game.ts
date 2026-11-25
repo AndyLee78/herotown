@@ -6,6 +6,8 @@ import { cheer, driftMorale, lowMorale, mourn } from './morale'
 import { arrive, interview, type Interviews } from './scouting'
 import { enroll, graduate, teachSeason, unenroll } from './school'
 import { afterTrip, benchAtDeparture, feel } from './personality'
+import { festivalScale, gather, type TavernState } from './tavern'
+import { bequeath, bequeathed, comfortHeir, heirloomMods } from './heirloom'
 import { buyOffer, freshMarket, sellGear, sellPotion, trade, updateMerchant, type Market, type MerchantOffer } from './market'
 import { forgetSkill, readDrills, runDrills, startDrill, type Drill } from './drill'
 import { buyIntel, finishScout, isNest, nestSeason, readScout, seasonKey, startScout, type ScoutJob } from './nest'
@@ -21,7 +23,7 @@ import type { Rng } from './rng'
 import type { Genes } from './genes'
 import type { Bond, ClassId, CombatError, DungeonReport, Gear, GearSlot, Gender, Hero, PartyMember, PotionId, Proposal, Role, Row, Supplies, Tactics, TrinketId , StatKey } from './types'
 
-export const SAVE_VERSION = 20
+export const SAVE_VERSION = 21
 
 export type SeasonId = 'spring' | 'summer' | 'autumn' | 'winter'
 
@@ -60,7 +62,7 @@ export type SmithJob = {
   finishAt: number
 }
 
-export type BuildingId = 'hall' | 'inn' | 'house' | 'guild' | 'smith' | 'temple' | 'fountain' | 'alchemy' | 'magic' | 'training' | 'school' | 'market'
+export type BuildingId = 'hall' | 'inn' | 'house' | 'guild' | 'smith' | 'temple' | 'fountain' | 'alchemy' | 'magic' | 'training' | 'school' | 'market' | 'tavern'
 export type MaterialName = 'wood' | 'stone' | 'iron' | 'bone' | 'herb' | 'crystal'
 
 export type AutoPolicy = 'material' | 'safe' | 'fixed'
@@ -175,6 +177,10 @@ export type GameNotice =
   | 'noMaterial'
   | 'noMerchant'
   | 'soldOut'
+  | 'noTavern'
+  | 'tavernFull'
+  | 'gatherSize'
+  | 'notHeir'
   | 'drillHero'
   | 'trainingFull'
   | 'scoutBusy'
@@ -259,6 +265,8 @@ export type GameState = {
   interviews: Interviews | null
   // The market's prices and the wandering merchant (Docs/market.md).
   market: Market
+  // Rounds at the tavern this season (Docs/tavern.md).
+  tavern: TavernState | null
 }
 
 export type QueueBuilding = 'smith' | 'alchemy' | 'magic'
@@ -337,6 +345,8 @@ export type GameAction =
   | { type: 'sellGear'; gearId: string }
   | { type: 'sellPotion'; potionId: PotionId; count: number }
   | { type: 'buyOffer'; offerId: string }
+  | { type: 'gather'; heroIds: string[] }
+  | { type: 'bequeath'; retireeId: string; gearId: string; toId: string | null }
   | { type: 'declineProposal'; a: string; b: string; now?: number }
   | { type: 'wish'; now: number }
   | { type: 'brew'; potionId: PotionId; now: number }
@@ -396,6 +406,7 @@ export function freshState(seed: number, now: number): GameState {
     automation: freshAutomation(),
     interviews: null,
     market: freshMarket(now),
+    tavern: null,
   }
 }
 
@@ -656,6 +667,12 @@ function apply(state: GameState, action: GameAction): GameState {
   }
   if (action.type === 'buyIntel') {
     return buyIntel(state)
+  }
+  if (action.type === 'gather') {
+    return gather(state, action.heroIds, busyHeroIds(state))
+  }
+  if (action.type === 'bequeath') {
+    return bequeath(state, action.retireeId, action.gearId, action.toId, busyHeroIds(state))
   }
   if (action.type === 'trade') {
     return trade(state, action.material, action.amount)
@@ -1207,7 +1224,9 @@ function withBonds(state: GameState, members: PartyMember[]): PartyMember[] {
   const parts = partyParts(state, members.map((member) => member.hero.id))
   return members.map((member) => {
     const part = parts[member.hero.id]
-    return part && (part.total !== 0 || part.bond !== 0) ? { ...member, bonus: part.total, healBonus: part.bond } : member
+    const bonded = part && (part.total !== 0 || part.bond !== 0) ? { ...member, bonus: part.total, healBonus: part.bond } : member
+    const heirloom = heirloomMods(state, member.hero)
+    return heirloom.attack > 0 || heirloom.defense > 0 ? { ...bonded, heirloom } : bonded
   })
 }
 
@@ -1469,7 +1488,7 @@ export function applyCasualty(
   alliesLived: boolean,
   rng: Rng,
   year?: number,
-): { hero: Hero | null; grave: Grave | null } {
+): { hero: Hero | null; grave: Grave | null; left?: Gear[] } {
   let next = applyReport(hero, report)
   if (report.victory && !next.clears.includes(dungeonId)) {
     next = { ...next, clears: [...next.clears, dungeonId] }
@@ -1481,7 +1500,7 @@ export function applyCasualty(
   const chance = alliesLived ? lifeRules.lossWithAllies : lifeRules.lossAlone
   next = { ...next, gear: next.gear.filter(() => rng.next() >= chance) }
   if (next.deaths >= 1) {
-    return { hero: null, grave: graveFor(next, 'battle', year) }
+    return { hero: null, grave: graveFor(next, 'battle', year), left: next.gear }
   }
   return { hero: { ...next, deaths: 1, condition: 'dead' }, grave: null }
 }
@@ -1493,12 +1512,13 @@ function settleParty(
   now: number,
   heroIds: string[],
   dungeonId: string,
-): Pick<GameState, 'roster' | 'graveyard'> {
+): Pick<GameState, 'roster' | 'graveyard' | 'stash'> {
   const rng = createRng(seed + 17)
   const partyIds = new Set(heroIds)
   const alliesLived = report.conditions.filter((entry) => entry.condition !== 'dead').length > 0
   const roster: Hero[] = []
   const graveyard = [...state.graveyard]
+  const stash = [...state.stash]
   for (const hero of state.roster) {
     if (!partyIds.has(hero.id)) {
       roster.push(hero)
@@ -1510,12 +1530,14 @@ function settleParty(
     }
     if (outcome.grave) {
       graveyard.push(outcome.grave)
+      // What survived the fall comes home as an heirloom (Docs/tavern.md).
+      stash.push(...bequeathed(state, hero, outcome.left ?? []))
     }
   }
   // Grief lands when the party comes home with the news; several losses on
   // one trip count as the deepest one (Docs/morale.md, review b9036a0).
   const lost = graveyard.slice(state.graveyard.length)
-  return { roster: lost.length ? mourn(roster, lost, state.bonds) : roster, graveyard }
+  return { roster: lost.length ? mourn(roster, lost, state.bonds) : roster, graveyard, stash }
 }
 
 // ---------- retirement ----------
@@ -1921,7 +1943,7 @@ function finishSmith(state: GameState, now: number, crafted: string[]): GameStat
 }
 
 function equipGear(state: GameState, heroId: string, gearId: string): GameState {
-  const item = state.stash.find((gear) => gear.id === gearId)
+  let item = state.stash.find((gear) => gear.id === gearId)
   const hero = state.roster.find((entry) => entry.id === heroId)
   if (!item || !hero) {
     return { ...state, notice: 'missing' }
@@ -1930,7 +1952,10 @@ function equipGear(state: GameState, heroId: string, gearId: string): GameState 
   if (busyHeroIds(state).has(heroId)) {
     return { ...state, notice: 'busyHero' }
   }
-  const stash = state.stash.filter((gear) => gear.id !== item.id)
+  const stash = state.stash.filter((gear) => gear.id !== gearId)
+  // An heir first wearing what a departed forebear left is comforted (Docs/tavern.md).
+  const comfort = comfortHeir(state, heroId, item)
+  item = comfort.item
   // Weapons and armour swap one for one; trinkets fill two slots, and the
   // oldest comes off when both are taken (Docs/depth.md 3b).
   const same = hero.gear.filter((gear) => gear.slot === item.slot)
@@ -1942,7 +1967,7 @@ function equipGear(state: GameState, heroId: string, gearId: string): GameState 
     notice: null,
     stash,
     roster: state.roster.map((entry) =>
-      entry.id === heroId ? { ...entry, gear: [...entry.gear.filter((gear) => !off.includes(gear)), item] } : entry,
+      entry.id === heroId ? comfort.hero({ ...entry, gear: [...entry.gear.filter((gear) => !off.includes(gear)), item!] }) : entry,
     ),
   }
 }
@@ -2070,6 +2095,7 @@ function normalize(record: Record<string, unknown>, now: number): GameState {
     automation: readAutomation(record.automation),
     interviews: readInterviews(record.interviews),
     market: readMarket(record.market, numberOr(record.lastTickAt, now)),
+    tavern: readTavern(record.tavern),
     auto: isAuto(record.auto) ? record.auto : base.auto,
     notice: null,
   }
@@ -2197,7 +2223,9 @@ function holdFestival(state: GameState): GameState {
   const kind = state.calendar.season
   const rules = moraleRules.festival
   const before = new Map(state.roster.map((hero) => [hero.id, hero.morale ?? moraleRules.base]))
-  let roster = state.roster.map((hero) => feel(hero, 'joy', rules.morale))
+  // A tavern hosting the festival makes it bigger (Docs/tavern.md).
+  const scale = festivalScale(state)
+  let roster = state.roster.map((hero) => feel(hero, 'joy', rules.morale * scale))
   let materials = state.materials
   if (kind === 'summer') {
     roster = roster.map((hero) => (isChild(hero) || hero.condition === 'dead' ? hero : gainXp(hero, Math.round(hero.level * progression.xpPerLevel * rules.xpShare))))
@@ -2421,6 +2449,14 @@ function drillReserved(state: GameState): Set<string> {
 }
 
 // Saves before version 20 have no market yet (Docs/market.md).
+function readTavern(value: unknown): TavernState | null {
+  if (value == null || typeof value !== 'object') {
+    return null
+  }
+  const record = value as TavernState
+  return typeof record.season === 'string' && typeof record.used === 'number' ? { season: record.season, used: record.used } : null
+}
+
 function readMarket(value: unknown, now: number): Market {
   if (value == null || typeof value !== 'object') {
     return freshMarket(now)

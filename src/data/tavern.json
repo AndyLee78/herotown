@@ -1,0 +1,12 @@
+{
+  "sessionsPerSeason": [2, 3, 4],
+  "minPeople": 2,
+  "maxPeople": 3,
+  "cost": 15,
+  "affinity": 8,
+  "joy": 4,
+  "fatigue": 3,
+  "minglePerLevel": 1,
+  "festivalScale": [1.15, 1.3, 1.5],
+  "heirloom": { "bonus": [0.06, 0.09, 0.12], "maxGenerations": 3, "comfort": 15 }
+}

@@ -506,6 +506,37 @@
           "ms": 3600000
         }
       ]
+    },
+    {
+      "id": "tavern",
+      "unlockLevel": 2,
+      "startLevel": 0,
+      "levels": [
+        {
+          "level": 1,
+          "gold": 60,
+          "wood": 30,
+          "stone": 15,
+          "iron": 0,
+          "ms": 600000
+        },
+        {
+          "level": 2,
+          "gold": 140,
+          "wood": 50,
+          "stone": 35,
+          "iron": 5,
+          "ms": 1200000
+        },
+        {
+          "level": 3,
+          "gold": 260,
+          "wood": 70,
+          "stone": 60,
+          "iron": 12,
+          "ms": 2400000
+        }
+      ]
     }
   ]
 }

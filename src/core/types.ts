@@ -149,6 +149,8 @@ export type Gear = {
   element?: GearElement
   option?: GearOption
   enhance: number
+  // Left behind or handed down by a hero (Docs/tavern.md).
+  heirloom?: { ownerId: string; ownerName: string; family?: string; generations: number; comforted?: string[] }
 }
 
 export type Hero = {
@@ -231,6 +233,8 @@ export type PartyMember = {
   bonus?: number
   // Healing goes up by the bond share only (review 49c92da); missing means the bonus, if positive.
   healBonus?: number
+  // Extra attack and defense from family heirlooms the hero wears (Docs/tavern.md).
+  heirloom?: { attack: number; defense: number }
 }
 
 export type LogEntry = {

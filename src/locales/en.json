@@ -292,7 +292,8 @@
     "magic": "Magic Workshop",
     "training": "Training Ground",
     "school": "School",
-    "market": "Market"
+    "market": "Market",
+    "tavern": "Tavern"
   },
   "buildingHint": {
     "hall": "See your village level and next goal.",
@@ -306,7 +307,8 @@
     "magic": "Makes trinkets. Each hero can wear two.",
     "training": "Brings heroes who fall behind up to speed. Learned skills can be swapped here.",
     "school": "Teaches children: grows a stat and their potential, and lets them pick the class they take when they come of age.",
-    "market": "Buy and sell materials, and sell spare gear and potions. A wandering merchant drops by now and then."
+    "market": "Buy and sell materials, and sell spare gear and potions. A wandering merchant drops by now and then.",
+    "tavern": "Where heroes get together. Rounds of drinks build bonds, and festivals grow bigger."
   },
   "resource": {
     "wood": "Wood {{amount}}",
@@ -424,7 +426,11 @@
     "noMarket": "There is no market yet.",
     "noMaterial": "Not enough materials.",
     "noMerchant": "The merchant is not in town.",
-    "soldOut": "That has already been sold."
+    "soldOut": "That has already been sold.",
+    "noTavern": "There is no tavern yet.",
+    "tavernFull": "No more rounds this season.",
+    "gatherSize": "A round is for two or three heroes.",
+    "notHeir": "Heirlooms go only to descendants."
   },
   "defeat": {
     "noHealer": "Bring a healer to keep the party going.",
@@ -1094,7 +1100,8 @@
       "magic": "Trinket making time −{{value}}%",
       "training": "Training time −{{value}}%",
       "school": "Tuition −{{value}}%",
-      "market": "Selling prices +{{value}}%"
+      "market": "Selling prices +{{value}}%",
+      "tavern": "Bonds from drinks +{{value}}%"
     }
   },
   "trinket": {

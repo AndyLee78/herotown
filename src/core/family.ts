@@ -3,6 +3,8 @@ import { genesFor, inheritGenes } from './genes'
 import { createHero } from './hero'
 import { cheer, mourn } from './morale'
 import { affinityScale, feel, inheritPersonality, partyFit } from './personality'
+import { festivalScale, mingle } from './tavern'
+import { bequeathed } from './heirloom'
 import { createRng, type Rng } from './rng'
 import type { GameState, Grave } from './game'
 import { STAT_KEYS, type Bond, type BondStage, type Gender, type Hero, type Proposal, type Stats, type TraitId } from './types'
@@ -231,7 +233,7 @@ export function bondParty(state: GameState, ids: string[], victory: boolean): Ga
   const present = ids.filter((id) => state.roster.some((hero) => hero.id === id))
   // A spring festival this season doubles what a trip brings (Docs/morale.md).
   const festive = state.festival?.kind === 'spring' && state.festival.season === `${state.calendar.year}-${state.calendar.season}`
-  const amount = (familyRules.affinityPerTrip + (victory ? familyRules.affinityWinBonus : 0)) * (festive ? moraleRules.festival.bondBoost : 1)
+  const amount = (familyRules.affinityPerTrip + (victory ? familyRules.affinityWinBonus : 0)) * (festive ? moraleRules.festival.bondBoost * festivalScale(state) : 1)
   let bonds = state.bonds ?? []
   for (let i = 0; i < present.length; i += 1) {
     for (let j = i + 1; j < present.length; j += 1) {
@@ -256,7 +258,8 @@ export function turnSeason(state: GameState, now: number, events: FamilyEvents):
 }
 
 function growTogether(state: GameState): GameState {
-  const amount = familyRules.affinityPerSeason + state.buildings.house * familyRules.affinityPerHouseLevel
+  // Neighbours mingle more with a tavern in town (Docs/tavern.md).
+  const amount = familyRules.affinityPerSeason + state.buildings.house * familyRules.affinityPerHouseLevel + mingle(state)
   let bonds = state.bonds
   const ids = state.roster.filter((hero) => hero.age >= familyRules.adultAge).map((hero) => hero.id)
   for (let i = 0; i < ids.length; i += 1) {
@@ -531,12 +534,16 @@ export function passAway(state: GameState, events: FamilyEvents): GameState {
   if (graves.length === 0) {
     return state
   }
+  // What they leave behind goes to the stash as heirlooms (Docs/tavern.md).
+  const departed = new Set(graves.map((grave) => grave.id))
+  const leaving = [...state.roster, ...state.retirees.map((retiree) => retiree.hero)].filter((hero) => departed.has(hero.id))
+  const heirlooms = leaving.flatMap((hero) => bequeathed(state, hero, hero.gear))
   // Leaving the roster also takes them out of saved parties.
   const gone = new Set(graves.map((grave) => grave.id))
   const presets = state.presets.map((preset) => ({ ...preset, slots: preset.slots.filter((slot) => !gone.has(slot.id)) }))
   const auto = { ...state.auto, party: state.auto.party.filter((slot) => !gone.has(slot.id)) }
   // The family grieves as the year turns (Docs/morale.md).
-  return { ...state, roster: mourn(roster, graves, state.bonds), retirees, presets, auto, graveyard: [...state.graveyard, ...graves] }
+  return { ...state, roster: mourn(roster, graves, state.bonds), retirees, presets, auto, graveyard: [...state.graveyard, ...graves], stash: [...state.stash, ...heirlooms] }
 }
 
 export function hallOfFame(state: GameState): Grave[] {
