@@ -12,7 +12,7 @@ export function Tavern({ save, onAction }: { save: GameState; onAction: (action:
   const adults = save.roster.filter((hero) => !isChild(hero)).map((hero) => ({ hero, busy: heroBusy(save, hero.id) }))
   const active = selected.filter((id) => adults.some(({ hero, busy }) => hero.id === id && !busy && hero.condition !== 'dead'))
   const preview = gatherPreview(save, active)
-  const number = new Intl.NumberFormat(i18n.language, { maximumFractionDigits: 2 })
+  const number = new Intl.NumberFormat(i18n.language, { maximumFractionDigits: 0 })
   if (level < 1) return <p className="banner">{t('result.noTavern')}</p>
   return (
     <div className="column">

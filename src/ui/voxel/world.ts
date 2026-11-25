@@ -24,9 +24,10 @@ export const LOTS: Record<BuildingId, Lot> = {
   // East of the square, between the inn yard and the guild (Docs/market.md).
   // Kept clear of INN_YARD, the guild front, the fountain rim and the south road.
   market: { x: 10.8, z: -3.2, w: 3.2, d: 2.6 },
-  // North-west of the square, between the hall and the temple (Docs/tavern.md).
-  // Front yard opens south toward the plaza; kept clear of hall, temple and alchemy.
-  tavern: { x: -4.4, z: -5.9, w: 3.2, d: 2.8 },
+  // East of the square, between the plaza and the market (Docs/tavern.md).
+  // North-west of the square it stood in front of the hall and hid its door
+  // from the camera; here nothing stands behind it. The yard opens south.
+  tavern: { x: 7.3, z: -2.1, w: 3.2, d: 2.8 },
   // South-west of the square: the training yard, in plain view.
   training: { x: -5.6, z: 8.4, w: 3.6, d: 3.2 },
   // East and south-east.
