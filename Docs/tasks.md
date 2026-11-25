@@ -114,6 +114,10 @@ Claude Code, Cursor, GPT(Codex)가 함께 쓰는 작업 목록이다. 작업 하
 | 72 | 집 화면: 방으로 묶어 보기 | GPT | `src/ui/App.tsx`, `src/ui/game/*.tsx`, `src/ui/styles.css`, `src/locales/*` | 완료 (2102e68) |
 | 73 | 파티 구성·전투 준비 화면의 영웅 상태와 소속 | GPT | `src/ui/game/battleScreens.tsx`, `src/ui/App.tsx`, `src/ui/styles.css`, `src/locales/*` | 완료 (c85b59e) |
 | 74 | 집·준비 상태 core 코드 리뷰 (7995eb2, b1261a7) | GPT | `Docs/reviews/b1261a7.md` (새 파일만) | 완료 (55e1167) |
+| 75 | 시장 건물·떠돌이 상인 3D | Cursor | `src/ui/voxel/*` | 대기 (76과 함께 가능) |
+| 76 | 시장 화면 | GPT | `src/ui/App.tsx`, `src/ui/game/*.tsx`, `src/ui/styles.css`, `src/locales/*` | 대기 (75와 함께 가능) |
+| 77 | 시장 core 코드 리뷰 (bb1c2cf) | GPT | `Docs/reviews/bb1c2cf.md` (새 파일만) | 대기 (76 뒤) |
+| 78 | 시장 경제 측정 | GPT | `tools/*`, `Docs/market.md`의 측정 절 | 대기 (77 뒤) |
 
 ---
 
@@ -1790,3 +1794,94 @@ VillageScene/BattleScene의 연출은 화면 작업이라 리뷰 대상이 아�
 
 - Claude Code가 리뷰 다섯 가지를 모두 고쳤다(e5a73ed). 자동 출정 사이 휴식은 출정으로 쌓인 피로만 덜어 주고, 방에 전사자를 넣고 2인실 남녀를 나누고, 'auto' 소속은 실제 자동 출정 편성을 따르고, treatAt을 더했다.
 - Claude Code가 127.0.0.1에서 집 화면과 준비 화면을 확인했다(부부·아이·임신, 한부모, 싱글, 부상·전사, 은퇴자, 원정·훈련 중 영웅이 섞인 세이브, 375px 포함). 집 화면에 부상·중상·전사 칩을 더했다.
+
+---
+
+## 75. 시장 건물·떠돌이 상인 3D (Cursor)
+
+**지금 시작할 수 있다. 작업 76(GPT)과 파일이 겹치지 않아 함께 돌릴 수 있다(같은 폴더에서 동시에 돌리려면 git worktree로 나눈다).** 설계: `Docs/market.md`. 끝나면 Claude Code가 화면을 직접 확인한다.
+
+**전달할 내용**
+
+```
+Docs/market.md를 읽고 시장의 3D를 만든다. src/ui/voxel/*만 고친다. core, App.tsx, 화면(src/ui/game/*)은 고치지 않는다.
+
+이미 있는 것:
+- 건물 id 'market'(마을 Lv3, 레벨 1–3). world.ts LOTS에 자리 표시용 market: { x: 10.3, z: -2.4, w: 3, d: 2.4 }가 있다(광장 동쪽, 여관과 길드 사이). 지금은 기본 집 모양으로 그려진다.
+- VillageScene.update(props)에 merchant: boolean(떠돌이 상인이 마을에 있는지)이 이미 들어온다. App과 VillageView는 연결되어 있다.
+
+1. 자리 확인: 카메라는 남동쪽(16,16,16)에서 본다. 다른 건물·여관 앞마당(INN_YARD)·길·분수 둘레와 겹치거나 가리지 않는지 보고, 필요하면 LOTS.market 좌표만 옮긴다.
+2. world.ts drawBuilding에 시장 모델: Lv1 천막 노점 두세 개(줄무늬 차양, 상자·자루·통), Lv2 노점이 늘고 간판, Lv3 지붕 있는 장터(깃발). 건설 중 비계는 기존 규칙 그대로.
+3. 떠돌이 상인: merchant가 true인 동안 시장 옆에 짐마차(바퀴·덮개·말 또는 당나귀)와 상인 한 명(모자·배낭)이 서 있다. 상인은 마차 둘레를 천천히 오가거나 손을 흔든다. 도착할 때(false → true) 남쪽 입구에서 마차가 걸어 들어오고, 떠날 때 입구로 나간다. 이미 와 있는 상태로 페이지를 열면 그 자리에 있다.
+4. 마을 영웅 몇 명이 가끔 시장 앞에 들러 서 있다(선택, 성능에 부담이 없으면).
+5. 성능: 기존 Builder로 합친 메시를 쓰고, 상인과 마차는 한 번 만들어 보였다 숨긴다.
+
+확인: npm run dev에서 디버그 세이브로 시장 Lv1–3과 상인 도착·떠남을 본다. tsc·test·build 통과. 확인한 내용을 메모에.
+```
+
+**메모**
+
+---
+
+## 76. 시장 화면 (GPT)
+
+**지금 시작할 수 있다. 작업 75(Cursor)와 함께 돌릴 수 있다.** 설계: `Docs/market.md`. 끝나면 Claude Code가 화면을 직접 확인한다.
+
+**전달할 내용**
+
+```
+Docs/market.md를 읽고 시장 화면을 만든다. src/ui/App.tsx, src/ui/game/*.tsx, src/ui/styles.css, src/locales/*만 고친다. core와 src/ui/voxel/*은 고치지 않는다. 기존 창 구조와 kit.tsx 공용 조각(Chip, Bar, Res, Portrait 등)을 그대로 쓴다.
+
+core에 이미 있는 것('../../core'에서 export):
+- 건물 id 'market'(마을 Lv3, 레벨 1–3). App.tsx BUILDING_SCREEN의 market은 지금 'town'을 연다.
+- MARKET_MATERIALS, marketRules, buyQuote(state, material, n), sellQuote(state, material, n), pressureOf(state, material), seasonDeal(state) → { cheap, wanted }, gearValue(gear), potionValue(potionId), merchantHere(state) → { arriveAt, leaveAt, offers } | null.
+- 상인 물건 offer: { id, kind: 'material', material, amount, price, sold } | { id, kind: 'gear', gear, price, sold } | { id, kind: 'potion', potionId, count, price, sold }.
+- 동작 { type: 'trade', material, amount }(양수 사기, 음수 팔기, 한 번에 최대 100), { type: 'sellGear', gearId }(창고 장비만), { type: 'sellPotion', potionId, count }, { type: 'buyOffer', offerId }.
+- 결과 notice: noMarket, poor, noMaterial, missing, noMerchant, soldOut(문구는 locales의 result.*에 이미 있다).
+
+1. 시장 창(App.tsx BUILDING_SCREEN의 market을 새 화면으로). 탭이나 접는 칸으로 "재료", "팔기", "떠돌이 상인"을 나눈다.
+2. 재료: 여섯 재료마다 보유량, 지금 사는 값·파는 값(1개 기준), 시세 표시(오름·내림 화살표와 %), 수량 고르기(1·10·50 또는 +/−)와 [사기 n골드] [팔기 n골드] 버튼. 값은 buyQuote/sellQuote로 고른 수량 전체를 계산해 보인다. 골드·재료가 모자라면 비활성.
+3. 계절 특가: 맨 위에 "이번 계절: 나무 30% 할인, 수정 50% 비싸게 삼" 같은 줄. 해당 재료 줄에 칩.
+4. 팔기: 창고 장비 목록(이름·등급·강화·판매가 gearValue)과 [팔기], 물약 보유량과 판매가 potionValue, 수량과 [팔기]. 팔기 전에 확인 한 번(장비는 되돌릴 수 없다).
+5. 떠돌이 상인: 있으면 "n시간 m분 뒤 떠남"과 물건 카드(장비는 능력치 요약, 재료 묶음, 물약 묶음, 값, [사기], 팔렸으면 "팔림"). 없으면 "다음 방문까지" 대신 "상인이 오면 알려 준다"(정확한 시각은 보이지 않는다).
+6. 상인이 와 있으면 마을 화면 건물 칩이나 하단 메뉴에 작은 표시(선택).
+7. 문구 ko/en 같은 키. 좁은 화면(375px)에서 넘치지 않게.
+
+확인: npm run dev에서 디버그 세이브(시장 Lv1, 골드·재료 넉넉히)로 사고팔기와 시세 변화, 특가, 장비·물약 판매, 상인 구매를 본다. tsc·test·build 통과. 확인한 내용을 메모에.
+```
+
+**메모**
+
+---
+
+## 77. 시장 core 코드 리뷰 (GPT)
+
+**작업 76 뒤에 시작한다(같은 도구라 순서대로).** core 커밋은 **bb1c2cf**다.
+
+**전달할 내용**
+
+```
+시장 core 커밋 bb1c2cf를 리뷰한다. 코드는 고치지 않고 Docs/reviews/bb1c2cf.md 새 파일 하나에만 쓴다(Docs/reviews/README.md 형식).
+볼 것: Docs/market.md와 수치·규칙 차이, 사고 되팔기로 골드를 만들 수 있는 길(특가 재료 포함, 시세 하한·상한, 반올림, 수량 0·음수·소수·100 초과), 시세가 시간에 따라 돌아오는 계산(lastTickAt 기준, 오프라인), 상인 도착·떠남·건너뛰기(advance 조각 경계, 시장을 나중에 지었을 때 nextMerchantAt), 상인 물건 생성(대장간 레벨별 장비, 희귀 옵션, 같은 id 중복), 장비 판매(입은 장비·기본 장비·장신구), 물약 판매와 자동 물약 유지, 은퇴자 보너스, 세이브 19 → 20.
+```
+
+**메모**
+
+---
+
+## 78. 시장 경제 측정 (GPT)
+
+**작업 77 뒤에 시작한다.**
+
+**전달할 내용**
+
+```
+시장이 진행과 골드 흐름에 주는 영향을 측정한다. tools/에 새 스크립트를 만들거나 tools/first-hour.ts를 넓힌다. core는 고치지 않는다. 결과는 Docs/market.md 끝에 "측정 (날짜)" 절로 적는다.
+
+1. 시장 없이 / 시장 Lv1로 마을 Lv3–5 구간을 시뮬레이션한다(남는 재료를 팔고 모자란 재료를 사는 단순한 플레이어). 건물 건설·제작에 걸리는 시간이 얼마나 줄어드는지.
+2. 사고 되팔기·특가로 골드를 버는 전략이 손해인지 확인(시세 상한·하한 근처 포함).
+3. 떠돌이 상인 장비가 대장간 진행을 너무 앞당기는지(Lv3 마을에서 희귀 장비를 살 수 있는 시점).
+4. 숫자를 바꿀 제안이 있으면 market.json 키와 값으로 적는다(고치지는 않는다).
+```
+
+**메모**
