@@ -8,7 +8,8 @@ import type { Bond, Hero } from './types'
 // The tavern (Docs/tavern.md): drinks the player sets up, a little more
 // mingling every season, and a bigger festival out front.
 
-export type TavernState = { season: string; used: number }
+// `last` is the latest round, for the village scene to show (Docs/tavern.md).
+export type TavernState = { season: string; used: number; last?: { heroIds: string[]; at: number } }
 
 function level(state: GameState): number {
   return Math.min(tavernRules.sessionsPerSeason.length, state.buildings.tavern)
@@ -77,7 +78,7 @@ export function gather(state: GameState, heroIds: string[], busy: Set<string>): 
   )
   const season = seasonKey(state.calendar)
   const used = state.tavern && state.tavern.season === season ? state.tavern.used + 1 : 1
-  return { ...state, notice: null, gold: state.gold - tavernRules.cost, bonds, roster, tavern: { season, used } }
+  return { ...state, notice: null, gold: state.gold - tavernRules.cost, bonds, roster, tavern: { season, used, last: { heroIds: ids, at: state.lastTickAt } } }
 }
 
 // Extra affinity each season for neighbours who mingle at the tavern.
