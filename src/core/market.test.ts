@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { marketRules, smithRules } from './data'
+import { alchemyRules, marketRules, smithRules } from './data'
 import { freshState, migrate, reduce, type GameState } from './game'
 import { forgeGear } from './gear'
 import { buyQuote, gearValue, merchantHere, potionValue, pressureOf, seasonDeal, sellQuote, updateMerchant } from './market'
@@ -99,5 +99,47 @@ describe('saves', () => {
     const opened = migrate(JSON.parse(JSON.stringify(old)), now)
     expect(opened.market.merchant).toBeNull()
     expect(opened.buildings.market).toBe(0)
+  })
+})
+
+describe('review bb1c2cf fixes', () => {
+  it('never profits from buying and selling straight back, bonuses and floor included', () => {
+    for (const market of [1, 2, 3]) {
+      for (const pressure of [marketRules.pressureMin, -0.3, 0, 1, marketRules.pressureMax]) {
+        for (const material of ['wood', 'iron', 'crystal'] as const) {
+          const base = town({ retirees: [] }, market)
+          const kept = { ...base, retirees: [{ hero: base.roster[0] ?? ({ id: 'r' } as never), retiredYear: 1, building: 'market' as const }] }
+          for (const state of [base, kept]) {
+            const at = { ...state, market: { ...state.market, pressure: { [material]: pressure }, pressureAt: state.lastTickAt } }
+            for (const amount of [1, 7, 50, 100]) {
+              const bought = reduce(at, { type: 'trade', material, amount })
+              const back = reduce(bought, { type: 'trade', material, amount: -amount })
+              expect(back.gold).toBeLessThan(at.gold)
+            }
+          }
+        }
+      }
+    }
+  })
+
+  it('prices a potion by the bottle, not the batch', () => {
+    const recipe = alchemyRules.potions.find((entry) => entry.id === 'heal')!
+    const batchCost = recipe.gold + recipe.herb * marketRules.basePrice.herb + recipe.bone * marketRules.basePrice.bone
+    expect(potionValue('heal') * alchemyRules.batch).toBeLessThan(batchCost)
+  })
+
+  it('sends the first merchant when the market opens, not before', () => {
+    const state = town({}, 0)
+    const later = reduce(state, { type: 'catchUp', now: now + 2 * marketRules.merchant.everyMs })
+    expect(later.market.merchant).toBeNull()
+    const opened = { ...later, buildings: { ...later.buildings, market: 1 } }
+    const arrived = updateMerchant(opened, later.lastTickAt + 1000)
+    expect(arrived.market.merchant?.arriveAt).toBeGreaterThanOrEqual(later.lastTickAt)
+  })
+
+  it('ignores amounts that are not numbers', () => {
+    const state = town({ potions: { heal: 2 } })
+    expect(reduce(state, { type: 'trade', material: 'wood', amount: Number.NaN }).materials.wood).toBe(200)
+    expect(reduce(state, { type: 'sellPotion', potionId: 'heal', count: Number.NaN }).potions.heal).toBe(2)
   })
 })

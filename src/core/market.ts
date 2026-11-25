@@ -86,12 +86,16 @@ export function buyQuote(state: GameState, material: MaterialName, amount: numbe
 
 export function sellQuote(state: GameState, material: MaterialName, amount: number): number {
   const demand = seasonDeal(state).wanted === material ? 1 + marketRules.deal.demand : 1
-  const ratio = sellRatio(state)
+  // Never near what buying pays, however the bonuses stack (review bb1c2cf).
+  const ratio = Math.min(marketRules.sellCap, sellRatio(state) * demand)
   let pressure = pressureOf(state, material)
   let total = 0
   for (let unit = 0; unit < amount; unit += 1) {
-    total += marketRules.basePrice[material] * ratio * (1 + pressure) * demand
+    // Each unit sold drops the price first, the mirror of buying, which pays
+    // and then raises it: buying units and selling them straight back walks
+    // the same prices, so it always loses (review bb1c2cf).
     pressure = Math.max(marketRules.pressureMin, pressure - marketRules.pressurePerUnit)
+    total += marketRules.basePrice[material] * ratio * (1 + pressure)
   }
   return Math.floor(total)
 }
@@ -108,7 +112,7 @@ export function trade(state: GameState, material: MaterialName, amount: number):
   if (state.buildings.market < 1) {
     return { ...state, notice: 'noMarket' }
   }
-  const units = Math.min(marketRules.maxTrade, Math.abs(Math.trunc(amount)))
+  const units = Number.isFinite(amount) ? Math.min(marketRules.maxTrade, Math.abs(Math.trunc(amount))) : 0
   if (units === 0 || !MARKET_MATERIALS.includes(material)) {
     return { ...state, notice: 'missing' }
   }
@@ -153,13 +157,18 @@ export function gearValue(gear: Gear): number {
   return Math.floor(recipeValue(gear.recipeId) * marketRules.gearSellRatio * (1 + gear.enhance * marketRules.enhanceSellBonus))
 }
 
-export function potionValue(potionId: PotionId): number {
+// What one bottle takes to brew: a batch makes several (review bb1c2cf).
+function bottleCost(potionId: string): number {
   const recipe = alchemyRules.potions.find((entry) => entry.id === potionId)
   if (!recipe) {
     return 0
   }
   const price = marketRules.basePrice
-  return Math.floor((recipe.gold + recipe.herb * price.herb + recipe.bone * price.bone) * marketRules.potionSellRatio)
+  return (recipe.gold + recipe.herb * price.herb + recipe.bone * price.bone) / alchemyRules.batch
+}
+
+export function potionValue(potionId: PotionId): number {
+  return Math.floor(bottleCost(potionId) * marketRules.potionSellRatio)
 }
 
 export function sellGear(state: GameState, gearId: string): GameState {
@@ -179,7 +188,7 @@ export function sellPotion(state: GameState, potionId: PotionId, count: number):
     return { ...state, notice: 'noMarket' }
   }
   const have = state.potions[potionId] ?? 0
-  const units = Math.min(have, Math.max(0, Math.trunc(count)))
+  const units = Number.isFinite(count) ? Math.min(have, Math.max(0, Math.trunc(count))) : 0
   if (units === 0) {
     return { ...state, notice: 'missing' }
   }
@@ -218,7 +227,9 @@ export function buyOffer(state: GameState, offerId: string): GameState {
 // bigger market). Arrivals missed while away are skipped, not stacked.
 export function updateMerchant(state: GameState, now: number): GameState {
   if (state.buildings.market < 1) {
-    return state
+    // No visits before the market opens: the clock waits, and the first
+    // merchant comes as it opens (review bb1c2cf).
+    return state.market.nextMerchantAt === now ? state : { ...state, market: { ...state.market, merchant: null, nextMerchantAt: now } }
   }
   let market = state.market
   if (market.merchant && market.merchant.leaveAt <= now) {
@@ -259,7 +270,7 @@ function stockFor(state: GameState, nonce: number): MerchantOffer[] {
       offers.push({ id, kind: 'gear', gear, price: Math.ceil(recipeValue(recipe.id) * rules.markup), sold: false })
     } else if (roll === 'potion') {
       const potion = pick(alchemyRules.potions)
-      const unit = potion.gold + potion.herb * marketRules.basePrice.herb + potion.bone * marketRules.basePrice.bone
+      const unit = bottleCost(potion.id)
       offers.push({ id, kind: 'potion', potionId: potion.id as PotionId, count: rules.potionCount, price: Math.ceil(unit * rules.potionCount * rules.markup), sold: false })
     } else {
       const material = pick(rules.materials as MaterialName[])
