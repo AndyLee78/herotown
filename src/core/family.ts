@@ -1,4 +1,4 @@
-import { bandForAge, ageBands, classById, dungeons, familyRules, maxAge, moraleRules, names, timeRules, traits, villageRules, personalityRules } from './data'
+import { bandForAge, ageBands, classById, dungeons, familyRules, maxAge, moraleRules, names, timeRules, traits, villageRules, personalityRules, legendsRules } from './data'
 import { genesFor, inheritGenes } from './genes'
 import { createHero } from './hero'
 import { cheer, mourn } from './morale'
@@ -556,7 +556,14 @@ export function familyLegends(state: GameState, family: string): Grave[] {
 
 // Potential a newborn of this family gets from its legends.
 export function legendBonus(state: GameState, family: string): number {
-  return Math.min(familyRules.legendPotentialMax, familyLegends(state, family).length * familyRules.legendPotential)
+  // With the hall of fame built, retired legends count too and each counts for
+  // more (Docs/legends.md).
+  const hall = Math.min(legendsRules.legendPotential.length, state.buildings.legends ?? 0)
+  if (hall < 1) {
+    return Math.min(familyRules.legendPotentialMax, familyLegends(state, family).length * familyRules.legendPotential)
+  }
+  const living = (state.retirees ?? []).filter((retiree) => isLegend(retiree.hero) && (retiree.hero.family ?? retiree.hero.name) === family).length
+  return Math.min(legendsRules.legendPotentialMax[hall - 1]!, (familyLegends(state, family).length + living) * legendsRules.legendPotential[hall - 1]!)
 }
 
 export type Ancestor = { id: string; name: string; gender?: Gender; living: boolean; hero?: Hero; grave?: Grave; generation: number }

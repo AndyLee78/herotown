@@ -1,0 +1,8 @@
+{
+  "legendPotential": [6, 7, 8],
+  "legendPotentialMax": [20, 25, 30],
+  "blessing": [0.02, 0.03, 0.04],
+  "shrineSlots": [2, 4, 6],
+  "shrineFame": 5,
+  "shrineMorale": 1
+}

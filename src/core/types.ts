@@ -235,6 +235,8 @@ export type PartyMember = {
   healBonus?: number
   // Extra attack and defense from family heirlooms the hero wears (Docs/tavern.md).
   heirloom?: { attack: number; defense: number }
+  // A legend among their forebears: attack goes up by this share (Docs/legends.md).
+  blessing?: number
 }
 
 export type LogEntry = {

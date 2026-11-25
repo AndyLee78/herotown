@@ -28,6 +28,8 @@ export const LOTS: Record<BuildingId, Lot> = {
   // North-west of the square it stood in front of the hall and hid its door
   // from the camera; here nothing stands behind it. The yard opens south.
   tavern: { x: 7.3, z: -2.1, w: 3.2, d: 2.8 },
+  // Placeholder spot for the hall of fame east of the inn until it gets a model (Docs/legends.md).
+  legends: { x: 12.3, z: -9.8, w: 3, d: 2.6 },
   // South-west of the square: the training yard, in plain view.
   training: { x: -5.6, z: 8.4, w: 3.6, d: 3.2 },
   // East and south-east.

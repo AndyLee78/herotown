@@ -8,6 +8,7 @@ import { enroll, graduate, teachSeason, unenroll } from './school'
 import { afterTrip, benchAtDeparture, feel } from './personality'
 import { festivalScale, gather, type TavernState } from './tavern'
 import { bequeath, bequeathed, comfortHeir, heirloomMods } from './heirloom'
+import { blessing, enshrine, shrineMorale, unshrine, type Shrine } from './legends'
 import { buyOffer, freshMarket, sellGear, sellPotion, trade, updateMerchant, type Market, type MerchantOffer } from './market'
 import { forgetSkill, readDrills, runDrills, startDrill, type Drill } from './drill'
 import { buyIntel, finishScout, isNest, nestSeason, readScout, seasonKey, startScout, type ScoutJob } from './nest'
@@ -23,7 +24,7 @@ import type { Rng } from './rng'
 import type { Genes } from './genes'
 import type { Bond, ClassId, CombatError, DungeonReport, Gear, GearSlot, Gender, Hero, PartyMember, PotionId, Proposal, Role, Row, Supplies, Tactics, TrinketId , StatKey } from './types'
 
-export const SAVE_VERSION = 21
+export const SAVE_VERSION = 22
 
 export type SeasonId = 'spring' | 'summer' | 'autumn' | 'winter'
 
@@ -62,7 +63,7 @@ export type SmithJob = {
   finishAt: number
 }
 
-export type BuildingId = 'hall' | 'inn' | 'house' | 'guild' | 'smith' | 'temple' | 'fountain' | 'alchemy' | 'magic' | 'training' | 'school' | 'market' | 'tavern'
+export type BuildingId = 'hall' | 'inn' | 'house' | 'guild' | 'smith' | 'temple' | 'fountain' | 'alchemy' | 'magic' | 'training' | 'school' | 'market' | 'tavern' | 'legends'
 export type MaterialName = 'wood' | 'stone' | 'iron' | 'bone' | 'herb' | 'crystal'
 
 export type AutoPolicy = 'material' | 'safe' | 'fixed'
@@ -181,6 +182,8 @@ export type GameNotice =
   | 'tavernFull'
   | 'gatherSize'
   | 'notHeir'
+  | 'noLegends'
+  | 'shrineFull'
   | 'drillHero'
   | 'trainingFull'
   | 'scoutBusy'
@@ -267,6 +270,8 @@ export type GameState = {
   market: Market
   // Rounds at the tavern this season (Docs/tavern.md).
   tavern: TavernState | null
+  // Heirlooms on display in the hall of fame (Docs/legends.md).
+  shrine: Shrine | null
 }
 
 export type QueueBuilding = 'smith' | 'alchemy' | 'magic'
@@ -347,6 +352,8 @@ export type GameAction =
   | { type: 'buyOffer'; offerId: string }
   | { type: 'gather'; heroIds: string[] }
   | { type: 'bequeath'; retireeId: string; gearId: string; toId: string | null }
+  | { type: 'enshrine'; gearId: string }
+  | { type: 'unshrine'; gearId: string }
   | { type: 'declineProposal'; a: string; b: string; now?: number }
   | { type: 'wish'; now: number }
   | { type: 'brew'; potionId: PotionId; now: number }
@@ -407,6 +414,7 @@ export function freshState(seed: number, now: number): GameState {
     interviews: null,
     market: freshMarket(now),
     tavern: null,
+    shrine: null,
   }
 }
 
@@ -667,6 +675,12 @@ function apply(state: GameState, action: GameAction): GameState {
   }
   if (action.type === 'buyIntel') {
     return buyIntel(state)
+  }
+  if (action.type === 'enshrine') {
+    return enshrine(state, action.gearId)
+  }
+  if (action.type === 'unshrine') {
+    return unshrine(state, action.gearId)
   }
   if (action.type === 'gather') {
     return gather(state, action.heroIds, busyHeroIds(state))
@@ -1226,7 +1240,10 @@ function withBonds(state: GameState, members: PartyMember[]): PartyMember[] {
     const part = parts[member.hero.id]
     const bonded = part && (part.total !== 0 || part.bond !== 0) ? { ...member, bonus: part.total, healBonus: part.bond } : member
     const heirloom = heirloomMods(state, member.hero)
-    return heirloom.attack > 0 || heirloom.defense > 0 ? { ...bonded, heirloom } : bonded
+    const withHeirloom = heirloom.attack > 0 || heirloom.defense > 0 ? { ...bonded, heirloom } : bonded
+    // A legend among their forebears watches over them (Docs/legends.md).
+    const blessed = blessing(state, member.hero)
+    return blessed > 0 ? { ...withHeirloom, blessing: blessed } : withHeirloom
   })
 }
 
@@ -1435,7 +1452,7 @@ function recoverRoster(state: GameState, elapsed: number, now: number): GameStat
     roster: state.roster.map((hero) => {
       const until = awayUntil.get(hero.id)
       // Morale drifts back toward its base wherever the hero is (Docs/morale.md).
-      hero = driftMorale(hero, hours)
+      hero = driftMorale(hero, hours, moraleRules.base + shrineMorale(state))
       if (until == null) {
         return recoverHero(hero, hours, rate, now)
       }
@@ -2096,6 +2113,7 @@ function normalize(record: Record<string, unknown>, now: number): GameState {
     interviews: readInterviews(record.interviews),
     market: readMarket(record.market, numberOr(record.lastTickAt, now)),
     tavern: readTavern(record.tavern),
+    shrine: readShrine(record.shrine),
     auto: isAuto(record.auto) ? record.auto : base.auto,
     notice: null,
   }
@@ -2449,6 +2467,17 @@ function drillReserved(state: GameState): Set<string> {
 }
 
 // Saves before version 20 have no market yet (Docs/market.md).
+function readShrine(value: unknown): Shrine | null {
+  if (value == null || typeof value !== 'object') {
+    return null
+  }
+  const shrine = value as Partial<Shrine>
+  return {
+    gear: Array.isArray(shrine.gear) ? shrine.gear.map((item) => normalizeGear(item, 'warrior')) : [],
+    honoured: Array.isArray(shrine.honoured) ? shrine.honoured.filter((id): id is string => typeof id === 'string') : [],
+  }
+}
+
 function readTavern(value: unknown): TavernState | null {
   if (value == null || typeof value !== 'object') {
     return null

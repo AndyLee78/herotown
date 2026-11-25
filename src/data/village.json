@@ -537,6 +537,37 @@
           "ms": 2400000
         }
       ]
+    },
+    {
+      "id": "legends",
+      "unlockLevel": 5,
+      "startLevel": 0,
+      "levels": [
+        {
+          "level": 1,
+          "gold": 220,
+          "wood": 40,
+          "stone": 80,
+          "iron": 10,
+          "ms": 1800000
+        },
+        {
+          "level": 2,
+          "gold": 380,
+          "wood": 60,
+          "stone": 120,
+          "iron": 20,
+          "ms": 3600000
+        },
+        {
+          "level": 3,
+          "gold": 560,
+          "wood": 80,
+          "stone": 160,
+          "iron": 30,
+          "ms": 5400000
+        }
+      ]
     }
   ]
 }

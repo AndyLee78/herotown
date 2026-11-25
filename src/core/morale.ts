@@ -23,9 +23,10 @@ export function shiftMorale(hero: Hero, amount: number): Hero {
 }
 
 // Morale drifts back toward its base as time passes.
-export function driftMorale(hero: Hero, hours: number): Hero {
+// `base` is where spirits settle; heirlooms on display raise it (Docs/legends.md).
+export function driftMorale(hero: Hero, hours: number, base = moraleRules.base): Hero {
   const morale = moraleOf(hero)
-  const gap = moraleRules.base - morale
+  const gap = base - morale
   if (gap === 0 || hours <= 0) {
     return hero
   }

@@ -68,6 +68,8 @@ const BUILDING_SCREEN: Record<BuildingId, Screen> = {
   market: 'market',
   // The tavern screen comes with its own task (Docs/tavern.md); until then it opens the town.
   tavern: 'tavern',
+  // The hall of fame screen comes with its own task (Docs/legends.md); until then it opens the town.
+  legends: 'town',
   training: 'training',
 }
 

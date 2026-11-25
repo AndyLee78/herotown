@@ -320,7 +320,8 @@
     "training": "Training Ground",
     "school": "School",
     "market": "Market",
-    "tavern": "Tavern"
+    "tavern": "Tavern",
+    "legends": "Hall of Fame"
   },
   "buildingHint": {
     "hall": "See your village level and next goal.",
@@ -335,7 +336,8 @@
     "training": "Brings heroes who fall behind up to speed. Learned skills can be swapped here.",
     "school": "Teaches children: grows a stat and their potential, and lets them pick the class they take when they come of age.",
     "market": "Buy and sell materials, and sell spare gear and potions. A wandering merchant drops by now and then.",
-    "tavern": "Where heroes get together. Rounds of drinks build bonds, and festivals grow bigger."
+    "tavern": "Where heroes get together. Rounds of drinks build bonds, and festivals grow bigger.",
+    "legends": "Honours heroes who became legends: stronger family bonuses, a blessing on their descendants, and heirlooms on display."
   },
   "resource": {
     "wood": "Wood {{amount}}",
@@ -457,7 +459,9 @@
     "noTavern": "There is no tavern yet.",
     "tavernFull": "No more rounds this season.",
     "gatherSize": "A round is for two or three heroes.",
-    "notHeir": "Heirlooms go only to descendants."
+    "notHeir": "Heirlooms go only to descendants.",
+    "noLegends": "There is no hall of fame yet.",
+    "shrineFull": "The display is full."
   },
   "defeat": {
     "noHealer": "Bring a healer to keep the party going.",
@@ -1128,7 +1132,8 @@
       "training": "Training time −{{value}}%",
       "school": "Tuition −{{value}}%",
       "market": "Selling prices +{{value}}%",
-      "tavern": "Bonds from drinks +{{value}}%"
+      "tavern": "Bonds from drinks +{{value}}%",
+      "legends": "Ancestral blessing +{{value}}%"
     }
   },
   "trinket": {
