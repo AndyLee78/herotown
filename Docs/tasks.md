@@ -135,7 +135,7 @@ Claude Code, Cursor, GPT(Codex)가 함께 쓰는 작업 목록이다. 작업 하
 | 93 | 마을 Lv8–10·상위 레벨·전설 장비 화면 | GPT | `src/ui/App.tsx`, `src/ui/game/*.tsx`, `src/ui/styles.css`, `src/locales/*` | 보류 (4b에서 다시 씀, Docs/endgame.md) |
 | 94 | 4a core 코드 리뷰 (d89e486) | GPT | `Docs/reviews/d89e486.md` (새 파일만) | 보류 (4b에서 다시 씀) |
 | 95 | 4a 측정: Lv8–10 도달·후반 재료·전설 장비 | GPT | `tools/*`, `Docs/endgame.md`의 측정 절 | 보류 (4b에서 다시 씀) |
-| 96 | 요일 던전·심연 전투 배경 3D | Cursor | `src/ui/voxel/*`, `src/ui/BattleView.tsx`, `src/ui/ExpeditionPanel.tsx` | 대기 (97과 함께 가능, 92 뒤) |
+| 96 | 요일 던전·심연 전투 배경 3D | Cursor | `src/ui/voxel/*`, `src/ui/BattleView.tsx`, `src/ui/ExpeditionPanel.tsx` | 완료 (4ae5c02) |
 | 97 | 금고·요일 던전·심연 화면 | GPT | `src/ui/App.tsx`, `src/ui/game/*.tsx`, `src/ui/styles.css`, `src/locales/*` | 대기 (96과 함께 가능) |
 | 98 | 4a core 코드 리뷰 (b80777c) | GPT | `Docs/reviews/b80777c.md` (새 파일만) | 대기 (97 뒤) |
 | 99 | 4a 측정: 요일 던전 승률·심연 깊이·하루 자원 | GPT | `tools/*`, `Docs/endgame.md`의 측정 절 | 대기 (98 뒤) |
@@ -2331,6 +2331,8 @@ Docs/endgame.md의 4a를 읽고 새 던전의 전투 배경을 만든다. src/ui
 ```
 
 **메모**
+
+BattleScene이 special·element·difficulty·abyssFrom을 받아 flame/frost/light/abyss 테마를 고른다(기존 tier·둥지 유지). 심연은 깊이에 따라 붉게 어두워지고 떠다니는 파편·층 라벨을 붙인다. BattleView·ExpeditionPanel이 dungeonById와 trip.abyssFrom을 넘긴다. tsc·test·build·battleTheme 단위 테스트 통과. 디버그 세이브로 요일/심연 리플레이는 브라우저에서 직접 보지 못함.
 
 ---
 
