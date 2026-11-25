@@ -1,4 +1,4 @@
-// Run: npx tsx tools/endgame-4a.ts [--4b [days=32] [seeds=20] [Lv9-shards,Lv10-shards]]
+// Run: npx tsx tools/endgame-4a.ts [--4b|--4c [days=32] [seeds=20] [Lv9-shards,Lv10-shards]]
 import { classById, endgameRules, lifeRules, specialDungeons, villageRules } from '../src/core/data'
 import { DEFAULT_TACTICS, runDungeon } from '../src/core/dungeon'
 import { freshState, presetById, reduce, type GameState } from '../src/core/game'
@@ -166,13 +166,13 @@ function measure4a() {
   }))
 }
 
-function measure4b(days: number, seedCount: number) {
+function measureVillage(days: number, seedCount: number, raidAndInvasion: boolean) {
   if (!Number.isSafeInteger(days) || days < 1 || !Number.isSafeInteger(seedCount) || seedCount < 1) {
-    throw new Error('Usage: npx tsx tools/endgame-4a.ts --4b [positive integer days] [positive integer seeds]')
+    throw new Error('Usage: npx tsx tools/endgame-4a.ts --4b|--4c [positive integer days] [positive integer seeds]')
   }
   const runs: ReturnType<typeof simulateVillage>[] = []
   for (let seed = 1; seed <= seedCount; seed += 1) {
-    const run = simulateVillage(seed, days, undefined, true)
+    const run = simulateVillage(seed, days, undefined, true, raidAndInvasion)
     for (const key of vaultKeys) {
       const spent = run.spending.promote[key] + run.spending.build[key] + run.spending.craft[key]
       if (run.income[key] - spent !== run.state.vault[key]) throw new Error(`Seed ${seed}: unexpected vault flow for ${key}`)
@@ -192,6 +192,10 @@ function measure4b(days: number, seedCount: number) {
       'fame wait h': eligible.length ? median(eligible.map(({ promotionWait }) => promotionWait[level]!.fame / hour)) : '—',
       'depth wait h': eligible.length ? median(eligible.map(({ promotionWait }) => promotionWait[level]!.depth / hour)) : '—',
       'offering wait h': eligible.length ? median(eligible.map(({ promotionWait }) => promotionWait[level]!.offering / hour)) : '—',
+      ...(raidAndInvasion ? {
+        'raid wait h': eligible.length ? median(eligible.map(({ promotionWait }) => promotionWait[level]!.raid / hour)) : '—',
+        'defence wait h': eligible.length ? median(eligible.map(({ promotionWait }) => promotionWait[level]!.invasion / hour)) : '—',
+      } : {}),
     }
   }))
   console.table(vaultKeys.map((resource) => ({
@@ -206,10 +210,38 @@ function measure4b(days: number, seedCount: number) {
   console.table((['routine only', 'material surplus'] as const).map((metric) => ({
     metric, 'online %': median(runs.map(({ totals, onlineMs }) => 100 * (totals[metric] ?? 0) / onlineMs)),
   })))
-  console.log('Median departures:', { trials: median(runs.map(({ specialRuns }) => specialRuns.trials)), abyss: median(runs.map(({ specialRuns }) => specialRuns.abyss)) })
+  console.log('Median departures:', { trials: median(runs.map(({ specialRuns }) => specialRuns.trials)), abyss: median(runs.map(({ specialRuns }) => specialRuns.abyss)), raid: median(runs.map(({ specialRuns }) => specialRuns.raid)) })
+  if (!raidAndInvasion) return
+  const weeks = runs.flatMap(({ raidWeeks }) => raidWeeks)
+  type Week = typeof weeks[number]
+  function raidRow(label: string, samples: Week[]) {
+    const kills = samples.flatMap((sample) => sample.killedAt == null ? [] : [{ ...sample, killedAt: sample.killedAt }])
+    return {
+      label, weeks: samples.length, kills: kills.length,
+      'days to kill': kills.length ? median(kills.map(({ openedAt, killedAt }) => (killedAt - openedAt) / day)) : '—',
+      'departures (killed week)': kills.length ? median(kills.map(({ departures }) => departures)) : '—',
+      'departures (all weeks)': median(samples.map(({ departures }) => departures)),
+    }
+  }
+  console.table([...new Set(weeks.map(({ week }) => week))].sort().map((week) => {
+    const samples = weeks.filter((sample) => sample.week === week)
+    return raidRow(`${week} (${samples[0]!.boss})`, samples)
+  }))
+  console.table(endgameRules.raid.bosses.map(({ id }) => raidRow(id, weeks.filter(({ boss }) => boss === id))))
+  const invasions = runs.flatMap((run) => run.invasions)
+  console.table([...new Set(invasions.map(({ round }) => round))].sort((a, b) => a - b).map((round) => {
+    const encounters = invasions.filter((entry) => entry.round === round)
+    const losses = encounters.filter(({ won }) => !won)
+    return {
+      round, attempts: encounters.length, wins: encounters.length - losses.length,
+      'gold lost on defeat': losses.length ? median(losses.map(({ goldLost }) => goldLost)) : '—',
+      'materials lost on defeat': losses.length ? median(losses.map(({ materialsLost }) => Object.values(materialsLost).reduce((total, amount) => total + amount, 0))) : '—',
+      'valor on win': encounters.find(({ won }) => won)?.valor ?? '—',
+    }
+  }))
 }
 
-const mode = process.argv.indexOf('--4b', 1)
+const mode = process.argv.findIndex((arg, index) => index > 0 && (arg === '--4b' || arg === '--4c'))
 if (mode >= 0) {
   const override = process.argv[mode + 3]
   if (override != null) {
@@ -221,7 +253,7 @@ if (mode >= 0) {
       if (promotion.level === 10) promotion.offering.abyss = level10!
     }
   }
-  measure4b(Number(process.argv[mode + 1] ?? 32), Number(process.argv[mode + 2] ?? 20))
+  measureVillage(Number(process.argv[mode + 1] ?? 32), Number(process.argv[mode + 2] ?? 20), process.argv[mode] === '--4c')
 } else {
   measure4a()
 }

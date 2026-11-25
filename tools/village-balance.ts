@@ -7,9 +7,11 @@ import { bedCount, busyHeroIds, dungeonUnlocked, festivalCost, freshState, prese
 import { gearMods } from '../src/core/gear'
 import { guideStatus } from '../src/core/guide'
 import { canDeploy, isChild } from '../src/core/hero'
+import { warned } from '../src/core/invasion'
 import { MARKET_MATERIALS, buyQuote } from '../src/core/market'
 import { lowMorale } from '../src/core/morale'
 import { nestRevealed, seasonKey } from '../src/core/nest'
+import { currentRaid, raidBoss, raidWeek } from '../src/core/raid'
 import { gatherLeft } from '../src/core/tavern'
 import { ESSENCES, freshVault, specialBlock, type Vault, type VaultKey } from '../src/core/trials'
 import type { Hero, PotionId } from '../src/core/types'
@@ -28,12 +30,14 @@ const route = [...dungeons].sort((a, b) => a.tier - b.tier || a.recommendedLevel
 const blockedTypes = ['gold', 'materials', 'fame', 'guild record', 'idle', 'routine only', 'morale', 'fatigue', 'injury', 'overlap', 'gold surplus', 'material surplus'] as const
 type Block = typeof blockedTypes[number]
 type Cost = { gold: number } & Partial<Record<MaterialName | VaultKey, number>>
-export const vaultKeys = [...ESSENCES, 'abyss'] as const
+export const vaultKeys = [...ESSENCES, 'abyss', 'scale', 'crown', 'core', 'valor'] as const
 const trials = specialDungeons.filter((entry) => entry.special === 'weekday')
 const hurt = (hero: Hero) => hero.condition === 'injured' || hero.condition === 'critical'
 const roleRank = (hero: Hero) => ({ tank: 0, healer: 1, dps: 2, support: 3 })[classById(hero.classId).role]
 
-export function simulateVillage(seed: number, days: number, stopAtTown?: number, lateGame = false) {
+type RaidWeekSample = { week: string; boss: string; openedAt: number; departures: number; killedAt?: number }
+
+export function simulateVillage(seed: number, days: number, stopAtTown?: number, lateGame = false, raidAndInvasion = false) {
   let state = freshState(seed, start)
   let now = start
   let acted = false
@@ -62,11 +66,21 @@ export function simulateVillage(seed: number, days: number, stopAtTown?: number,
   let lastLevelAt = start
   const income = freshVault()
   const spending = { promote: freshVault(), build: freshVault(), craft: freshVault() }
-  const promotionWait: Record<number, { fame: number; depth: number; offering: number } | undefined> = {}
-  const specialRuns = { trials: 0, abyss: 0 }
+  const promotionWait: Record<number, { fame: number; depth: number; offering: number; raid: number; invasion: number } | undefined> = {}
+  const specialRuns = { trials: 0, abyss: 0, raid: 0 }
+  const raidWeeks = new Map<string, RaidWeekSample>()
+  const invasions: { round: number; won: boolean; waves: number; goldLost: number; materialsLost: Record<MaterialName, number>; valor: number }[] = []
   let abyssRetryAt = start
+  let raidRetryAt = start
   const nextPromotion = () => endgameRules.promotions.find(({ level }) => level === state.promoted + 1)
   const vaultShort = (cost: Partial<Vault>) => vaultKeys.some((key) => state.vault[key] < (cost[key] ?? 0))
+  function raidSample(week: string) {
+    const earlier = raidWeeks.get(week)
+    if (earlier) return earlier
+    const sample = { week, boss: raidBoss(week).id, openedAt: now, departures: 0 }
+    raidWeeks.set(week, sample)
+    return sample
+  }
   const mark = (key: string, timestamp = now) => { times[key] ??= (timestamp - start) / hour }
   const cast = (action: GameAction) => {
     const next = reduce(state, action)
@@ -81,6 +95,7 @@ export function simulateVillage(seed: number, days: number, stopAtTown?: number,
   }
   function record() {
     const level = townLevelOf(state).level
+    if (raidAndInvasion && level >= endgameRules.raid.unlockTown) raidSample(raidWeek(now))
     if (level > priorLevel) {
       for (let reached = priorLevel + 1; reached <= level; reached += 1) {
         mark(`town ${reached}`)
@@ -169,8 +184,14 @@ export function simulateVillage(seed: number, days: number, stopAtTown?: number,
         cast({ type: 'enroll', heroId: child.id, focus: 'vit', career: null })
       }
     }
-    if (state.buildings.training > 0 && !state.automation.drill && state.gold >= 100) cast({ type: 'automation', drill: true })
-    if (now - start >= hour && state.buildings.guild > 0 && !state.auto.enabled) cast({ type: 'auto', enabled: true })
+    const holding = raidAndInvasion && warned(state, now)
+    if (holding) {
+      if (state.automation.drill) cast({ type: 'automation', drill: false })
+      if (state.auto.enabled) cast({ type: 'auto', enabled: false })
+    } else {
+      if (state.buildings.training > 0 && !state.automation.drill && state.gold >= 100) cast({ type: 'automation', drill: true })
+      if (now - start >= hour && state.buildings.guild > 0 && !state.auto.enabled) cast({ type: 'auto', enabled: true })
+    }
     while (guideStatus(state).done) if (!cast({ type: 'claimGuide' })) break
     if (state.festival?.season !== seasonKey(state.calendar) && state.gold >= festivalCost(state) + 100 && state.roster.length >= 3 && cast({ type: 'festival' })) festivals += 1
     if (gatherLeft(state) && state.gold >= 100) {
@@ -271,14 +292,39 @@ export function simulateVillage(seed: number, days: number, stopAtTown?: number,
     if (townLevelOf(state).level < 7) return
     const rule = nextPromotion()
     if (!rule) return
-    const wait = promotionWait[rule.level] ??= { fame: 0, depth: 0, offering: 0 }
+    const wait = promotionWait[rule.level] ??= { fame: 0, depth: 0, offering: 0, raid: 0, invasion: 0 }
     const fame = state.fame < villageRules.levels.find(({ level }) => level === rule.level)!.fame
     const depth = state.abyss.best < rule.abyssBest
     const offering = vaultShort(rule.offering)
+    const raid = state.raidKills < (rule.raidKills ?? 0)
+    const invasion = (state.invasion?.wins ?? 0) < (rule.invasionWins ?? 0)
     if (fame) wait.fame += step
     if (depth) wait.depth += step
     if (offering) wait.offering += step
-    if (!fame && !depth && !offering) cast({ type: 'promote' })
+    if (raid) wait.raid += step
+    if (invasion) wait.invasion += step
+    if (!fame && !depth && !offering && !raid && !invasion) cast({ type: 'promote' })
+  }
+
+  function prepareDefenders() {
+    const invasion = state.invasion
+    if (!invasion) return
+    const main = presetById(state, state.presetId)
+    if (!main) return
+    const assigned = new Set(main.slots.map(({ id }) => id))
+    const reserves = state.roster.filter((hero) => canDeploy(hero) && !assigned.has(hero.id))
+      .sort((a, b) => b.level - a.level)
+    const backups = state.presets.filter(({ id }) => id !== main.id).slice(0, endgameRules.invasion.maxDefenders - 1)
+    for (const [index, backup] of backups.entries()) {
+      const heroes = reserves.filter((_, member) => member % backups.length === index).slice(0, combatRules.maxParty)
+      if (backup.slots.length === heroes.length && backup.slots.every(({ id }) => heroes.some((hero) => hero.id === id))) continue
+      for (const slot of backup.slots) state = reduce(state, { type: 'remove', id: slot.id, presetId: backup.id })
+      for (const hero of heroes) state = reduce(state, { type: 'add', id: hero.id, presetId: backup.id })
+    }
+    const ids = [main.id, ...backups.map(({ id }) => id)]
+    if (ids.length !== invasion.defenders.length || ids.some((id, index) => id !== invasion.defenders[index])) {
+      cast({ type: 'defend', presetIds: ids })
+    }
   }
 
   function specialExpedition(members: Hero[], strength: number) {
@@ -289,7 +335,8 @@ export function simulateVillage(seed: number, days: number, stopAtTown?: number,
       .sort((a, b) => Number(b.recommendedLevel <= strength) - Number(a.recommendedLevel <= strength)
         || (a.recommendedLevel <= strength ? b.recommendedLevel - a.recommendedLevel : a.recommendedLevel - b.recommendedLevel)
         || ((offering?.[b.element!] ?? 0) - state.vault[b.element!]) - ((offering?.[a.element!] ?? 0) - state.vault[a.element!]))[0]
-    const target = trial?.id ?? (now >= abyssRetryAt && !specialBlock(state, 'abyss', now) ? 'abyss' : undefined)
+    const raid = raidAndInvasion && now >= raidRetryAt && dungeonUnlocked(state, 'raid') && !currentRaid(state, now).killed
+    const target = raid ? 'raid' : trial?.id ?? (now >= abyssRetryAt && !specialBlock(state, 'abyss', now) ? 'abyss' : undefined)
     if (!target) return false
     state = reduce(state, { type: 'dungeon', id: target })
     const preset = presetById(state, state.presetId)!
@@ -299,7 +346,13 @@ export function simulateVillage(seed: number, days: number, stopAtTown?: number,
       if ((preset.supplies?.[id] ?? 0) !== count) state = reduce(state, { type: 'supplies', potionId: id, count })
     }
     if (!cast({ type: 'depart', presetId: state.presetId, confirm: true, now })) return false
-    if (trial) specialRuns.trials += 1
+    if (raid) {
+      specialRuns.raid += 1
+      const trip = state.expeditions.at(-1)!
+      const progress = trip.raid!
+      raidSample(progress.week).departures += 1
+      if (progress.left == null || progress.left >= (progress.start ?? progress.max ?? 0)) raidRetryAt = trip.returnAt + 2 * hour
+    } else if (trial) specialRuns.trials += 1
     else {
       specialRuns.abyss += 1
       const trip = state.expeditions.at(-1)!
@@ -309,6 +362,7 @@ export function simulateVillage(seed: number, days: number, stopAtTown?: number,
   }
 
   function expedition(blocks: Set<Block>, shortage?: MaterialName) {
+    if (raidAndInvasion && warned(state, now)) return
     const members = party()
     const strength = members.length ? members.reduce((sum, hero) => sum + hero.level, 0) / members.length : 0
     const mainReport = state.history[0]
@@ -386,6 +440,7 @@ export function simulateVillage(seed: number, days: number, stopAtTown?: number,
       const blocks = new Set<Block>()
       upkeep()
       prepareParty()
+      if (raidAndInvasion) prepareDefenders()
       if (lateGame) tryPromotion(step)
       const short = projects(blocks)
       workshops()
@@ -410,13 +465,42 @@ export function simulateVillage(seed: number, days: number, stopAtTown?: number,
       for (const kind of blockedTypes) streaks[kind] = 0
     }
     const nonce = state.auto.nonce ?? 0
-    now += step
+    const due = state.invasion?.nextAt
+    const end = now + step
+    if (raidAndInvasion && due != null && now < due && due <= end) {
+      // Settle events strictly before the invasion so returns and production
+      // before the defence are not confused with its losses.
+      if (due - 1 > now) {
+        const before = reduce(state, { type: 'catchUp', now: due - 1 })
+        trackSettlement(before)
+        state = before
+      }
+      const next = reduce(state, { type: 'catchUp', now: due })
+      const last = next.invasion?.last
+      if (last?.at === due) {
+        // Only gold is persisted in the result. Compare the same 1 ms tick
+        // with the invasion deferred to estimate each lost material.
+        const without = last.won ? next : reduce({ ...state, invasion: { ...state.invasion!, nextAt: due + hour } }, { type: 'catchUp', now: due })
+        const materialsLost = Object.fromEntries(MARKET_MATERIALS.map((key) => [key, without.materials[key] - next.materials[key]])) as Record<MaterialName, number>
+        invasions.push({ round: next.invasion!.count, won: last.won, waves: last.waves, goldLost: last.lost?.gold ?? 0, materialsLost, valor: next.vault.valor - state.vault.valor })
+      }
+      trackSettlement(next)
+      state = next
+    }
+    now = end
     const next = reduce(state, { type: 'catchUp', now })
-    if (lateGame) for (const key of vaultKeys) income[key] += next.vault[key] - state.vault[key]
+    trackSettlement(next)
     state = next
     autoRuns += (state.auto.nonce ?? 0) - nonce
   }
-  return { state, times, totals, beforeSeven, longest, materialWait, onlineMs, progressionMs, offlineMs, manualRuns, autoRuns, queued, bought, gatherings, festivals, fame: state.fame, gold: state.gold, cleared: state.cleared.length, peakUnlocks, fastUnlocks, income, spending, promotionWait, specialRuns }
+  function trackSettlement(next: GameState) {
+    if (lateGame) for (const key of vaultKeys) income[key] += next.vault[key] - state.vault[key]
+    if (raidAndInvasion && next.raidKills > state.raidKills && next.raid) {
+      const sample = raidWeeks.get(next.raid.week)
+      if (sample) sample.killedAt = next.history.find((report) => report.dungeonId === 'raid' && Object.values(report.gained?.vault ?? {}).some((amount) => amount > 0))?.finishedAt ?? next.lastTickAt
+    }
+  }
+  return { state, times, totals, beforeSeven, longest, materialWait, onlineMs, progressionMs, offlineMs, manualRuns, autoRuns, queued, bought, gatherings, festivals, fame: state.fame, gold: state.gold, cleared: state.cleared.length, peakUnlocks, fastUnlocks, income, spending, promotionWait, specialRuns, raidWeeks: [...raidWeeks.values()], invasions }
 }
 
 export function villageCheckpoint(seed: number, level: number): GameState | null {
