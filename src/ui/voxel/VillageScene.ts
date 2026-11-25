@@ -14,7 +14,7 @@ import {
 } from '../../core'
 import { buildBody, buildCharacter, idlePose, walkPose, type Rig } from './character'
 import { Builder, disposeTree, makeLabel } from './kit'
-import { hashString, lookFor, lookKey, seeded } from './look'
+import { gearAuraOf, hashString, lookFor, lookKey, seeded } from './look'
 import { buildMoodBubble, idleSeconds, strollPace, type MoodKind } from './mood'
 import {
   GATE,
@@ -987,7 +987,8 @@ export class VillageScene {
     for (const { hero, kind } of entries) {
       seen.add(hero.id)
       const look = lookFor(hero)
-      const key = lookKey(look)
+      const aura = gearAuraOf(hero.gear)
+      const key = `${lookKey(look)}|${aura ?? ''}`
       const existing = this.walkers.get(hero.id)
       if (existing && existing.key === key && existing.kind === kind) {
         this.touchMood(existing, hero)
@@ -996,7 +997,7 @@ export class VillageScene {
       if (existing) {
         existing.root.remove(existing.rig.group)
         disposeTree(existing.rig.group)
-        existing.rig = buildCharacter(look)
+        existing.rig = buildCharacter(look, aura)
         existing.root.add(existing.rig.group)
         existing.key = key
         if (existing.kind !== kind) {
@@ -1014,7 +1015,7 @@ export class VillageScene {
         id: hero.id,
         kind,
         root: new THREE.Group(),
-        rig: buildCharacter(look),
+        rig: buildCharacter(look, aura),
         key,
         state: 'idle',
         away: false,

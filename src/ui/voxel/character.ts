@@ -1,7 +1,18 @@
 import * as THREE from 'three'
 import type { ClassId } from '../../core'
 import { Builder } from './kit'
-import { ageLook, hairColor, type HairStyle, type Look } from './look'
+import { ageLook, hairColor, type GearAura, type HairStyle, type Look } from './look'
+
+export type { GearAura }
+
+const AURA_TRIM: Record<Exclude<GearAura, null>, string> = {
+  epic: '#9b6bff',
+  legend: '#d9b54a',
+}
+const AURA_BLADE: Record<Exclude<GearAura, null>, string> = {
+  epic: '#c79bff',
+  legend: '#ffe27a',
+}
 
 export type Weapon = 'sword' | 'dagger' | 'bow' | 'staff' | 'mace' | 'lute' | 'fan' | 'rusty' | 'pick' | 'none'
 export type Headwear = 'wizard' | 'feather' | 'helmet' | 'hood' | 'crown'
@@ -47,6 +58,7 @@ export type BodySpec = {
   head: number
   stoop: number
   shoe?: string
+  aura?: GearAura
 }
 
 export type Rig = {
@@ -65,10 +77,12 @@ export function outfitFor(classId: ClassId): Outfit {
   return OUTFITS[classId]
 }
 
-export function buildCharacter(look: Look): Rig {
+export function buildCharacter(look: Look, aura: GearAura = null): Rig {
   const age = ageLook(look.age)
-  return buildBody({
-    outfit: OUTFITS[look.classId],
+  const base = OUTFITS[look.classId]
+  const outfit = aura ? { ...base, trim: AURA_TRIM[aura] } : base
+  const rig = buildBody({
+    outfit,
     skin: look.skin,
     eye: look.eye,
     blush: true,
@@ -78,7 +92,9 @@ export function buildCharacter(look: Look): Rig {
     scale: age.scale * look.height,
     head: age.head,
     stoop: age.stoop,
+    aura,
   })
+  return rig
 }
 
 // Each moving part is one merged mesh. Only the torso and head cast shadows,
@@ -146,11 +162,21 @@ export function buildBody(spec: BodySpec): Rig {
       parts.box(0.16, 0.08, 0.19, outfit.trim === '#c9a43a' ? '#b8c0c8' : outfit.trim, 0, 0.02, 0)
     }
     if (arm === armR) {
-      drawWeapon(parts, outfit.weapon)
+      drawWeapon(parts, outfit.weapon, spec.aura ?? null)
     }
     arm.add(parts.build({ castShadow: false }))
   }
   torso.add(armL, armR)
+  if (spec.aura) {
+    const glow = AURA_BLADE[spec.aura]
+    const spark = new Builder()
+      .box(0.1, 0.1, 0.1, glow, 0.16, 0.38, -0.12, { glow: true })
+      .box(0.08, 0.08, 0.08, glow, -0.14, 0.48, -0.08, { glow: true })
+      .box(0.06, 0.06, 0.06, glow, 0.02, 0.55, -0.16, { glow: true })
+      .build({ castShadow: false, receiveShadow: false })
+    spark.name = 'gearAura'
+    torso.add(spark)
+  }
 
   const head = new THREE.Group()
   head.position.y = 0.32
@@ -234,45 +260,58 @@ function drawHair(b: Builder, style: HairStyle, color: string) {
 }
 
 // Weapons hang from the right hand (arm-local y = -0.27).
-function drawWeapon(b: Builder, weapon: Weapon) {
+function drawWeapon(b: Builder, weapon: Weapon, aura: GearAura = null) {
   const forward = Math.PI / 2
+  const blade = aura ? AURA_BLADE[aura] : null
+  const trim = aura ? AURA_TRIM[aura] : null
   if (weapon === 'sword' || weapon === 'rusty') {
     const rusty = weapon === 'rusty'
     b.within(0, -0.27, 0.03, forward, 0, 0, () => {
       b.box(0.05, 0.12, 0.05, '#5a3d28')
-        .box(0.2, 0.04, 0.06, rusty ? '#7a6a55' : '#c9a43a', 0, 0.07, 0)
-        .box(0.07, 0.46, 0.035, rusty ? '#9c8f7c' : '#dfe4ea', 0, 0.32, 0)
+        .box(0.2, 0.04, 0.06, rusty ? '#7a6a55' : (trim ?? '#c9a43a'), 0, 0.07, 0)
+        .box(0.07, 0.46, 0.035, rusty ? '#9c8f7c' : (blade ?? '#dfe4ea'), 0, 0.32, 0, blade ? { glow: true } : {})
     })
   } else if (weapon === 'dagger') {
     b.within(0, -0.27, 0.03, forward, 0, 0, () => {
-      b.box(0.045, 0.1, 0.045, '#3a2a20').box(0.13, 0.035, 0.05, '#8a3434', 0, 0.06, 0).box(0.05, 0.22, 0.03, '#cfd5dc', 0, 0.18, 0)
+      b.box(0.045, 0.1, 0.045, '#3a2a20')
+        .box(0.13, 0.035, 0.05, trim ?? '#8a3434', 0, 0.06, 0)
+        .box(0.05, 0.22, 0.03, blade ?? '#cfd5dc', 0, 0.18, 0, blade ? { glow: true } : {})
     })
   } else if (weapon === 'mace') {
     b.within(0, -0.27, 0.03, forward, 0, 0, () => {
-      b.box(0.045, 0.32, 0.045, '#6b4a30', 0, 0.1, 0).box(0.15, 0.15, 0.15, '#c9a43a', 0, 0.3, 0)
+      b.box(0.045, 0.32, 0.045, '#6b4a30', 0, 0.1, 0).box(0.15, 0.15, 0.15, blade ?? '#c9a43a', 0, 0.3, 0, blade ? { glow: true } : {})
     })
   } else if (weapon === 'pick') {
     b.within(0, -0.27, 0.03, forward, 0, 0, () => {
-      b.box(0.045, 0.42, 0.045, '#6b4a30', 0, 0.15, 0).box(0.36, 0.06, 0.05, '#8a8f98', 0, 0.36, 0, { rz: 0.15 })
+      b.box(0.045, 0.42, 0.045, '#6b4a30', 0, 0.15, 0).box(0.36, 0.06, 0.05, blade ?? '#8a8f98', 0, 0.36, 0, { rz: 0.15, ...(blade ? { glow: true } : {}) })
     })
   } else if (weapon === 'staff') {
     b.within(0, -0.27, 0.05, 0, 0, 0, () => {
-      b.box(0.05, 1.0, 0.05, '#7a5236', 0, 0.28, 0).box(0.18, 0.05, 0.05, '#7a5236', 0, 0.76, 0).box(0.13, 0.13, 0.13, '#7fe3ff', 0, 0.86, 0, { glow: true })
+      b.box(0.05, 1.0, 0.05, '#7a5236', 0, 0.28, 0)
+        .box(0.18, 0.05, 0.05, '#7a5236', 0, 0.76, 0)
+        .box(0.13, 0.13, 0.13, blade ?? '#7fe3ff', 0, 0.86, 0, { glow: true })
     })
   } else if (weapon === 'bow') {
     b.within(0, -0.27, 0.09, 0, 0, 0, () => {
-      b.box(0.05, 0.2, 0.05, '#7a5236')
-        .box(0.05, 0.26, 0.05, '#7a5236', 0, 0.21, -0.04, { rx: 0.3 })
-        .box(0.05, 0.26, 0.05, '#7a5236', 0, -0.21, -0.04, { rx: -0.3 })
-        .box(0.012, 0.64, 0.012, '#f2efe6', 0, 0, -0.09)
+      b.box(0.05, 0.2, 0.05, trim ?? '#7a5236')
+        .box(0.05, 0.26, 0.05, trim ?? '#7a5236', 0, 0.21, -0.04, { rx: 0.3 })
+        .box(0.05, 0.26, 0.05, trim ?? '#7a5236', 0, -0.21, -0.04, { rx: -0.3 })
+        .box(0.012, 0.64, 0.012, blade ?? '#f2efe6', 0, 0, -0.09, blade ? { glow: true } : {})
     })
   } else if (weapon === 'lute') {
     b.within(0, -0.27, 0.03, 1.1, 0, 0, () => {
-      b.box(0.22, 0.26, 0.08, '#b07a3c', 0, 0.06, 0).box(0.07, 0.07, 0.01, '#3a2616', 0, 0.07, 0.045).box(0.05, 0.3, 0.04, '#7a5236', 0, 0.34, 0)
+      b.box(0.22, 0.26, 0.08, '#b07a3c', 0, 0.06, 0)
+        .box(0.07, 0.07, 0.01, '#3a2616', 0, 0.07, 0.045)
+        .box(0.05, 0.3, 0.04, '#7a5236', 0, 0.34, 0)
+      if (blade) {
+        b.box(0.1, 0.1, 0.04, blade, 0, 0.08, 0.06, { glow: true })
+      }
     })
   } else if (weapon === 'fan') {
     b.within(0, -0.27, 0.03, forward, 0, 0, () => {
-      b.box(0.03, 0.12, 0.03, '#6b4a30', 0, 0.03, 0).box(0.3, 0.2, 0.025, '#f39bc2', 0, 0.18, 0).box(0.2, 0.06, 0.03, '#f0c75e', 0, 0.29, 0)
+      b.box(0.03, 0.12, 0.03, '#6b4a30', 0, 0.03, 0)
+        .box(0.3, 0.2, 0.025, blade ?? '#f39bc2', 0, 0.18, 0, blade ? { glow: true } : {})
+        .box(0.2, 0.06, 0.03, trim ?? '#f0c75e', 0, 0.29, 0)
     })
   }
 }
@@ -286,12 +325,22 @@ export function idlePose(rig: Rig, time: number, phase: number) {
   rig.armR.rotation.set(0, 0, 0.06 + breath * 0.03)
   rig.legL.rotation.x = 0
   rig.legR.rotation.x = 0
+  const aura = rig.torso.getObjectByName('gearAura')
+  if (aura) {
+    aura.position.y = Math.sin(time * 2.2 + phase) * 0.04
+    aura.rotation.y = time * 0.9 + phase
+  }
 }
 
 export function walkPose(rig: Rig, time: number, phase: number, speed: number) {
   const k = time * 9 * speed + phase
   const swing = Math.sin(k)
   rig.group.position.y = Math.abs(Math.cos(k)) * 0.035
+  const aura = rig.torso.getObjectByName('gearAura')
+  if (aura) {
+    aura.position.y = Math.sin(time * 2.2 + phase) * 0.04
+    aura.rotation.y = time * 0.9 + phase
+  }
   rig.group.rotation.set(0, 0, 0)
   rig.torso.scale.y = 1
   rig.legL.rotation.x = swing * 0.6

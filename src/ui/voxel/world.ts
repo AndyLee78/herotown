@@ -383,6 +383,14 @@ function drawAlchemy(b: Builder, w: number, d: number, level: number): number {
   if (level >= 3) {
     b.box(0.4, 0.18, 0.08, '#d9b54a', -w * 0.28, 1.2, d / 2 + 0.06)
   }
+  if (level >= 4) {
+    b.box(0.55, 0.55, 0.55, '#3e4248', w * 0.32, 0.4, front - 0.15)
+    b.box(0.4, 0.14, 0.4, '#6fbf4a', w * 0.32, 0.7, front - 0.15, { glow: true })
+    b.box(0.18, 0.28, 0.18, '#a8ef7a', w * 0.32, 0.9, front - 0.15, { glow: true })
+    for (const x of [-0.55, -0.3, -0.05]) {
+      b.box(0.1, 0.1, 0.1, '#ffe27a', x, 1.35, d / 2 + 0.08, { glow: true })
+    }
+  }
   return top + 0.4
 }
 
@@ -400,7 +408,14 @@ function drawMagic(b: Builder, w: number, d: number, level: number): number {
   if (level >= 3) {
     b.box(0.4, 0.18, 0.08, '#d9b54a', -w * 0.25, 1.2, d / 2 + 0.05)
   }
-  return top + 1
+  if (level >= 4) {
+    b.box(0.7, 1.15, 0.7, '#4a3a68', w * 0.28, top + 0.35, -d * 0.15)
+    b.box(0.4, 0.4, 0.4, '#e6d4ff', w * 0.28, top + 1.05, -d * 0.15, { glow: true })
+    b.box(0.16, 0.5, 0.16, '#ffe27a', w * 0.28, top + 1.4, -d * 0.15, { glow: true })
+    b.box(0.08, 1.2, 0.08, WOOD, -w * 0.4, 0.7, d / 2 + 0.25)
+    b.box(0.36, 0.28, 0.05, '#9b6bff', -w * 0.22, 1.15, d / 2 + 0.28)
+  }
+  return top + (level >= 4 ? 1.6 : 1)
 }
 
 // Open sand yard with a shed, scarecrow and wooden-sword rack (Docs/skills.md).
@@ -437,6 +452,15 @@ function drawTraining(b: Builder, w: number, d: number, level: number): number {
     b.box(0.2, 0.5, 0.08, post, w * 0.35, 0.55, d * 0.3)
     b.box(0.4, 0.18, 0.08, '#d9b54a', -w * 0.2, shedH * 0.7, -d * 0.35)
   }
+  if (level >= 4) {
+    b.box(0.9, 0.12, 0.55, '#8a5a32', 0.1, 0.14, 0.55)
+    b.box(0.55, 0.08, 0.55, '#c45c3a', 0.1, 0.2, 0.55)
+    b.box(0.08, 1.35, 0.08, post, -w * 0.4, 0.75, -d * 0.15)
+    b.box(0.42, 0.32, 0.05, '#e2b340', -w * 0.22, 1.25, -d * 0.15)
+    for (const x of [-0.35, 0, 0.35]) {
+      b.box(0.1, 0.1, 0.1, '#ffe27a', x, shedH + 0.22, -d * 0.28, { glow: true })
+    }
+  }
   return shedH + 0.3
 }
 
@@ -461,6 +485,10 @@ function magicCrystals(level: number): THREE.Group {
   if (level >= 3) {
     add(0.55, 2.7, -0.2, 0.2, 0xffe56a)
   }
+  if (level >= 4) {
+    add(-0.55, 2.95, 0.1, 0.18, 0xffc8ff)
+    add(0.35, 3.15, 0.35, 0.16, 0xffe27a)
+  }
   group.userData.materials = materials
   return group
 }
@@ -484,6 +512,10 @@ function alchemySmoke(level: number, w: number, d: number): THREE.Group {
   puff(-0.06, 0.68, 0.1, 0.3)
   if (level >= 2) {
     puff(0.22, 0.95, -0.16, 0.26)
+  }
+  if (level >= 4) {
+    puff(-0.12, 1.15, 0.12, 0.3)
+    puff(0.1, 1.4, -0.05, 0.22)
   }
   group.userData.materials = materials
   return group
@@ -533,7 +565,18 @@ function drawBuilding(b: Builder, id: BuildingId, lot: Lot, level: number): numb
   if (id === 'inn') {
     const top = house(b, { w, d, h: 1.8 + grow * 0.35, wall: '#c99c6a', roof: '#e07b5f', timber: true, chimney: true })
     b.box(0.06, 0.06, 0.5, WOOD, w * 0.32, 1.25, d / 2 + 0.25).box(0.45, 0.32, 0.05, '#e9d6a8', w * 0.32, 1.05, d / 2 + 0.48)
-    return top
+    let peak = top
+    if (level >= 3) {
+      const story = 0.7
+      b.box(w * 0.72, story, d * 0.65, '#c99c6a', 0, top + story / 2, -0.05)
+      b.box(w * 0.86, 0.14, d * 0.78, '#e07b5f', 0, top + story + 0.07, -0.05)
+      b.box(0.28, 0.22, 0.06, '#5aa0a0', -w * 0.18, top + story * 0.4, d * 0.3)
+      b.box(0.28, 0.22, 0.06, '#5aa0a0', w * 0.18, top + story * 0.4, d * 0.3)
+      b.box(0.08, 1.1, 0.08, WOOD, -w * 0.4, 0.7, d / 2 + 0.35)
+      b.box(0.36, 0.28, 0.05, '#e2b340', -w * 0.22, 1.15, d / 2 + 0.35)
+      peak = top + story + 0.14
+    }
+    return peak
   }
   if (id === 'house') {
     return drawHome(b, w, d, level)
@@ -545,7 +588,18 @@ function drawBuilding(b: Builder, id: BuildingId, lot: Lot, level: number): numb
     const top = house(b, { w, d, h: 1.6 + grow * 0.3, wall: '#e2dccb', roof: '#4f7fb5', timber: true })
     b.box(0.08, 2.4, 0.08, '#5d4433', w / 2 + 0.3, 1.2, d / 2).box(0.5, 0.35, 0.03, '#3f6fa8', w / 2 + 0.55, 2.2, d / 2)
     b.box(0.8, 0.6, 0.06, '#9c7448', -w * 0.3, 0.7, d / 2 + 0.35).box(0.06, 0.7, 0.06, WOOD, -w * 0.3 - 0.35, 0.35, d / 2 + 0.35).box(0.06, 0.7, 0.06, WOOD, -w * 0.3 + 0.35, 0.35, d / 2 + 0.35)
-    return Math.max(top, 2.4)
+    let peak = Math.max(top, 2.4)
+    if (level >= 5) {
+      b.box(0.08, 1.2, 0.08, WOOD, -w / 2 - 0.25, 0.7, d / 2)
+      b.box(0.42, 0.32, 0.04, '#e2b340', -w / 2 - 0.05, 1.15, d / 2)
+      b.box(0.5, 0.16, 0.08, '#d9b54a', 0, 1.55, d / 2 + 0.04)
+      b.box(0.18, 0.18, 0.06, '#ffe27a', 0, 1.55, d / 2 + 0.08, { glow: true })
+      peak = Math.max(peak, 1.75)
+    }
+    return peak
+  }
+  if (id === 'school') {
+    return drawSchool(b, w, d, level)
   }
   if (id === 'alchemy') {
     return drawAlchemy(b, w, d, level)
@@ -570,7 +624,20 @@ function drawBuilding(b: Builder, id: BuildingId, lot: Lot, level: number): numb
     b.box(0.6, 1.3, 0.6, '#7d7a74', -w * 0.3, top + 0.2, -d * 0.15).box(0.36, 0.2, 0.36, '#ff8a3d', -w * 0.3, top + 0.86, -d * 0.15, { glow: true })
     b.box(0.5, 0.25, 0.3, '#4a4d54', w * 0.35, 0.55, d / 2 + 0.6).box(0.25, 0.3, 0.2, '#3a3d44', w * 0.35, 0.27, d / 2 + 0.6)
     b.box(0.3, 0.3, 0.06, '#ff9d4d', -w * 0.3, 0.45, d / 2 + 0.04, { glow: true })
-    return top + 1
+    let peak = top + 1
+    if (level >= 4) {
+      b.box(0.85, 1.55, 0.85, '#6a6864', -w * 0.3, top + 0.35, -d * 0.15)
+      b.box(0.5, 0.28, 0.5, '#ff6a3a', -w * 0.3, top + 1.15, -d * 0.15, { glow: true })
+      b.box(0.28, 0.45, 0.28, '#ffd36b', -w * 0.3, top + 1.45, -d * 0.15, { glow: true })
+      peak = top + 1.7
+    }
+    if (level >= 5) {
+      b.box(0.55, 0.22, 0.35, '#d9b54a', w * 0.32, 0.72, d / 2 + 0.55)
+      b.box(0.22, 0.45, 0.22, '#ffe27a', w * 0.32, 0.55, d / 2 + 0.55, { glow: true })
+      b.box(0.4, 0.14, 0.08, '#d9b54a', 0, 1.25, d / 2 + 0.04)
+      peak = Math.max(peak, 1.4)
+    }
+    return peak
   }
   return drawTemple(b, w, d, grow)
 }
@@ -612,6 +679,22 @@ function drawHome(b: Builder, w: number, d: number, level: number): number {
     b.box(0.05, 0.06, fz * 2, rail, fx, 0.34, 0.1)
     b.box(fx * 0.62, 0.06, 0.05, rail, -fx * 0.58, 0.34, fz + 0.1)
     b.box(fx * 0.62, 0.06, 0.05, rail, fx * 0.58, 0.34, fz + 0.1)
+  }
+  if (level >= 5) {
+    const wingX = -(w / 2 + 0.62)
+    b.box(1.1, 1.0, d * 0.68, HOME_WALL, wingX, 0.7, 0.05)
+    b.box(1.3, 0.14, d * 0.82, HOME_ROOF, wingX, 1.28, 0.05)
+    b.box(0.28, 0.5, 0.06, WOOD, wingX, 0.45, d * 0.34)
+    b.box(0.2, 0.2, 0.05, '#5aa0a0', wingX - 0.25, 0.85, d * 0.34)
+  }
+  if (level >= 6) {
+    const second = top + 0.85 + 0.16
+    const story = 0.7
+    b.box(w * 0.6, story, d * 0.55, HOME_WALL, 0, second + story / 2, 0)
+    b.box(w * 0.72, 0.14, d * 0.68, HOME_ROOF, 0, second + story + 0.07, 0)
+    b.box(0.26, 0.2, 0.05, '#5aa0a0', 0, second + story * 0.4, d * 0.26)
+    b.box(0.16, 0.16, 0.16, '#ffe27a', 0, second + story + 0.22, 0, { glow: true })
+    peak = second + story + 0.3
   }
   return peak
 }
@@ -679,6 +762,15 @@ function drawMarket(b: Builder, w: number, d: number, level: number): number {
     b.box(0.07, 0.85, 0.07, WOOD, w * 0.42, roofH + 0.45, -d * 0.4)
     b.box(0.38, 0.26, 0.04, '#4a7eb5', w * 0.22, roofH + 0.8, -d * 0.4)
     peak = roofH + 1.05
+  }
+  if (level >= 4) {
+    drawStall(b, -w * 0.15, 0.35, '#d9b54a', '#efe6d4')
+    b.box(0.55, 0.45, 0.45, '#9c7448', w * 0.35, 0.35, -d * 0.2)
+    b.box(0.4, 0.2, 0.35, '#c9a36b', w * 0.35, 0.65, -d * 0.2)
+    for (const x of [-0.6, -0.2, 0.2, 0.6]) {
+      b.box(0.1, 0.1, 0.1, '#ffe27a', x, 1.75, -0.05, { glow: true })
+    }
+    peak = Math.max(peak, 1.9)
   }
   return peak
 }
@@ -748,6 +840,17 @@ function drawTavern(b: Builder, w: number, d: number, level: number): number {
     }
     b.box(0.4, 0.18, 0.08, '#d9b54a', -w * 0.25, 1.15, d / 2 + 0.05)
     peak = Math.max(peak, 1.35)
+  }
+  if (level >= 4) {
+    b.box(0.08, 1.4, 0.08, WOOD, -w * 0.48, 0.85, d / 2 + 0.15)
+    b.box(0.45, 0.35, 0.05, '#c0392b', -w * 0.28, 1.35, d / 2 + 0.15)
+    b.box(1.1, 0.1, 0.9, WOOD, w * 0.2, 0.48, d / 2 + 1.2)
+    b.box(0.85, 0.55, 0.55, '#6b4a33', -w * 0.35, 0.4, -d * 0.15)
+    b.box(0.5, 0.2, 0.4, '#8a5a32', -w * 0.35, 0.75, -d * 0.15)
+    for (const x of [-0.5, 0, 0.5]) {
+      b.box(0.12, 0.12, 0.12, '#ffe27a', x, peak + 0.15, d * 0.1, { glow: true })
+    }
+    peak = Math.max(peak, peak + 0.25)
   }
   return peak
 }
@@ -989,6 +1092,39 @@ function drawTemple(b: Builder, w: number, d: number, grow: number): number {
   return top + 1.1
 }
 
+// Schoolhouse: chalk board and book sign, then a wing, a bell, and lanterns.
+function drawSchool(b: Builder, w: number, d: number, level: number): number {
+  const grow = level - 1
+  const top = house(b, { w, d, h: 1.5 + grow * 0.18, wall: '#efe8d6', roof: '#5a7a9a', timber: true, steps: 2, stone: '#c9c5bb' })
+  b.box(0.55, 0.38, 0.06, '#3a5a40', -w * 0.22, 1.15, d / 2 + 0.05)
+  b.box(0.08, 1.05, 0.08, WOOD, w * 0.35, 0.65, d / 2 + 0.22)
+  b.box(0.42, 0.3, 0.05, '#e8d4a8', w * 0.35, 1.12, d / 2 + 0.26)
+  b.box(0.18, 0.14, 0.04, '#c45c3a', w * 0.32, 1.12, d / 2 + 0.3)
+  let peak = top
+  if (level >= 2) {
+    const wingX = w / 2 + 0.55
+    b.box(1.05, 1.15, d * 0.7, '#efe8d6', wingX, 0.75, 0)
+    b.box(1.25, 0.14, d * 0.85, '#5a7a9a', wingX, 1.4, 0)
+    b.box(0.3, 0.24, 0.06, '#5aa0a0', wingX, 0.95, d * 0.32)
+    peak = Math.max(peak, 1.55)
+  }
+  if (level >= 3) {
+    b.box(0.18, 0.55, 0.18, '#8a9098', 0, top + 0.35, 0)
+    b.box(0.4, 0.12, 0.4, '#d9b54a', 0, top + 0.65, 0)
+    b.box(0.16, 0.16, 0.16, '#ffe27a', 0, top + 0.82, 0, { glow: true })
+    peak = Math.max(peak, top + 0.95)
+  }
+  if (level >= 4) {
+    for (const x of [-w * 0.35, w * 0.15]) {
+      b.box(0.1, 0.85, 0.1, WOOD, x, 0.55, d / 2 + 0.45)
+      b.box(0.18, 0.18, 0.18, '#ffe27a', x, 1.05, d / 2 + 0.45, { glow: true })
+    }
+    b.box(0.5, 0.14, 0.08, '#d9b54a', 0, 1.45, d / 2 + 0.06)
+    peak = Math.max(peak, 1.2)
+  }
+  return peak
+}
+
 // Hall of fame: white-stone shrine with pillars (Docs/legends.md).
 // Lv2 adds steps and banners; Lv3 adds a gold roof crest and braziers.
 function drawLegends(b: Builder, w: number, d: number, level: number): number {
@@ -1026,6 +1162,18 @@ function drawLegends(b: Builder, w: number, d: number, level: number): number {
       b.box(0.1, 0.22, 0.1, '#ffd36b', x, 0.72, d / 2 + 0.35, { glow: true })
     }
     peak = Math.max(peak, top + 0.7)
+  }
+  if (level >= 4) {
+    for (const x of [-w * 0.18, w * 0.18]) {
+      b.box(0.18, 1.55, 0.18, '#e8e4da', x, 0.9, d / 2 + 0.05)
+      b.box(0.26, 0.1, 0.26, '#d9b54a', x, 1.72, d / 2 + 0.05)
+    }
+    b.box(0.9, 0.2, 0.12, '#d9b54a', 0, 1.75, d / 2 + 0.1)
+    b.box(0.22, 0.22, 0.08, '#ffe27a', 0, 1.75, d / 2 + 0.16, { glow: true })
+    for (const x of [-w * 0.5, w * 0.5]) {
+      b.box(0.12, 0.12, 0.12, '#ffe27a', x, 1.4, d / 2 + 0.55, { glow: true })
+    }
+    peak = Math.max(peak, 1.95)
   }
   return peak
 }
@@ -1068,6 +1216,8 @@ export function shrinePedestals(count: number): { x: number; z: number }[] {
     { x: lot.x + 1.35, z: lot.z - 0.55 },
     { x: lot.x - 0.55, z: lot.z - lot.d / 2 - 0.35 },
     { x: lot.x + 0.55, z: lot.z - lot.d / 2 - 0.35 },
+    { x: lot.x - 1.55, z: lot.z + 0.85 },
+    { x: lot.x + 1.55, z: lot.z + 0.85 },
   ]
   return spots.slice(0, Math.max(0, count))
 }
@@ -1076,6 +1226,8 @@ const SHRINE_GRADE: Record<string, string> = {
   common: '#c9c5bb',
   fine: '#6db36d',
   rare: '#5a8fd4',
+  epic: '#9b6bff',
+  legend: '#d9b54a',
 }
 
 // Tiny glowing heirloom model for a shrine pedestal (slot + grade colour).

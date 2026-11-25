@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { ageLook, hairColor, lookFor, lookKey, mixHex } from './look'
+import { ageLook, gearAuraOf, hairColor, lookFor, lookKey, mixHex } from './look'
 
 const hero = { id: '4-0', classId: 'warrior' as const, gender: 'male' as const, age: 24 }
 
@@ -36,6 +36,15 @@ describe('hero look', () => {
     for (let index = 0; index < 40; index += 1) {
       expect(lookFor({ ...hero, id: `f-${index}`, gender: 'female' }).beard).toBe(false)
     }
+  })
+})
+
+describe('gear aura', () => {
+  it('picks the highest epic or legend grade', () => {
+    expect(gearAuraOf([])).toBeNull()
+    expect(gearAuraOf([{ grade: 'rare' }])).toBeNull()
+    expect(gearAuraOf([{ grade: 'epic' }, { grade: 'fine' }])).toBe('epic')
+    expect(gearAuraOf([{ grade: 'epic' }, { grade: 'legend' }])).toBe('legend')
   })
 })
 

@@ -1,6 +1,22 @@
-import type { ClassId, Gender, Genes, Hero } from '../../core'
+import type { ClassId, Gender, Genes, Gear, Hero } from '../../core'
 import { STYLES, genesFor, hashString, mixHex, seeded } from '../../core'
 import type { HairStyle } from '../../core'
+
+// Highest worn gear grade that gets a glow: heroic purple, legendary gold.
+export type GearAura = 'epic' | 'legend' | null
+
+export function gearAuraOf(gear: Pick<Gear, 'grade'>[] | undefined | null): GearAura {
+  let best: GearAura = null
+  for (const item of gear ?? []) {
+    if (item.grade === 'legend') {
+      return 'legend'
+    }
+    if (item.grade === 'epic') {
+      best = 'epic'
+    }
+  }
+  return best
+}
 
 // Appearance is drawn from the hero's genes (src/core/genes.ts). Heroes born
 // in town carry theirs; everyone else gets genes from their id, so a hero
