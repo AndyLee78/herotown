@@ -144,9 +144,9 @@ Claude Code, Cursor, GPT(Codex)가 함께 쓰는 작업 목록이다. 작업 하
 | 102 | 4b core 코드 리뷰 (d89e486, c89e043) | GPT | `Docs/reviews/c89e043.md` (새 파일만) | 완료 (175703a) |
 | 103 | 4b 측정: Lv8–10 도달·자원 흐름 | GPT | `tools/*`, `Docs/endgame.md`의 측정 절 | 완료 (0156f23) |
 | 104 | 레이드 보스·마을 침공 장면 3D | Cursor | `src/ui/voxel/*`, `src/ui/BattleView.tsx`, `src/ui/ExpeditionPanel.tsx` | 완료 (8c4c0a7) |
-| 105 | 레이드·침공 화면 | GPT | `src/ui/App.tsx`, `src/ui/game/*.tsx`, `src/ui/styles.css`, `src/locales/*` | 대기 (104와 함께 가능) |
-| 106 | 4c core 코드 리뷰 (1650b75) | GPT | `Docs/reviews/1650b75.md` (새 파일만) | 대기 (105 뒤) |
-| 107 | 4c 측정: Lv9·10 승격·레이드 주기·침공 | GPT | `tools/*`, `Docs/endgame.md`의 측정 절 | 대기 (106 뒤) |
+| 105 | 레이드·침공 화면 | GPT | `src/ui/App.tsx`, `src/ui/game/*.tsx`, `src/ui/styles.css`, `src/locales/*` | 완료 (30cc97e) |
+| 106 | 4c core 코드 리뷰 (1650b75) | GPT | `Docs/reviews/1650b75.md` (새 파일만) | 완료 (58eea1f) |
+| 107 | 4c 측정: Lv9·10 승격·레이드 주기·침공 | GPT | `tools/*`, `Docs/endgame.md`의 측정 절 | 완료 (32d2605) |
 
 ---
 
@@ -2564,6 +2564,8 @@ core에 이미 있는 것('../../core'에서 export):
 
 **메모**
 
+디버그 상태로 레이드 귀환 후 체력 변화, 침공 예고·승패·훈장을 확인했다. Chrome 375px에서 두 창의 가로 넘침이 없고 방어 프리셋 3개가 선택됐다. 침공 결과는 저장된 골드 손실과 재료 차감률을 표시한다.
+
 ---
 
 ## 106. 4c core 코드 리뷰 (GPT)
@@ -2578,6 +2580,8 @@ core에 이미 있는 것('../../core'에서 export):
 ```
 
 **메모**
+
+주간 교대 뒤 이전 레이드 보상, 침공 중복 방어·귀환 순서, 구버전 대기열 환불을 재현했다. 재료 손실 이력 누락까지 `Docs/reviews/1650b75.md`에 기록했다.
 
 ---
 
@@ -2598,3 +2602,5 @@ core에 이미 있는 것('../../core'에서 export):
 ```
 
 **메모**
+
+20개 시드 × 32일에서 Lv9 11.01일, Lv10 25.02일이 중앙값이었다. 레이드 100회 처치, 침공 120회 방어와 금고 흐름을 기록했다. 타입 검사, 테스트 376개, 프로덕션 빌드 통과.
