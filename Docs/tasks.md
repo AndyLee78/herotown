@@ -115,9 +115,9 @@ Claude Code, Cursor, GPT(Codex)가 함께 쓰는 작업 목록이다. 작업 하
 | 73 | 파티 구성·전투 준비 화면의 영웅 상태와 소속 | GPT | `src/ui/game/battleScreens.tsx`, `src/ui/App.tsx`, `src/ui/styles.css`, `src/locales/*` | 완료 (c85b59e) |
 | 74 | 집·준비 상태 core 코드 리뷰 (7995eb2, b1261a7) | GPT | `Docs/reviews/b1261a7.md` (새 파일만) | 완료 (55e1167) |
 | 75 | 시장 건물·떠돌이 상인 3D | Cursor | `src/ui/voxel/*` | 완료 (0397ba8) |
-| 76 | 시장 화면 | GPT | `src/ui/App.tsx`, `src/ui/game/*.tsx`, `src/ui/styles.css`, `src/locales/*` | 대기 (75와 함께 가능) |
-| 77 | 시장 core 코드 리뷰 (bb1c2cf) | GPT | `Docs/reviews/bb1c2cf.md` (새 파일만) | 대기 (76 뒤) |
-| 78 | 시장 경제 측정 | GPT | `tools/*`, `Docs/market.md`의 측정 절 | 대기 (77 뒤) |
+| 76 | 시장 화면 | GPT | `src/ui/App.tsx`, `src/ui/game/*.tsx`, `src/ui/styles.css`, `src/locales/*` | 완료 (3e9cb81) |
+| 77 | 시장 core 코드 리뷰 (bb1c2cf) | GPT | `Docs/reviews/bb1c2cf.md` (새 파일만) | 완료 (206cc3b) |
+| 78 | 시장 경제 측정 | GPT | `tools/*`, `Docs/market.md`의 측정 절 | 완료 (8b0f1ab) |
 
 ---
 
@@ -1837,6 +1837,9 @@ core에 이미 있는 것('../../core'에서 export):
 
 **메모**
 
+- 재료 거래·특가, 장비와 물약의 판매 확인, 떠돌이 상인과 방문 알림을 연결했다.
+- 개발 서버 렌더링과 리듀서에서 재료·시세·특가, 장비·물약 판매와 상인 구매를 확인했다. 브라우저 클릭과 375px 실측은 남았다. 타입 검사·테스트 296개·빌드 통과.
+
 ---
 
 ## 77. 시장 core 코드 리뷰 (GPT)
@@ -1851,6 +1854,9 @@ core에 이미 있는 것('../../core'에서 export):
 ```
 
 **메모**
+
+- [리뷰](reviews/bb1c2cf.md)에 즉시 왕복 이익, 물약 배치 가격, 완공 전으로 소급하는 상인 일정, 비유한 수량 미검증을 기록했다.
+- 수정 50개 왕복 +2골드, 회복 물약 한 배치 판매의 현금 +8골드, v19 시장 초기화를 재현했다.
 
 ---
 
@@ -1870,3 +1876,6 @@ core에 이미 있는 것('../../core'에서 export):
 ```
 
 **메모**
+
+- 시드 20개에서 시장 Lv1 이용 시 대장간 Lv3까지 중앙값 37.8분, 희귀 장비 제작까지 38.8분 단축됐다. 151,200건의 즉시 왕복 거래와 계절 경계 특가를 비교했다.
+- [시장 측정](market.md#측정-2026-11-25)에 거래·상인 결과와 `deal.demand` 0.5→0.35 제안을 기록했다. 코어와 데이터는 수정하지 않았다.
