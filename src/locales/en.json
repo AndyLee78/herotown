@@ -864,7 +864,18 @@
       "armor": "Cloth"
     }
   },
+  "promotion": {
+    "target": "Town Lv{{level}} promotion",
+    "fame": "Fame {{have}}/{{need}}",
+    "depth": "Abyss record {{have}}/{{need}}",
+    "offering": "Offering",
+    "action": "Promote",
+    "waiting": "Awaiting promotion",
+    "max": "Maximum town level"
+  },
   "grade": {
+    "epic": "Heroic",
+    "legend": "Legendary",
     "common": "Common",
     "fine": "Fine",
     "rare": "Rare"
@@ -878,6 +889,14 @@
     "guard": "Guard"
   },
   "item": {
+    "epic": {
+      "blade": "Heroic blade",
+      "mail": "Heroic armor"
+    },
+    "legend": {
+      "blade": "Legendary blade",
+      "mail": "Legendary armor"
+    },
     "iron": {
       "blade": "Iron blade",
       "mail": "Iron mail"

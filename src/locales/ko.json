@@ -864,7 +864,18 @@
       "armor": "천옷"
     }
   },
+  "promotion": {
+    "target": "마을 Lv{{level}} 승격 의식",
+    "fame": "명성 {{have}}/{{need}}",
+    "depth": "심연 최고 층 {{have}}/{{need}}",
+    "offering": "바칠 자원",
+    "action": "승격",
+    "waiting": "승격 의식을 기다리는 중",
+    "max": "최고 레벨"
+  },
   "grade": {
+    "epic": "영웅",
+    "legend": "전설",
     "common": "일반",
     "fine": "고급",
     "rare": "희귀"
@@ -878,6 +889,14 @@
     "guard": "방어"
   },
   "item": {
+    "epic": {
+      "blade": "영웅의 검",
+      "mail": "영웅의 갑옷"
+    },
+    "legend": {
+      "blade": "전설의 검",
+      "mail": "전설의 갑옷"
+    },
     "iron": {
       "blade": "철검",
       "mail": "철갑"

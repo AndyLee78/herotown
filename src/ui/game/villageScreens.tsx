@@ -5,6 +5,7 @@ import { lazy, Suspense, useEffect, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import {
   POTION_IDS,
+  PROMOTION_FREE,
   STAT_KEYS,
   adRules,
   alchemyRules,
@@ -23,6 +24,7 @@ import {
   drillXp,
   dungeons,
   enchantTime,
+  endgameRules,
   expeditionSlots,
   fountainLevel,
   fountainNextAt,
@@ -71,9 +73,9 @@ import { loadSoundPrefs, saveSoundPrefs, SOUND_NAMES } from '../sound'
 import { canReplay } from '../voxel/replay'
 import { dungeonPreviewUrl } from '../voxel/portrait'
 import { GraveFace, bonusValue } from './heroScreens'
-import { Bar, Chip, CostList, Portrait, Res, SchoolInfo, Window, affordable, formatEntry, itemLabel, useNow, waitLabel } from './kit'
+import { Bar, Chip, CostList, Portrait, Res, SchoolInfo, VaultAmount, Window, affordable, formatEntry, gearGradeClass, itemLabel, useNow, vaultKinds, waitLabel } from './kit'
 import { josa } from '../josa'
-import { SpecialRewardChips, VaultAmount } from './specialDungeons'
+import { SpecialRewardChips } from './specialDungeons'
 
 const BattleView = lazy(() => import('../BattleView').then((mod) => ({ default: mod.BattleView })))
 
@@ -217,7 +219,7 @@ export function Town({
       {Object.values(save.vault).some((amount) => amount > 0) ? (
         <div className="card column">
           <strong>{t('special.vault')}</strong>
-          <div className="chips">{(['flame', 'frost', 'light', 'abyss'] as const).map((kind) => <VaultAmount key={kind} kind={kind} amount={save.vault[kind]} />)}</div>
+          <div className="chips">{vaultKinds.map((kind) => <VaultAmount key={kind} kind={kind} amount={save.vault[kind]} />)}</div>
         </div>
       ) : null}
       <div className="card summary">
@@ -227,6 +229,7 @@ export function Town({
             <Res kind="fame" amount={next ? `${save.fame}/${next.fame}` : save.fame} light />
             {next ? <Bar value={save.fame} max={next.fame} tone="warn" /> : null}
           </span>
+          {next && next.level > PROMOTION_FREE && save.fame >= next.fame ? <Chip tone="warn">{t('promotion.waiting')}</Chip> : null}
         </div>
         <span className="chips">
           <Chip>
@@ -254,6 +257,8 @@ export function Town({
         <button type="button" className="btn gold small" onClick={onFestival}>{t('morale.festival.open')}</button>
       </div>
 
+      {level.level >= PROMOTION_FREE ? <Promotion save={save} onAction={onAction} /> : null}
+
       {save.construction ? (
         <div className="card building-now">
           <UiIcon name="town" size={22} />
@@ -279,7 +284,8 @@ export function Town({
           const id = building.id as BuildingId
           const current = save.buildings[id]
           const cost = building.levels.find((entry) => entry.level === current + 1)
-          const locked = level.level < building.unlockLevel
+          const requiredTown = Math.max(building.unlockLevel, cost?.town ?? 0)
+          const locked = level.level < requiredTown
           const capped = !cost || current >= level.maxBuildingLevel
           const disabled = locked || capped || save.construction != null || !cost || !affordable(cost, save)
           return (
@@ -300,13 +306,12 @@ export function Town({
               })()}
               {locked ? (
                 <p className="locked-note">
-                  <Lock size={14} /> {t('town.locked', { level: building.unlockLevel })}
+                  <Lock size={14} /> {t('town.locked', { level: requiredTown })}
                 </p>
               ) : capped ? (
                 <p className="muted">{t('town.maxed')}</p>
-              ) : (
-                <CostList cost={cost} save={save} />
-              )}
+              ) : null}
+              {cost && (locked || !capped) ? <CostList cost={cost} save={save} /> : null}
               <button type="button" className="btn primary" disabled={disabled} onClick={() => onAction({ type: 'build', id, now: gameNow() })}>
                 {current === 0 ? t('action.construct') : t('action.upgrade')}
               </button>
@@ -635,13 +640,13 @@ export function Legends({ save, onAction }: { save: GameState; onAction: Act }) 
         <p className="muted">{t('legends.displayHint', { fame: legendsRules.shrineFame, morale: legendsRules.shrineMorale, current: shrineMorale(save) })}</p>
         {onDisplay.length === 0 ? <p className="muted">{t('legends.noDisplay')}</p> : null}
         <ul className="plain">{onDisplay.map((gear) => <li key={gear.id} className="line">
-          <span>{itemLabel(t, gear, 'warrior')}</span>
+          <span className={gearGradeClass(gear.grade)}>{itemLabel(t, gear, 'warrior')}</span>
           <button type="button" className="btn small" onClick={() => onAction({ type: 'unshrine', gearId: gear.id })}>{t('legends.withdraw')}</button>
         </li>)}</ul>
         <h3 className="section-title">{t('legends.spare')}</h3>
         {stash.length === 0 ? <p className="muted">{t('legends.noSpare')}</p> : null}
         <ul className="plain">{stash.map((gear) => <li key={gear.id} className="line">
-          <span>{itemLabel(t, gear, 'warrior')}</span>
+          <span className={gearGradeClass(gear.grade)}>{itemLabel(t, gear, 'warrior')}</span>
           <button type="button" className="btn small" disabled={onDisplay.length >= slots} onClick={() => onAction({ type: 'enshrine', gearId: gear.id })}>{t('legends.place')}</button>
         </li>)}</ul>
       </section>
@@ -1073,6 +1078,36 @@ export function Magic({ save, onAction }: { save: GameState; onAction: Act }) {
   )
 }
 
+function Promotion({ save, onAction }: { save: GameState; onAction: Act }) {
+  const { t } = useTranslation()
+  const promotion = endgameRules.promotions.find(({ level }) => level === save.promoted + 1)
+  const required = villageRules.levels.find(({ level }) => level === promotion?.level)
+  if (!promotion || !required) return <p className="banner">{t('promotion.max')}</p>
+  const enoughFame = save.fame >= required.fame
+  const deepEnough = save.abyss.best >= promotion.abyssBest
+  const enoughOffering = vaultKinds.every((kind) => save.vault[kind] >= promotion.offering[kind])
+  return (
+    <section className="card column">
+      <strong>{t('promotion.target', { level: promotion.level })}</strong>
+      <div className="chips">
+        <Chip tone={enoughFame ? 'good' : 'bad'}>{t('promotion.fame', { have: save.fame, need: required.fame })}</Chip>
+        <Chip tone={deepEnough ? 'good' : 'bad'}>{t('promotion.depth', { have: save.abyss.best, need: promotion.abyssBest })}</Chip>
+      </div>
+      <strong>{t('promotion.offering')}</strong>
+      <div className="chips">
+        {vaultKinds.map((kind) => {
+          const have = save.vault[kind]
+          const need = promotion.offering[kind]
+          return <Chip key={kind} tone={have >= need ? 'good' : 'bad'}><VaultAmount kind={kind} amount={`${have}/${need}`} /></Chip>
+        })}
+      </div>
+      <button type="button" className="btn gold" disabled={!enoughFame || !deepEnough || !enoughOffering} onClick={() => onAction({ type: 'promote' })}>
+        {t('promotion.action')}
+      </button>
+    </section>
+  )
+}
+
 export function Smith({ save, onAction }: { save: GameState; onAction: Act }) {
   const { t } = useTranslation()
   const working = save.smith != null
@@ -1097,7 +1132,7 @@ export function Smith({ save, onAction }: { save: GameState; onAction: Act }) {
                 <article key={recipe.id} className={locked ? 'card locked' : 'card'}>
                   <strong className="name">{t(`item.${recipe.id}`)}</strong>
                   <span className="chips">
-                    <Chip tone="info">{t(`grade.${recipe.grade}`)}</Chip>
+                    <Chip tone="info"><span className={gearGradeClass(recipe.grade)}>{t(`grade.${recipe.grade}`)}</span></Chip>
                     {recipe.element ? <Chip tone="warn">{t(`element.${recipe.element}`)}</Chip> : null}
                   </span>
                   <p className="muted">{t('smith.stats', { attack: recipe.attack, defense: recipe.defense })}</p>
@@ -1121,7 +1156,7 @@ export function Smith({ save, onAction }: { save: GameState; onAction: Act }) {
           <ul className="plain">
             {save.stash.map((item) => (
               <li key={item.id} className="line">
-                <span>{itemLabel(t, item, 'warrior')}</span>
+                <span className={gearGradeClass(item.grade)}>{itemLabel(t, item, 'warrior')}</span>
                 <button
                   type="button"
                   className="btn small"

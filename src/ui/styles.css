@@ -765,6 +765,18 @@ button,
   background: #fde9c2;
 }
 
+.gear-grade-epic {
+  color: #713c9d;
+}
+
+.gear-grade-legend {
+  color: #805500;
+}
+
+.cost .chip.short {
+  color: #a32232;
+}
+
 .chip.bad {
   color: #9a2a24;
   background: #f9d6d3;

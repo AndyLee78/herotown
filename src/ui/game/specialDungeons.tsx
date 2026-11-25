@@ -1,7 +1,6 @@
-import { Gem } from 'lucide-react'
 import { useTranslation } from 'react-i18next'
 import { ESSENCES, abyssFloors, abyssShards, dungeonById, endgameRules, reduce, specialBlock, specialDungeons, todayElement, trialsLeft, type DungeonReport, type GameAction, type GameState, type VaultKey } from '../../core'
-import { Chip } from './kit'
+import { Chip, VaultAmount } from './kit'
 
 type SpecialReward = { key: VaultKey; amount: number; best?: number }
 type SpecialReport = DungeonReport & { specialReward?: SpecialReward }
@@ -38,11 +37,6 @@ export function applyWithVaultHistory(state: GameState, action: GameAction): Gam
   // reader preserves report fields, including reports from offline returns.
   const history: SpecialReport[] = next.history.map((report) => annotations.has(report) ? { ...report, specialReward: annotations.get(report) } : report)
   return annotations.size ? { ...next, history } : next
-}
-
-export function VaultAmount({ kind, amount }: { kind: VaultKey; amount: number | string }) {
-  const { t } = useTranslation()
-  return <span className={`chip vault-${kind}`}><Gem size={14} aria-hidden="true" />{t(`vault.${kind}`)} {amount}</span>
 }
 
 export function SpecialRewardChips({ report }: { report: SpecialReport }) {

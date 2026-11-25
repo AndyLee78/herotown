@@ -1,8 +1,8 @@
 import type { TFunction } from 'i18next'
-import { X } from 'lucide-react'
+import { Gem, X } from 'lucide-react'
 import { lazy, Suspense, useEffect, useState, type ReactNode } from 'react'
 import { useTranslation } from 'react-i18next'
-import { lifeRules, lowMorale, moraleOf, moraleRules, type GameState, type Gear, type Hero, type LogEntry } from '../../core'
+import { ESSENCES, lifeRules, lowMorale, moraleOf, moraleRules, type GameState, type Gear, type Hero, type LogEntry, type VaultKey } from '../../core'
 import { gameNow, subscribeGameClock } from '../clock'
 import { ResourceIcon, type ResourceKind } from './icons'
 
@@ -86,11 +86,20 @@ export function Res({ kind, amount, short = false, light = false }: { kind: Reso
   )
 }
 
-type Cost = { gold: number; wood?: number; stone?: number; iron?: number; bone?: number; herb?: number; crystal?: number }
+type Cost = { gold: number; wood?: number; stone?: number; iron?: number; bone?: number; herb?: number; crystal?: number } & Partial<Record<VaultKey, number>>
+export const vaultKinds = [...ESSENCES, 'abyss'] as const
 
-// Lists the non-zero parts of a cost, marking the ones the player lacks.
-export function CostList({ cost, save }: { cost: Cost; save: GameState }) {
-  const parts: [ResourceKind, number, number][] = [
+export function VaultAmount({ kind, amount, short = false }: { kind: VaultKey; amount: number | string; short?: boolean }) {
+  const { t } = useTranslation()
+  return <span className={`chip vault-${kind}${short ? ' short' : ''}`}><Gem size={14} aria-hidden="true" />{t(`vault.${kind}`)} {amount}</span>
+}
+
+function isVaultKind(kind: ResourceKind | VaultKey): kind is VaultKey {
+  return vaultKinds.some((key) => key === kind)
+}
+
+function costParts(cost: Cost, save: GameState): [ResourceKind | VaultKey, number, number][] {
+  return [
     ['gold', cost.gold, save.gold],
     ['wood', cost.wood ?? 0, save.materials.wood],
     ['stone', cost.stone ?? 0, save.materials.stone],
@@ -98,12 +107,18 @@ export function CostList({ cost, save }: { cost: Cost; save: GameState }) {
     ['bone', cost.bone ?? 0, save.materials.bone],
     ['herb', cost.herb ?? 0, save.materials.herb],
     ['crystal', cost.crystal ?? 0, save.materials.crystal],
+    ...vaultKinds.map((kind): [VaultKey, number, number] => [kind, cost[kind] ?? 0, save.vault[kind]]),
   ]
+}
+
+export function CostList({ cost, save }: { cost: Cost; save: GameState }) {
   return (
     <span className="cost">
-      {parts
+      {costParts(cost, save)
         .filter(([, amount]) => amount > 0)
-        .map(([kind, amount, have]) => (
+        .map(([kind, amount, have]) => isVaultKind(kind) ? (
+          <VaultAmount key={kind} kind={kind} amount={amount} short={have < amount} />
+        ) : (
           <Res key={kind} kind={kind} amount={amount} short={have < amount} light />
         ))}
     </span>
@@ -111,15 +126,7 @@ export function CostList({ cost, save }: { cost: Cost; save: GameState }) {
 }
 
 export function affordable(cost: Cost, save: GameState): boolean {
-  return (
-    save.gold >= cost.gold &&
-    save.materials.wood >= (cost.wood ?? 0) &&
-    save.materials.stone >= (cost.stone ?? 0) &&
-    save.materials.iron >= (cost.iron ?? 0) &&
-    save.materials.bone >= (cost.bone ?? 0) &&
-    save.materials.herb >= (cost.herb ?? 0) &&
-    save.materials.crystal >= (cost.crystal ?? 0)
-  )
+  return costParts(cost, save).every(([, amount, have]) => have >= amount)
 }
 
 export function Bar({ value, max, tone = 'good' }: { value: number; max: number; tone?: 'good' | 'warn' | 'bad' | 'info' }) {
@@ -210,6 +217,10 @@ export function itemLabel(t: TFunction, item: Gear, fallback: Hero['classId'], h
   if (heirloom) extra.push(t('heirloom.generation', { count: heirloom.generations }))
   if (heirBonus > 0) extra.push(t('heirloom.bonus', { percent: Math.round(heirBonus * 100) }))
   return `${title} (${extra.join(', ')})`
+}
+
+export function gearGradeClass(grade: string, fallback?: string) {
+  return grade === 'epic' || grade === 'legend' ? `gear-grade-${grade}` : fallback
 }
 
 export function formatEntry(t: TFunction, entry: LogEntry): string {
