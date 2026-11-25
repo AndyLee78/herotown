@@ -1,8 +1,9 @@
 // Run: npx tsx tools/village-balance.ts [days=32] [seeds=20]
+import { pathToFileURL } from 'node:url'
 import { alchemyRules, classById, combatRules, dungeons, guildRules, lifeRules, magicRules, marketRules, progression, retirementRules, schoolRules, smithRules, villageRules } from '../src/core/data'
 import { bedsTaken, isLegend } from '../src/core/family'
 import { fountainWishes } from '../src/core/fountain'
-import { bedCount, busyHeroIds, dungeonUnlocked, festivalCost, freshState, presetById, reduce, townLevel, type BuildingId, type GameAction, type MaterialName } from '../src/core/game'
+import { bedCount, busyHeroIds, dungeonUnlocked, festivalCost, freshState, presetById, reduce, townLevel, type BuildingId, type GameAction, type GameState, type MaterialName } from '../src/core/game'
 import { gearMods } from '../src/core/gear'
 import { guideStatus } from '../src/core/guide'
 import { canDeploy, isChild } from '../src/core/hero'
@@ -17,11 +18,6 @@ const minute = 60_000
 const hour = 60 * minute
 const day = 24 * hour
 const start = 1_700_000_000_000
-const days = Number(process.argv[2] ?? 32)
-const seedCount = Number(process.argv[3] ?? 20)
-if (!Number.isSafeInteger(days) || days < 1 || !Number.isSafeInteger(seedCount) || seedCount < 1) {
-  throw new Error('Usage: npx tsx tools/village-balance.ts [positive integer days] [positive integer seeds]')
-}
 
 const sources: Record<MaterialName, string> = {
   wood: 'hill_cave', stone: 'moss_path', iron: 'abandoned_mine', bone: 'barrow', herb: 'moss_path', crystal: 'sunken_crypt',
@@ -34,7 +30,7 @@ type Cost = { gold: number } & Partial<Record<MaterialName, number>>
 const hurt = (hero: Hero) => hero.condition === 'injured' || hero.condition === 'critical'
 const roleRank = (hero: Hero) => ({ tank: 0, healer: 1, dps: 2, support: 3 })[classById(hero.classId).role]
 
-function simulate(seed: number) {
+export function simulateVillage(seed: number, days: number, stopAtTown?: number) {
   let state = freshState(seed, start)
   let now = start
   let acted = false
@@ -316,7 +312,7 @@ function simulate(seed: number) {
 
   while (now <= start + days * day) {
     record()
-    if (now === start + days * day) break
+    if (now === start + days * day || (stopAtTown != null && townLevel(state.fame).level >= stopAtTown)) break
     const elapsed = now - start
     const sinceDay = elapsed % day
     const offline = sinceDay === 16 * hour
@@ -355,7 +351,12 @@ function simulate(seed: number) {
     state = reduce(state, { type: 'catchUp', now })
     autoRuns += (state.auto.nonce ?? 0) - nonce
   }
-  return { times, totals, beforeSeven, longest, materialWait, onlineMs, progressionMs, offlineMs, manualRuns, autoRuns, queued, bought, gatherings, festivals, fame: state.fame, gold: state.gold, cleared: state.cleared.length, peakUnlocks, fastUnlocks }
+  return { state, times, totals, beforeSeven, longest, materialWait, onlineMs, progressionMs, offlineMs, manualRuns, autoRuns, queued, bought, gatherings, festivals, fame: state.fame, gold: state.gold, cleared: state.cleared.length, peakUnlocks, fastUnlocks }
+}
+
+export function villageCheckpoint(seed: number, level: number): GameState | null {
+  const { state } = simulateVillage(seed, 2, level)
+  return townLevel(state.fame).level >= level ? state : null
 }
 
 function stats(values: number[]) {
@@ -364,28 +365,37 @@ function stats(values: number[]) {
   return sorted.length ? [rounded((sorted[Math.floor((sorted.length - 1) / 2)]! + sorted[Math.floor(sorted.length / 2)]!) / 2), rounded(sorted[0]!), rounded(sorted.at(-1)!)] : ['—', '—', '—']
 }
 
-const runs = Array.from({ length: seedCount }, (_, index) => simulate(index + 1))
-const milestone = (goal: string) => {
-  const samples = runs.flatMap(({ times }) => times[goal] == null ? [] : [times[goal]!])
-  const [median, min, max] = stats(samples)
-  return { goal, reached: `${samples.length}/${runs.length}`, median, min, max }
+export function printVillageBalance(days: number, seedCount: number) {
+  if (!Number.isSafeInteger(days) || days < 1 || !Number.isSafeInteger(seedCount) || seedCount < 1) {
+    throw new Error('Usage: npx tsx tools/village-balance.ts [positive integer days] [positive integer seeds]')
+  }
+  const runs = Array.from({ length: seedCount }, (_, index) => simulateVillage(index + 1, days))
+  const milestone = (goal: string) => {
+    const samples = runs.flatMap(({ times }) => times[goal] == null ? [] : [times[goal]!])
+    const [median, min, max] = stats(samples)
+    return { goal, reached: `${samples.length}/${runs.length}`, median, min, max }
+  }
+  console.log(`Seeds 1–${seedCount}; ${days} game days; 8h offline each day. Milestones are elapsed hours, censored at the horizon.`)
+  console.table(Array.from({ length: 6 }, (_, index) => milestone(`town ${index + 2}`)))
+  console.table(priority.flatMap((id) => [milestone(`${id} first`), milestone(`${id} max`)]))
+  console.table(Array.from({ length: 7 }, (_, index) => milestone(`tier ${index + 1}`)))
+  console.table(['marriage', 'birth', 'coming of age', 'retirement', 'legend qualification', 'hall legend'].map(milestone))
+  console.table(blockedTypes.map((kind) => {
+    const [median, min, max] = stats(runs.map((run) => 100 * (run.totals[kind] ?? 0) / run.onlineMs))
+    const [longestMedian, , longestMax] = stats(runs.map((run) => (run.longest[kind] ?? 0) / minute))
+    const [early] = stats(runs.map((run) => 100 * (run.beforeSeven[kind] ?? 0) / run.progressionMs))
+    return { kind, 'before Lv7 % median': early, 'online % median': median, min, max, 'longest minutes median': longestMedian, 'longest minutes max': longestMax }
+  }))
+  console.table(MARKET_MATERIALS.map((material) => {
+    const [median, min, max] = stats(runs.map((run) => (run.materialWait[material] ?? 0) / hour))
+    return { material, 'first shortage hours median': median, min, max }
+  }))
+  console.table((['onlineMs', 'offlineMs', 'manualRuns', 'autoRuns', 'queued', 'bought', 'gatherings', 'festivals', 'fame', 'gold', 'cleared', 'peakUnlocks', 'fastUnlocks'] as const).map((key) => {
+    const [median, min, max] = stats(runs.map((entry) => key.endsWith('Ms') ? entry[key] / hour : entry[key]))
+    return { key, median, min, max }
+  }))
 }
-console.log(`Seeds 1–${seedCount}; ${days} game days; 8h offline each day. Milestones are elapsed hours, censored at the horizon.`)
-console.table(Array.from({ length: 6 }, (_, index) => milestone(`town ${index + 2}`)))
-console.table(priority.flatMap((id) => [milestone(`${id} first`), milestone(`${id} max`)]))
-console.table(Array.from({ length: 7 }, (_, index) => milestone(`tier ${index + 1}`)))
-console.table(['marriage', 'birth', 'coming of age', 'retirement', 'legend qualification', 'hall legend'].map(milestone))
-console.table(blockedTypes.map((kind) => {
-  const [median, min, max] = stats(runs.map((run) => 100 * (run.totals[kind] ?? 0) / run.onlineMs))
-  const [longestMedian, , longestMax] = stats(runs.map((run) => (run.longest[kind] ?? 0) / minute))
-  const [early] = stats(runs.map((run) => 100 * (run.beforeSeven[kind] ?? 0) / run.progressionMs))
-  return { kind, 'before Lv7 % median': early, 'online % median': median, min, max, 'longest minutes median': longestMedian, 'longest minutes max': longestMax }
-}))
-console.table(MARKET_MATERIALS.map((material) => {
-  const [median, min, max] = stats(runs.map((run) => (run.materialWait[material] ?? 0) / hour))
-  return { material, 'first shortage hours median': median, min, max }
-}))
-console.table((['onlineMs', 'offlineMs', 'manualRuns', 'autoRuns', 'queued', 'bought', 'gatherings', 'festivals', 'fame', 'gold', 'cleared', 'peakUnlocks', 'fastUnlocks'] as const).map((key) => {
-  const [median, min, max] = stats(runs.map((entry) => key.endsWith('Ms') ? entry[key] / hour : entry[key]))
-  return { key, median, min, max }
-}))
+
+if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) {
+  printVillageBalance(Number(process.argv[2] ?? 32), Number(process.argv[3] ?? 20))
+}
