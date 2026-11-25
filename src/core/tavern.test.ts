@@ -142,3 +142,50 @@ describe('heirlooms', () => {
     expect(opened.stash[0]?.heirloom?.ownerId).toBe('g')
   })
 })
+
+describe('review 161d1d1 fixes', () => {
+  function line(): GameState {
+    const grandpa = hero('g', 'timid', { family: 'Stone' })
+    const son = hero('s', 'timid', { parents: ['g', 'gm'] })
+    return town([son], 0, { retirees: [{ hero: grandpa, retiredYear: 1, building: null }] })
+  }
+
+  it('keeps the trinket slot limit when handing a trinket down', () => {
+    const charm = (id: string) => ({ id, recipeId: 'trinket.alert', slot: 'trinket' as const, grade: 'common' as const, enhance: 0 })
+    const base = line()
+    const state = {
+      ...base,
+      roster: base.roster.map((entry) => ({ ...entry, gear: [...entry.gear, charm('c1'), charm('c2')] })),
+      retirees: base.retirees.map((entry) => ({ ...entry, hero: { ...entry.hero, gear: [...entry.hero.gear, charm('old')] } })),
+    }
+    const given = reduce(state, { type: 'bequeath', retireeId: 'g', gearId: 'old', toId: 's' })
+    const trinkets = given.roster[0]!.gear.filter((gear) => gear.slot === 'trinket')
+    expect(trinkets.map((gear) => gear.id)).toEqual(['c2', 'old'])
+    expect(given.stash.map((gear) => gear.id)).toEqual(['c1'])
+  })
+
+  it('does not hand gear to a fallen heir', () => {
+    const base = line()
+    const state = {
+      ...base,
+      roster: base.roster.map((entry) => ({ ...entry, condition: 'dead' as const })),
+      retirees: base.retirees.map((entry) => ({ ...entry, hero: { ...entry.hero, gear: [...entry.hero.gear, forgeGear(blade, 'old')] } })),
+    }
+    expect(reduce(state, { type: 'bequeath', retireeId: 'g', gearId: 'old', toId: 's' }).notice).toBe('busyHero')
+  })
+
+  it('remembers who a piece already comforted when it passes on', () => {
+    const state = line()
+    const once = { ...forgeGear(blade, 'h'), heirloom: { ownerId: 'g', ownerName: 'g', generations: 1, comforted: ['s'] } }
+    const son = state.roster[0]!
+    expect(bequeathed(state, son, [once])[0]!.heirloom?.comforted).toEqual(['s'])
+  })
+
+  it('stamps two rounds between ticks differently', () => {
+    let state = town([hero('a'), hero('b')], 2)
+    state = reduce(state, { type: 'gather', heroIds: ['a', 'b'] })
+    const first = state.tavern!.last!.at
+    state = reduce(state, { type: 'gather', heroIds: ['a', 'b'] })
+    expect(state.tavern!.last!.at).toBeGreaterThan(first)
+  })
+})

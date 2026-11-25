@@ -57,6 +57,8 @@ export type VillageSceneProps = {
   merchant: boolean
   // The latest round at the tavern (Docs/tavern.md); the 3D for it comes with task 83.
   tavernRound: { heroIds: string[]; at: number } | null
+  // The festival held this season, if any (Docs/morale.md), for decorations (task 87).
+  festival: 'spring' | 'summer' | 'autumn' | 'winter' | null
 }
 
 type Area = { minX: number; maxX: number; minZ: number; maxZ: number }

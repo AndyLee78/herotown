@@ -78,7 +78,9 @@ export function gather(state: GameState, heroIds: string[], busy: Set<string>): 
   )
   const season = seasonKey(state.calendar)
   const used = state.tavern && state.tavern.season === season ? state.tavern.used + 1 : 1
-  return { ...state, notice: null, gold: state.gold - tavernRules.cost, bonds, roster, tavern: { season, used, last: { heroIds: ids, at: state.lastTickAt } } }
+  // Two rounds between ticks still get different stamps, so the scene sees both (review 161d1d1).
+  const at = Math.max(state.lastTickAt, (state.tavern?.last?.at ?? 0) + 1)
+  return { ...state, notice: null, gold: state.gold - tavernRules.cost, bonds, roster, tavern: { season, used, last: { heroIds: ids, at } } }
 }
 
 // Extra affinity each season for neighbours who mingle at the tavern.

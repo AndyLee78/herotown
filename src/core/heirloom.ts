@@ -1,4 +1,4 @@
-import { tavernRules } from './data'
+import { magicRules, tavernRules } from './data'
 import type { GameState } from './game'
 import { gearMods } from './gear'
 import { feel } from './personality'
@@ -61,7 +61,9 @@ export function bequeathed(state: GameState, owner: Hero, items: Gear[]): Gear[]
     .map((item) => {
       const line = item.heirloom && isHeir(state, owner.id, item.heirloom.ownerId)
       const generations = line ? Math.min(tavernRules.heirloom.maxGenerations, item.heirloom!.generations + 1) : 1
-      const heirloom: Heirloom = { ownerId: owner.id, ownerName: owner.name, generations, ...(owner.family ? { family: owner.family } : {}) }
+      // Whoever was already comforted by this piece is not comforted again (review 161d1d1).
+      const comforted = item.heirloom?.comforted
+      const heirloom: Heirloom = { ownerId: owner.id, ownerName: owner.name, generations, ...(owner.family ? { family: owner.family } : {}), ...(comforted?.length ? { comforted } : {}) }
       return { ...item, heirloom }
     })
 }
@@ -78,7 +80,7 @@ export function bequeath(state: GameState, retireeId: string, gearId: string, to
   if (toId && (!heir || !isHeir(state, toId, retireeId))) {
     return { ...state, notice: 'notHeir' }
   }
-  if (heir && busy.has(heir.id)) {
+  if (heir && (busy.has(heir.id) || heir.condition === 'dead')) {
     return { ...state, notice: 'busyHero' }
   }
   const [gift] = bequeathed(state, retiree.hero, [item])
@@ -87,7 +89,11 @@ export function bequeath(state: GameState, retireeId: string, gearId: string, to
     return { ...state, notice: null, retirees, stash: [...state.stash, gift!] }
   }
   // Worn at once; whatever it replaces goes to the stash.
-  const off = heir.gear.filter((gear) => gear.slot === gift!.slot && gift!.slot !== 'trinket')
+  // The same slot rules as equipping: one weapon, one armour, and the oldest
+  // trinket comes off when both trinket slots are taken (review 161d1d1).
+  const same = heir.gear.filter((gear) => gear.slot === gift!.slot)
+  const room = gift!.slot === 'trinket' ? magicRules.trinketSlots : 1
+  const off = same.length >= room ? same.slice(0, same.length - room + 1) : []
   const roster = state.roster.map((hero) => (hero.id === heir.id ? { ...hero, gear: [...hero.gear.filter((gear) => !off.includes(gear)), gift!] } : hero))
   return { ...state, notice: null, retirees, roster, stash: [...state.stash, ...off] }
 }

@@ -126,6 +126,7 @@ Claude Code, Cursor, GPT(Codex)가 함께 쓰는 작업 목록이다. 작업 하
 | 84 | 선술집·유품 화면 | GPT | `src/ui/App.tsx`, `src/ui/game/*.tsx`, `src/ui/styles.css`, `src/locales/*` | 완료 (870201f) |
 | 85 | 선술집·유품 core 코드 리뷰 (161d1d1) | GPT | `Docs/reviews/161d1d1.md` (새 파일만) | 완료 (b60c1cb) |
 | 86 | 선술집·유품 측정 | GPT | `tools/*`, `Docs/tavern.md`의 측정 절 | 완료 (d1013ec) |
+| 87 | 축제 장식 3D | Cursor | `src/ui/voxel/*` | 대기 |
 
 ---
 
@@ -2076,3 +2077,27 @@ core에 이미 있는 것('../../core'에서 export):
 
 - [측정](tavern.md#측정-2026-11-25)에 안 맞는 짝의 첫 결혼 12시간 단축, 첫 출산의 짝지은 중앙값 0시간, 레벨별 교류·축제·피로를 기록했다.
 - 유품 보너스와 승률, 예시 계보의 3대 약 164일, 골드 부담 완화 후보 `cost` 15→12를 기록했다.
+- Claude Code가 리뷰 세 가지를 고치고 측정 제안을 반영했다. 물려주기 슬롯 규칙과 쓰러진 자손, 위로 기록 유지, 술자리 시각 구분, 비용 12. 마을 장면에 festival prop을 연결했다(작업 87).
+
+---
+
+## 87. 축제 장식 3D (Cursor)
+
+**지금 시작할 수 있다.** 작업 83 메모의 "festival prop 필요"를 Claude Code가 연결했다.
+
+**전달할 내용**
+
+```
+작업 83에 이어 축제 장식을 만든다. src/ui/voxel/*만 고친다.
+
+이미 있는 것: VillageScene.update(props)의 festival: 'spring' | 'summer' | 'autumn' | 'winter' | null(이번 계절에 연 축제 종류, 없으면 null). App·VillageView는 연결되어 있다.
+
+1. festival이 null이 아니면 그 계절 동안 선술집 앞마당과 광장에 장식을 둔다. 봄 파종제(꽃줄·꽃바구니), 여름 무술 대회(깃발·작은 과녁), 가을 수확제(곡식 다발·호박·과일 수레), 겨울 추모제(등불·촛불). 선술집이 없으면 광장에만.
+2. 축제를 막 연 순간(null → 값) 광장에 작은 폭죽·꽃가루 터짐(기존 burst 재사용 가능).
+3. 계절이 바뀌어 null이 되면 장식을 걷는다.
+4. 성능: Builder로 합친 메시를 계절마다 한 번 만든다.
+
+확인: npm run dev에서 계절마다 축제를 열어 장식을 본다. tsc·test·build 통과. 확인한 내용을 메모에.
+```
+
+**메모**

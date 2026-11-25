@@ -26,10 +26,11 @@ type Props = {
   wishJackpot: boolean
   merchant: boolean
   tavernRound: { heroIds: string[]; at: number } | null
+  festival: 'spring' | 'summer' | 'autumn' | 'winter' | null
   onWish: () => void
 }
 
-export function VillageView({ roster, visitors, awayIds, drillIds, retirees, partyIds, selectedId, onSelect, onPickBuilding, villageLabel, buildings, constructing, buildingLabels, expeditions, active, graves, wishes, wishCap, wishAt, wishJackpot, merchant, tavernRound, onWish }: Props) {
+export function VillageView({ roster, visitors, awayIds, drillIds, retirees, partyIds, selectedId, onSelect, onPickBuilding, villageLabel, buildings, constructing, buildingLabels, expeditions, active, graves, wishes, wishCap, wishAt, wishJackpot, merchant, tavernRound, festival, onWish }: Props) {
   const canvasRef = useRef<HTMLCanvasElement>(null)
   const sceneRef = useRef<VillageScene | null>(null)
   const onSelectRef = useRef(onSelect)
@@ -101,6 +102,7 @@ export function VillageView({ roster, visitors, awayIds, drillIds, retirees, par
       wishJackpot,
       merchant,
       tavernRound,
+      festival,
     })
   })
 

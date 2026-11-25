@@ -452,6 +452,7 @@ export function App() {
           wishJackpot={save.fountain.last?.jackpot ?? false}
           merchant={merchantHere(save) != null}
           tavernRound={save.tavern?.last ?? null}
+          festival={save.festival && save.festival.season === `${save.calendar.year}-${save.calendar.season}` ? save.festival.kind : null}
           onWish={() => apply({ type: 'wish', now: gameNow() })}
           active={!covered}
         />
