@@ -7,6 +7,7 @@ import {
   guideStatus,
   exportSave,
   housingFree,
+  merchantHere,
   importSave,
   lowMorale,
   isChild,
@@ -438,6 +439,7 @@ export function App() {
           wishCap={fountainLevel(save.buildings.fountain).cap}
           wishAt={save.fountain.last?.at ?? null}
           wishJackpot={save.fountain.last?.jackpot ?? false}
+          merchant={merchantHere(save) != null}
           onWish={() => apply({ type: 'wish', now: gameNow() })}
           active={!covered}
         />

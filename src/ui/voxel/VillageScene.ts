@@ -28,6 +28,8 @@ export type VillageSceneProps = {
   wishCap: number
   wishBurst: boolean
   wishJackpot: boolean
+  // The wandering merchant is in town (Docs/market.md); the 3D for it comes with task 75.
+  merchant: boolean
 }
 
 type Area = { minX: number; maxX: number; minZ: number; maxZ: number }
