@@ -127,7 +127,7 @@ Claude Code, Cursor, GPT(Codex)가 함께 쓰는 작업 목록이다. 작업 하
 | 85 | 선술집·유품 core 코드 리뷰 (161d1d1) | GPT | `Docs/reviews/161d1d1.md` (새 파일만) | 완료 (b60c1cb) |
 | 86 | 선술집·유품 측정 | GPT | `tools/*`, `Docs/tavern.md`의 측정 절 | 완료 (d1013ec) |
 | 87 | 축제 장식 3D | Cursor | `src/ui/voxel/*` | 완료 (5922ec2) |
-| 88 | 명예의 전당 건물·석상·진열장 3D | Cursor | `src/ui/voxel/*` | 대기 (89와 함께 가능) |
+| 88 | 명예의 전당 건물·석상·진열장 3D | Cursor | `src/ui/voxel/*` | 완료 (813599d) |
 | 89 | 명예의 전당 화면 | GPT | `src/ui/App.tsx`, `src/ui/game/*.tsx`, `src/ui/styles.css`, `src/locales/*` | 대기 (88과 함께 가능) |
 | 90 | 명예의 전당 core 코드 리뷰 (4c3aec1) | GPT | `Docs/reviews/4c3aec1.md` (새 파일만) | 대기 (89 뒤) |
 | 91 | 마을 Lv7까지 전체 흐름 점검 | GPT | `tools/*`, `Docs/balance.md`(새 파일) | 대기 (90 뒤) |
@@ -2132,6 +2132,7 @@ Docs/legends.md를 읽고 명예의 전당의 3D를 만든다. src/ui/voxel/*만
 ```
 
 **메모**
+- 완료 813599d. LOTS.legends (12.6, −9.4), 근처 나무를 동남으로 옮김. Lv1 흰 돌 기둥 전당, Lv2 계단·깃발, Lv3 금 지붕 장식·화로. 전설 2/4/6명을 대리석 석상으로(유전자·직업 기반, legends 변경 시에만 재생성). shrine 유품은 받침대 위 빛나는 무기/갑옷/장신구. 5179에서 Lv3·석상 6·진열 3 확인. tsc·test·build 통과.
 
 ---
 
