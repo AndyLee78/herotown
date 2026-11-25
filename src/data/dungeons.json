@@ -331,7 +331,7 @@
           ]
         }
       ],
-      "monsterScale": 2.6,
+      "monsterScale": 3.6,
       "special": "weekday",
       "element": "flame",
       "difficulty": 1
@@ -364,7 +364,7 @@
           ]
         }
       ],
-      "monsterScale": 3.4,
+      "monsterScale": 5.0,
       "special": "weekday",
       "element": "flame",
       "difficulty": 2
@@ -397,7 +397,7 @@
           ]
         }
       ],
-      "monsterScale": 4.4,
+      "monsterScale": 6.6,
       "special": "weekday",
       "element": "flame",
       "difficulty": 3
@@ -430,7 +430,7 @@
           ]
         }
       ],
-      "monsterScale": 2.6,
+      "monsterScale": 3.6,
       "special": "weekday",
       "element": "frost",
       "difficulty": 1
@@ -463,7 +463,7 @@
           ]
         }
       ],
-      "monsterScale": 3.4,
+      "monsterScale": 5.0,
       "special": "weekday",
       "element": "frost",
       "difficulty": 2
@@ -496,7 +496,7 @@
           ]
         }
       ],
-      "monsterScale": 4.4,
+      "monsterScale": 6.6,
       "special": "weekday",
       "element": "frost",
       "difficulty": 3
@@ -530,7 +530,7 @@
           ]
         }
       ],
-      "monsterScale": 2.6,
+      "monsterScale": 2.2,
       "special": "weekday",
       "element": "light",
       "difficulty": 1
@@ -564,7 +564,7 @@
           ]
         }
       ],
-      "monsterScale": 3.4,
+      "monsterScale": 2.9,
       "special": "weekday",
       "element": "light",
       "difficulty": 2
@@ -598,7 +598,7 @@
           ]
         }
       ],
-      "monsterScale": 4.4,
+      "monsterScale": 3.8,
       "special": "weekday",
       "element": "light",
       "difficulty": 3

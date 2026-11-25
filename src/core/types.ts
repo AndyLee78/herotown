@@ -296,7 +296,9 @@ export type DungeonReport = {
   // Filled in when an expedition comes home.
   presetId?: string
   finishedAt?: number
-  gained?: { gold: number; fame: number; materials: Partial<Record<'wood' | 'stone' | 'iron' | 'bone' | 'herb' | 'crystal', number>> }
+  gained?: { gold: number; fame: number; materials: Partial<Record<'wood' | 'stone' | 'iron' | 'bone' | 'herb' | 'crystal', number>>; vault?: Partial<Record<'flame' | 'frost' | 'light' | 'abyss', number>> }
+  // Where an abyss run started and the deepest floor after it (Docs/endgame.md 4a).
+  abyss?: { from: number; best: number }
   potionsUsed?: Supplies
   // Traps met on the way, in dungeons that have them.
   traps?: { sprung: number; disarmed: number }

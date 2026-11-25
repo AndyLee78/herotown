@@ -21,10 +21,9 @@
     "unlockTown": 7,
     "floorsPerRun": 5,
     "baseScale": 2.2,
-    "scalePerFloor": 0.05,
     "shardsFirst": 2,
     "shardsPerFive": 1,
-    "shardsRepeat": 1,
+    "shardsRepeat": 0,
     "fameEvery": 10,
     "fame": 10,
     "bands": [
@@ -73,6 +72,7 @@
       "bandit_chief",
       "citadel_lord",
       "elder_dragon"
-    ]
+    ],
+    "scaleGrowth": 1.06
   }
 }

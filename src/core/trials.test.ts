@@ -111,3 +111,29 @@ describe('saves', () => {
     expect(opened.trials).toBeNull()
   })
 })
+
+describe('review b80777c fixes', () => {
+  it('does not refill attempts when the clock goes back a day', () => {
+    const state = { ...town(6), trials: { date: '2026-11-24', used: 1 } }
+    expect(trialsLeft(state, monday)).toBe(0)
+  })
+
+  it('keeps whole vault amounts and checkpoints on whole runs', () => {
+    const old = JSON.parse(JSON.stringify({ ...town(1), vault: { flame: 1.5, frost: -2, light: 3, abyss: 7 }, abyss: { best: 12, checkpoint: 3 } })) as Record<string, unknown>
+    const opened = migrate(old, monday)
+    expect(opened.vault).toEqual({ flame: 1, frost: 0, light: 3, abyss: 7 })
+    expect(opened.abyss).toEqual({ best: 12, checkpoint: 0 })
+  })
+
+  it('records the essence a trial brought home', () => {
+    let state = { ...town(6), dungeonId: 'trial_flame_1' }
+    state = reduce(state, { type: 'depart', presetId: 'p1', confirm: true, now: monday })
+    const home = reduce(state, { type: 'catchUp', now: state.expeditions[0]!.returnAt + 1000 })
+    const record = home.history[0]!
+    if (record.victory) {
+      expect(record.gained?.vault?.flame).toBe(endgameRules.weekday.essence[0])
+    } else {
+      expect(record.gained?.vault).toBeUndefined()
+    }
+  })
+})

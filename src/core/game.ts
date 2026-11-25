@@ -575,7 +575,8 @@ function apply(state: GameState, action: GameAction): GameState {
     return { ...state, notice: null, auto: { ...state.auto, material: action.material } }
   }
   if (action.type === 'autoDungeon') {
-    if (!state.cleared.includes(action.id)) {
+    // Trials and the abyss are by hand only, even if an imported save lists them (review b80777c).
+    if (!state.cleared.includes(action.id) || specialDungeons.some((dungeon) => dungeon.id === action.id)) {
       return { ...state, notice: 'autoLocked' }
     }
     return { ...state, notice: null, auto: { ...state.auto, dungeonId: action.id } }
@@ -1810,12 +1811,21 @@ function settleExpedition(state: GameState, expedition: Expedition): GameState {
       materials[key] = diff
     }
   }
+  // Essences and abyss shards gained, kept on the record (review b80777c).
+  const vaultGained: Partial<Vault> = {}
+  for (const key of Object.keys(next.vault) as (keyof Vault)[]) {
+    const diff = next.vault[key] - (state.vault?.[key] ?? 0)
+    if (diff > 0) {
+      vaultGained[key] = diff
+    }
+  }
   const record: DungeonReport = {
     ...report,
     dungeonId,
     presetId: expedition.presetId,
     finishedAt: expedition.returnAt,
-    gained: { gold: next.gold - state.gold, fame: next.fame - state.fame, materials },
+    gained: { gold: next.gold - state.gold, fame: next.fame - state.fame, materials, ...(Object.keys(vaultGained).length ? { vault: vaultGained } : {}) },
+    ...(expedition.abyssFrom != null ? { abyss: { from: expedition.abyssFrom, best: next.abyss.best } } : {}),
   }
   return { ...next, history: [record, ...next.history].slice(0, expeditionRules.history) }
 }
@@ -2498,7 +2508,7 @@ function readVault(value: unknown): Vault {
   if (value != null && typeof value === 'object') {
     for (const key of Object.keys(vault) as (keyof Vault)[]) {
       const amount = (value as Record<string, unknown>)[key]
-      vault[key] = typeof amount === 'number' && Number.isFinite(amount) ? Math.max(0, amount) : 0
+      vault[key] = typeof amount === 'number' && Number.isFinite(amount) ? Math.max(0, Math.floor(amount)) : 0
     }
   }
   return vault
@@ -2506,9 +2516,11 @@ function readVault(value: unknown): Vault {
 
 function readAbyss(value: unknown): Abyss {
   const record = (value ?? {}) as Partial<Abyss>
-  const best = typeof record.best === 'number' ? Math.max(0, Math.floor(record.best)) : 0
-  const checkpoint = typeof record.checkpoint === 'number' ? Math.max(0, Math.min(best, Math.floor(record.checkpoint))) : 0
-  return { best, checkpoint }
+  const best = typeof record.best === 'number' && Number.isFinite(record.best) ? Math.max(0, Math.floor(record.best)) : 0
+  // Checkpoints sit on whole runs of floors (review b80777c).
+  const step = endgameRules.abyss.floorsPerRun
+  const raw = typeof record.checkpoint === 'number' && Number.isFinite(record.checkpoint) ? Math.min(best, Math.floor(record.checkpoint)) : 0
+  return { best, checkpoint: Math.max(0, Math.floor(raw / step) * step) }
 }
 
 function readShrine(value: unknown): Shrine | null {

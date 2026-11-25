@@ -26,7 +26,12 @@ export function todayElement(now: number): Essence | 'choice' {
 }
 
 export function trialsLeft(state: GameState, now: number): number {
-  const used = state.trials && state.trials.date === localDateKey(now) ? state.trials.used : 0
+  const today = localDateKey(now)
+  // Setting the clock back to an earlier day does not refill it (review b80777c).
+  if (state.trials && today < state.trials.date) {
+    return 0
+  }
+  const used = state.trials && state.trials.date === today ? state.trials.used : 0
   return Math.max(0, endgameRules.weekday.attemptsPerDay - used)
 }
 
@@ -69,7 +74,8 @@ export function abyssFloors(from: number): DungeonFloor[] {
     if (floor % 5 === 0) {
       monsters[0] = rules.bosses[Math.floor(floor / 5 - 1) % rules.bosses.length]!
     }
-    return { monsters, scale: rules.baseScale * (1 + rules.scalePerFloor * (floor - 1)) }
+    // Each floor is a share stronger than the one above: the abyss always has a bottom for a party.
+    return { monsters, scale: rules.baseScale * Math.pow(rules.scaleGrowth, floor - 1) }
   })
 }
 
