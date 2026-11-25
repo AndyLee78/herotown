@@ -2454,7 +2454,11 @@ function readTavern(value: unknown): TavernState | null {
     return null
   }
   const record = value as TavernState
-  return typeof record.season === 'string' && typeof record.used === 'number' ? { season: record.season, used: record.used } : null
+  if (typeof record.season !== 'string' || typeof record.used !== 'number') {
+    return null
+  }
+  const last = record.last && Array.isArray(record.last.heroIds) && typeof record.last.at === 'number' ? { heroIds: record.last.heroIds.filter((id): id is string => typeof id === 'string'), at: record.last.at } : undefined
+  return { season: record.season, used: record.used, ...(last ? { last } : {}) }
 }
 
 function readMarket(value: unknown, now: number): Market {

@@ -450,6 +450,7 @@ export function App() {
           wishAt={save.fountain.last?.at ?? null}
           wishJackpot={save.fountain.last?.jackpot ?? false}
           merchant={merchantHere(save) != null}
+          tavernRound={save.tavern?.last ?? null}
           onWish={() => apply({ type: 'wish', now: gameNow() })}
           active={!covered}
         />

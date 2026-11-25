@@ -52,6 +52,8 @@ export type VillageSceneProps = {
   wishJackpot: boolean
   // The wandering merchant is in town (Docs/market.md); the 3D for it comes with task 75.
   merchant: boolean
+  // The latest round at the tavern (Docs/tavern.md); the 3D for it comes with task 83.
+  tavernRound: { heroIds: string[]; at: number } | null
 }
 
 type Area = { minX: number; maxX: number; minZ: number; maxZ: number }
