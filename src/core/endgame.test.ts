@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest'
 import { endgameRules, smithRules, villageRules } from './data'
 import { freshState, migrate, reduce, townLevel, townLevelOf, type GameState } from './game'
 import { forgeGear, gearMods } from './gear'
-import { gearValue } from './market'
+import { gearValue, updateMerchant } from './market'
 
 // Docs/endgame.md, stage 4a: town levels 8-10, late building levels, heroic
 // and legendary gear.
@@ -28,7 +28,8 @@ describe('town levels 8-10', () => {
 describe('late building levels', () => {
   it('wait for their town level and take the late materials', () => {
     const house4 = (fame: number) => town(fame, { buildings: { ...freshState(5, now).buildings, house: 4 } })
-    expect(reduce(house4(400), { type: 'build', id: 'house', now }).notice).toBe('maxLevel')
+    // A level waiting for a higher town says so before the cap (review c89e043).
+    expect(reduce(house4(400), { type: 'build', id: 'house', now }).notice).toBe('locked')
     const level5 = villageRules.buildings.find((building) => building.id === 'house')!.levels.find((entry) => entry.level === 5) as { bone?: number }
     const started = reduce(house4(villageRules.levels[7]!.fame), { type: 'build', id: 'house', now })
     expect(started.construction?.id).toBe('house')
@@ -108,5 +109,32 @@ describe('promotion to town levels 8-10 (4b)', () => {
     const old = JSON.parse(JSON.stringify({ ...town(fame8), version: 23 })) as Record<string, unknown>
     delete old.promoted
     expect(migrate(old, now).promoted).toBe(7)
+  })
+})
+
+describe('review c89e043 fixes', () => {
+  const legendMail = smithRules.recipes.find((recipe) => recipe.id === 'legend.mail')! as { flame?: number; frost?: number; light?: number; abyss?: number; bone?: number; crystal?: number }
+
+  it('takes the vault cost for a queued order and gives it all back when cancelled', () => {
+    const busy = town(2000, { buildings: { ...freshState(5, now).buildings, smith: 5 }, smith: { kind: 'craft', recipeId: 'fine.blade', gear: null, finishAt: now + 1000 } })
+    const queued = reduce(busy, { type: 'craft', recipeId: 'legend.mail', now })
+    expect(queued.automation.queues.smith).toEqual(['legend.mail'])
+    expect(queued.vault.frost).toBe(999 - (legendMail.frost ?? 0))
+    expect(queued.vault.abyss).toBe(999 - (legendMail.abyss ?? 0))
+    const cancelled = reduce(queued, { type: 'dequeue', building: 'smith', index: 0 })
+    expect(cancelled.vault).toEqual(busy.vault)
+    expect(cancelled.materials).toEqual(busy.materials)
+  })
+
+  it('keeps the enhance chance at smith levels 4 and 5', () => {
+    expect(smithRules.successByLevel[5]).toBeGreaterThanOrEqual(smithRules.successByLevel[3]!)
+  })
+
+  it('never sells heroic or legendary gear at the market', () => {
+    for (let seed = 1; seed <= 20; seed += 1) {
+      const base = freshState(seed, now)
+      const state = updateMerchant({ ...base, buildings: { ...base.buildings, market: 3, smith: 4 }, market: { ...base.market, nextMerchantAt: now } }, now + 1)
+      expect(state.market.merchant!.offers.every((offer) => offer.kind !== 'gear' || (offer.gear.grade !== 'epic' && offer.gear.grade !== 'legend'))).toBe(true)
+    }
   })
 })

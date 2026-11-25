@@ -259,7 +259,8 @@ function stockFor(state: GameState, nonce: number): MerchantOffer[] {
   const pick = <T,>(list: readonly T[]): T => list[Math.floor(rng.next() * list.length)]!
   // Gear one step beyond what the smith can make yet, or the best it can.
   const smithLevel = state.buildings.smith
-  const reachable = smithRules.recipes.filter((recipe) => recipe.smithLevel <= Math.max(1, smithLevel + 1) && recipe.smithLevel < 99)
+  // Heroic and legendary gear is made only from the vault, never sold for gold (review c89e043).
+  const reachable = smithRules.recipes.filter((recipe) => recipe.smithLevel <= Math.max(1, smithLevel + 1) && recipe.smithLevel < 99 && recipe.grade !== 'epic' && recipe.grade !== 'legend')
   const gearPool = reachable.filter((recipe) => recipe.smithLevel === Math.max(...reachable.map((entry) => entry.smithLevel)))
   // Every offer is a different thing: no two of the same blade or bundle.
   type Pick = { kind: 'gear'; recipe: (typeof gearPool)[number] } | { kind: 'potion'; potionId: PotionId } | { kind: 'material'; material: MaterialName }

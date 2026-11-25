@@ -80,9 +80,9 @@
       "level": 8,
       "abyssBest": 10,
       "offering": {
-        "flame": 12,
-        "frost": 8,
-        "light": 8,
+        "flame": 15,
+        "frost": 10,
+        "light": 10,
         "abyss": 60
       }
     },
@@ -90,20 +90,20 @@
       "level": 9,
       "abyssBest": 25,
       "offering": {
-        "flame": 40,
-        "frost": 30,
-        "light": 30,
-        "abyss": 150
+        "flame": 60,
+        "frost": 45,
+        "light": 45,
+        "abyss": 90
       }
     },
     {
       "level": 10,
       "abyssBest": 40,
       "offering": {
-        "flame": 80,
-        "frost": 60,
-        "light": 60,
-        "abyss": 250
+        "flame": 150,
+        "frost": 120,
+        "light": 120,
+        "abyss": 120
       }
     }
   ]

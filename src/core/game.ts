@@ -1202,12 +1202,13 @@ function startBuild(state: GameState, id: BuildingId, now: number): GameState {
   }
   const current = state.buildings[id]
   const cost = def.levels.find((level) => level.level === current + 1) as (Cost & { level: number; ms: number; town?: number }) | undefined
+  // The late levels wait for town levels 8-10 (Docs/endgame.md); say so
+  // before the cap, as the screen does (review c89e043).
+  if (cost && (cost.town ?? 0) > townLevelOf(state).level) {
+    return { ...state, notice: 'locked' }
+  }
   if (!cost || current >= townLevelOf(state).maxBuildingLevel) {
     return { ...state, notice: 'maxLevel' }
-  }
-  // The late levels wait for town levels 8-10 (Docs/endgame.md).
-  if ((cost.town ?? 0) > townLevelOf(state).level) {
-    return { ...state, notice: 'locked' }
   }
   if (!affordable(state, cost)) {
     return { ...state, notice: 'resources' }
@@ -2026,7 +2027,9 @@ function finishSmith(state: GameState, now: number, crafted: string[]): GameStat
   if (!job.gear) {
     return { ...state, smith: null, craftNonce }
   }
-  const chance = Math.min(1, (smithRules.successByLevel[state.buildings.smith] ?? 0) + retireeBonus(state, 'smith'))
+  // Past the table the last chance holds (review c89e043).
+  const table = smithRules.successByLevel
+  const chance = Math.min(1, (table[Math.min(state.buildings.smith, table.length - 1)] ?? 0) + retireeBonus(state, 'smith'))
   const success = rng.next() < chance
   const gear = success ? { ...job.gear, enhance: job.gear.enhance + 1 } : job.gear
   return {
@@ -2380,6 +2383,8 @@ function enqueue(state: GameState, building: QueueBuilding, id: string): GameSta
     notice: null,
     gold: probe.gold,
     materials: probe.materials,
+    // Essences and shards too, as a direct order would (review c89e043).
+    vault: probe.vault,
     automation: { ...state.automation, queues: { ...state.automation.queues, [building]: [...queue, id] } },
   }
 }
@@ -2404,15 +2409,26 @@ function dequeue(state: GameState, building: QueueBuilding, index: number): Game
       bone: state.materials.bone + refund.bone,
       crystal: state.materials.crystal + refund.crystal,
     },
+    vault: Object.fromEntries((Object.keys(state.vault) as VaultKey[]).map((key) => [key, state.vault[key] + (refund.vault[key] ?? 0)])) as Vault,
     automation: { ...state.automation, queues: { ...state.automation.queues, [building]: queue.filter((_, at) => at !== index) } },
   }
 }
 
 function orderCost(building: QueueBuilding, id: string) {
-  const none = { gold: 0, wood: 0, stone: 0, iron: 0, herb: 0, bone: 0, crystal: 0 }
+  const none = { gold: 0, wood: 0, stone: 0, iron: 0, herb: 0, bone: 0, crystal: 0, vault: {} as Partial<Vault> }
   if (building === 'smith') {
-    const recipe = recipeById(id)
-    return recipe ? { ...none, gold: recipe.gold, wood: recipe.wood, stone: recipe.stone, iron: recipe.iron } : none
+    // Everything a recipe costs, the late bone, crystal and vault costs too (review c89e043).
+    const recipe = recipeById(id) as (Cost & { gold: number }) | undefined
+    if (!recipe) {
+      return none
+    }
+    const vault: Partial<Vault> = {}
+    for (const key of ['flame', 'frost', 'light', 'abyss'] as const) {
+      if (recipe[key]) {
+        vault[key] = recipe[key]
+      }
+    }
+    return { ...none, gold: recipe.gold, wood: recipe.wood, stone: recipe.stone, iron: recipe.iron, bone: recipe.bone ?? 0, crystal: recipe.crystal ?? 0, vault }
   }
   if (building === 'alchemy') {
     const potion = potionById(id)

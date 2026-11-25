@@ -7,7 +7,9 @@
     0,
     0.7,
     0.85,
-    0.95
+    0.95,
+    0.97,
+    0.99
   ],
   "enhanceCost": {
     "gold": 20,
@@ -134,8 +136,7 @@
       "crystal": 10,
       "ms": 14400000,
       "smithLevel": 4,
-      "flame": 6,
-      "abyss": 15
+      "flame": 16
     },
     {
       "id": "epic.mail",
@@ -152,8 +153,7 @@
       "crystal": 10,
       "ms": 14400000,
       "smithLevel": 4,
-      "frost": 6,
-      "abyss": 15
+      "frost": 16
     },
     {
       "id": "legend.blade",
@@ -170,9 +170,9 @@
       "crystal": 25,
       "ms": 21600000,
       "smithLevel": 5,
-      "flame": 20,
-      "light": 10,
-      "abyss": 50
+      "flame": 40,
+      "light": 20,
+      "abyss": 15
     },
     {
       "id": "legend.mail",
@@ -189,9 +189,9 @@
       "crystal": 25,
       "ms": 21600000,
       "smithLevel": 5,
-      "frost": 20,
-      "light": 10,
-      "abyss": 50
+      "frost": 40,
+      "light": 20,
+      "abyss": 15
     }
   ]
 }
