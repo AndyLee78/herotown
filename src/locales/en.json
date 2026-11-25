@@ -505,7 +505,9 @@
     "promoteFame": "Not enough fame.",
     "promoteDeed": "The party must go deeper into the abyss.",
     "promoteOffering": "Not enough essence or abyss shards to offer.",
-    "promoteMax": "The town is already at its highest level."
+    "promoteMax": "The town is already at its highest level.",
+    "raidDone": "This week's raid boss has already fallen.",
+    "noInvasion": "No invasion is coming yet."
   },
   "defeat": {
     "noHealer": "Bring a healer to keep the party going.",

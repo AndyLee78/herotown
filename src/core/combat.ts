@@ -251,6 +251,10 @@ export function applyAuras(heroes: BattleUnit[]) {
   }
 }
 
+// A raid boss's health pool across attempts: `hp` in (null for a fresh boss),
+// `left` and `max` out (Docs/endgame.md 4c).
+export type RaidPool = { hpScale: number; hp: number | null; left?: number; max?: number }
+
 export function simulateFloor(
   heroes: BattleUnit[],
   monsterIds: string[],
@@ -263,8 +267,23 @@ export function simulateFloor(
   kit?: Kit,
   trapChance = 0,
   affixes: AffixId[] = [],
+  raid?: RaidPool,
 ): { outcome: FloorOutcome; ticks: number; trap: TrapResult } {
   const enemies = monsterIds.map((id, index) => enemyUnit(monsterById(id), index, monsterScale))
+  // A raid boss has a far deeper pool of health and keeps what it lost
+  // between attempts (Docs/endgame.md 4c).
+  const raidBoss = raid ? enemies.find((enemy) => enemy.boss) : undefined
+  if (raid && raidBoss) {
+    raidBoss.maxHp = Math.round(raidBoss.maxHp * raid.hpScale)
+    raidBoss.hp = raid.hp == null ? raidBoss.maxHp : Math.max(1, Math.min(raidBoss.maxHp, raid.hp))
+    raid.max = raidBoss.maxHp
+  }
+  const done = <T,>(result: T): T => {
+    if (raid && raidBoss) {
+      raid.left = Math.max(0, raidBoss.hp)
+    }
+    return result
+  }
   applyAffixes(enemies, affixes)
   floors?.push([...heroes, ...enemies].map(replayUnit))
   push(log, 0, 'log.floor', { floor: floorNumber })
@@ -289,11 +308,11 @@ export function simulateFloor(
   while (tick < combatRules.maxTicks) {
     if (!living(heroes).length) {
       push(log, tick, 'log.defeat')
-      return { outcome: 'wipe', ticks: tick, trap }
+      return done({ outcome: 'wipe' as const, ticks: tick, trap })
     }
     if (!living(enemies).length) {
       push(log, tick, 'log.floorClear', { floor: floorNumber })
-      return { outcome: 'victory', ticks: tick, trap }
+      return done({ outcome: 'victory' as const, ticks: tick, trap })
     }
     tick += 1
     for (const unit of [...heroes, ...enemies]) {
@@ -330,7 +349,7 @@ export function simulateFloor(
       const average = averageHpRatio(heroes)
       if (average * 100 < tactics.retreatBelow) {
         push(log, tick, 'log.retreat', { hp: Math.round(average * 100) })
-        return { outcome: 'retreat', ticks: tick, trap }
+        return done({ outcome: 'retreat' as const, ticks: tick, trap })
       }
       // A paralysed hero with a tonic drinks it instead of losing the turn
       // blankly: the turn still goes, but paralysis and slow wear off and
@@ -381,7 +400,7 @@ export function simulateFloor(
     advancePhases(enemies, monsterScale, tick, log, affixes)
   }
   push(log, tick, 'log.defeat')
-  return { outcome: 'timeout', ticks: tick, trap }
+  return done({ outcome: 'timeout' as const, ticks: tick, trap })
 }
 
 export type TrapResult = 'none' | 'disarmed' | 'sprung'

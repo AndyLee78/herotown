@@ -7,7 +7,7 @@ import { lookFor, seeded } from './look'
 import type { Hit, ReplayStep, StatusMark } from './replay'
 
 export type BattleBackdrop = {
-  special?: 'weekday' | 'endless'
+  special?: 'weekday' | 'endless' | 'raid' | 'invasion'
   element?: 'flame' | 'frost' | 'light'
   difficulty?: 1 | 2 | 3
   abyssFrom?: number

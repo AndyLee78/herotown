@@ -14,7 +14,7 @@ const plenty = { wood: 999, stone: 999, iron: 999, bone: 999, herb: 999, crystal
 // fame and building rules; promotion has its own tests below (Docs/endgame.md 4b).
 function town(fame: number, extra: Partial<GameState> = {}): GameState {
   const base = freshState(5, now)
-  return { ...base, fame, gold: 99_999, materials: plenty, promoted: 10, vault: { flame: 999, frost: 999, light: 999, abyss: 999 }, ...extra }
+  return { ...base, fame, gold: 99_999, materials: plenty, promoted: 10, vault: { flame: 999, frost: 999, light: 999, abyss: 999, scale: 999, crown: 999, core: 999, valor: 999 }, ...extra }
 }
 
 describe('town levels 8-10', () => {
@@ -83,7 +83,7 @@ describe('promotion to town levels 8-10 (4b)', () => {
     const ready = town(fame8, { promoted: 7, abyss: { best: rule8.abyssBest, checkpoint: rule8.abyssBest } })
     expect(reduce({ ...ready, fame: fame8 - 1 }, { type: 'promote' }).notice).toBe('promoteFame')
     expect(reduce({ ...ready, abyss: { best: rule8.abyssBest - 1, checkpoint: 5 } }, { type: 'promote' }).notice).toBe('promoteDeed')
-    expect(reduce({ ...ready, vault: { flame: 0, frost: 0, light: 0, abyss: 0 } }, { type: 'promote' }).notice).toBe('promoteOffering')
+    expect(reduce({ ...ready, vault: { flame: 0, frost: 0, light: 0, abyss: 0, scale: 0, crown: 0, core: 0, valor: 0 } }, { type: 'promote' }).notice).toBe('promoteOffering')
     const promoted = reduce(ready, { type: 'promote' })
     expect(promoted.promoted).toBe(8)
     expect(townLevelOf(promoted).level).toBe(8)
@@ -102,7 +102,7 @@ describe('promotion to town levels 8-10 (4b)', () => {
     const level5 = villageRules.buildings.find((building) => building.id === 'house')!.levels.find((entry) => entry.level === 5) as { flame?: number; abyss?: number }
     expect(started.vault.flame).toBe(999 - (level5.flame ?? 0))
     expect(started.vault.abyss).toBe(999 - (level5.abyss ?? 0))
-    expect(reduce({ ...house4, vault: { flame: 0, frost: 0, light: 0, abyss: 0 } }, { type: 'build', id: 'house', now }).notice).toBe('resources')
+    expect(reduce({ ...house4, vault: { flame: 0, frost: 0, light: 0, abyss: 0, scale: 0, crown: 0, core: 0, valor: 0 } }, { type: 'build', id: 'house', now }).notice).toBe('resources')
   })
 
   it('opens a version 23 save at promotion step 7', () => {

@@ -106,7 +106,7 @@ describe('saves', () => {
     delete old.trials
     delete old.abyss
     const opened = migrate(old, monday)
-    expect(opened.vault).toEqual({ flame: 0, frost: 0, light: 0, abyss: 0 })
+    expect(opened.vault).toEqual({ flame: 0, frost: 0, light: 0, abyss: 0, scale: 0, crown: 0, core: 0, valor: 0 })
     expect(opened.abyss).toEqual({ best: 0, checkpoint: 0 })
     expect(opened.trials).toBeNull()
   })
@@ -121,7 +121,7 @@ describe('review b80777c fixes', () => {
   it('keeps whole vault amounts and checkpoints on whole runs', () => {
     const old = JSON.parse(JSON.stringify({ ...town(1), vault: { flame: 1.5, frost: -2, light: 3, abyss: 7 }, abyss: { best: 12, checkpoint: 3 } })) as Record<string, unknown>
     const opened = migrate(old, monday)
-    expect(opened.vault).toEqual({ flame: 1, frost: 0, light: 3, abyss: 7 })
+    expect(opened.vault).toEqual({ flame: 1, frost: 0, light: 3, abyss: 7, scale: 0, crown: 0, core: 0, valor: 0 })
     expect(opened.abyss).toEqual({ best: 12, checkpoint: 0 })
   })
 

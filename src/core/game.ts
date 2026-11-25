@@ -10,6 +10,8 @@ import { festivalScale, gather, type TavernState } from './tavern'
 import { bequeath, bequeathed, comfortHeir, heirloomMods } from './heirloom'
 import { blessing, enshrine, fitShrine, shrineMorale, unshrine, type Shrine } from './legends'
 import { abyssFloors, freshVault, settleSpecial, specialBlock, spendTrial, type Abyss, type Trials, type Vault, type VaultKey } from './trials'
+import { currentRaid, raidVariant, settleRaid, type Raid } from './raid'
+import { resolveInvasion, setDefenders, type Invasion } from './invasion'
 import { buyOffer, freshMarket, sellGear, sellPotion, trade, updateMerchant, type Market, type MerchantOffer } from './market'
 import { forgetSkill, readDrills, runDrills, startDrill, type Drill } from './drill'
 import { buyIntel, finishScout, isNest, nestSeason, readScout, seasonKey, startScout, type ScoutJob } from './nest'
@@ -25,7 +27,7 @@ import type { Rng } from './rng'
 import type { Genes } from './genes'
 import type { Bond, ClassId, CombatError, DungeonReport, Gear, GearSlot, Gender, Hero, PartyMember, PotionId, Proposal, Role, Row, Supplies, Tactics, TrinketId , StatKey } from './types'
 
-export const SAVE_VERSION = 24
+export const SAVE_VERSION = 25
 
 // Town levels up to here come with fame alone (Docs/endgame.md 4b).
 export const PROMOTION_FREE = 7
@@ -127,6 +129,8 @@ export type Expedition = {
   nestKey?: string
   // The floor an abyss run started below (Docs/endgame.md 4a).
   abyssFrom?: number
+  // The raid week and the boss's health before and after this party (Docs/endgame.md 4c).
+  raid?: { week: string; start: number | null; left?: number; max?: number }
 }
 
 // A hero who has hung up their sword. They stay in town, cost no wages,
@@ -200,6 +204,8 @@ export type GameNotice =
   | 'promoteDeed'
   | 'promoteOffering'
   | 'promoteMax'
+  | 'raidDone'
+  | 'noInvasion'
   | 'drillHero'
   | 'trainingFull'
   | 'scoutBusy'
@@ -294,6 +300,10 @@ export type GameState = {
   abyss: Abyss
   // The highest town level whose promotion ritual is done (7 before any).
   promoted: number
+  // This week's raid, raids won, and the coming invasion (Docs/endgame.md 4c).
+  raid: Raid | null
+  raidKills: number
+  invasion: Invasion | null
 }
 
 export type QueueBuilding = 'smith' | 'alchemy' | 'magic'
@@ -375,6 +385,7 @@ export type GameAction =
   | { type: 'gather'; heroIds: string[] }
   | { type: 'bequeath'; retireeId: string; gearId: string; toId: string | null }
   | { type: 'promote' }
+  | { type: 'defend'; presetIds: string[] }
   | { type: 'enshrine'; gearId: string }
   | { type: 'unshrine'; gearId: string }
   | { type: 'declineProposal'; a: string; b: string; now?: number }
@@ -442,6 +453,9 @@ export function freshState(seed: number, now: number): GameState {
     trials: null,
     abyss: { best: 0, checkpoint: 0 },
     promoted: PROMOTION_FREE,
+    raid: null,
+    raidKills: 0,
+    invasion: null,
   }
 }
 
@@ -704,6 +718,9 @@ function apply(state: GameState, action: GameAction): GameState {
   if (action.type === 'buyIntel') {
     return buyIntel(state)
   }
+  if (action.type === 'defend') {
+    return setDefenders(state, action.presetIds)
+  }
   if (action.type === 'promote') {
     return promote(state)
   }
@@ -823,6 +840,8 @@ function advance(state: GameState, now: number): GameState {
     next = updateVisitors(next, until, visitors)
     // The wandering merchant comes and goes (Docs/market.md).
     next = updateMerchant(next, until)
+    // Invasions from town level 9, every three days (Docs/endgame.md 4c).
+    next = invade(next, until)
     const out = next.expeditions
     next = returnExpeditions(next, until, returned)
     // The wounded who come home start treatment as they arrive.
@@ -1672,7 +1691,12 @@ export function dungeonUnlocked(state: GameState, id: string): boolean {
   // Weekday trials and the abyss open with the town (Docs/endgame.md 4a).
   const special = specialDungeons.find((entry) => entry.id === id)
   if (special) {
-    return townLevelOf(state).level >= (special.special === 'weekday' ? endgameRules.weekday.unlockTown : endgameRules.abyss.unlockTown)
+    // The invasion comes to the town; nobody sets out for it.
+    if (special.special === 'invasion') {
+      return false
+    }
+    const unlock = special.special === 'weekday' ? endgameRules.weekday.unlockTown : special.special === 'raid' ? endgameRules.raid.unlockTown : endgameRules.abyss.unlockTown
+    return townLevelOf(state).level >= unlock
   }
   const dungeon = dungeons.find((entry) => entry.id === id)
   if (!dungeon) {
@@ -1749,7 +1773,13 @@ function startExpedition(state: GameState, presetId: string, confirm: boolean, n
   const carry = takeSupplies(state.potions, preset.supplies)
   // The abyss is laid out below its checkpoint as the party sets out.
   const abyssFrom = dungeon.special === 'endless' ? state.abyss.checkpoint : undefined
-  const variant = abyssFrom != null ? { floors: abyssFloors(abyssFrom) } : nestVariant(state, state.dungeonId)
+  // The raid: this week's boss, with whatever health it has left (Docs/endgame.md 4c).
+  const raid = dungeon.special === 'raid' ? currentRaid(state, now) : null
+  if (raid?.killed) {
+    return { ...state, notice: 'raidDone' }
+  }
+  const raidPlan = raid ? raidVariant(state, now) : null
+  const variant = abyssFrom != null ? { floors: abyssFloors(abyssFrom) } : raidPlan ?? nestVariant(state, state.dungeonId)
   const result = runDungeon(party, state.dungeonId, preset.tactics, battleSeed, carry.taken, variant)
   if (!result.ok) {
     return { ...state, notice: result.error }
@@ -1772,9 +1802,10 @@ function startExpedition(state: GameState, presetId: string, confirm: boolean, n
     ...(Object.keys(carry.taken).length > 0 ? { supplies: carry.taken } : {}),
     ...(isNest(state.dungeonId) ? { nestKey: seasonKey(state.calendar) } : {}),
     ...(abyssFrom != null ? { abyssFrom } : {}),
+    ...(raid && raidPlan ? { raid: { week: raid.week, start: raid.hp, left: raidPlan.raid.left, max: raidPlan.raid.max } } : {}),
   }
   // Friends left at home notice who went without them (Docs/personality.md).
-  const spent = dungeon.special === 'weekday' ? spendTrial(state, now) : state
+  const spent = dungeon.special === 'weekday' ? spendTrial(state, now) : raid ? { ...state, raid } : state
   const benched = benchAtDeparture(spent, expedition.heroIds, away)
   return { ...benched, notice: null, potions: carry.stock, expeditionNonce: state.expeditionNonce + 1, expeditions: [...state.expeditions, expedition] }
 }
@@ -1823,7 +1854,8 @@ function settleExpedition(state: GameState, expedition: Expedition): GameState {
     expedition.heroIds,
     report.victory,
   )
-  const rewarded = settleSpecial(grantVictoryRewards(afterTrip(home, expedition.heroIds, report.victory), report, dungeonId), dungeonId, report.floorsCleared, report.victory, expedition.abyssFrom)
+  const special = settleSpecial(grantVictoryRewards(afterTrip(home, expedition.heroIds, report.victory), report, dungeonId), dungeonId, report.floorsCleared, report.victory, expedition.abyssFrom)
+  const rewarded = expedition.raid ? settleRaid(special, expedition.raid.week, expedition.raid.start, expedition.raid.left, expedition.raid.max) : special
   const next = dropFromPresets(rewarded)
   const materials: Partial<Materials> = {}
   for (const key of ['wood', 'stone', 'iron', 'bone', 'herb', 'crystal'] as const) {
@@ -1939,6 +1971,29 @@ function pay(state: GameState, cost: Cost): GameState {
   }
 }
 
+// Schedules the first invasion when the town reaches level 9, and fights
+// any that arrive by `until`. Defence never kills: the fallen come home
+// critical, as on auto runs (Docs/endgame.md 4c).
+function invade(state: GameState, until: number): GameState {
+  const rules = endgameRules.invasion
+  if (!state.invasion) {
+    return townLevelOf(state).level >= rules.unlockTown ? { ...state, invasion: { nextAt: until + rules.everyMs, defenders: [], count: 0, wins: 0 } } : state
+  }
+  let next = state
+  for (let fought = 0; next.invasion && next.invasion.nextAt <= until && fought < 3; fought += 1) {
+    const at = next.invasion.nextAt
+    next = resolveInvasion(next, (current, report, heroIds) => {
+      const safe = { ...report, conditions: report.conditions.map((entry) => (entry.condition === 'dead' ? { ...entry, condition: 'critical' as const } : entry)) }
+      return { ...current, ...settleParty(current, safe, current.seed + at, at, heroIds, 'invasion') }
+    })
+  }
+  // A long absence does not stack up raids: the next one is a full wait away.
+  if (next.invasion && next.invasion.nextAt <= until) {
+    next = { ...next, invasion: { ...next.invasion, nextAt: until + rules.everyMs } }
+  }
+  return next
+}
+
 // The promotion ritual for town levels 8-10: enough fame, a deed in the
 // abyss, and an offering from the vault (Docs/endgame.md 4b).
 function promote(state: GameState): GameState {
@@ -1951,7 +2006,9 @@ function promote(state: GameState): GameState {
   if (state.fame < level.fame) {
     return { ...state, notice: 'promoteFame' }
   }
-  if (state.abyss.best < rule.abyssBest) {
+  // Level 9 needs a raid boss brought down, level 10 an invasion held (Docs/endgame.md 4c).
+  const deeds = rule as { raidKills?: number; invasionWins?: number }
+  if (state.abyss.best < rule.abyssBest || (state.raidKills ?? 0) < (deeds.raidKills ?? 0) || (state.invasion?.wins ?? 0) < (deeds.invasionWins ?? 0)) {
     return { ...state, notice: 'promoteDeed' }
   }
   const offering = rule.offering as Partial<Record<VaultKey, number>>
@@ -2199,6 +2256,9 @@ function normalize(record: Record<string, unknown>, now: number): GameState {
     vault: readVault(record.vault),
     trials: record.trials && typeof (record.trials as Trials).date === 'string' && typeof (record.trials as Trials).used === 'number' ? { date: (record.trials as Trials).date, used: (record.trials as Trials).used } : null,
     abyss: readAbyss(record.abyss),
+    raid: readRaid(record.raid),
+    raidKills: numberOr(record.raidKills, 0),
+    invasion: readInvasion(record.invasion),
     promoted: typeof record.promoted === 'number' && Number.isFinite(record.promoted) ? Math.max(PROMOTION_FREE, Math.min(10, Math.floor(record.promoted))) : PROMOTION_FREE,
     auto: isAuto(record.auto) ? record.auto : base.auto,
     notice: null,
@@ -2423,7 +2483,7 @@ function orderCost(building: QueueBuilding, id: string) {
       return none
     }
     const vault: Partial<Vault> = {}
-    for (const key of ['flame', 'frost', 'light', 'abyss'] as const) {
+    for (const key of Object.keys(freshVault()) as VaultKey[]) {
       if (recipe[key]) {
         vault[key] = recipe[key]
       }
@@ -2566,6 +2626,29 @@ function drillReserved(state: GameState): Set<string> {
 }
 
 // Saves before version 20 have no market yet (Docs/market.md).
+function readRaid(value: unknown): Raid | null {
+  const record = value as Partial<Raid> | null
+  if (!record || typeof record.week !== 'string' || typeof record.bossId !== 'string') {
+    return null
+  }
+  const num = (entry: unknown) => (typeof entry === 'number' && Number.isFinite(entry) ? Math.max(0, entry) : null)
+  return { week: record.week, bossId: record.bossId, hp: num(record.hp), max: num(record.max), killed: record.killed === true }
+}
+
+function readInvasion(value: unknown): Invasion | null {
+  const record = value as Partial<Invasion> | null
+  if (!record || typeof record.nextAt !== 'number') {
+    return null
+  }
+  return {
+    nextAt: record.nextAt,
+    defenders: Array.isArray(record.defenders) ? record.defenders.filter((id): id is string => typeof id === 'string').slice(0, endgameRules.invasion.maxDefenders) : [],
+    count: numberOr(record.count, 0),
+    wins: numberOr(record.wins, 0),
+    ...(record.last && typeof record.last.at === 'number' ? { last: record.last } : {}),
+  }
+}
+
 function readVault(value: unknown): Vault {
   const vault = freshVault()
   if (value != null && typeof value === 'object') {

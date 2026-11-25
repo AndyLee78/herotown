@@ -172,7 +172,8 @@
       "smithLevel": 5,
       "flame": 40,
       "light": 20,
-      "abyss": 15
+      "abyss": 15,
+      "scale": 2
     },
     {
       "id": "legend.mail",
@@ -191,7 +192,8 @@
       "smithLevel": 5,
       "frost": 40,
       "light": 20,
-      "abyss": 15
+      "abyss": 15,
+      "core": 2
     }
   ]
 }

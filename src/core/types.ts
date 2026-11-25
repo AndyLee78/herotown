@@ -138,7 +138,7 @@ export type DungeonDef = {
   floors: DungeonFloor[]
   // Weekday trials and the endless abyss (Docs/endgame.md 4a) live apart from
   // the regular dungeon ladder.
-  special?: 'weekday' | 'endless'
+  special?: 'weekday' | 'endless' | 'raid' | 'invasion'
   element?: Essence
   difficulty?: 1 | 2 | 3
 }

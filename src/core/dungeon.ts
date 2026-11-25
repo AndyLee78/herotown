@@ -1,5 +1,5 @@
 import { classById, combatRules, dungeonById, lifeRules, magicRules, nestRules, progression } from './data'
-import { applyAuras, createHeroUnit, heroUnitsToReport, simulateFloor, type BattleUnit, type Kit } from './combat'
+import { applyAuras, createHeroUnit, heroUnitsToReport, simulateFloor, type BattleUnit, type Kit, type RaidPool } from './combat'
 import { canDeploy, createHero } from './hero'
 import { createRng } from './rng'
 import type { AffixId, Condition, DungeonFloor, DungeonReport, DungeonResult, Hero, PartyMember, Supplies, Tactics } from './types'
@@ -12,7 +12,8 @@ export const DEFAULT_TACTICS: Tactics = {
 }
 
 // The nest passes this season's lineup and affixes (Docs/depth.md 3d).
-export type DungeonVariant = { floors?: DungeonFloor[]; affixes?: AffixId[] }
+// `raid` carries a raid boss's health pool in and out of the fight (Docs/endgame.md 4c).
+export type DungeonVariant = { floors?: DungeonFloor[]; affixes?: AffixId[]; raid?: RaidPool }
 
 export function runDungeon(party: PartyMember[], dungeonId: string, tactics: Tactics, seed: number, supplies: Supplies = {}, variant: DungeonVariant = {}): DungeonResult {
   if (party.length === 0) {
@@ -57,7 +58,7 @@ export function runDungeon(party: PartyMember[], dungeonId: string, tactics: Tac
     if (!floorDef) {
       break
     }
-    const result = simulateFloor(heroes, floorDef.monsters, tactics, rng, log, floor + 1, floors, floorDef.scale ?? dungeon.monsterScale ?? 1, carried ? kit : undefined, floorDef.trapChance ?? 0, affixes)
+    const result = simulateFloor(heroes, floorDef.monsters, tactics, rng, log, floor + 1, floors, floorDef.scale ?? dungeon.monsterScale ?? 1, carried ? kit : undefined, floorDef.trapChance ?? 0, affixes, variant.raid)
     ticks += result.ticks
     if (result.trap !== 'none') {
       traps[result.trap] += 1

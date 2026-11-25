@@ -644,6 +644,63 @@
       ],
       "monsterScale": 2.2,
       "special": "endless"
+    },
+    {
+      "id": "raid",
+      "tier": 7,
+      "recommendedLevel": 18,
+      "betweenHeal": 0.5,
+      "gold": 120,
+      "xp": 400,
+      "floors": [
+        {
+          "monsters": [
+            "wyvern",
+            "drake"
+          ]
+        },
+        {
+          "monsters": [
+            "elder_dragon",
+            "drake"
+          ]
+        }
+      ],
+      "monsterScale": 6,
+      "special": "raid"
+    },
+    {
+      "id": "invasion",
+      "tier": 6,
+      "recommendedLevel": 18,
+      "betweenHeal": 0.3,
+      "gold": 0,
+      "xp": 300,
+      "floors": [
+        {
+          "monsters": [
+            "bandit_thug",
+            "crossbowman",
+            "cutthroat"
+          ]
+        },
+        {
+          "monsters": [
+            "grave_knight",
+            "bone_archer",
+            "specter"
+          ]
+        },
+        {
+          "monsters": [
+            "bandit_chief",
+            "drake",
+            "wyvern"
+          ]
+        }
+      ],
+      "monsterScale": 3.4,
+      "special": "invasion"
     }
   ]
 }

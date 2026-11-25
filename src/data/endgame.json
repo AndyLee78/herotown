@@ -94,7 +94,8 @@
         "frost": 45,
         "light": 45,
         "abyss": 90
-      }
+      },
+      "raidKills": 1
     },
     {
       "level": 10,
@@ -104,7 +105,78 @@
         "frost": 120,
         "light": 120,
         "abyss": 120
-      }
+      },
+      "invasionWins": 1
     }
-  ]
+  ],
+  "raid": {
+    "unlockTown": 8,
+    "bosses": [
+      {
+        "id": "wyrm",
+        "boss": "elder_dragon",
+        "minions": [
+          "wyvern",
+          "drake"
+        ],
+        "scale": 9,
+        "hpScale": 30,
+        "spoil": "scale"
+      },
+      {
+        "id": "lich",
+        "boss": "crypt_lord",
+        "minions": [
+          "wraith",
+          "specter"
+        ],
+        "scale": 12,
+        "hpScale": 30,
+        "spoil": "crown"
+      },
+      {
+        "id": "titan",
+        "boss": "citadel_lord",
+        "minions": [
+          "grave_knight",
+          "bone_archer"
+        ],
+        "scale": 8,
+        "hpScale": 30,
+        "spoil": "core"
+      }
+    ],
+    "spoils": 3,
+    "fame": 30
+  },
+  "invasion": {
+    "unlockTown": 9,
+    "everyMs": 259200000,
+    "warnMs": 21600000,
+    "waves": [
+      [
+        "bandit_thug",
+        "crossbowman",
+        "cutthroat"
+      ],
+      [
+        "grave_knight",
+        "bone_archer",
+        "specter"
+      ],
+      [
+        "bandit_chief",
+        "drake",
+        "wyvern"
+      ]
+    ],
+    "scale": 7,
+    "scalePerInvasion": 0.15,
+    "maxDefenders": 3,
+    "valor": 10,
+    "valorPer": 2,
+    "pride": 5,
+    "loss": 0.1,
+    "dread": 10
+  }
 }

@@ -271,7 +271,8 @@
           "crystal": 10,
           "flame": 40,
           "frost": 30,
-          "abyss": 15
+          "abyss": 15,
+          "valor": 10
         }
       ]
     },
@@ -383,7 +384,9 @@
           "flame": 60,
           "frost": 40,
           "light": 40,
-          "abyss": 20
+          "abyss": 20,
+          "scale": 1,
+          "core": 1
         }
       ]
     },
@@ -752,7 +755,9 @@
           "flame": 50,
           "frost": 50,
           "light": 50,
-          "abyss": 20
+          "abyss": 20,
+          "crown": 1,
+          "valor": 20
         }
       ]
     }
