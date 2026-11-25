@@ -122,7 +122,7 @@ Claude Code, Cursor, GPT(Codex)가 함께 쓰는 작업 목록이다. 작업 하
 | 80 | 성격·감정 화면 | GPT | `src/ui/App.tsx`, `src/ui/game/*.tsx`, `src/ui/styles.css`, `src/locales/*` | 완료 (b16876f) |
 | 81 | 성격 core 코드 리뷰 (49c92da) | GPT | `Docs/reviews/49c92da.md` (새 파일만) | 완료 (b9207af) |
 | 82 | 성격 영향 측정 | GPT | `tools/*`, `Docs/personality.md`의 측정 절 | 완료 (0559f10) |
-| 83 | 선술집 건물·술자리·축제 장식 3D | Cursor | `src/ui/voxel/*` | 대기 (84와 함께 가능) |
+| 83 | 선술집 건물·술자리·축제 장식 3D | Cursor | `src/ui/voxel/*` | 완료 (155a38a) |
 | 84 | 선술집·유품 화면 | GPT | `src/ui/App.tsx`, `src/ui/game/*.tsx`, `src/ui/styles.css`, `src/locales/*` | 대기 (83과 함께 가능) |
 | 85 | 선술집·유품 core 코드 리뷰 (161d1d1) | GPT | `Docs/reviews/161d1d1.md` (새 파일만) | 대기 (84 뒤) |
 | 86 | 선술집·유품 측정 | GPT | `tools/*`, `Docs/tavern.md`의 측정 절 | 대기 (85 뒤) |
@@ -2001,6 +2001,7 @@ Docs/tavern.md를 읽고 선술집의 3D를 만든다. src/ui/voxel/*만 고친�
 ```
 
 **메모**
+- 완료 155a38a. LOTS.tavern을 (-4.4, -5.9, 3.2×2.8)로 살짝 옮겨 회관·신전·연금술과 띄우고 광장 쪽으로 앞마당을 열었다. Lv1 목조 주점(잔 간판·통·돌바닥·벤치), Lv2 2층+바깥 탁자, Lv3 테라스+줄등. `tavernRound.at` 변경 시 탁자·잔 재사용 건배(원정·훈련 스킵, 페이지 첫 로드의 옛 술자리는 재생 안 함). 사교 성격은 앞마당에 더 자주 들른다. 축제 장식용 festival prop은 아직 안 넘어와서 **festival prop 필요**(Claude Code가 연결). 5177에서 Lv1–3·건배 장면 확인. tsc·test·build 통과.
 
 ---
 
