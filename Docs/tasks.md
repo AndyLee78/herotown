@@ -118,6 +118,10 @@ Claude Code, Cursor, GPT(Codex)가 함께 쓰는 작업 목록이다. 작업 하
 | 76 | 시장 화면 | GPT | `src/ui/App.tsx`, `src/ui/game/*.tsx`, `src/ui/styles.css`, `src/locales/*` | 완료 (3e9cb81) |
 | 77 | 시장 core 코드 리뷰 (bb1c2cf) | GPT | `Docs/reviews/bb1c2cf.md` (새 파일만) | 완료 (206cc3b) |
 | 78 | 시장 경제 측정 | GPT | `tools/*`, `Docs/market.md`의 측정 절 | 완료 (8b0f1ab) |
+| 79 | 성격별 마을 행동·감정 말풍선 3D | Cursor | `src/ui/voxel/*` | 대기 (80과 함께 가능) |
+| 80 | 성격·감정 화면 | GPT | `src/ui/App.tsx`, `src/ui/game/*.tsx`, `src/ui/styles.css`, `src/locales/*` | 대기 (79와 함께 가능) |
+| 81 | 성격 core 코드 리뷰 (49c92da) | GPT | `Docs/reviews/49c92da.md` (새 파일만) | 대기 (80 뒤) |
+| 82 | 성격 영향 측정 | GPT | `tools/*`, `Docs/personality.md`의 측정 절 | 대기 (81 뒤) |
 
 ---
 
@@ -1881,3 +1885,96 @@ core에 이미 있는 것('../../core'에서 export):
 - [시장 측정](market.md#측정-2026-11-25)에 거래·상인 결과와 `deal.demand` 0.5→0.35 제안을 기록했다. 코어와 데이터는 수정하지 않았다.
 - Claude Code가 리뷰 네 가지를 고쳤다(13fffab): 팔 때 값을 먼저 내리고 파는 값 상한 90%로 왕복 이익 차단, 물약을 병 단위로 계산, 시장이 열릴 때 첫 상인, 숫자가 아닌 수량 무시.
 - Claude Code가 127.0.0.1에서 시장 화면·3D를 확인했다. 사고팔기와 시세 변화, 장비·물약 판매, 상인 구매, 375px. 상인 물건이 겹치던 것(같은 검 두 자루)을 서로 다른 물건으로 바꾸고, 물약 판매 수량을 보유량에 맞추고, 시장 앞을 가리던 나무를 옮겼다.
+
+---
+
+## 79. 성격별 마을 행동·감정 말풍선 3D (Cursor)
+
+**지금 시작할 수 있다. 작업 80(GPT)과 파일이 겹치지 않아 함께 돌릴 수 있다(같은 폴더에서 동시에 돌리려면 git worktree로 나눈다).** 설계: `Docs/personality.md`. 끝나면 Claude Code가 화면을 직접 확인한다.
+
+**전달할 내용**
+
+```
+Docs/personality.md를 읽고 성격이 마을에서 보이게 한다. src/ui/voxel/*만 고친다. core, App.tsx, 화면(src/ui/game/*)은 고치지 않는다.
+
+이미 있는 것:
+- VillageScene.update(props)의 roster: Hero[]에 hero.personality('social' | 'loner' | 'ambitious' | 'gentle' | 'hotheaded' | 'timid')와 hero.morale이 이미 들어 있다. App·VillageView는 고칠 필요가 없다.
+- 걷는 영웅은 VillageScene의 Walker(step, idle 목표 고르기, 분수 피하기 keepOffFountain)다. 분수 피하기 규칙은 그대로 지킨다.
+
+1. 성격별 마을 행동(광장에서 쉬는 중일 때만, 원정·훈련·짐 싸기 같은 상태는 그대로):
+   - 사교적: 다른 영웅 가까이에 목표를 잡아 둘셋이 모여 서 있는 일이 잦다.
+   - 외톨이: 광장 가장자리·나무 근처에 혼자 서 있는 일이 잦고, 다른 영웅과 거리를 둔다.
+   - 야망가: 훈련소나 마을 입구 쪽을 자주 오간다.
+   - 온화함: 아이나 은퇴자 가까이에 자주 간다.
+   - 다혈질: 걸음이 빠르고 목표를 자주 바꾼다.
+   - 겁 많은 마음: 걸음이 느리고 건물 가까이에 붙어 다닌다.
+2. 감정 말풍선: 영웅의 사기가 한 번에 크게 오르면(예: +8 이상) 머리 위에 하트·느낌표 같은 작은 복셀 말풍선, 크게 내리면 비구름·땀방울을 1–2초 띄운다(update마다 이전 morale과 비교). 사기 30 이하인 영웅은 고개를 숙이고 천천히 걷는다.
+3. 성능: 말풍선은 공용 메시를 재사용하고, 한 번에 보이는 수를 제한한다.
+
+확인: npm run dev에서 성격이 섞인 디버그 세이브로 마을 행동과 말풍선(결혼·축제·패배)을 본다. tsc·test·build 통과. 확인한 내용을 메모에.
+```
+
+**메모**
+
+---
+
+## 80. 성격·감정 화면 (GPT)
+
+**지금 시작할 수 있다. 작업 79(Cursor)와 함께 돌릴 수 있다.** 설계: `Docs/personality.md`. 끝나면 Claude Code가 화면을 직접 확인한다.
+
+**전달할 내용**
+
+```
+Docs/personality.md를 읽고 성격과 새 감정을 화면에 보인다. src/ui/App.tsx, src/ui/game/*.tsx, src/ui/styles.css, src/locales/*만 고친다. core와 src/ui/voxel/*은 고치지 않는다. 기존 창 구조와 kit.tsx 공용 조각을 그대로 쓴다.
+
+core에 이미 있는 것('../../core'에서 export):
+- PERSONALITY_IDS, personalityOf(hero), emotionScale(hero, 'grief' | 'joy' | 'pride' | 'anxiety' | 'resentment'), affinityScale(a, b), partyFit(hero, others), partyBonus(state, ids)(음수일 수 있다), personalityRules(emotion·pairs 표, anxiety·resentment 수치).
+- hero.personality, hero.losses(연패 수), hero.benched(친구가 떠나는 걸 지켜본 횟수, 3이면 서운함).
+
+1. 성격 이름과 한 줄 설명(ko/en). 문서의 표 문구를 쓴다.
+2. 영웅 상세: 성격 칩과 설명, "잘 느끼는 감정"(배수가 1.2 이상인 감정)과 "덤덤한 감정"(0.8 이하). 연패 중이면 "연패 n번 · 불안", 남겨짐이 1 이상이면 "친구들이 떠나는 걸 n번 지켜봄".
+3. 영웅 상세의 친한 사람 목록(topBonds)에 궁합 표시: affinityScale이 1.15 이상이면 "잘 맞음", 0.85 이하면 "안 맞음".
+4. 파티 편집(battleScreens): 영웅을 고를 때 지금 파티와의 궁합 칩(partyFit 합이 양수면 "궁합 +n%", 음수면 "충돌 −n%"). 파티 칸에는 partyBonus가 음수인 영웅에게 경고 칩.
+5. 방문자(여관)·아이 상세에도 성격 칩. 아이는 부모에게서 물려받았는지는 보이지 않아도 된다.
+6. 사기가 크게 바뀐 사건 알림 문구에 원인 추가(선택): "연패로 불안해한다", "친구들만 떠나 서운해한다".
+7. 문구 ko/en 같은 키. 좁은 화면(375px)에서 넘치지 않게.
+
+확인: npm run dev에서 성격이 섞인 디버그 세이브로 상세·파티 편집·여관을 본다. tsc·test·build 통과. 확인한 내용을 메모에.
+```
+
+**메모**
+
+---
+
+## 81. 성격 core 코드 리뷰 (GPT)
+
+**작업 80 뒤에 시작한다(같은 도구라 순서대로).** core 커밋은 **49c92da**다.
+
+**전달할 내용**
+
+```
+성격 core 커밋 49c92da를 리뷰한다. 코드는 고치지 않고 Docs/reviews/49c92da.md 새 파일 하나에만 쓴다(Docs/reviews/README.md 형식).
+볼 것: Docs/personality.md와 수치·규칙 차이, 성격 결정이 기존 무작위 흐름(방문자·아이·전투)을 바꾸지 않는지, 이전 세이브와 은퇴자·방문자·아이의 성격, 유전 확률, 감정 배수가 빠진 사기 변화 경로, cheer 상한과 배수의 순서, 음수 파티 보너스가 전투·자동 출정에 주는 영향(공격력 하한), 불안 연패 계산(자동 출정 포함, 사망·중상, 후퇴), 가족 중상 불안의 대상, 서운함 계산(원정 출발 시점의 바쁜 영웅, 친구 기준, 남겨짐 초기화), 결혼 기쁨.
+```
+
+**메모**
+
+---
+
+## 82. 성격 영향 측정 (GPT)
+
+**작업 81 뒤에 시작한다.**
+
+**전달할 내용**
+
+```
+성격이 진행에 주는 영향을 측정한다. tools/에 새 스크립트를 만들거나 기존 시뮬레이터를 넓힌다. core는 고치지 않는다. 결과는 Docs/personality.md 끝에 "측정 (날짜)" 절로 적는다.
+
+1. 같은 시드에서 성격 분포별로 첫 결혼까지 걸리는 시간(잘 맞는 짝 대 안 맞는 짝).
+2. 패배가 잦은 구간에서 불안이 사기를 얼마나 떨어뜨리는지, 사기 30 이하로 자동 출정에서 빠지는 일이 얼마나 생기는지.
+3. 서운함이 일반적인 플레이(파티 하나를 주로 보내는 플레이어)에서 얼마나 자주 생기는지. 너무 잦으면 benchedTrips·loss 조정안을 적는다.
+4. 파티 궁합 보정이 전투 승률에 주는 차이(최대 +5%와 −6%).
+5. 숫자를 바꿀 제안이 있으면 personality.json 키와 값으로 적는다(고치지는 않는다).
+```
+
+**메모**
