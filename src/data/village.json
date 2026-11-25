@@ -50,7 +50,7 @@
     },
     {
       "level": 7,
-      "fame": 270,
+      "fame": 340,
       "visitorPotential": 40,
       "maxBuildingLevel": 4
     }
@@ -485,7 +485,7 @@
           "level": 1,
           "gold": 100,
           "wood": 40,
-          "stone": 30,
+          "stone": 20,
           "iron": 0,
           "ms": 900000
         },
