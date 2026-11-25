@@ -119,9 +119,9 @@ Claude Code, Cursor, GPT(Codex)가 함께 쓰는 작업 목록이다. 작업 하
 | 77 | 시장 core 코드 리뷰 (bb1c2cf) | GPT | `Docs/reviews/bb1c2cf.md` (새 파일만) | 완료 (206cc3b) |
 | 78 | 시장 경제 측정 | GPT | `tools/*`, `Docs/market.md`의 측정 절 | 완료 (8b0f1ab) |
 | 79 | 성격별 마을 행동·감정 말풍선 3D | Cursor | `src/ui/voxel/*` | 완료 (776b46f) |
-| 80 | 성격·감정 화면 | GPT | `src/ui/App.tsx`, `src/ui/game/*.tsx`, `src/ui/styles.css`, `src/locales/*` | 대기 (79와 함께 가능) |
-| 81 | 성격 core 코드 리뷰 (49c92da) | GPT | `Docs/reviews/49c92da.md` (새 파일만) | 대기 (80 뒤) |
-| 82 | 성격 영향 측정 | GPT | `tools/*`, `Docs/personality.md`의 측정 절 | 대기 (81 뒤) |
+| 80 | 성격·감정 화면 | GPT | `src/ui/App.tsx`, `src/ui/game/*.tsx`, `src/ui/styles.css`, `src/locales/*` | 완료 (b16876f) |
+| 81 | 성격 core 코드 리뷰 (49c92da) | GPT | `Docs/reviews/49c92da.md` (새 파일만) | 완료 (b9207af) |
+| 82 | 성격 영향 측정 | GPT | `tools/*`, `Docs/personality.md`의 측정 절 | 완료 (0559f10) |
 
 ---
 
@@ -1925,6 +1925,9 @@ core에 이미 있는 것('../../core'에서 export):
 
 **메모**
 
+- 영웅·아이·여관의 성격, 영웅의 감정·연패·남겨짐, 친한 사람과 파티 편집의 궁합 및 충돌 표시를 추가했다.
+- Vite 개발 서버 렌더링으로 각 표시를 확인했다. 브라우저 클릭과 375px 실측은 남았다. 타입 검사·테스트 311개·빌드 통과.
+
 ---
 
 ## 81. 성격 core 코드 리뷰 (GPT)
@@ -1939,6 +1942,9 @@ core에 이미 있는 것('../../core'에서 export):
 ```
 
 **메모**
+
+- [리뷰](reviews/49c92da.md)에 추모제 대상 판정, 궁합의 치유량 반영, 은퇴 가족의 중상 불안 제외, 저피로 영웅의 서운함 제외를 기록했다.
+- 감정 배수의 자부심 상한, 연패·남겨짐 초기화, 기존 세이브의 성격 이관을 검증했다.
 
 ---
 
@@ -1959,3 +1965,6 @@ core에 이미 있는 것('../../core'에서 export):
 ```
 
 **메모**
+
+- [성격 측정](personality.md#측정-2026-11-25)에 짝지은 첫 결혼 48시간 차이, 겁 많은 마음의 3연패 실의, 궁합 ±보정 승률을 기록했다.
+- 한 친구를 30회 연속 남긴 경우 서운함이 10회, `resentment.benchedTrips` 5·`resentment.loss` 8 비교에서는 6회였다. 이 설정을 플레이테스트 제안으로 남겼다.
