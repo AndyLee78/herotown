@@ -17,6 +17,7 @@ import {
   heroPower,
   heroTrinkets,
   busyHeroIds,
+  currentRaid,
   blessing,
   isNest,
   monsterById,
@@ -44,7 +45,7 @@ import { josa } from '../josa'
 import { ResourceIcon, type ResourceKind } from './icons'
 import { Bar, Chip, Portrait, Res, clampPercent, needsWarning, useNow, waitLabel } from './kit'
 import { Report } from './villageScreens'
-import { SpecialDungeons, SpecialRewardChips } from './specialDungeons'
+import { RaidCard, SpecialDungeons, SpecialRewardChips } from './specialDungeons'
 import { dungeonPreviewUrl, monsterPortraitUrl } from '../voxel/portrait'
 
 type Act = (action: GameAction) => void
@@ -448,7 +449,7 @@ export function Prep({
   const busy = heroes.some((hero) => away.has(hero.id))
   const full = save.expeditions.length >= slots
   const [stamping, setStamping] = useState(false)
-  const special = specialBlock(save, dungeon.id, now)
+  const special = dungeon.id === 'raid' && currentRaid(save, now).killed ? 'raidDone' : specialBlock(save, dungeon.id, now)
   const blocked = special ? t(`result.${special}`) : heroes.length === 0 ? t('battle.emptyPreset') : busy ? t('result.busyHero') : full ? t('result.slotsFull') : !dungeonUnlocked(save, dungeon.id) ? t('result.lockedDungeon') : null
   const depart = () => {
     if (stamping || blocked) {
@@ -596,6 +597,7 @@ export function Prep({
       <AutoSettings save={save} onAction={onAction} />
 
       <SuppliesPicker save={save} preset={preset} onAction={onAction} />
+      {dungeon.id === 'raid' ? <RaidCard save={save} now={now} /> : null}
 
       <FortReady dungeonId={dungeon.id} heroes={heroes} />
       <CitadelReady dungeonId={dungeon.id} heroes={heroes} blast={preset.tactics.blast ?? 'interrupt'} />

@@ -1,6 +1,6 @@
 import { useTranslation } from 'react-i18next'
-import { ESSENCES, abyssFloors, abyssShards, dungeonById, endgameRules, reduce, specialBlock, specialDungeons, todayElement, trialsLeft, type DungeonReport, type GameAction, type GameState, type VaultKey } from '../../core'
-import { Chip, VaultAmount } from './kit'
+import { ESSENCES, abyssFloors, abyssShards, currentRaid, dungeonById, dungeonUnlocked, endgameRules, raidBoss, reduce, specialBlock, specialDungeons, todayElement, trialsLeft, type DungeonReport, type GameAction, type GameState, type VaultKey } from '../../core'
+import { Bar, Chip, VaultAmount, waitLabel } from './kit'
 
 type SpecialReward = { key: VaultKey; amount: number; best?: number }
 type SpecialReport = DungeonReport & { specialReward?: SpecialReward }
@@ -95,5 +95,32 @@ export function SpecialDungeons({ save, now, onSelect }: { save: GameState; now:
         <button type="button" className="btn primary" onClick={() => onSelect(abyss.id)}>{t('battle.prepare')}</button>
       </>}
     </div>
+    <RaidCard save={save} now={now} onSelect={onSelect} />
+  </section>
+}
+
+export function RaidCard({ save, now, onSelect }: { save: GameState; now: number; onSelect?: (id: string) => void }) {
+  const { t } = useTranslation()
+  const raid = currentRaid(save, now)
+  const boss = raidBoss(raid.week)
+  const date = new Date(now)
+  const daysUntilMonday = (8 - date.getDay()) % 7 || 7
+  const reset = new Date(date.getFullYear(), date.getMonth(), date.getDate() + daysUntilMonday).getTime()
+  const locked = !dungeonUnlocked(save, 'raid')
+  return <section className="card column">
+    <strong>{t('dungeon.raid.name')} · {t(`enemy.${boss.boss}`)}</strong>
+    <span className="muted">{t('raid.reset', { time: waitLabel(reset - now) })}</span>
+    <p className="muted">{t('raid.guard', { names: boss.minions.map((id) => t(`enemy.${id}`)).join(', ') })}</p>
+    <div className="column">
+      <span>{raid.max != null && raid.hp != null ? t('raid.hp', { hp: raid.hp, max: raid.max }) : t('raid.full')}</span>
+      <Bar value={raid.hp ?? 1} max={raid.max ?? 1} tone="bad" />
+    </div>
+    <div className="chips">
+      <VaultAmount kind={boss.spoil as VaultKey} amount={`+${endgameRules.raid.spoils}`} />
+      {raid.killed ? <Chip tone="good">{t('raid.killed')}</Chip> : null}
+    </div>
+    {locked ? <p className="muted">{t('special.unlock', { level: endgameRules.raid.unlockTown })}</p> : null}
+    {!locked && !raid.killed ? <p className="muted">{t('raid.onReturn')}</p> : null}
+    {onSelect && !locked && !raid.killed ? <button type="button" className="btn primary" onClick={() => onSelect('raid')}>{t('battle.prepare')}</button> : null}
   </section>
 }

@@ -1,5 +1,5 @@
 import type { TFunction } from 'i18next'
-import { Gem, X } from 'lucide-react'
+import { Award, Crown, Gem, Hexagon, Shield, X } from 'lucide-react'
 import { lazy, Suspense, useEffect, useState, type ReactNode } from 'react'
 import { useTranslation } from 'react-i18next'
 import { ESSENCES, lifeRules, lowMorale, moraleOf, moraleRules, type GameState, type Gear, type Hero, type LogEntry, type VaultKey } from '../../core'
@@ -87,11 +87,13 @@ export function Res({ kind, amount, short = false, light = false }: { kind: Reso
 }
 
 type Cost = { gold: number; wood?: number; stone?: number; iron?: number; bone?: number; herb?: number; crystal?: number } & Partial<Record<VaultKey, number>>
-export const vaultKinds = [...ESSENCES, 'abyss'] as const
+export const vaultKinds = [...ESSENCES, 'abyss', 'scale', 'crown', 'core', 'valor'] as const
+const vaultIcons = { scale: Shield, crown: Crown, core: Hexagon, valor: Award }
 
 export function VaultAmount({ kind, amount, short = false }: { kind: VaultKey; amount: number | string; short?: boolean }) {
   const { t } = useTranslation()
-  return <span className={`chip vault-${kind}${short ? ' short' : ''}`}><Gem size={14} aria-hidden="true" />{t(`vault.${kind}`)} {amount}</span>
+  const Icon = kind in vaultIcons ? vaultIcons[kind as keyof typeof vaultIcons] : Gem
+  return <span className={`chip vault-${kind}${short ? ' short' : ''}`}><Icon size={14} aria-hidden="true" />{t(`vault.${kind}`)} {amount}</span>
 }
 
 function isVaultKind(kind: ResourceKind | VaultKey): kind is VaultKey {

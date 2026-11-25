@@ -1,9 +1,32 @@
 {
   "vault": {
+    "scale": "Dragon scale",
+    "crown": "Lich crown",
+    "core": "Titan core",
+    "valor": "Valour medal",
     "flame": "Flame essence",
     "frost": "Frost essence",
     "light": "Light essence",
     "abyss": "Abyss shards"
+  },
+  "raid": {
+    "reset": "Changes Monday · {{time}} left",
+    "guard": "Battle clue · Guards: {{names}}",
+    "hp": "Health {{hp}}/{{max}}",
+    "full": "Full health",
+    "killed": "Defeated this week",
+    "onReturn": "This expedition’s damage counts when the party returns."
+  },
+  "invasion": {
+    "title": "Town invasion",
+    "next": "Next invasion in {{time}}",
+    "warning": "An invasion is approaching!",
+    "defenders": "Defending parties {{used}}/{{max}}",
+    "home": "Ready in town {{ready}}/{{total}}",
+    "fallback": "The five strongest available heroes in town will defend.",
+    "won": "Last defence held · {{waves}}/{{total}} waves",
+    "lost": "Last defence failed · {{waves}}/{{total}} waves",
+    "materialLoss": "Lost {{percent}}% of materials, rounded down per material"
   },
   "special": {
     "title": "Special dungeons",
@@ -503,7 +526,7 @@
     "trialDay": "Today is not this essence's day.",
     "trialsUsed": "Today's trials are all used.",
     "promoteFame": "Not enough fame.",
-    "promoteDeed": "The party must go deeper into the abyss.",
+    "promoteDeed": "Complete the required deeds before promoting.",
     "promoteOffering": "Not enough essence or abyss shards to offer.",
     "promoteMax": "The town is already at its highest level.",
     "raidDone": "This week's raid boss has already fallen.",
@@ -524,6 +547,14 @@
     "blasted": "The boss's blast went unbroken. Bring a warrior, rogue or archer, or set tactics to 'Brace'."
   },
   "dungeon": {
+    "raid": {
+      "name": "Weekly raid",
+      "hint": "Send expeditions to bring down the weekly boss."
+    },
+    "invasion": {
+      "name": "Town invasion",
+      "hint": "Hold back the waves with your defending parties."
+    },
     "abyss": {
       "name": "Abyss",
       "hint": "Clear the next five floors below your checkpoint and earn abyss shards."
@@ -867,6 +898,8 @@
     }
   },
   "promotion": {
+    "raid": "Raid kills {{have}}/{{need}}",
+    "defense": "Invasions repelled {{have}}/{{need}}",
     "target": "Town Lv{{level}} promotion",
     "fame": "Fame {{have}}/{{need}}",
     "depth": "Abyss record {{have}}/{{need}}",

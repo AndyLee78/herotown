@@ -1,9 +1,32 @@
 {
   "vault": {
+    "scale": "용비늘",
+    "crown": "리치의 왕관",
+    "core": "거신의 핵",
+    "valor": "용맹 훈장",
     "flame": "화염 정수",
     "frost": "서리 정수",
     "light": "빛 정수",
     "abyss": "심연석"
+  },
+  "raid": {
+    "reset": "월요일에 바뀜 · {{time}} 남음",
+    "guard": "공략 단서 · 호위 {{names}}",
+    "hp": "남은 체력 {{hp}}/{{max}}",
+    "full": "체력 가득",
+    "killed": "이번 주 처치",
+    "onReturn": "이번 원정의 피해는 파티가 귀환할 때 보스에게 반영됩니다."
+  },
+  "invasion": {
+    "title": "마을 침공",
+    "next": "다음 침공까지 {{time}}",
+    "warning": "침공이 임박했습니다!",
+    "defenders": "방어 파티 {{used}}/{{max}}",
+    "home": "마을에서 방어 가능 {{ready}}/{{total}}명",
+    "fallback": "마을에 있는 강한 영웅 다섯이 막습니다.",
+    "won": "지난 방어 성공 · {{waves}}/{{total}} 물결",
+    "lost": "지난 방어 실패 · {{waves}}/{{total}} 물결",
+    "materialLoss": "재료 {{percent}}% 손실(재료별 내림)"
   },
   "special": {
     "title": "특수 던전",
@@ -503,7 +526,7 @@
     "trialDay": "오늘은 이 정수의 날이 아닙니다.",
     "trialsUsed": "오늘 요일 던전을 모두 돌았습니다.",
     "promoteFame": "명성이 모자랍니다.",
-    "promoteDeed": "심연을 더 깊이 내려가야 합니다.",
+    "promoteDeed": "승격에 필요한 업적을 먼저 달성해야 합니다.",
     "promoteOffering": "바칠 정수나 심연석이 모자랍니다.",
     "promoteMax": "마을이 이미 최고 레벨입니다.",
     "raidDone": "이번 주 레이드 보스는 이미 쓰러졌습니다.",
@@ -524,6 +547,14 @@
     "blasted": "광역기를 끊지 못했다. 전사·도적·궁수를 데려가거나 작전을 '버티기'로 바꾸자."
   },
   "dungeon": {
+    "raid": {
+      "name": "주간 레이드",
+      "hint": "원정을 보내 주간 보스를 쓰러뜨리세요."
+    },
+    "invasion": {
+      "name": "마을 침공",
+      "hint": "방어 파티로 적의 물결을 막으세요."
+    },
     "abyss": {
       "name": "심연",
       "hint": "체크포인트 아래 다섯 층을 공략하고 심연석을 얻습니다."
@@ -867,6 +898,8 @@
     }
   },
   "promotion": {
+    "raid": "레이드 처치 {{have}}/{{need}}",
+    "defense": "침공 방어 성공 {{have}}/{{need}}",
     "target": "마을 Lv{{level}} 승격 의식",
     "fame": "명성 {{have}}/{{need}}",
     "depth": "심연 최고 층 {{have}}/{{need}}",

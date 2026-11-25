@@ -1230,6 +1230,29 @@ button,
 .vault-frost { color: #215a88; }
 .vault-light { color: #765700; }
 .vault-abyss { color: #623285; }
+.vault-scale { color: #1f685c; }
+.vault-crown { color: #693e89; }
+.vault-core { color: #93411e; }
+.vault-valor { color: #765700; }
+
+.invasion-warning {
+  border-color: #ab5144;
+  background: #fff1eb;
+}
+
+.invasion-parties {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px 16px;
+}
+
+.invasion-party {
+  display: flex;
+  align-items: baseline;
+  gap: 6px;
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
 
 .special-choice {
   flex-wrap: wrap;

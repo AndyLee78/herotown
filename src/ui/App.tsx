@@ -255,6 +255,16 @@ export function App() {
     window.setTimeout(() => setToasts((list) => list.filter((toast) => toast.id !== id)), 3500)
   }
 
+  const warnedInvasion = useRef<number | undefined>(undefined)
+  const invasionWarning = save && warned(save, gameNow()) ? save.invasion?.nextAt : undefined
+  useEffect(() => {
+    if (invasionWarning == null || warnedInvasion.current === invasionWarning) return
+    warnedInvasion.current = invasionWarning
+    pushToast(t('invasion.warning'))
+    // Announce once for each scheduled invasion, including after loading.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [invasionWarning])
+
   const apply = (action: GameAction) => {
     const current = saveRef.current
     if (!current) {

@@ -75,6 +75,7 @@ import { dungeonPreviewUrl } from '../voxel/portrait'
 import { GraveFace, bonusValue } from './heroScreens'
 import { Bar, Chip, CostList, Portrait, Res, SchoolInfo, VaultAmount, Window, affordable, formatEntry, gearGradeClass, itemLabel, useNow, vaultKinds, waitLabel } from './kit'
 import { josa } from '../josa'
+import { InvasionCard } from './invasion'
 import { SpecialRewardChips } from './specialDungeons'
 
 const BattleView = lazy(() => import('../BattleView').then((mod) => ({ default: mod.BattleView })))
@@ -212,7 +213,7 @@ export function Town({
   const adults = save.roster.filter((hero) => !isChild(hero) && hero.condition !== 'dead')
   const villageMorale = adults.length > 0 ? Math.round(adults.reduce((total, hero) => total + moraleOf(hero), 0) / adults.length) : '—'
   const next = villageRules.levels.find((entry) => entry.level === level.level + 1)
-  const now = useNow(save.construction != null)
+  const now = useNow(save.construction != null || save.invasion != null)
   const total = save.construction ? villageRules.buildings.find((b) => b.id === save.construction?.id)?.levels.find((l) => l.level === save.buildings[save.construction!.id] + 1)?.ms ?? 1 : 1
   return (
     <>
@@ -258,6 +259,7 @@ export function Town({
       </div>
 
       {level.level >= PROMOTION_FREE ? <Promotion save={save} onAction={onAction} /> : null}
+      <InvasionCard save={save} now={now} onAction={onAction} />
 
       {save.construction ? (
         <div className="card building-now">
@@ -1085,23 +1087,28 @@ function Promotion({ save, onAction }: { save: GameState; onAction: Act }) {
   if (!promotion || !required) return <p className="banner">{t('promotion.max')}</p>
   const enoughFame = save.fame >= required.fame
   const deepEnough = save.abyss.best >= promotion.abyssBest
-  const enoughOffering = vaultKinds.every((kind) => save.vault[kind] >= promotion.offering[kind])
+  const raidKills = 'raidKills' in promotion ? promotion.raidKills : 0
+  const invasionWins = 'invasionWins' in promotion ? promotion.invasionWins : 0
+  const wins = save.invasion?.wins ?? 0
+  const offerings = vaultKinds.flatMap((kind) => {
+    const need = (promotion.offering as Partial<GameState['vault']>)[kind] ?? 0
+    return need > 0 ? [{ kind, have: save.vault[kind], need }] : []
+  })
+  const enoughOffering = offerings.every(({ have, need }) => have >= need)
   return (
     <section className="card column">
       <strong>{t('promotion.target', { level: promotion.level })}</strong>
       <div className="chips">
         <Chip tone={enoughFame ? 'good' : 'bad'}>{t('promotion.fame', { have: save.fame, need: required.fame })}</Chip>
         <Chip tone={deepEnough ? 'good' : 'bad'}>{t('promotion.depth', { have: save.abyss.best, need: promotion.abyssBest })}</Chip>
+        {raidKills ? <Chip tone={save.raidKills >= raidKills ? 'good' : 'bad'}>{t('promotion.raid', { have: save.raidKills, need: raidKills })}</Chip> : null}
+        {invasionWins ? <Chip tone={wins >= invasionWins ? 'good' : 'bad'}>{t('promotion.defense', { have: wins, need: invasionWins })}</Chip> : null}
       </div>
       <strong>{t('promotion.offering')}</strong>
       <div className="chips">
-        {vaultKinds.map((kind) => {
-          const have = save.vault[kind]
-          const need = promotion.offering[kind]
-          return <Chip key={kind} tone={have >= need ? 'good' : 'bad'}><VaultAmount kind={kind} amount={`${have}/${need}`} /></Chip>
-        })}
+        {offerings.map(({ kind, have, need }) => <Chip key={kind} tone={have >= need ? 'good' : 'bad'}><VaultAmount kind={kind} amount={`${have}/${need}`} /></Chip>)}
       </div>
-      <button type="button" className="btn gold" disabled={!enoughFame || !deepEnough || !enoughOffering} onClick={() => onAction({ type: 'promote' })}>
+      <button type="button" className="btn gold" disabled={!enoughFame || !deepEnough || !enoughOffering || save.raidKills < (raidKills ?? 0) || wins < (invasionWins ?? 0)} onClick={() => onAction({ type: 'promote' })}>
         {t('promotion.action')}
       </button>
     </section>
