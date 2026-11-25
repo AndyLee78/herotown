@@ -135,6 +135,10 @@ Claude Code, Cursor, GPT(Codex)가 함께 쓰는 작업 목록이다. 작업 하
 | 93 | 마을 Lv8–10·상위 레벨·전설 장비 화면 | GPT | `src/ui/App.tsx`, `src/ui/game/*.tsx`, `src/ui/styles.css`, `src/locales/*` | 보류 (4b에서 다시 씀, Docs/endgame.md) |
 | 94 | 4a core 코드 리뷰 (d89e486) | GPT | `Docs/reviews/d89e486.md` (새 파일만) | 보류 (4b에서 다시 씀) |
 | 95 | 4a 측정: Lv8–10 도달·후반 재료·전설 장비 | GPT | `tools/*`, `Docs/endgame.md`의 측정 절 | 보류 (4b에서 다시 씀) |
+| 96 | 요일 던전·심연 전투 배경 3D | Cursor | `src/ui/voxel/*`, `src/ui/BattleView.tsx`, `src/ui/ExpeditionPanel.tsx` | 대기 (97과 함께 가능, 92 뒤) |
+| 97 | 금고·요일 던전·심연 화면 | GPT | `src/ui/App.tsx`, `src/ui/game/*.tsx`, `src/ui/styles.css`, `src/locales/*` | 대기 (96과 함께 가능) |
+| 98 | 4a core 코드 리뷰 (b80777c) | GPT | `Docs/reviews/b80777c.md` (새 파일만) | 대기 (97 뒤) |
+| 99 | 4a 측정: 요일 던전 승률·심연 깊이·하루 자원 | GPT | `tools/*`, `Docs/endgame.md`의 측정 절 | 대기 (98 뒤) |
 
 ---
 
@@ -2297,6 +2301,94 @@ core에 이미 있는 것:
 2. 새 건물 레벨이 뼈·약초·수정 재고를 얼마나 쓰는지, "100개 넘는 재료 3종" 비율과 "소원만 가능" 비율이 얼마나 줄었는지(작업 91과 비교).
 3. 영웅·전설 장비가 티어 6–7 승률과 첫 클리어 시점에 주는 차이.
 4. 숫자를 바꿀 제안이 있으면 파일·키·값으로 적는다(고치지는 않는다). 특히 levels 8–10의 fame.
+```
+
+**메모**
+
+---
+
+## 96. 요일 던전·심연 전투 배경 3D (Cursor)
+
+**작업 92 뒤에 시작한다(같은 도구라 순서대로). 작업 97(GPT)과는 파일이 겹치지 않아 함께 돌릴 수 있다.** 설계: `Docs/endgame.md` 4a.
+
+**전달할 내용**
+
+```
+Docs/endgame.md의 4a를 읽고 새 던전의 전투 배경을 만든다. src/ui/voxel/*, src/ui/BattleView.tsx, src/ui/ExpeditionPanel.tsx만 고친다. core, App.tsx, src/ui/game/*는 고치지 않는다.
+
+이미 있는 것:
+- 특수 던전: trial_flame_1–3, trial_frost_1–3, trial_light_1–3(요일 던전, DungeonDef.special 'weekday', element), abyss(끝없는 던전, special 'endless'). dungeonById(id)로 찾는다. 원정에 abyssFrom(시작 층)이 있다.
+- BattleScene은 지금 tier로 배경 테마를 고른다. BattleView·ExpeditionPanel이 dungeonById(...).tier를 넘긴다.
+
+1. BattleScene이 던전 id(또는 special·element·깊이)를 받아 배경을 고르게 한다. 기존 tier 경로는 그대로 둔다.
+2. 요일 던전: 화염(용암 바닥·불꽃 기둥·붉은 빛), 서리(얼음 바닥·고드름·푸른 빛), 빛(대리석·빛 기둥·금빛). 난이도가 높을수록 장식이 짙어진다.
+3. 심연: 어두운 보라 바닥, 떠다니는 파편. 깊이(abyssFrom)가 깊을수록 더 어둡고 붉은 빛이 섞인다. 층 번호를 화면 구석에 작게.
+4. 성능: 테마 재질은 기존처럼 한 번 만든다.
+
+확인: npm run dev에서 디버그 세이브(마을 Lv7, 강한 파티)로 요일 던전과 심연 리플레이를 본다. tsc·test·build 통과. 확인한 내용을 메모에.
+```
+
+**메모**
+
+---
+
+## 97. 금고·요일 던전·심연 화면 (GPT)
+
+**지금 시작할 수 있다. 작업 96(Cursor)과 함께 돌릴 수 있다.** 설계: `Docs/endgame.md` 4a.
+
+**전달할 내용**
+
+```
+Docs/endgame.md의 4a를 화면에 보인다. src/ui/App.tsx, src/ui/game/*.tsx, src/ui/styles.css, src/locales/*만 고친다. core, src/ui/voxel/*, src/ui/BattleView.tsx, src/ui/ExpeditionPanel.tsx는 고치지 않는다.
+
+core에 이미 있는 것('../../core'에서 export):
+- specialDungeons(요일 던전 9개 trial_<element>_<1-3>, 끝없는 던전 abyss), DungeonDef.special('weekday' | 'endless'), element('flame' | 'frost' | 'light'), difficulty(1–3). 일반 dungeons 목록에는 없다.
+- state.vault({ flame, frost, light, abyss }), state.trials({ date, used } | null), state.abyss({ best, checkpoint }).
+- ESSENCES, todayElement(now)('flame' | 'frost' | 'light' | 'choice'), trialsLeft(state, now), specialBlock(state, id, now)(null | 'lockedDungeon' | 'trialDay' | 'trialsUsed'), abyssFloors(from)(층별 몬스터와 scale), abyssShards(floor, best), endgameRules.
+- 원정은 기존대로 { type: 'dungeon', id }로 고르고 { type: 'depart', ... }로 보낸다. 결과 notice trialDay, trialsUsed(문구는 locales result.*에 있다).
+
+1. 상단 자원 줄 또는 마을 운영에 금고: 화염·서리·빛 정수와 심연석(아이콘과 수). 0이면 숨겨도 된다.
+2. 전투 > 던전 목록에 "특수 던전" 묶음: 오늘의 요일 던전(오늘 정수, 남은 횟수 n/3, 난이도 3단계와 권장 레벨·보상 정수 수, 일요일은 세 정수 모두), 끝없는 던전(최고 층, 체크포인트, 다음 5층의 몬스터 미리보기, 처음 깨는 층의 심연석). 잠겨 있으면 "마을 LvN에 열림".
+3. 던전 이름·설명 ko/en: 화염의 시련(초급·중급·상급) 등, 심연.
+4. 원정 결과·전투 기록에 얻은 정수·심연석과 새 최고 층을 보인다(core의 history 기록에 없으면 금고 차이로 보인다).
+5. 자동 출정 던전 고르기에서 특수 던전은 보이지 않거나 고를 수 없다고 보인다.
+6. 문구 ko/en 같은 키. 좁은 화면(375px)에서 넘치지 않게.
+
+확인: npm run dev에서 디버그 세이브(마을 Lv7, 강한 파티)로 요일 던전 3번과 심연 진행을 본다. tsc·test·build 통과. 확인한 내용을 메모에.
+```
+
+**메모**
+
+---
+
+## 98. 4a core 코드 리뷰 (GPT)
+
+**작업 97 뒤에 시작한다(같은 도구라 순서대로).** core 커밋은 **b80777c**다.
+
+**전달할 내용**
+
+```
+4a core 커밋 b80777c를 리뷰한다. 코드는 고치지 않고 Docs/reviews/b80777c.md 새 파일 하나에만 쓴다(Docs/reviews/README.md 형식).
+볼 것: Docs/endgame.md 4a와 차이, 특수 던전을 일반 사다리에서 뺀 영향(dungeons를 쓰는 모든 곳: 해금, 의뢰, 자동, 둥지, 전설 판정, 기록·UI), 요일 계산(기기 시간대, 날짜가 바뀌는 순간, 오프라인 귀환), 하루 횟수(출발 시 소모, 실패 출발 시 소모되지 않는지), 심연 층 생성(같은 층 같은 몬스터, 보스 순환, scale 적용 경로), 심연 보상(최고 기록 갱신 순서, 체크포인트, 명성 10층마다, 중간 패배·후퇴), 금고 정규화, 세이브 22 → 23, 원정 기록(history)에 특수 던전 보상이 남는지.
+```
+
+**메모**
+
+---
+
+## 99. 4a 측정: 요일 던전 승률·심연 깊이·하루 자원 (GPT)
+
+**작업 98 뒤에 시작한다.**
+
+**전달할 내용**
+
+```
+4a의 난이도와 수입을 측정한다. tools/에 새 스크립트를 만들거나 tools/village-balance.ts를 넓힌다. core는 고치지 않는다. 결과는 Docs/endgame.md 끝에 "4a 측정 (날짜)" 절로 적는다.
+
+1. 요일 던전 난이도 1–3의 승률을 파티 평균 레벨별로(권장 12·15·18 근처). 마을 Lv6에 도달한 실제 파티로 첫 시도 승률.
+2. 심연: 레벨·장비별로 체크포인트가 얼마나 깊이 가는지, 하루(16시간 확인) 동안 얻는 심연석과 명성.
+3. 하루 자원 수입: 정수(요일 3번)와 심연석을 매일 하는 플레이어 기준으로. 4b에서 쓸 비용을 정하는 바탕이므로 일·주 단위로 적는다.
+4. 숫자를 바꿀 제안이 있으면 endgame.json·dungeons.json 키와 값으로 적는다(고치지는 않는다).
 ```
 
 **메모**
