@@ -515,7 +515,7 @@ export function migrate(raw: unknown, now: number): GameState {
     return fromLegacy(record, now)
   }
   if (typeof record.version === 'number' && record.version >= 2 && record.version <= SAVE_VERSION) {
-    return fitShrine(normalize(record, now))
+    return dropUnpaidOrders(fitShrine(normalize(record, now)), record.version)
   }
   if (typeof record.version === 'number' && record.version > SAVE_VERSION) {
     throw new Error('newer')
@@ -818,8 +818,10 @@ function advance(state: GameState, now: number): GameState {
     // A finished building also ends a piece, so work before it runs at the
     // old level and work after it at the new one (review a6be730).
     const builtAt = next.construction && next.construction.finishAt > next.lastTickAt ? next.construction.finishAt : Infinity
+    // An invasion ends a piece too, so everyone home by then can defend (review 1650b75).
+    const raidAt = next.invasion && next.invasion.nextAt > next.lastTickAt ? next.invasion.nextAt : Infinity
     // Always move forward, even if a broken save has the season overrun.
-    const until = Math.min(Math.max(Math.min(turnAt, builtAt), next.lastTickAt + 1), effectiveNow)
+    const until = Math.min(Math.max(Math.min(turnAt, builtAt, raidAt), next.lastTickAt + 1), effectiveNow)
     const piece = until - next.lastTickAt
     const from = next.lastTickAt
     const before = next.calendar
@@ -840,8 +842,6 @@ function advance(state: GameState, now: number): GameState {
     next = updateVisitors(next, until, visitors)
     // The wandering merchant comes and goes (Docs/market.md).
     next = updateMerchant(next, until)
-    // Invasions from town level 9, every three days (Docs/endgame.md 4c).
-    next = invade(next, until)
     const out = next.expeditions
     next = returnExpeditions(next, until, returned)
     // The wounded who come home start treatment as they arrive.
@@ -850,6 +850,9 @@ function advance(state: GameState, now: number): GameState {
     }
     next = finishCare(next, until)
     next = finishConstruction(next, until, completed)
+    // Invasions from town level 9, every three days, fought once the piece's
+    // returns, care and building are settled (Docs/endgame.md 4c).
+    next = invade(next, until)
     // Auto runs settle within their season, against that season's board (review 1208be3).
     next = ensureBoard(next)
     next = runAuto(next, piece, autoTally)
@@ -1855,7 +1858,7 @@ function settleExpedition(state: GameState, expedition: Expedition): GameState {
     report.victory,
   )
   const special = settleSpecial(grantVictoryRewards(afterTrip(home, expedition.heroIds, report.victory), report, dungeonId), dungeonId, report.floorsCleared, report.victory, expedition.abyssFrom)
-  const rewarded = expedition.raid ? settleRaid(special, expedition.raid.week, expedition.raid.start, expedition.raid.left, expedition.raid.max) : special
+  const rewarded = expedition.raid ? settleRaid(special, expedition.raid.week, expedition.raid.start, expedition.raid.left, expedition.raid.max, expedition.returnAt) : special
   const next = dropFromPresets(rewarded)
   const materials: Partial<Materials> = {}
   for (const key of ['wood', 'stone', 'iron', 'bone', 'herb', 'crystal'] as const) {
@@ -1969,6 +1972,25 @@ function pay(state: GameState, cost: Cost): GameState {
     },
     vault: Object.fromEntries((Object.keys(state.vault) as VaultKey[]).map((key) => [key, state.vault[key] - (cost[key] ?? 0)])) as Vault,
   }
+}
+
+// Smith orders queued before raid spoils were added to their cost never paid
+// them: hand back what was paid and take the orders off (review 1650b75).
+function dropUnpaidOrders(state: GameState, version: unknown): GameState {
+  if (typeof version !== 'number' || version >= 25 || !state.automation) {
+    return state
+  }
+  const spoils = ['scale', 'crown', 'core', 'valor'] as const
+  let next = state
+  const queue = next.automation.queues.smith
+  for (let index = queue.length - 1; index >= 0; index -= 1) {
+    const recipe = recipeById(queue[index]!) as (Cost & { gold: number }) | undefined
+    if (recipe && spoils.some((key) => (recipe[key] ?? 0) > 0)) {
+      next = dequeue(next, 'smith', index)
+      next = { ...next, vault: { ...next.vault, scale: next.vault.scale - (recipe.scale ?? 0), crown: next.vault.crown - (recipe.crown ?? 0), core: next.vault.core - (recipe.core ?? 0), valor: next.vault.valor - (recipe.valor ?? 0) } }
+    }
+  }
+  return { ...next, notice: null }
 }
 
 // Schedules the first invasion when the town reaches level 9, and fights

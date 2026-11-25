@@ -12,7 +12,7 @@ import type { DungeonFloor, PartyMember } from './types'
 // hold the line wave by wave; with none chosen, whoever is home steps up.
 // Holding earns valour; failing costs supplies and spirits.
 
-export type InvasionResult = { at: number; won: boolean; waves: number; lost?: { gold: number } }
+export type InvasionResult = { at: number; won: boolean; waves: number; lost?: { gold: number; materials?: GameState['materials'] } }
 export type Invasion = { nextAt: number; defenders: string[]; count: number; wins: number; last?: InvasionResult }
 
 export function warned(state: GameState, now: number): boolean {
@@ -33,30 +33,35 @@ function waves(count: number): DungeonFloor[] {
   return rules.waves.map((monsters) => ({ monsters: [...monsters], scale }))
 }
 
-// The parties that hold the line: the chosen ones as they are at home, or
-// with none chosen, the strongest five who are home and able.
-function defenders(state: GameState): PartyMember[][] {
+// The parties that hold the line, chosen as each one's turn comes: the chosen
+// presets in order, each hero only once and only if still able after the
+// fights before (review 1650b75); with none chosen, the strongest five at home.
+function nextDefenders(state: GameState, used: Set<string>, turn: number): PartyMember[] | null {
   const away = busyHeroIds(state)
   const able = (id: string) => {
     const hero = state.roster.find((entry) => entry.id === id)
-    return hero && canDeploy(hero) && !away.has(id) && hero.condition !== 'critical' ? hero : null
+    return hero && !used.has(id) && canDeploy(hero) && !away.has(id) && hero.condition !== 'critical' ? hero : null
   }
-  const chosen = (state.invasion?.defenders ?? [])
-    .map((id) => presetById(state, id))
-    .map((preset) => (preset?.slots ?? []).flatMap((slot) => {
+  const chosen = state.invasion?.defenders ?? []
+  if (chosen.length) {
+    const preset = presetById(state, chosen[turn] ?? '')
+    if (!preset) {
+      return turn < chosen.length ? [] : null
+    }
+    return preset.slots.flatMap((slot) => {
       const hero = able(slot.id)
       return hero ? [{ hero, row: slot.row }] : []
-    }))
-    .filter((party) => party.length > 0)
-  if (chosen.length) {
-    return chosen
+    })
+  }
+  if (turn > 0) {
+    return null
   }
   const home = state.roster
     .map((hero) => able(hero.id))
     .filter((hero): hero is NonNullable<typeof hero> => hero != null)
     .sort((a, b) => b.level - a.level)
     .slice(0, 5)
-  return home.length ? [home.map((hero) => ({ hero, row: classById(hero.classId).reach === 'melee' ? 'front' as const : 'back' as const }))] : []
+  return home.map((hero) => ({ hero, row: classById(hero.classId).reach === 'melee' ? 'front' as const : 'back' as const }))
 }
 
 // Battles the band when it arrives. `settle` applies a party's report the way
@@ -67,14 +72,22 @@ export function resolveInvasion(state: GameState, settle: (state: GameState, rep
   let floors = waves(invasion.count)
   let next = state
   let held = 0
-  for (const party of defenders(state)) {
-    if (!floors.length) {
+  const used = new Set<string>()
+  const fought = new Set<string>()
+  for (let turn = 0; floors.length > 0; turn += 1) {
+    const party = nextDefenders(next, used, turn)
+    if (party == null) {
       break
     }
-    const result = runDungeon(party, 'invasion', DEFAULT_TACTICS, state.seed + 5_000_011 + invasion.count * 977 + held, {}, { floors })
+    party.forEach((member) => used.add(member.hero.id))
+    if (!party.length) {
+      continue
+    }
+    const result = runDungeon(party, 'invasion', DEFAULT_TACTICS, state.seed + 5_000_011 + invasion.count * 977 + turn, {}, { floors })
     if (!result.ok) {
       continue
     }
+    party.forEach((member) => fought.add(member.hero.id))
     next = settle(next, result.report, party.map((member) => member.hero.id))
     held += result.report.floorsCleared
     floors = floors.slice(result.report.floorsCleared)
@@ -84,7 +97,7 @@ export function resolveInvasion(state: GameState, settle: (state: GameState, rep
   if (won) {
     const vault = { ...(next.vault ?? freshVault()) }
     vault.valor += rules.valor + rules.valorPer * invasion.count
-    const proud = new Set(defenders(state).flat().map((member) => member.hero.id))
+    const proud = fought
     return {
       ...next,
       vault,
@@ -94,12 +107,13 @@ export function resolveInvasion(state: GameState, settle: (state: GameState, rep
   }
   // The raiders carry off a share of the gold and materials and leave the town shaken.
   const gold = Math.floor(next.gold * rules.loss)
-  const materials = Object.fromEntries(Object.entries(next.materials).map(([key, amount]) => [key, amount - Math.floor(amount * rules.loss)])) as GameState['materials']
+  const taken = Object.fromEntries(Object.entries(next.materials).map(([key, amount]) => [key, Math.floor(amount * rules.loss)])) as GameState['materials']
+  const materials = Object.fromEntries(Object.entries(next.materials).map(([key, amount]) => [key, amount - taken[key as keyof typeof taken]])) as GameState['materials']
   return {
     ...next,
     gold: next.gold - gold,
     materials,
     roster: next.roster.map((hero) => feel(hero, 'anxiety', -rules.dread)),
-    invasion: { ...base, last: { at: invasion.nextAt, won: false, waves: held, lost: { gold } } },
+    invasion: { ...base, last: { at: invasion.nextAt, won: false, waves: held, lost: { gold, materials: taken } } },
   }
 }

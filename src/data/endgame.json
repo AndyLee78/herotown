@@ -90,9 +90,9 @@
       "level": 9,
       "abyssBest": 25,
       "offering": {
-        "flame": 60,
-        "frost": 45,
-        "light": 45,
+        "flame": 45,
+        "frost": 30,
+        "light": 30,
         "abyss": 90
       },
       "raidKills": 1
@@ -101,9 +101,9 @@
       "level": 10,
       "abyssBest": 40,
       "offering": {
-        "flame": 150,
-        "frost": 120,
-        "light": 120,
+        "flame": 100,
+        "frost": 80,
+        "light": 80,
         "abyss": 120
       },
       "invasionWins": 1
@@ -147,7 +147,8 @@
       }
     ],
     "spoils": 3,
-    "fame": 30
+    "fame": 30,
+    "growthPerKill": 0.15
   },
   "invasion": {
     "unlockTown": 9,
@@ -171,7 +172,7 @@
       ]
     ],
     "scale": 7,
-    "scalePerInvasion": 0.15,
+    "scalePerInvasion": 0.25,
     "maxDefenders": 3,
     "valor": 10,
     "valorPer": 2,

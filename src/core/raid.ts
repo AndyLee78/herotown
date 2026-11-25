@@ -36,24 +36,32 @@ export function currentRaid(state: GameState, now: number): Raid {
   return { week, bossId: raidBoss(week).id, hp: null, max: null, killed: false }
 }
 
+// Each boss brought down makes the next week's stronger, so the raid keeps
+// pace with a growing party (Docs/endgame.md 4c).
+export function raidGrowth(state: GameState): number {
+  return 1 + endgameRules.raid.growthPerKill * (state.raidKills ?? 0)
+}
+
 // Minions first, then the boss with a guard, at this week's strength.
 export function raidVariant(state: GameState, now: number): DungeonVariant & { raid: NonNullable<DungeonVariant['raid']> } {
   const raid = currentRaid(state, now)
   const boss = endgameRules.raid.bosses.find((entry) => entry.id === raid.bossId)!
+  const grow = raidGrowth(state)
   return {
     floors: [
-      { monsters: [...boss.minions], scale: boss.scale * 0.6 },
-      { monsters: [boss.boss, boss.minions[0]!], scale: boss.scale },
+      { monsters: [...boss.minions], scale: boss.scale * 0.6 * grow },
+      { monsters: [boss.boss, boss.minions[0]!], scale: boss.scale * grow },
     ],
-    raid: { hpScale: boss.hpScale, hp: raid.hp },
+    raid: { hpScale: boss.hpScale * grow, hp: raid.hp },
   }
 }
 
 // A party's damage lands when it comes home, on whatever is left by then,
 // so parties sent together each count. A raid from last week is over.
-export function settleRaid(state: GameState, week: string, start: number | null, left: number | undefined, max: number | undefined): GameState {
+export function settleRaid(state: GameState, week: string, start: number | null, left: number | undefined, max: number | undefined, returnAt?: number): GameState {
   const raid = state.raid
-  if (!raid || raid.week !== week || raid.killed || left == null || max == null) {
+  // A party home after the week turned finds its raid over (review 1650b75).
+  if (!raid || raid.week !== week || raid.killed || left == null || max == null || (returnAt != null && raidWeek(returnAt) !== week)) {
     return state
   }
   const damage = Math.max(0, (start ?? max) - left)

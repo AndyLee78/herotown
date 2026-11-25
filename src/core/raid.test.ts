@@ -121,3 +121,42 @@ describe('town invasions', () => {
     expect(opened.invasion).toBeNull()
   })
 })
+
+describe('review 1650b75 fixes', () => {
+  it('lets a party home after the week turned touch neither raid', () => {
+    const week = raidWeek(monday)
+    const state = { ...town(8), raid: { week, bossId: raidBoss(week).id, hp: 1, max: 10_000, killed: false } }
+    expect(settleRaid(state, week, 1, 0, 10_000, monday + 7 * 86_400_000)).toBe(state)
+    expect(settleRaid(state, week, 1, 0, 10_000, monday + 86_400_000).raid?.killed).toBe(true)
+  })
+
+  it('lets each hero defend only once, however many presets hold them', () => {
+    const base = town(9)
+    const presets = base.presets.map((preset) => ({ ...preset, slots: [{ id: 'w', row: 'front' as const }] }))
+    const state = { ...base, presets, invasion: { nextAt: monday, defenders: ['p1', 'p2', 'p3'], count: 30, wins: 0 } }
+    const settled: string[][] = []
+    resolveInvasion(state, (current, _report, heroIds) => {
+      settled.push(heroIds)
+      return current
+    })
+    expect(settled).toEqual([['w']])
+  })
+
+  it('lets a party home just before an invasion defend', () => {
+    let state: GameState = { ...town(9), dungeonId: 'hill_cave' }
+    state = reduce(state, { type: 'depart', presetId: 'p1', confirm: true, now: monday })
+    const back = state.expeditions[0]!.returnAt
+    state = { ...state, invasion: { nextAt: back + 1000, defenders: ['p1'], count: 0, wins: 0 } }
+    const after = reduce(state, { type: 'catchUp', now: back + 60_000 })
+    expect(after.invasion?.last?.waves).toBeGreaterThan(0)
+  })
+
+  it('takes queued orders that never paid spoils off a version 24 save and refunds them', () => {
+    const base = town(10)
+    const saved = JSON.parse(JSON.stringify({ ...base, version: 24, automation: { ...base.automation, queues: { ...base.automation.queues, smith: ['legend.blade', 'fine.blade'] } } })) as Record<string, unknown>
+    const opened = migrate(saved, monday)
+    expect(opened.automation.queues.smith).toEqual(['fine.blade'])
+    expect(opened.vault.scale).toBe(0)
+    expect(opened.gold).toBeGreaterThan(base.gold)
+  })
+})
