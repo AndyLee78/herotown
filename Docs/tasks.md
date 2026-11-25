@@ -140,9 +140,9 @@ Claude Code, Cursor, GPT(Codex)가 함께 쓰는 작업 목록이다. 작업 하
 | 98 | 4a core 코드 리뷰 (b80777c) | GPT | `Docs/reviews/b80777c.md` (새 파일만) | 완료 (82ab2e2) |
 | 99 | 4a 측정: 요일 던전 승률·심연 깊이·하루 자원 | GPT | `tools/*`, `Docs/endgame.md`의 측정 절 | 완료 (374866e) |
 | 100 | 승격 의식·마을 레벨 8–10 모습 3D | Cursor | `src/ui/voxel/*` | 완료 (3132b54) |
-| 101 | 승격·새 자원 비용·마을 Lv10·장비 등급 화면 | GPT | `src/ui/App.tsx`, `src/ui/game/*.tsx`, `src/ui/styles.css`, `src/locales/*` | 대기 (100과 함께 가능) |
-| 102 | 4b core 코드 리뷰 (d89e486, c89e043) | GPT | `Docs/reviews/c89e043.md` (새 파일만) | 대기 (101 뒤) |
-| 103 | 4b 측정: Lv8–10 도달·자원 흐름 | GPT | `tools/*`, `Docs/endgame.md`의 측정 절 | 대기 (102 뒤) |
+| 101 | 승격·새 자원 비용·마을 Lv10·장비 등급 화면 | GPT | `src/ui/App.tsx`, `src/ui/game/*.tsx`, `src/ui/styles.css`, `src/locales/*` | 완료 (a588af8) |
+| 102 | 4b core 코드 리뷰 (d89e486, c89e043) | GPT | `Docs/reviews/c89e043.md` (새 파일만) | 완료 (175703a) |
+| 103 | 4b 측정: Lv8–10 도달·자원 흐름 | GPT | `tools/*`, `Docs/endgame.md`의 측정 절 | 완료 (0156f23) |
 
 ---
 
@@ -2462,6 +2462,8 @@ core에 이미 있는 것('../../core'에서 export):
 
 **메모**
 
+승격 조건, 건물·대장간 비용, 영웅·전설 등급을 화면에 반영했다. 명성 1300·심연 40층 상태에서 Lv8–10 승격, 대장간 Lv5 건설과 전설 갑옷 제작을 확인했다. 브라우저 기동이 시간 초과되어 375px 실기 검증은 미완료다.
+
 ---
 
 ## 102. 4b core 코드 리뷰 (GPT)
@@ -2476,6 +2478,8 @@ core에 이미 있는 것('../../core'에서 export):
 ```
 
 **메모**
+
+대장간 대기열 금고 미차감·취소 환불 누락, Lv4·5 강화 확률, 상인 판매와 건설 검사 순서를 `Docs/reviews/c89e043.md`에 기록했다.
 
 ---
 
@@ -2497,3 +2501,5 @@ core에 이미 있는 것('../../core'에서 export):
 ```
 
 **메모**
+
+20시드 × 32일 기준 Lv8 20/20(2.03일), Lv9 15/20(7.01일), Lv10 0/20이었다. 금고 수지와 작업 91 비교, 공물 조정 실험을 `Docs/endgame.md`에 기록했다. 타입 검사·테스트 364개·빌드 통과.
