@@ -143,7 +143,7 @@ Claude Code, Cursor, GPT(Codex)가 함께 쓰는 작업 목록이다. 작업 하
 | 101 | 승격·새 자원 비용·마을 Lv10·장비 등급 화면 | GPT | `src/ui/App.tsx`, `src/ui/game/*.tsx`, `src/ui/styles.css`, `src/locales/*` | 완료 (a588af8) |
 | 102 | 4b core 코드 리뷰 (d89e486, c89e043) | GPT | `Docs/reviews/c89e043.md` (새 파일만) | 완료 (175703a) |
 | 103 | 4b 측정: Lv8–10 도달·자원 흐름 | GPT | `tools/*`, `Docs/endgame.md`의 측정 절 | 완료 (0156f23) |
-| 104 | 레이드 보스·마을 침공 장면 3D | Cursor | `src/ui/voxel/*`, `src/ui/BattleView.tsx`, `src/ui/ExpeditionPanel.tsx` | 대기 (105와 함께 가능) |
+| 104 | 레이드 보스·마을 침공 장면 3D | Cursor | `src/ui/voxel/*`, `src/ui/BattleView.tsx`, `src/ui/ExpeditionPanel.tsx` | 완료 (8c4c0a7) |
 | 105 | 레이드·침공 화면 | GPT | `src/ui/App.tsx`, `src/ui/game/*.tsx`, `src/ui/styles.css`, `src/locales/*` | 대기 (104와 함께 가능) |
 | 106 | 4c core 코드 리뷰 (1650b75) | GPT | `Docs/reviews/1650b75.md` (새 파일만) | 대기 (105 뒤) |
 | 107 | 4c 측정: Lv9·10 승격·레이드 주기·침공 | GPT | `tools/*`, `Docs/endgame.md`의 측정 절 | 대기 (106 뒤) |
@@ -2532,6 +2532,8 @@ Docs/endgame.md의 4c를 읽고 레이드와 침공을 보이게 한다. src/ui/
 ```
 
 **메모**
+
+레이드 보스별 배경(wyrm 용암·날개 그림자, lich 얼음 왕좌, titan 무너진 성채)과 2층 보스 체력 막대(trip.raid 또는 report). 침공 예고 시 남쪽 진영·붉은 하늘, 결과 시 입구 교전·승패 여파(한 번 만들어 보였다 숨김). tsc·test·build 통과. 디버그 세이브로 레이드/침공은 눈으로 확인하지 못함.
 
 ---
 
