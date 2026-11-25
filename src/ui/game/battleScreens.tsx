@@ -22,6 +22,8 @@ import {
   nestRevealed,
   nestRules,
   nestSeason,
+  partyBonus,
+  partyFit,
   readiness,
   timeRules,
   villageRules,
@@ -689,6 +691,7 @@ export function PartyEditor({ save, onAction, onBack }: { save: GameState; onAct
     slots: preset.slots.filter((slot) => slot.row === row),
   }))
   const members = presetHeroes(save, preset)
+  const bonuses = partyBonus(save, members.map(({ id }) => id))
   return (
     <div className="column">
       <PartyNotes heroes={members} />
@@ -712,6 +715,7 @@ export function PartyEditor({ save, onAction, onBack }: { save: GameState; onAct
           {listed.map(({ hero, power }) => {
             const chosen = inPreset.has(hero.id)
             const unavailable = away.has(hero.id) || !canDeploy(hero)
+            const fit = Math.round(partyFit(hero, members) * 100)
             return (
               <button
                 key={hero.id}
@@ -729,6 +733,7 @@ export function PartyEditor({ save, onAction, onBack }: { save: GameState; onAct
                     <Chip tone="info">{t(`class.${hero.classId}`)}</Chip>
                     <Chip>{t('ui.level', { level: hero.level })}</Chip>
                     {hero.expecting ? <Chip tone="info">{t('battle.expecting')}</Chip> : null}
+                    {fit !== 0 ? <Chip tone={fit > 0 ? 'good' : 'bad'}>{t(fit > 0 ? 'personality.fit' : 'personality.clash', { percent: Math.abs(fit) })}</Chip> : null}
                   </span>
                   <HeroStatus save={save} hero={hero} presetId={preset.id} now={now} />
                 </span>
@@ -758,6 +763,7 @@ export function PartyEditor({ save, onAction, onBack }: { save: GameState; onAct
                     <Portrait hero={hero} />
                     <span className="slot-body">
                       <strong>{hero.name}</strong>
+                      {(bonuses[hero.id] ?? 0) < 0 ? <Chip tone="bad">{t('personality.clash', { percent: Math.round(-100 * bonuses[hero.id]!) })}</Chip> : null}
                       <HeroStatus save={save} hero={hero} presetId={preset.id} now={now} />
                       <span className="row">
                         <button

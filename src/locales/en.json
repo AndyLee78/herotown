@@ -1,4 +1,37 @@
 {
+  "personality": {
+    "names": {
+      "social": "Sociable",
+      "loner": "Loner",
+      "ambitious": "Ambitious",
+      "gentle": "Gentle",
+      "hotheaded": "Hotheaded",
+      "timid": "Timid"
+    },
+    "descriptions": {
+      "social": "Likes people and gets along easily.",
+      "loner": "Prefers being alone. Takes most things in stride.",
+      "ambitious": "Making a name for themselves is everything.",
+      "gentle": "Warm and affectionate. Rarely brags.",
+      "hotheaded": "Quick to boil over and quick to get excited.",
+      "timid": "Worries a lot."
+    },
+    "emotions": {
+      "grief": "Grief",
+      "joy": "Joy",
+      "pride": "Pride",
+      "anxiety": "Anxiety",
+      "resentment": "Resentment"
+    },
+    "strong": "Feels strongly · {{emotions}}",
+    "mild": "Feels mildly · {{emotions}}",
+    "losses": "Loss streak {{count}} · Anxiety",
+    "benched": "Times they watched friends leave without them · {{count}}",
+    "goodMatch": "Good match",
+    "badMatch": "Poor match",
+    "fit": "Fit +{{percent}}%",
+    "clash": "Clash −{{percent}}%"
+  },
   "market": {
     "open": "Open market",
     "materials": "Materials",

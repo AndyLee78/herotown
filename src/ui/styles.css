@@ -1077,6 +1077,12 @@ button,
   text-align: right;
 }
 
+.personality-detail {
+  display: grid;
+  gap: 4px;
+  overflow-wrap: anywhere;
+}
+
 .prep-status {
   display: grid;
   gap: 4px;

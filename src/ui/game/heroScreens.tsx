@@ -5,6 +5,7 @@ import type { TFunction } from 'i18next'
 import {
   STAT_KEYS,
   adRules,
+  affinityScale,
   adsRemaining,
   ancestorsOf,
   canDeploy,
@@ -13,6 +14,7 @@ import {
   isChild,
   familyLegends,
   familyOf,
+  emotionScale,
   freeInterviews,
   guildLevel,
   interviewsLeft,
@@ -22,6 +24,7 @@ import {
   maxExtraSkills,
   moraleRules,
   potentialBand,
+  personalityOf,
   peakStats,
   progression,
   residents,
@@ -69,6 +72,7 @@ type Act = (action: GameAction) => void
 
 // Stats never go far past 30 in stage 1; bars are scaled to that.
 const STAT_SCALE = 30
+const emotions = ['grief', 'joy', 'pride', 'anxiety', 'resentment'] as const
 
 function HeroChips({ hero, scouting = false, drilling = false }: { hero: Hero; scouting?: boolean; drilling?: boolean }) {
   const { t } = useTranslation()
@@ -163,6 +167,7 @@ export function Inn({ save, onAction }: { save: GameState; onAction: Act }) {
                     <Chip tone="info">{t(`class.${hero.classId}`)}</Chip>
                     <Chip>{t(`gender.${hero.gender}`)}</Chip>
                     <Chip>{t('hero.age', { age: hero.age })}</Chip>
+                    <Chip>{t(`personality.names.${personalityOf(hero)}`)}</Chip>
                   </span>
                   <span className="muted">{korean ? t('hint.inn', { name: josa(hero.name, '이') }) : t('hint.inn', { name: hero.name })}</span>
                 </div>
@@ -324,6 +329,12 @@ function HeroDetail({
   const skills = classById(hero.classId).skills
   const careAt = hero.resurrectAt ?? hero.treatAt
   const recovery = recoveryText(t, hero, now)
+  const personality = personalityOf(hero)
+  const describeEmotions = (strong: boolean) => emotions
+    .filter((emotion) => strong ? emotionScale(hero, emotion) >= 1.2 : emotionScale(hero, emotion) <= 0.8)
+    .map((emotion) => t(`personality.emotions.${emotion}`)).join(', ')
+  const strongEmotions = describeEmotions(true)
+  const mildEmotions = describeEmotions(false)
   return (
     <article className="card detail">
       <button type="button" className="btn small back" onClick={onBack}>
@@ -339,11 +350,19 @@ function HeroDetail({
             drilling={save.drills.some((drill) => drill.heroId === hero.id)}
           />
           <span className="chips">
+            <Chip tone="info">{t(`personality.names.${personality}`)}</Chip>
             {hero.traitIds.map((trait) => (
               <Chip key={trait}>{t(`trait.${trait}`)}</Chip>
             ))}
           </span>
         </div>
+      </div>
+      <div className="personality-detail">
+        <span>{t(`personality.descriptions.${personality}`)}</span>
+        {strongEmotions ? <span className="muted">{t('personality.strong', { emotions: strongEmotions })}</span> : null}
+        {mildEmotions ? <span className="muted">{t('personality.mild', { emotions: mildEmotions })}</span> : null}
+        {(hero.losses ?? 0) > 0 ? <span className="muted">{t('personality.losses', { count: hero.losses })}</span> : null}
+        {(hero.benched ?? 0) > 0 ? <span className="muted">{t('personality.benched', { count: hero.benched })}</span> : null}
       </div>
       <span className="fatigue">
         <Bar value={hero.fatigue} max={100} tone={fatigueTone(hero)} />
@@ -586,11 +605,16 @@ function FamilyPanel({
         if (!other) {
           return null
         }
+        const fit = affinityScale(hero, other)
         return (
           <button key={bond.id} type="button" className="bond" onClick={() => onSelect(other.id)}>
             <span>{other.family ? `${other.name} · ${other.family}` : other.name}</span>
             <Bar value={bond.affinity} max={100} tone={bond.stage === 'spouse' || bond.stage === 'lover' ? 'good' : 'info'} />
-            <Chip>{t(`family.stage.${bond.stage}`)}</Chip>
+            <span className="chips">
+              <Chip>{t(`family.stage.${bond.stage}`)}</Chip>
+              {fit >= 1.15 ? <Chip tone="good">{t('personality.goodMatch')}</Chip> : null}
+              {fit <= 0.85 ? <Chip tone="warn">{t('personality.badMatch')}</Chip> : null}
+            </span>
           </button>
         )
       })}

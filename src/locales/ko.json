@@ -1,4 +1,37 @@
 {
+  "personality": {
+    "names": {
+      "social": "사교적",
+      "loner": "외톨이",
+      "ambitious": "야망가",
+      "gentle": "온화함",
+      "hotheaded": "다혈질",
+      "timid": "겁 많은 마음"
+    },
+    "descriptions": {
+      "social": "사람을 좋아하고 잘 어울린다",
+      "loner": "혼자가 편하다. 웬만한 일에 덤덤하다",
+      "ambitious": "공을 세우는 것이 전부다",
+      "gentle": "따뜻하고 정이 많다. 자랑은 하지 않는다",
+      "hotheaded": "쉽게 끓고 쉽게 들뜬다",
+      "timid": "걱정이 많다"
+    },
+    "emotions": {
+      "grief": "슬픔",
+      "joy": "기쁨",
+      "pride": "자부심",
+      "anxiety": "불안",
+      "resentment": "서운함"
+    },
+    "strong": "잘 느끼는 감정 · {{emotions}}",
+    "mild": "덤덤한 감정 · {{emotions}}",
+    "losses": "연패 {{count}}번 · 불안",
+    "benched": "친구들이 떠나는 걸 {{count}}번 지켜봄",
+    "goodMatch": "잘 맞음",
+    "badMatch": "안 맞음",
+    "fit": "궁합 +{{percent}}%",
+    "clash": "충돌 −{{percent}}%"
+  },
   "market": {
     "open": "시장 열기",
     "materials": "재료",
