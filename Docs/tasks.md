@@ -132,13 +132,17 @@ Claude Code, Cursor, GPT(Codex)가 함께 쓰는 작업 목록이다. 작업 하
 | 90 | 명예의 전당 core 코드 리뷰 (4c3aec1) | GPT | `Docs/reviews/4c3aec1.md` (새 파일만) | 완료 (3b65093) |
 | 91 | 마을 Lv7까지 전체 흐름 점검 | GPT | `tools/*`, `Docs/balance.md`(새 파일) | 완료 (4075ab5) |
 | 92 | 상위 레벨 건물·영웅·전설 장비 3D | Cursor | `src/ui/voxel/*` | 완료 (0e3e29d) |
-| 93 | 마을 Lv8–10·상위 레벨·전설 장비 화면 | GPT | `src/ui/App.tsx`, `src/ui/game/*.tsx`, `src/ui/styles.css`, `src/locales/*` | 보류 (4b에서 다시 씀, Docs/endgame.md) |
-| 94 | 4a core 코드 리뷰 (d89e486) | GPT | `Docs/reviews/d89e486.md` (새 파일만) | 보류 (4b에서 다시 씀) |
-| 95 | 4a 측정: Lv8–10 도달·후반 재료·전설 장비 | GPT | `tools/*`, `Docs/endgame.md`의 측정 절 | 보류 (4b에서 다시 씀) |
+| 93 | 마을 Lv8–10·상위 레벨·전설 장비 화면 | GPT | `src/ui/App.tsx`, `src/ui/game/*.tsx`, `src/ui/styles.css`, `src/locales/*` | 대체됨 (작업 100–103) |
+| 94 | 4a core 코드 리뷰 (d89e486) | GPT | `Docs/reviews/d89e486.md` (새 파일만) | 대체됨 (작업 100–103) |
+| 95 | 4a 측정: Lv8–10 도달·후반 재료·전설 장비 | GPT | `tools/*`, `Docs/endgame.md`의 측정 절 | 대체됨 (작업 100–103) |
 | 96 | 요일 던전·심연 전투 배경 3D | Cursor | `src/ui/voxel/*`, `src/ui/BattleView.tsx`, `src/ui/ExpeditionPanel.tsx` | 완료 (4ae5c02) |
 | 97 | 금고·요일 던전·심연 화면 | GPT | `src/ui/App.tsx`, `src/ui/game/*.tsx`, `src/ui/styles.css`, `src/locales/*` | 완료 (ec16996) |
 | 98 | 4a core 코드 리뷰 (b80777c) | GPT | `Docs/reviews/b80777c.md` (새 파일만) | 완료 (82ab2e2) |
 | 99 | 4a 측정: 요일 던전 승률·심연 깊이·하루 자원 | GPT | `tools/*`, `Docs/endgame.md`의 측정 절 | 완료 (374866e) |
+| 100 | 승격 의식·마을 레벨 8–10 모습 3D | Cursor | `src/ui/voxel/*` | 대기 (101과 함께 가능) |
+| 101 | 승격·새 자원 비용·마을 Lv10·장비 등급 화면 | GPT | `src/ui/App.tsx`, `src/ui/game/*.tsx`, `src/ui/styles.css`, `src/locales/*` | 대기 (100과 함께 가능) |
+| 102 | 4b core 코드 리뷰 (d89e486, c89e043) | GPT | `Docs/reviews/c89e043.md` (새 파일만) | 대기 (101 뒤) |
+| 103 | 4b 측정: Lv8–10 도달·자원 흐름 | GPT | `tools/*`, `Docs/endgame.md`의 측정 절 | 대기 (102 뒤) |
 
 ---
 
@@ -2402,3 +2406,92 @@ core에 이미 있는 것('../../core'에서 export):
 **메모**
 
 시드 20개로 요일 시련 승률, 심연 깊이·명성, 일·주 수입을 측정해 `Docs/endgame.md`에 기록했다. tsc·테스트 354개·빌드 통과.
+
+---
+
+## 100. 승격 의식·마을 레벨 8–10 모습 3D (Cursor)
+
+**지금 시작할 수 있다. 작업 101(GPT)과 파일이 겹치지 않아 함께 돌릴 수 있다(같은 폴더에서 동시에 돌리려면 git worktree로 나눈다).** 설계: `Docs/endgame.md` 4b.
+
+**전달할 내용**
+
+```
+Docs/endgame.md의 4b를 읽고 승격을 마을에서 보이게 한다. src/ui/voxel/*만 고친다. core, App.tsx, 화면(src/ui/game/*)은 고치지 않는다.
+
+이미 있는 것: VillageScene.update(props)에 townLevel(승격을 반영한 마을 레벨, 1–10)이 들어온다. App·VillageView는 연결되어 있다.
+
+1. 승격 장면: townLevel이 7 → 8, 8 → 9, 9 → 10으로 오르는 순간(페이지 첫 로드 제외) 광장에 영웅들이 모이고 회관 위로 빛 기둥·깃발이 오르며 폭죽이 터진다(기존 burst·꽃가루 재사용 가능). 몇 초 뒤 원래대로.
+2. 마을 레벨 모습: Lv8 회관에 큰 깃발, Lv9 마을 둘레 낮은 성벽(입구는 열어 둠)이나 등불 길, Lv10 회관 첨탑·금빛 장식. 다른 건물을 가리지 않게.
+3. 성능: 장식은 레벨이 바뀔 때만 다시 만든다.
+
+확인: npm run dev에서 디버그 세이브(승격 직전)로 승격 장면과 Lv8–10 모습을 본다. tsc·test·build 통과. 확인한 내용을 메모에.
+```
+
+**메모**
+
+---
+
+## 101. 승격·새 자원 비용·마을 Lv10·장비 등급 화면 (GPT)
+
+**지금 시작할 수 있다. 작업 100(Cursor)과 함께 돌릴 수 있다.** 설계: `Docs/endgame.md` 4b와 그 아래 "틀" 절. 보류했던 작업 93의 내용을 포함한다.
+
+**전달할 내용**
+
+```
+Docs/endgame.md의 4b와 "틀" 절을 화면에 반영한다. src/ui/App.tsx, src/ui/game/*.tsx, src/ui/styles.css, src/locales/*만 고친다. core와 src/ui/voxel/*은 고치지 않는다.
+
+core에 이미 있는 것('../../core'에서 export):
+- townLevelOf(state)(승격까지 반영한 마을 레벨, UI는 이미 이것을 쓴다), townLevel(fame)(명성만), PROMOTION_FREE(7), state.promoted.
+- 동작 { type: 'promote' }. endgameRules.promotions: [{ level, abyssBest, offering: { flame, frost, light, abyss } }]. 결과 notice promoteFame, promoteDeed, promoteOffering, promoteMax(문구는 locales result.*에 있다).
+- 건물 레벨 항목: town?(필요한 마을 레벨), bone?·herb?·crystal?, flame?·frost?·light?·abyss?(금고에서 뺀다). build 결과 'locked', 'resources'.
+- GearGrade 'epic'·'legend'. 레시피 epic.blade·epic.mail(smithLevel 4)·legend.blade·legend.mail(smithLevel 5)에 bone·crystal과 flame·frost·light·abyss 비용.
+- state.vault, state.abyss.best.
+
+1. 승격 창(마을 운영 또는 회관): 다음 승격 레벨, 명성(현재/필요), 업적(심연 최고 층/필요), 바치는 것(화염·서리·빛·심연석, 현재/필요)과 [승격] 버튼. 조건마다 충족 표시. Lv7 미만이면 숨기고, Lv10이면 "최고 레벨".
+2. 마을 레벨·명성 표시가 Lv10까지 이어지게. 명성은 넘었지만 승격 전이면 "승격 의식을 기다리는 중" 칩.
+3. 건물 카드: 다음 레벨에 town이 있고 마을 레벨이 모자라면 "마을 LvN에 열림"으로 막는다. 비용에 뼈·약초·수정·정수·심연석이 있으면 함께 보인다(모자란 것은 빨강).
+4. 각 건물 창의 레벨별 효과 표에 새 레벨 행이 나오는지 확인하고, 하드코딩된 표가 있으면 데이터에서 읽게 바꾼다.
+5. 장비 등급 이름·색: 영웅(보라), 전설(금색) ko/en. 장비 목록·창고·시장·상인·유품 표시 모두.
+6. 대장간 창: Lv4·5 레시피와 모든 비용(정수·심연석 포함).
+7. 문구 ko/en 같은 키. 좁은 화면(375px)에서 넘치지 않게.
+
+확인: npm run dev에서 디버그 세이브(명성 1300, 심연 40층, 금고 넉넉히, 건물 최고 레벨 직전)로 승격 3번, 상위 건설, 전설 제작을 본다. tsc·test·build 통과. 확인한 내용을 메모에.
+```
+
+**메모**
+
+---
+
+## 102. 4b core 코드 리뷰 (GPT)
+
+**작업 101 뒤에 시작한다(같은 도구라 순서대로).** core 커밋은 **d89e486**(틀)과 **c89e043**(승격·새 자원 비용)이다.
+
+**전달할 내용**
+
+```
+4b core 커밋 d89e486과 c89e043을 리뷰한다. 코드는 고치지 않고 Docs/reviews/c89e043.md 새 파일 하나에만 쓴다(Docs/reviews/README.md 형식).
+볼 것: Docs/endgame.md 4b·틀과 차이, townLevel(fame)과 townLevelOf(state)가 섞인 곳(마을 레벨에 따른 모든 효과: 방문자 잠재력, 건물 최대 레벨, 해금, 축제 비용, 특수 던전, UI), 승격 조건 순서와 금고 차감, 승격 시 사기 상승, 건설 town 확인과 maxBuildingLevel 순서, 금고 비용이 빠진 경로(건설·제작·대장간 대기열·강화·광고로 건설 끝내기), 레벨 표를 늘린 건물마다 새 레벨이 실제로 쓰이는지, 길드 Lv5 실적, 영웅·전설 장비의 정규화·옵션·판매가·상인 물건, 명성이 270–339인 기존 세이브가 Lv6으로 내려가는 영향, 세이브 23 → 24.
+```
+
+**메모**
+
+---
+
+## 103. 4b 측정: Lv8–10 도달·자원 흐름 (GPT)
+
+**작업 102 뒤에 시작한다.**
+
+**전달할 내용**
+
+```
+4b가 후반 흐름에 주는 영향을 측정한다. tools/village-balance.ts와 tools/endgame-4a.ts를 넓힌다. core는 고치지 않는다. 결과는 Docs/endgame.md 끝에 "4b 측정 (날짜)" 절로 적는다.
+
+흉내 플레이어: 작업 91의 플레이어에 요일 던전 3번(가능한 가장 높은 난이도), 심연(쉴 때마다), 승격(조건이 되면 바로), 상위 건물·영웅·전설 장비(자원이 되면)를 더한다.
+
+1. 마을 Lv8·9·10 도달 시간(시드 20개 이상, 32일 이상). 목표는 Lv8 2–3일, Lv9 약 1주, Lv10 약 2주. 어떤 조건(명성·심연 깊이·바치는 것)이 가장 오래 막는지.
+2. 금고 자원(화염·서리·빛·심연석)의 수입과 지출, 남는 양. 너무 쌓이거나 모자라는 자원.
+3. "소원만 가능" 비율과 "100개 넘는 재료 3종" 비율이 작업 91보다 얼마나 줄었는지.
+4. 숫자를 바꿀 제안이 있으면 파일·키·값으로 적는다(고치지는 않는다). 특히 promotions와 levels 8–10의 fame.
+```
+
+**메모**
