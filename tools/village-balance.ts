@@ -1,9 +1,9 @@
 // Run: npx tsx tools/village-balance.ts [days=32] [seeds=20]
 import { pathToFileURL } from 'node:url'
-import { alchemyRules, classById, combatRules, dungeons, guildRules, lifeRules, magicRules, marketRules, progression, retirementRules, schoolRules, smithRules, villageRules } from '../src/core/data'
+import { alchemyRules, classById, combatRules, dungeons, endgameRules, guildRules, lifeRules, magicRules, marketRules, progression, retirementRules, schoolRules, smithRules, specialDungeons, villageRules } from '../src/core/data'
 import { bedsTaken, isLegend } from '../src/core/family'
 import { fountainWishes } from '../src/core/fountain'
-import { bedCount, busyHeroIds, dungeonUnlocked, festivalCost, freshState, presetById, reduce, townLevel, type BuildingId, type GameAction, type GameState, type MaterialName } from '../src/core/game'
+import { bedCount, busyHeroIds, dungeonUnlocked, festivalCost, freshState, presetById, reduce, townLevelOf, type BuildingId, type GameAction, type GameState, type MaterialName } from '../src/core/game'
 import { gearMods } from '../src/core/gear'
 import { guideStatus } from '../src/core/guide'
 import { canDeploy, isChild } from '../src/core/hero'
@@ -11,6 +11,7 @@ import { MARKET_MATERIALS, buyQuote } from '../src/core/market'
 import { lowMorale } from '../src/core/morale'
 import { nestRevealed, seasonKey } from '../src/core/nest'
 import { gatherLeft } from '../src/core/tavern'
+import { ESSENCES, freshVault, specialBlock, type Vault, type VaultKey } from '../src/core/trials'
 import type { Hero, PotionId } from '../src/core/types'
 import { skillChoices } from './curve'
 
@@ -26,11 +27,13 @@ const priority: BuildingId[] = ['guild', 'market', 'smith', 'house', 'alchemy', 
 const route = [...dungeons].sort((a, b) => a.tier - b.tier || a.recommendedLevel - b.recommendedLevel)
 const blockedTypes = ['gold', 'materials', 'fame', 'guild record', 'idle', 'routine only', 'morale', 'fatigue', 'injury', 'overlap', 'gold surplus', 'material surplus'] as const
 type Block = typeof blockedTypes[number]
-type Cost = { gold: number } & Partial<Record<MaterialName, number>>
+type Cost = { gold: number } & Partial<Record<MaterialName | VaultKey, number>>
+export const vaultKeys = [...ESSENCES, 'abyss'] as const
+const trials = specialDungeons.filter((entry) => entry.special === 'weekday')
 const hurt = (hero: Hero) => hero.condition === 'injured' || hero.condition === 'critical'
 const roleRank = (hero: Hero) => ({ tank: 0, healer: 1, dps: 2, support: 3 })[classById(hero.classId).role]
 
-export function simulateVillage(seed: number, days: number, stopAtTown?: number) {
+export function simulateVillage(seed: number, days: number, stopAtTown?: number, lateGame = false) {
   let state = freshState(seed, start)
   let now = start
   let acted = false
@@ -57,17 +60,27 @@ export function simulateVillage(seed: number, days: number, stopAtTown?: number)
   let fastUnlocks = 0
   let peakUnlocks = 0
   let lastLevelAt = start
+  const income = freshVault()
+  const spending = { promote: freshVault(), build: freshVault(), craft: freshVault() }
+  const promotionWait: Record<number, { fame: number; depth: number; offering: number } | undefined> = {}
+  const specialRuns = { trials: 0, abyss: 0 }
+  let abyssRetryAt = start
+  const nextPromotion = () => endgameRules.promotions.find(({ level }) => level === state.promoted + 1)
+  const vaultShort = (cost: Partial<Vault>) => vaultKeys.some((key) => state.vault[key] < (cost[key] ?? 0))
   const mark = (key: string, timestamp = now) => { times[key] ??= (timestamp - start) / hour }
   const cast = (action: GameAction) => {
     const next = reduce(state, action)
     if (next.notice) return false
+    if (lateGame && (action.type === 'promote' || action.type === 'build' || action.type === 'craft')) {
+      for (const key of vaultKeys) spending[action.type][key] += state.vault[key] - next.vault[key]
+    }
     state = next
     acted = true
     if (action.type !== 'wish') substantive = true
     return true
   }
   function record() {
-    const level = townLevel(state.fame).level
+    const level = townLevelOf(state).level
     if (level > priorLevel) {
       for (let reached = priorLevel + 1; reached <= level; reached += 1) {
         mark(`town ${reached}`)
@@ -174,13 +187,14 @@ export function simulateVillage(seed: number, days: number, stopAtTown?: number)
   }
   function projects(blocks: Set<Block>) {
     if (state.construction) return undefined
-    const level = townLevel(state.fame).level
+    const level = townLevelOf(state)
     const available = priority.flatMap((id) => {
       const building = villageRules.buildings.find((entry) => entry.id === id)!
       const next = building.levels.find(({ level: target }) => target === state.buildings[id] + 1)
       return next ? [{ id, building, next }] : []
     })
-    const options = available.filter(({ building }) => building.unlockLevel <= level)
+    const options = available.filter(({ id, building, next }) => building.unlockLevel <= level.level
+      && (!lateGame || (state.buildings[id] < level.maxBuildingLevel && (next.town ?? 0) <= level.level)))
       .sort((a, b) => Number(state.buildings[a.id] > 0) - Number(state.buildings[b.id] > 0) || state.buildings[a.id] - state.buildings[b.id])
     if (available.length > 0 && options.length === 0) blocks.add('fame')
     let shortage: MaterialName | undefined
@@ -189,6 +203,7 @@ export function simulateVillage(seed: number, days: number, stopAtTown?: number)
         blocks.add('guild record')
         continue
       }
+      if (lateGame && vaultShort(next as Cost)) continue
       buyMissing(next)
       const material = MARKET_MATERIALS.find((key) => state.materials[key] < ((next as Cost)[key] ?? 0))
       if (state.gold < next.gold) blocks.add('gold')
@@ -223,6 +238,7 @@ export function simulateVillage(seed: number, days: number, stopAtTown?: number)
       if (!recipe || worn.filter(({ recipeId }) => recipeId === recipe.id).length + state.stash.filter(({ recipeId }) => recipeId === recipe.id).length
         + Number(state.smith?.recipeId === recipe.id) + state.automation.queues.smith.filter((id) => id === recipe.id).length >= Math.min(3, members.length)) continue
       if (state.automation.queues.smith.length >= state.buildings.smith) continue
+      if (lateGame && (vaultShort(recipe as Cost) || (recipe.smithLevel >= 4 && state.smith))) continue
       buyMissing(recipe)
       const waiting = state.smith != null
       if (cast({ type: 'craft', recipeId: recipe.id, now }) && waiting) queued += 1
@@ -251,6 +267,47 @@ export function simulateVillage(seed: number, days: number, stopAtTown?: number)
       }
     }
   }
+  function tryPromotion(step: number) {
+    if (townLevelOf(state).level < 7) return
+    const rule = nextPromotion()
+    if (!rule) return
+    const wait = promotionWait[rule.level] ??= { fame: 0, depth: 0, offering: 0 }
+    const fame = state.fame < villageRules.levels.find(({ level }) => level === rule.level)!.fame
+    const depth = state.abyss.best < rule.abyssBest
+    const offering = vaultShort(rule.offering)
+    if (fame) wait.fame += step
+    if (depth) wait.depth += step
+    if (offering) wait.offering += step
+    if (!fame && !depth && !offering) cast({ type: 'promote' })
+  }
+
+  function specialExpedition(members: Hero[], strength: number) {
+    if (members.length < 3 || members.some(({ fatigue }) => fatigue >= lifeRules.fatigue.tiredAt)
+      || !members.some((hero) => roleRank(hero) === 0) || !members.some((hero) => roleRank(hero) === 1)) return false
+    const offering = nextPromotion()?.offering
+    const trial = trials.filter(({ id }) => !specialBlock(state, id, now))
+      .sort((a, b) => Number(b.recommendedLevel <= strength) - Number(a.recommendedLevel <= strength)
+        || (a.recommendedLevel <= strength ? b.recommendedLevel - a.recommendedLevel : a.recommendedLevel - b.recommendedLevel)
+        || ((offering?.[b.element!] ?? 0) - state.vault[b.element!]) - ((offering?.[a.element!] ?? 0) - state.vault[a.element!]))[0]
+    const target = trial?.id ?? (now >= abyssRetryAt && !specialBlock(state, 'abyss', now) ? 'abyss' : undefined)
+    if (!target) return false
+    state = reduce(state, { type: 'dungeon', id: target })
+    const preset = presetById(state, state.presetId)!
+    if (preset.tactics.blast !== 'interrupt') state = reduce(state, { type: 'tactics', tactics: { ...preset.tactics, blast: 'interrupt' } })
+    for (const id of ['heal', 'tonic', 'clarity', 'antidote'] as const) {
+      const count = id === 'antidote' ? 0 : 2
+      if ((preset.supplies?.[id] ?? 0) !== count) state = reduce(state, { type: 'supplies', potionId: id, count })
+    }
+    if (!cast({ type: 'depart', presetId: state.presetId, confirm: true, now })) return false
+    if (trial) specialRuns.trials += 1
+    else {
+      specialRuns.abyss += 1
+      const trip = state.expeditions.at(-1)!
+      if ((trip.abyssFrom ?? state.abyss.checkpoint) + trip.report.floorsCleared <= state.abyss.best) abyssRetryAt = trip.returnAt + 2 * hour
+    }
+    return true
+  }
+
   function expedition(blocks: Set<Block>, shortage?: MaterialName) {
     const members = party()
     const strength = members.length ? members.reduce((sum, hero) => sum + hero.level, 0) / members.length : 0
@@ -278,6 +335,11 @@ export function simulateVillage(seed: number, days: number, stopAtTown?: number)
     const board = [...(state.guild?.seasonal ?? []), state.guild?.repeat].filter((contract) => contract && !contract.done)
     for (const contract of board) {
       if (contract?.kind === 'deliver' && contract.material && state.materials[contract.material] >= contract.need - contract.progress + 12) cast({ type: 'deliver', contractId: contract.id })
+    }
+    if (lateGame && specialExpedition(members, strength)) {
+      blocks.delete('morale')
+      blocks.delete('fatigue')
+      return
     }
     const contract = board.find((entry) => entry?.kind === 'clear' && entry.dungeonId && viable.some(({ id }) => id === entry.dungeonId))
     const fallback = [...viable].reverse().find(({ id, tier }) => state.cleared.includes(id) && tier <= 3)?.id ?? 'hill_cave'
@@ -312,18 +374,19 @@ export function simulateVillage(seed: number, days: number, stopAtTown?: number)
 
   while (now <= start + days * day) {
     record()
-    if (now === start + days * day || (stopAtTown != null && townLevel(state.fame).level >= stopAtTown)) break
+    if (now === start + days * day || (stopAtTown != null && townLevelOf(state).level >= stopAtTown)) break
     const elapsed = now - start
     const sinceDay = elapsed % day
     const offline = sinceDay === 16 * hour
     const step = offline ? 8 * hour : Math.min(elapsed < hour ? 15_000 : elapsed < day ? 3 * minute : 10 * minute, 16 * hour - sinceDay)
     if (!offline) {
-      const progressing = townLevel(state.fame).level < 7
+      const progressing = townLevelOf(state).level < 7
       acted = false
       substantive = false
       const blocks = new Set<Block>()
       upkeep()
       prepareParty()
+      if (lateGame) tryPromotion(step)
       const short = projects(blocks)
       workshops()
       expedition(blocks, short)
@@ -348,15 +411,17 @@ export function simulateVillage(seed: number, days: number, stopAtTown?: number)
     }
     const nonce = state.auto.nonce ?? 0
     now += step
-    state = reduce(state, { type: 'catchUp', now })
+    const next = reduce(state, { type: 'catchUp', now })
+    if (lateGame) for (const key of vaultKeys) income[key] += next.vault[key] - state.vault[key]
+    state = next
     autoRuns += (state.auto.nonce ?? 0) - nonce
   }
-  return { state, times, totals, beforeSeven, longest, materialWait, onlineMs, progressionMs, offlineMs, manualRuns, autoRuns, queued, bought, gatherings, festivals, fame: state.fame, gold: state.gold, cleared: state.cleared.length, peakUnlocks, fastUnlocks }
+  return { state, times, totals, beforeSeven, longest, materialWait, onlineMs, progressionMs, offlineMs, manualRuns, autoRuns, queued, bought, gatherings, festivals, fame: state.fame, gold: state.gold, cleared: state.cleared.length, peakUnlocks, fastUnlocks, income, spending, promotionWait, specialRuns }
 }
 
 export function villageCheckpoint(seed: number, level: number): GameState | null {
   const { state } = simulateVillage(seed, 2, level)
-  return townLevel(state.fame).level >= level ? state : null
+  return townLevelOf(state).level >= level ? state : null
 }
 
 function stats(values: number[]) {
