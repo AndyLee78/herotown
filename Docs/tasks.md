@@ -118,7 +118,7 @@ Claude Code, Cursor, GPT(Codex)가 함께 쓰는 작업 목록이다. 작업 하
 | 76 | 시장 화면 | GPT | `src/ui/App.tsx`, `src/ui/game/*.tsx`, `src/ui/styles.css`, `src/locales/*` | 완료 (3e9cb81) |
 | 77 | 시장 core 코드 리뷰 (bb1c2cf) | GPT | `Docs/reviews/bb1c2cf.md` (새 파일만) | 완료 (206cc3b) |
 | 78 | 시장 경제 측정 | GPT | `tools/*`, `Docs/market.md`의 측정 절 | 완료 (8b0f1ab) |
-| 79 | 성격별 마을 행동·감정 말풍선 3D | Cursor | `src/ui/voxel/*` | 대기 (80과 함께 가능) |
+| 79 | 성격별 마을 행동·감정 말풍선 3D | Cursor | `src/ui/voxel/*` | 완료 (776b46f) |
 | 80 | 성격·감정 화면 | GPT | `src/ui/App.tsx`, `src/ui/game/*.tsx`, `src/ui/styles.css`, `src/locales/*` | 대기 (79와 함께 가능) |
 | 81 | 성격 core 코드 리뷰 (49c92da) | GPT | `Docs/reviews/49c92da.md` (새 파일만) | 대기 (80 뒤) |
 | 82 | 성격 영향 측정 | GPT | `tools/*`, `Docs/personality.md`의 측정 절 | 대기 (81 뒤) |
@@ -1890,31 +1890,12 @@ core에 이미 있는 것('../../core'에서 export):
 
 ## 79. 성격별 마을 행동·감정 말풍선 3D (Cursor)
 
-**지금 시작할 수 있다. 작업 80(GPT)과 파일이 겹치지 않아 함께 돌릴 수 있다(같은 폴더에서 동시에 돌리려면 git worktree로 나눈다).** 설계: `Docs/personality.md`. 끝나면 Claude Code가 화면을 직접 확인한다.
+**완료 (776b46f).** 설계: `Docs/personality.md`.
 
-**전달할 내용**
-
-```
-Docs/personality.md를 읽고 성격이 마을에서 보이게 한다. src/ui/voxel/*만 고친다. core, App.tsx, 화면(src/ui/game/*)은 고치지 않는다.
-
-이미 있는 것:
-- VillageScene.update(props)의 roster: Hero[]에 hero.personality('social' | 'loner' | 'ambitious' | 'gentle' | 'hotheaded' | 'timid')와 hero.morale이 이미 들어 있다. App·VillageView는 고칠 필요가 없다.
-- 걷는 영웅은 VillageScene의 Walker(step, idle 목표 고르기, 분수 피하기 keepOffFountain)다. 분수 피하기 규칙은 그대로 지킨다.
-
-1. 성격별 마을 행동(광장에서 쉬는 중일 때만, 원정·훈련·짐 싸기 같은 상태는 그대로):
-   - 사교적: 다른 영웅 가까이에 목표를 잡아 둘셋이 모여 서 있는 일이 잦다.
-   - 외톨이: 광장 가장자리·나무 근처에 혼자 서 있는 일이 잦고, 다른 영웅과 거리를 둔다.
-   - 야망가: 훈련소나 마을 입구 쪽을 자주 오간다.
-   - 온화함: 아이나 은퇴자 가까이에 자주 간다.
-   - 다혈질: 걸음이 빠르고 목표를 자주 바꾼다.
-   - 겁 많은 마음: 걸음이 느리고 건물 가까이에 붙어 다닌다.
-2. 감정 말풍선: 영웅의 사기가 한 번에 크게 오르면(예: +8 이상) 머리 위에 하트·느낌표 같은 작은 복셀 말풍선, 크게 내리면 비구름·땀방울을 1–2초 띄운다(update마다 이전 morale과 비교). 사기 30 이하인 영웅은 고개를 숙이고 천천히 걷는다.
-3. 성능: 말풍선은 공용 메시를 재사용하고, 한 번에 보이는 수를 제한한다.
-
-확인: npm run dev에서 성격이 섞인 디버그 세이브로 마을 행동과 말풍선(결혼·축제·패배)을 본다. tsc·test·build 통과. 확인한 내용을 메모에.
-```
-
-**메모**
+메모:
+- 쉬는 중 성격 배회: 사교적 무리, 외톨이 가장자리, 야망가 훈련소/남문, 온화함 아이·은퇴자, 다혈질 빠른 걸음·잦은 목표 변경, 겁 많은 마음 건물 앞·느린 걸음. 분수 회피 유지.
+- 사기 ±8 이상이면 공용 말풍선(하트/구름, 최대 4개·약 2초). 사기 ≤30이면 고개 숙임·느린 걸음.
+- 5176에서 성격 6종 로스터 배회 확인. 말풍선은 세이브 사기 급변으로 경로 확인(수명이 짧아 스크린샷은 놓치기 쉬움). tsc·테스트 311·빌드 통과.
 
 ---
 
