@@ -127,6 +127,10 @@ Claude Code, Cursor, GPT(Codex)가 함께 쓰는 작업 목록이다. 작업 하
 | 85 | 선술집·유품 core 코드 리뷰 (161d1d1) | GPT | `Docs/reviews/161d1d1.md` (새 파일만) | 완료 (b60c1cb) |
 | 86 | 선술집·유품 측정 | GPT | `tools/*`, `Docs/tavern.md`의 측정 절 | 완료 (d1013ec) |
 | 87 | 축제 장식 3D | Cursor | `src/ui/voxel/*` | 완료 (5922ec2) |
+| 88 | 명예의 전당 건물·석상·진열장 3D | Cursor | `src/ui/voxel/*` | 대기 (89와 함께 가능) |
+| 89 | 명예의 전당 화면 | GPT | `src/ui/App.tsx`, `src/ui/game/*.tsx`, `src/ui/styles.css`, `src/locales/*` | 대기 (88과 함께 가능) |
+| 90 | 명예의 전당 core 코드 리뷰 (4c3aec1) | GPT | `Docs/reviews/4c3aec1.md` (새 파일만) | 대기 (89 뒤) |
+| 91 | 마을 Lv7까지 전체 흐름 점검 | GPT | `tools/*`, `Docs/balance.md`(새 파일) | 대기 (90 뒤) |
 
 ---
 
@@ -2102,3 +2106,94 @@ core에 이미 있는 것('../../core'에서 export):
 
 **메모**
 - 완료 5922ec2. `buildFestivalDecor`로 계절마다 합친 메시 하나(봄 꽃줄·바구니, 여름 깃발·과녁, 가을 곡식·호박·수레, 겨울 등불·촛불). 선술집이 있으면 앞마당에도, 없으면 광장만. null→값일 때만 꽃가루 폭죽, 계절이 바뀌면 걷음. 첫 로드의 기존 축제는 장식만. 5178에서 봄·여름 축제 개회와 계절 넘기기 후 장식 제거 확인. 가을·겨울 메시는 강제 sync로 생성 확인. tsc·test·build 통과.
+
+---
+
+## 88. 명예의 전당 건물·석상·진열장 3D (Cursor)
+
+**지금 시작할 수 있다. 작업 89(GPT)와 파일이 겹치지 않아 함께 돌릴 수 있다(같은 폴더에서 동시에 돌리려면 git worktree로 나눈다).** 설계: `Docs/legends.md`. 끝나면 Claude Code가 화면을 직접 확인한다.
+
+**전달할 내용**
+
+```
+Docs/legends.md를 읽고 명예의 전당의 3D를 만든다. src/ui/voxel/*만 고친다. core, App.tsx, 화면(src/ui/game/*)은 고치지 않는다.
+
+이미 있는 것:
+- 건물 id 'legends'(마을 Lv5, 레벨 1–3). world.ts LOTS에 자리 표시용 legends: { x: 12.3, z: -9.8, w: 3, d: 2.6 }가 있다(여관 동쪽, 나무 (12,-11.5)·(13,-12.5) 근처). 지금은 기본 집 모양이다.
+- VillageScene.update(props)에 legends: { id, name, classId, gender?, genes? }[](무덤의 전설과 은퇴한 전설)와 shrine: { id, slot, grade }[](전시된 유품)이 이미 들어온다. App·VillageView는 연결되어 있다.
+
+1. 자리 확인: 카메라는 남동쪽(16,16,16)에서 본다. 여관·여관 앞마당·나무·밭과 겹치거나 다른 건물을 가리지 않는지 보고, 필요하면 LOTS.legends 좌표나 그 근처 나무만 옮긴다. 더 나은 빈자리가 있으면 옮겨도 된다(선술집은 광장 동쪽 (7.3, −2.1)으로 옮겨졌다).
+2. world.ts drawBuilding에 명예의 전당 모델: Lv1 흰 돌 기둥의 작은 신전풍 전당, Lv2 계단과 깃발, Lv3 금빛 지붕 장식과 화로.
+3. 석상: 전당 앞에 legends의 처음 몇 명(레벨에 따라 2/4/6명)을 돌색 석상으로 세운다. 기존 캐릭터 빌더(buildCharacter)를 genes·classId로 만들고 회색·대리석 재질로 칠한다. 전설이 늘면 석상이 늘어난다.
+4. 진열장: shrine 수만큼 전당 안팎의 받침대에 작게 빛나는 무기·갑옷·장신구 모형(slot별 모양, grade별 색).
+5. 성능: 석상은 legends가 바뀔 때만 다시 만든다.
+
+확인: npm run dev에서 전설 무덤과 은퇴 전설, 전시 유품이 있는 디버그 세이브로 Lv1–3을 본다. tsc·test·build 통과. 확인한 내용을 메모에.
+```
+
+**메모**
+
+---
+
+## 89. 명예의 전당 화면 (GPT)
+
+**지금 시작할 수 있다. 작업 88(Cursor)과 함께 돌릴 수 있다.** 설계: `Docs/legends.md`. 끝나면 Claude Code가 화면을 직접 확인한다.
+
+**전달할 내용**
+
+```
+Docs/legends.md를 읽고 명예의 전당을 화면에 보인다. src/ui/App.tsx, src/ui/game/*.tsx, src/ui/styles.css, src/locales/*만 고친다. core와 src/ui/voxel/*은 고치지 않는다. 기존 창 구조와 kit.tsx 공용 조각을 그대로 쓴다.
+
+core에 이미 있는 것('../../core'에서 export):
+- 건물 id 'legends'(마을 Lv5, 레벨 1–3). App.tsx BUILDING_SCREEN의 legends는 지금 'town'을 연다. 마을 화면에 이미 "명예의 전당" 목록 버튼(hallOfFame 무덤 목록)이 있다.
+- hallOfFame(state)(무덤의 전설), livingLegends(state)(은퇴한 전설, 전당이 있을 때), isLegendId, legendBonus(state, family), familyLegends(state, family), blessing(state, hero), shrineSlots(state), shrineMorale(state), legendsRules, state.shrine({ gear, honoured } | null).
+- 동작 { type: 'enshrine', gearId }(창고의 유품만), { type: 'unshrine', gearId }. 결과 notice noLegends, shrineFull, missing(문구는 locales의 result.*에 이미 있다).
+
+1. 명예의 전당 창(App.tsx BUILDING_SCREEN의 legends를 새 화면으로): 레벨별 효과 표(문서의 표), 전설 목록(무덤과 살아 있는 전설을 함께, "살아 있는 전설" 칩, 직업·레벨·클리어·가문), 가문별 묶음과 그 가문 아이의 잠재력 보너스.
+2. 유품 전시: 전시 칸 n/m, 전시된 유품(이름 앞 "○○ 가문의", 대 수)과 [꺼내기], 창고 유품 목록과 [전시하기]. "처음 전시하면 명성 +5", "전시 하나마다 사기 기준 +1" 안내.
+3. 기존 마을 화면의 명예의 전당 목록 버튼은 전당이 있으면 새 창을 연다(없으면 지금 목록 그대로).
+4. 영웅 상세와 파티 편집: blessing > 0이면 "조상의 가호 +n%" 칩.
+5. 문구 ko/en 같은 키. 좁은 화면(375px)에서 넘치지 않게.
+
+확인: npm run dev에서 디버그 세이브(전설 무덤, 은퇴 전설, 그 자손, 창고 유품)로 전당 창·전시·가호 칩을 본다. tsc·test·build 통과. 확인한 내용을 메모에.
+```
+
+**메모**
+
+---
+
+## 90. 명예의 전당 core 코드 리뷰 (GPT)
+
+**작업 89 뒤에 시작한다(같은 도구라 순서대로).** core 커밋은 **4c3aec1**과 **d7369af**, 장면 연결은 **99207cc**다.
+
+**전달할 내용**
+
+```
+명예의 전당 core 커밋 4c3aec1(테스트 수정 d7369af)을 리뷰한다. 코드는 고치지 않고 Docs/reviews/4c3aec1.md 새 파일 하나에만 쓴다(Docs/reviews/README.md 형식).
+볼 것: Docs/legends.md와 수치·규칙 차이, 살아 있는 전설의 판정과 가문 이름(family 없는 영웅), 가문 보너스 계산(전당 레벨 0과 1 이상, 상한), 조상의 가호의 대상(3대, 은퇴·무덤 조상, 자기 자신)과 수동·자동 전투 경로, 전시(유품만, 명성 1회, 칸 수, 전당 레벨이 낮아지는 경우는 없지만 칸보다 많을 때), 꺼내기, 사기 기준 상승이 회복·자동 출정 판정에 주는 영향, 세이브 21 → 22.
+```
+
+**메모**
+
+---
+
+## 91. 마을 Lv7까지 전체 흐름 점검 (GPT)
+
+**작업 90 뒤에 시작한다.**
+
+**전달할 내용**
+
+```
+지금 게임 전체를 처음부터 마을 Lv7까지 시뮬레이션해 흐름을 점검한다. tools/에 새 스크립트를 만들거나 tools/first-hour.ts·market-economy.ts 등을 넓힌다. core는 고치지 않는다. 결과는 Docs/balance.md 새 파일에 적는다.
+
+흉내 플레이어: 첫 시간에는 자주 수동 원정, 이후 자동 출정과 공방 대기열, 시장에서 모자란 재료 사기, 선술집 술자리, 축제, 학교·훈련, 은퇴·결혼은 받아들임. 오프라인(밤 8시간)도 하루 한 번 넣는다. 시드 20개 이상.
+
+1. 마을 Lv2–7 도달 시간, 건물별 첫 건설·최고 레벨 시간, 던전 티어별 첫 클리어 시간(중앙값·최소·최대).
+2. 막히는 구간: 골드·재료·명성 중 무엇이 오래 모자라는지, 플레이어가 할 일이 없는(기다리기만 하는) 구간의 길이.
+3. 너무 쉬운 구간: 한꺼번에 많이 열리거나 자원이 넘치는 구간.
+4. 세대: 첫 결혼·첫 아이·첫 성인식·첫 은퇴·첫 전설 시점.
+5. 사기·피로·부상으로 원정이 멈추는 시간 비율.
+6. 숫자를 바꿀 제안은 파일(json)·키·값과 기대 효과로 적는다(고치지는 않는다). 우선순위를 매긴다.
+```
+
+**메모**
