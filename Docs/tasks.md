@@ -143,6 +143,10 @@ Claude Code, Cursor, GPT(Codex)가 함께 쓰는 작업 목록이다. 작업 하
 | 101 | 승격·새 자원 비용·마을 Lv10·장비 등급 화면 | GPT | `src/ui/App.tsx`, `src/ui/game/*.tsx`, `src/ui/styles.css`, `src/locales/*` | 완료 (a588af8) |
 | 102 | 4b core 코드 리뷰 (d89e486, c89e043) | GPT | `Docs/reviews/c89e043.md` (새 파일만) | 완료 (175703a) |
 | 103 | 4b 측정: Lv8–10 도달·자원 흐름 | GPT | `tools/*`, `Docs/endgame.md`의 측정 절 | 완료 (0156f23) |
+| 104 | 레이드 보스·마을 침공 장면 3D | Cursor | `src/ui/voxel/*`, `src/ui/BattleView.tsx`, `src/ui/ExpeditionPanel.tsx` | 대기 (105와 함께 가능) |
+| 105 | 레이드·침공 화면 | GPT | `src/ui/App.tsx`, `src/ui/game/*.tsx`, `src/ui/styles.css`, `src/locales/*` | 대기 (104와 함께 가능) |
+| 106 | 4c core 코드 리뷰 (1650b75) | GPT | `Docs/reviews/1650b75.md` (새 파일만) | 대기 (105 뒤) |
+| 107 | 4c 측정: Lv9·10 승격·레이드 주기·침공 | GPT | `tools/*`, `Docs/endgame.md`의 측정 절 | 대기 (106 뒤) |
 
 ---
 
@@ -2503,3 +2507,92 @@ core에 이미 있는 것('../../core'에서 export):
 **메모**
 
 20시드 × 32일 기준 Lv8 20/20(2.03일), Lv9 15/20(7.01일), Lv10 0/20이었다. 금고 수지와 작업 91 비교, 공물 조정 실험을 `Docs/endgame.md`에 기록했다. 타입 검사·테스트 364개·빌드 통과.
+
+---
+
+## 104. 레이드 보스·마을 침공 장면 3D (Cursor)
+
+**지금 시작할 수 있다. 작업 105(GPT)와 파일이 겹치지 않아 함께 돌릴 수 있다(같은 폴더에서 동시에 돌리려면 git worktree로 나눈다).** 설계: `Docs/endgame.md` 4c.
+
+**전달할 내용**
+
+```
+Docs/endgame.md의 4c를 읽고 레이드와 침공을 보이게 한다. src/ui/voxel/*, src/ui/BattleView.tsx, src/ui/ExpeditionPanel.tsx만 고친다. core, App.tsx, src/ui/game/*는 고치지 않는다.
+
+이미 있는 것:
+- 특수 던전 raid(special 'raid'), invasion(special 'invasion'). BattleScene의 special 타입에 둘이 더해졌다(지금은 tier 배경으로 보인다). 원정 trip.raid = { week, start, left, max }(보스 체력 시작·끝·최대). 레이드 보스는 report의 둘째 층 적 중 boss.
+- VillageScene.update(props)에 invasion: { warned, at, last: { at, won } | null } | null이 들어온다. App·VillageView는 연결되어 있다.
+
+1. 레이드 전투 배경: 보스마다(고룡: 용암 동굴·날개 그림자, 리치 왕: 얼어붙은 왕좌의 방, 거신: 무너진 성채) 다르게. 둘째 층에서 화면 위에 큰 보스 체력 막대(trip.raid의 start → left로 줄어들고, max 기준). 리플레이에서는 report로 계산.
+2. 침공 예고: warned가 true인 동안 마을 남쪽 입구 너머에 적 진영의 깃발·모닥불과 붉은 하늘빛, 경고 표시.
+3. 침공 장면: 마을을 볼 때 at이 지나 last.at이 바뀌면(새 결과) 입구로 적이 몰려오고 영웅들이 맞서는 짧은 장면(몇 초). won이면 적이 물러나고 꽃가루, 아니면 연기와 부서진 상자.
+4. 성능: 장면 오브젝트는 한 번 만들어 보였다 숨긴다.
+
+확인: npm run dev에서 디버그 세이브로 레이드 리플레이, 침공 예고, 침공 결과(승·패)를 본다. tsc·test·build 통과. 확인한 내용을 메모에.
+```
+
+**메모**
+
+---
+
+## 105. 레이드·침공 화면 (GPT)
+
+**지금 시작할 수 있다. 작업 104(Cursor)와 함께 돌릴 수 있다.** 설계: `Docs/endgame.md` 4c.
+
+**전달할 내용**
+
+```
+Docs/endgame.md의 4c를 화면에 보인다. src/ui/App.tsx, src/ui/game/*.tsx, src/ui/styles.css, src/locales/*만 고친다. core, src/ui/voxel/*, src/ui/BattleView.tsx, src/ui/ExpeditionPanel.tsx는 고치지 않는다.
+
+core에 이미 있는 것('../../core'에서 export):
+- 금고에 scale(용비늘)·crown(리치의 왕관)·core(거신의 핵)·valor(용맹 훈장).
+- 레이드: 특수 던전 'raid'. raidWeek(now), raidBoss(week)({ id, boss, minions, scale, hpScale, spoil }), currentRaid(state, now)({ week, bossId, hp, max, killed }), state.raidKills, endgameRules.raid. 원정 trip.raid = { week, start, left, max }. 결과 notice raidDone.
+- 침공: state.invasion({ nextAt, defenders, count, wins, last: { at, won, waves, lost? } } | null), warned(state, now), 동작 { type: 'defend', presetIds }(최대 3), endgameRules.invasion. 결과 notice noInvasion.
+- 승격 조건에 raidKills(Lv9), invasionWins(Lv10)이 endgameRules.promotions에 더해졌다(state.invasion.wins로 센다).
+
+1. 특수 던전 묶음에 레이드: 이번 주 보스 이름·약점 힌트(부하 구성)·남은 체력 막대(hp/max, 처음엔 가득)·전리품, "월요일에 바뀜"과 남은 시간, 쓰러뜨렸으면 "이번 주 처치". 파티를 보낼 때 이번 원정이 줄일 체력은 귀환 때 들어온다는 안내.
+2. 침공: 마을 운영(또는 회관)에 다음 침공까지 남은 시간, 예고 중이면 강조, 방어 파티 고르기(프리셋 최대 3, 지금 마을에 있는 인원 표시), 정하지 않으면 "마을에 있는 강한 영웅 다섯이 막는다" 안내. 지난 결과(승리: 얻은 훈장, 패배: 잃은 골드·재료).
+3. 승격 창에 레이드 처치·침공 방어 조건 줄.
+4. 금고 표시와 비용 표시에 새 자원 4종 이름·아이콘(ko/en).
+5. 침공 예고가 시작되면 화면 알림(토스트) 한 번.
+6. 문구 ko/en 같은 키. 좁은 화면(375px)에서 넘치지 않게.
+
+확인: npm run dev에서 디버그 세이브(마을 Lv9, 강한 파티 여럿)로 레이드 여러 번, 침공 예고·방어·결과를 본다. tsc·test·build 통과. 확인한 내용을 메모에.
+```
+
+**메모**
+
+---
+
+## 106. 4c core 코드 리뷰 (GPT)
+
+**작업 105 뒤에 시작한다(같은 도구라 순서대로).** core 커밋은 **1650b75**다.
+
+**전달할 내용**
+
+```
+4c core 커밋 1650b75를 리뷰한다. 코드는 고치지 않고 Docs/reviews/1650b75.md 새 파일 하나에만 쓴다(Docs/reviews/README.md 형식).
+볼 것: Docs/endgame.md 4c와 차이, 전투 엔진의 RaidPool(보스 찾기, 체력 시작·끝, 페이즈와 소환, 시간 초과·후퇴·전멸의 기록), 레이드 주 계산(시간대, 월요일 경계, 주가 바뀐 뒤 귀환한 파티), 동시에 보낸 파티의 피해 합산, 처치 보상 중복, 레이드 진행 중 세이브, 침공 예약(Lv9 도달 시점, 승격으로 Lv9가 된 경우), 오프라인 중 여러 침공, 방어 파티 선택(바쁜 영웅, 중복 영웅이 여러 프리셋에 있을 때), 방어 결과 적용(피로·부상, 죽지 않음), 손실 계산, 승격 조건, 금고 새 키와 비용·환불, 세이브 24 → 25.
+```
+
+**메모**
+
+---
+
+## 107. 4c 측정: Lv9·10 승격·레이드 주기·침공 (GPT)
+
+**작업 106 뒤에 시작한다.**
+
+**전달할 내용**
+
+```
+4c를 포함한 후반 흐름을 측정한다. tools/endgame-4a.ts --4b 흐름에 레이드(가능할 때마다 주력 파티)와 침공 방어(파티 셋 지정)를 더한다. tools/raid-probe.ts도 참고한다. core는 고치지 않는다. 결과는 Docs/endgame.md 끝에 "4c 측정 (날짜)" 절로 적는다.
+
+1. 마을 Lv8·9·10 도달 시간(시드 20개 이상, 32일 이상). 목표 Lv9 약 1주, Lv10 약 2주.
+2. 레이드: 주마다 처치까지 걸린 날짜·출정 수, 보스별 차이, 전리품 수입.
+3. 침공: 회차별 승률, 패배 때 잃은 양, 용맹 훈장 수입.
+4. 금고 자원(정수·심연석·전리품·훈장) 수입·지출·잔액.
+5. 숫자를 바꿀 제안이 있으면 endgame.json 등의 키와 값으로 적는다(고치지는 않는다).
+```
+
+**메모**
