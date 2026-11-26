@@ -860,6 +860,8 @@
     "noGear": "No gear",
     "trinketEmpty": "Empty trinket slot",
     "spares": "In storage ({{count}})",
+    "noSpares": "Nothing in storage for this slot",
+    "takeOff": "Take off and store",
     "slotEmpty": {
       "weapon": "Empty weapon slot",
       "armor": "Empty armor slot"

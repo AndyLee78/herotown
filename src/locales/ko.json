@@ -860,6 +860,8 @@
     "noGear": "장비 없음",
     "trinketEmpty": "빈 장신구 칸",
     "spares": "창고에 있는 것 {{count}}개",
+    "noSpares": "창고에 바꿔 낄 장비가 없다",
+    "takeOff": "빼서 창고에 두기",
     "slotEmpty": {
       "weapon": "빈 무기 칸",
       "armor": "빈 방어구 칸"
