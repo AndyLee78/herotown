@@ -165,8 +165,8 @@ Claude Code, Cursor, GPT(Codex)가 함께 쓰는 작업 목록이다. 작업 하
 | 123 | 5c 측정: 드롭 속도·고유 장비·세트 세기 | GPT | `tools/*`, `Docs/identity.md`의 측정 절 | 완료 (44f32fa) |
 | 124 | 5d 밸런스 측정 | GPT | `tools/*`, `Docs/identity.md`의 측정 절 | 완료 (92f6b1a) |
 | 125 | 5d 수치 조정 | GPT | `src/data/*.json`, `src/core/*.test.ts`, `Docs/identity.md` | 완료 (066e4e3) |
-| 126 | 직업 사이 차이 줄이기 | GPT | `src/data/classes.json`, `src/data/*.json`, `src/core/*.test.ts`, `tools/*`, `Docs/identity.md` | 대기 |
-| 127 | 정예 처치 드롭 보너스 | GPT | `src/core/dungeon.ts`, `src/core/loot.ts`, `src/core/game.ts`, `src/core/types.ts`, `src/data/loot.json`, `src/core/loot.test.ts`, `Docs/identity.md` | 대기 (126과 함께 가능: 파일이 겹치지 않는다) |
+| 126 | 직업 사이 차이 줄이기 | GPT | `src/data/classes.json`, `src/data/*.json`, `src/core/*.test.ts`, `tools/*`, `Docs/identity.md` | 완료 (e062b37) |
+| 127 | 정예 처치 드롭 보너스 | GPT | `src/core/dungeon.ts`, `src/core/loot.ts`, `src/core/game.ts`, `src/core/types.ts`, `src/data/loot.json`, `src/core/loot.test.ts`, `Docs/identity.md` | 완료 (b212ded) |
 
 ---
 
@@ -3119,6 +3119,9 @@ Docs/identity.md 5d를 측정한다. core와 src/data는 고치지 않는다. �
 
 **메모**
 
+성직자 공격·치유 계수를 조정해 직업 격차를 2.786 → 2.000레벨로 줄였다. 직업 내 갈래 최대 격차는 1.667레벨이다.
+일반 던전 권장 레벨 P25는 조정 전후 100%였고 기존 밸런스 가드를 통과했다.
+
 ---
 
 ## 127. 정예 처치 드롭 보너스 (GPT)
@@ -3141,3 +3144,6 @@ Docs/identity.md 5d를 측정한다. core와 src/data는 고치지 않는다. �
 ```
 
 **메모**
+
+정예를 처치한 수동 반복 승리의 일반 장비 기본 확률을 10% → 12%로 올렸다. 상한, 고유 장비 시드, 자동·첫 클리어, 귀환 정산과 예전 보고서를 테스트했다.
+타입 검사·테스트 458개·프로덕션 빌드를 통과했다.
