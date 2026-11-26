@@ -2443,3 +2443,13 @@ button.chip {
 .gift-details summary, .monster-trait {
   cursor: help;
 }
+
+/* Hero gear: one block per slot (weapon, armour) above the trinkets. */
+.gear-slot + .gear-slot {
+  margin-top: 8px;
+}
+.gear-slot-title {
+  margin: 4px 0 2px;
+  font-size: 0.85rem;
+  color: var(--muted, inherit);
+}

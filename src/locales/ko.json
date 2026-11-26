@@ -387,6 +387,10 @@
     "smith": "제작",
     "stash": "창고",
     "trinkets": "장신구",
+    "slot": {
+      "weapon": "무기",
+      "armor": "방어구"
+    },
     "blast": "광역기 대응"
   },
   "hint": {
@@ -855,6 +859,10 @@
     "reviving": "되살리는 중 {{time}}",
     "noGear": "장비 없음",
     "trinketEmpty": "빈 장신구 칸",
+    "slotEmpty": {
+      "weapon": "빈 무기 칸",
+      "armor": "빈 방어구 칸"
+    },
     "clears": "토벌 {{count}}",
     "fatigue": "피로 {{fatigue}}",
     "fatigueEffect": "피로 {{fatigue}} · 공격·속도 −{{percent}}%",
@@ -1578,6 +1586,7 @@
     "stats": "능력치",
     "gear": "장비",
     "unequip": "해제",
+    "swap": "교체",
     "equip": "장착",
     "revive": "되살리기",
     "formation": "대열",

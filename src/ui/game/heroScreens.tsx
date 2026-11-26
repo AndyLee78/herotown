@@ -355,33 +355,42 @@ function HeroDetail({
 
       <h3 className="section-title">{t('ui.gear')}</h3>
       {save.retirees.some(({ hero: retiree }) => retiree.id === hero.id) ? <Inheritance save={save} hero={hero} onAction={onAction} /> : null}
-      {hero.gear.filter((item) => item.slot !== 'trinket').length === 0 ? <p className="muted">{t('hero.noGear')}</p> : null}
-      <ul className="plain">
-        {hero.gear
-          .filter((item) => item.slot !== 'trinket')
-          .map((item) => (
-            <li key={item.id} className="line">
-              <span className={gearGradeClass(item.grade)}>{itemLabel(t, item, hero.classId, heirloomBonus(save, hero, item))}</span>
-              {inRoster ? (
-                <button type="button" className="btn small" onClick={() => onAction({ type: 'unequip', heroId: hero.id, slot: item.slot, gearId: item.id })}>
-                  {t('ui.unequip')}
-                </button>
-              ) : null}
-            </li>
-          ))}
-        {inRoster
-          ? save.stash
-              .filter((item) => item.slot !== 'trinket')
-              .map((item) => (
-                <li key={item.id} className="line">
-                  <span className={gearGradeClass(item.grade, "muted")}>{itemLabel(t, item, hero.classId, heirloomBonus(save, hero, item))}</span>
-                  <button type="button" className="btn small" onClick={() => onAction({ type: 'equip', heroId: hero.id, gearId: item.id })}>
-                    {t('ui.equip')}
-                  </button>
-                </li>
-              ))
-          : null}
-      </ul>
+      {(['weapon', 'armor'] as const).map((slot) => {
+        const worn = hero.gear.find((item) => item.slot === slot)
+        return (
+          <div key={slot} className="gear-slot">
+            <h4 className="gear-slot-title">{t(`label.slot.${slot}`)}</h4>
+            <ul className="plain">
+              <li className="line">
+                {worn ? (
+                  <>
+                    <span className={gearGradeClass(worn.grade)}>{itemLabel(t, worn, hero.classId, heirloomBonus(save, hero, worn))}</span>
+                    {inRoster ? (
+                      <button type="button" className="btn small" onClick={() => onAction({ type: 'unequip', heroId: hero.id, slot, gearId: worn.id })}>
+                        {t('ui.unequip')}
+                      </button>
+                    ) : null}
+                  </>
+                ) : (
+                  <span className="muted">{t(`hero.slotEmpty.${slot}`)}</span>
+                )}
+              </li>
+              {inRoster
+                ? save.stash
+                    .filter((item) => item.slot === slot)
+                    .map((item) => (
+                      <li key={item.id} className="line">
+                        <span className={gearGradeClass(item.grade, 'muted')}>{itemLabel(t, item, hero.classId, heirloomBonus(save, hero, item))}</span>
+                        <button type="button" className="btn small" onClick={() => onAction({ type: 'equip', heroId: hero.id, gearId: item.id })}>
+                          {t(worn ? 'ui.swap' : 'ui.equip')}
+                        </button>
+                      </li>
+                    ))
+                : null}
+            </ul>
+          </div>
+        )
+      })}
 
       <h3 className="section-title">{t('label.trinkets')}</h3>
       <ul className="plain">
