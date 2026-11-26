@@ -155,7 +155,7 @@ Claude Code, Cursor, GPT(Codex)가 함께 쓰는 작업 목록이다. 작업 하
 | 113 | 스킬 갈래·천부·몬스터 특성 화면 | GPT | `src/ui/App.tsx`, `src/ui/game/*.tsx`, `src/ui/styles.css`, `src/locales/*` | 완료 (ff89a13) |
 | 114 | 5a core 코드 리뷰 (318455b) | GPT | `Docs/reviews/318455b.md` (새 파일만) | 완료 (f5f51e0) |
 | 115 | 5a 측정: 갈래 조합·천부·몬스터 세기 | GPT | `tools/*`, `Docs/identity.md`의 측정 절 | 완료 (ab7c014) |
-| 116 | 무기·방어구 종류 3D | Cursor | `src/ui/voxel/*`, `src/ui/BattleView.tsx`, `src/ui/ExpeditionPanel.tsx` | 대기 (117과 함께 가능) |
+| 116 | 무기·방어구 종류 3D | Cursor | `src/ui/voxel/*`, `src/ui/BattleView.tsx`, `src/ui/ExpeditionPanel.tsx` | 완료 (d9e9664) |
 | 117 | 무기·방어구 종류·옵션·다시 굴리기 화면 | GPT | `src/ui/App.tsx`, `src/ui/game/*.tsx`, `src/ui/styles.css`, `src/locales/*` | 대기 (116과 함께 가능) |
 | 118 | 5b core 코드 리뷰 (3ad100c) | GPT | `Docs/reviews/3ad100c.md` (새 파일만) | 대기 (117 뒤) |
 | 119 | 5b 측정: 무기 종류·옵션 세기 | GPT | `tools/*`, `Docs/identity.md`의 측정 절 | 대기 (118 뒤) |
@@ -2858,6 +2858,8 @@ Docs/identity.md의 5b를 읽고 영웅 복셀 모델에 무기·방어구 종�
 ```
 
 **메모**
+
+`gearStyleOf`로 착용 무기·방어구 type을 읽고 없으면 직업 기본. 무기 추가: 도끼·방패검(+왼손 방패)·석궁·마도서·홀·북. 방어구: 판금(어깨·두꺼운 몸통)·가죽 조끼·로브 자락. VillageScene·portrait·원정 LiveFight에 반영. BattleView는 선택 `gearByHero`(기록 화면은 아직 안 넘김 → 직업 기본). 종류 변경 시에만 모델 재생성. tsc·test·build 통과. 디버그 세이브로 마을·리플레이는 눈으로 확인하지 못함.
 
 ---
 
