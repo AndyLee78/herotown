@@ -21,16 +21,16 @@ import { buyIntel, finishScout, isNest, nestSeason, readScout, seasonKey, startS
 import { TRINKET_IDS, enchantTime, finishEnchant, readMagicJob, startEnchant, type MagicJob } from './magic'
 import { POTION_IDS, brewTime, finishBrew, readAlchemyJob, readSupplies, returnSupplies, startBrew, takeSupplies, type AlchemyJob } from './alchemy'
 import { adRules, giftRules, automationRules, potionById, trinketById, moraleRules, magicRules, nestRules, classById, classList, combatRules, dungeonById, dungeons, expeditionRules, lifeRules, progression, retirementRules, smithRules, timeRules, villageRules, specialDungeons, endgameRules } from './data'
-import { forgeGear, normalizeGear, recipeById } from './gear'
+import { canWield, forgeGear, normalizeGear, orderId, recipeById, rerollOption, splitOrder } from './gear'
 import { applyReport, DEFAULT_TACTICS, gainXp, runDungeon } from './dungeon'
 import { canDeploy, generateHero, isChild, generateVisitors, normalizeHero, restHero, withAge } from './hero'
 import { acceptProposal, bedsTaken, bondParty, declineProposal, deliverBirths, femaleChance, graveFor, nextAge, partyParts, passAway, readBonds, readProposals, tidyFamily, turnSeason, wageCount, type FamilyEvents } from './family'
 import { createRng } from './rng'
 import type { Rng } from './rng'
 import type { Genes } from './genes'
-import type { Bond, ClassId, CombatError, DungeonReport, Gear, GearSlot, Gender, Hero, PartyMember, PotionId, Proposal, Role, Row, Supplies, Tactics, TrinketId , StatKey } from './types'
+import type { Bond, ClassId, CombatError, DungeonReport, Gear, GearSlot, GearType, Gender, Hero, PartyMember, PotionId, Proposal, Role, Row, Supplies, Tactics, TrinketId , StatKey } from './types'
 
-export const SAVE_VERSION = 27
+export const SAVE_VERSION = 28
 
 // Town levels up to here come with fame alone (Docs/endgame.md 4b).
 export const PROMOTION_FREE = 7
@@ -72,6 +72,8 @@ export type AbsenceReport = {
 export type SmithJob = {
   kind: 'craft' | 'enhance'
   recipeId: string
+  // The weapon or armour type chosen for a craft (Docs/identity.md 5b).
+  gearType?: GearType
   gear: Gear | null
   finishAt: number
 }
@@ -200,6 +202,7 @@ export type GameNotice =
   | 'tavernFull'
   | 'gatherSize'
   | 'notHeir'
+  | 'wrongClass'
   | 'noLegends'
   | 'shrineFull'
   | 'trialDay'
@@ -345,7 +348,7 @@ export type GameAction =
   | { type: 'treat'; id: string; now: number }
   | { type: 'revive'; id: string; now: number }
   | { type: 'dismiss'; id: string }
-  | { type: 'craft'; recipeId: string; now: number }
+  | { type: 'craft'; recipeId: string; gearType?: GearType; now: number }
   | { type: 'enhance'; gearId: string; now: number }
   | { type: 'equip'; heroId: string; gearId: string }
   | { type: 'unequip'; heroId: string; slot: GearSlot; gearId?: string }
@@ -399,7 +402,7 @@ export type GameAction =
   | { type: 'buyEvent'; itemId: string }
   | { type: 'raiseMonument'; id: MonumentId }
   | { type: 'prosper' }
-  | { type: 'setOption'; gearId: string; option: 'power' | 'guard' }
+  | { type: 'reroll'; gearId: string; index: number }
   | { type: 'enshrine'; gearId: string }
   | { type: 'unshrine'; gearId: string }
   | { type: 'declineProposal'; a: string; b: string; now?: number }
@@ -590,7 +593,11 @@ function apply(state: GameState, action: GameAction): GameState {
     return dropFromPresets({ ...state, notice: null, roster: state.roster.filter((hero) => hero.id !== action.id) })
   }
   if (action.type === 'craft') {
-    return state.smith ? enqueue(state, 'smith', action.recipeId) : startCraft(state, action.recipeId, action.now)
+    const order = orderId(action.recipeId, action.gearType)
+    if (action.gearType && splitOrder(order).type !== action.gearType) {
+      return { ...state, notice: 'recipe' }
+    }
+    return state.smith ? enqueue(state, 'smith', order) : startCraft(state, order, action.now)
   }
   if (action.type === 'enhance') {
     return startEnhance(state, action.gearId, action.now)
@@ -745,8 +752,8 @@ function apply(state: GameState, action: GameAction): GameState {
   if (action.type === 'prosper') {
     return prosper(state)
   }
-  if (action.type === 'setOption') {
-    return setOption(state, action.gearId, action.option)
+  if (action.type === 'reroll') {
+    return reroll(state, action.gearId, action.index)
   }
   if (action.type === 'defend') {
     return setDefenders(state, action.presetIds)
@@ -2033,7 +2040,7 @@ function dropUnpaidOrders(state: GameState, version: unknown): GameState {
   let next = state
   const queue = next.automation.queues.smith
   for (let index = queue.length - 1; index >= 0; index -= 1) {
-    const recipe = recipeById(queue[index]!) as (Cost & { gold: number }) | undefined
+    const recipe = recipeById(splitOrder(queue[index]!).recipeId) as (Cost & { gold: number }) | undefined
     if (recipe && spoils.some((key) => (recipe[key] ?? 0) > 0)) {
       next = dequeue(next, 'smith', index)
       next = { ...next, vault: { ...next.vault, scale: next.vault.scale - (recipe.scale ?? 0), crown: next.vault.crown - (recipe.crown ?? 0), core: next.vault.core - (recipe.core ?? 0), valor: next.vault.valor - (recipe.valor ?? 0) } }
@@ -2090,7 +2097,8 @@ function promote(state: GameState): GameState {
   return { ...state, notice: null, vault, promoted: target }
 }
 
-function startCraft(state: GameState, recipeId: string, now: number): GameState {
+function startCraft(state: GameState, order: string, now: number): GameState {
+  const { recipeId, type: gearType } = splitOrder(order)
   if (state.buildings.smith < 1) {
     return { ...state, notice: 'noSmith' }
   }
@@ -2109,7 +2117,7 @@ function startCraft(state: GameState, recipeId: string, now: number): GameState 
   }
   return {
     ...pay(state, recipe),
-    smith: { kind: 'craft', recipeId, gear: null, finishAt: now + recipe.ms },
+    smith: { kind: 'craft', recipeId, ...(gearType ? { gearType } : {}), gear: null, finishAt: now + recipe.ms },
   }
 }
 
@@ -2128,20 +2136,26 @@ export function enhanceCostFor(gear: Gear): Cost & { ms: number } {
   return { gold: late.gold * step, wood: 0, stone: 0, iron: late.iron * step, bone: late.bonePerStep * step, crystal: late.crystalPerStep * step, [essence]: late.essencePerStep * step, abyss: late.abyssPerStep * step, ms: smithRules.enhanceCost.ms }
 }
 
-// Valour buys a new option on rare and better gear (Docs/endgame.md 4d).
-function setOption(state: GameState, gearId: string, option: 'power' | 'guard'): GameState {
+// Valour rerolls one option of a stored piece (Docs/identity.md 5b).
+function reroll(state: GameState, gearId: string, index: number): GameState {
   const gear = state.stash.find((item) => item.id === gearId)
-  if (!gear || !(['rare', 'epic', 'legend'] as string[]).includes(gear.grade) || gear.option === option) {
+  if (!gear || !Number.isInteger(index) || index < 0 || index >= (gear.options?.length ?? 0)) {
     return { ...state, notice: 'missing' }
   }
   if ((state.vault?.valor ?? 0) < smithRules.optionValor) {
     return { ...state, notice: 'resources' }
   }
+  const craftNonce = state.craftNonce + 1
+  const rolled = rerollOption(gear, index, state.seed + craftNonce * 100003 + 17)
+  if (!rolled) {
+    return { ...state, notice: 'missing' }
+  }
   return {
     ...state,
     notice: null,
+    craftNonce,
     vault: { ...state.vault, valor: state.vault.valor - smithRules.optionValor },
-    stash: state.stash.map((item) => (item.id === gearId ? { ...item, option } : item)),
+    stash: state.stash.map((item) => (item.id === gearId ? rolled : item)),
   }
 }
 
@@ -2180,8 +2194,7 @@ function finishSmith(state: GameState, now: number, crafted: string[]): GameStat
     if (!recipe) {
       return { ...state, smith: null, craftNonce }
     }
-    const rolled = rng.pick(smithRules.options)
-    const gear = forgeGear(recipe, `${state.seed}-g${craftNonce}`, rolled === 'guard' ? 'guard' : 'power')
+    const gear = forgeGear(recipe, `${state.seed}-g${craftNonce}`, rng.int(2 ** 31), job.gearType)
     crafted.push(recipe.id)
     return { ...state, smith: null, craftNonce, stash: [...state.stash, gear] }
   }
@@ -2213,6 +2226,10 @@ function equipGear(state: GameState, heroId: string, gearId: string): GameState 
   // Gear is locked while its hero is away: the trip was simulated with it (review 1f690a1).
   if (busyHeroIds(state).has(heroId)) {
     return { ...state, notice: 'busyHero' }
+  }
+  // Each class wields its own weapon types (Docs/identity.md 5b).
+  if (!canWield(hero.classId, item)) {
+    return { ...state, notice: 'wrongClass' }
   }
   const stash = state.stash.filter((gear) => gear.id !== gearId)
   // An heir first wearing what a departed forebear left is comforted (Docs/tavern.md).
@@ -2587,7 +2604,7 @@ function orderCost(building: QueueBuilding, id: string) {
   const none = { gold: 0, wood: 0, stone: 0, iron: 0, herb: 0, bone: 0, crystal: 0, vault: {} as Partial<Vault> }
   if (building === 'smith') {
     // Everything a recipe costs, the late bone, crystal and vault costs too (review c89e043).
-    const recipe = recipeById(id) as (Cost & { gold: number }) | undefined
+    const recipe = recipeById(splitOrder(id).recipeId) as (Cost & { gold: number }) | undefined
     if (!recipe) {
       return none
     }
@@ -2616,7 +2633,8 @@ function startNext(state: GameState, building: QueueBuilding, at: number): GameS
     const queues = { ...state.automation.queues, [building]: rest }
     const automation = { ...state.automation, queues }
     if (building === 'smith') {
-      return { ...state, automation, smith: { kind: 'craft', recipeId: id, gear: null, finishAt: at + (recipeById(id)?.ms ?? 0) } }
+      const { recipeId, type: gearType } = splitOrder(id)
+      return { ...state, automation, smith: { kind: 'craft', recipeId, ...(gearType ? { gearType } : {}), gear: null, finishAt: at + (recipeById(recipeId)?.ms ?? 0) } }
     }
     if (building === 'alchemy') {
       return { ...state, automation, alchemy: { potionId: id as PotionId, finishAt: at + brewTime(state, id as PotionId) } }

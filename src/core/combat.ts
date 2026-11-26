@@ -1,4 +1,4 @@
-import { alchemyRules, classById, combatRules, giftRules, lifeRules, magicRules, monsterById, nestRules, potionById, trainingRules } from './data'
+import { alchemyRules, classById, combatRules, giftRules, lifeRules, magicRules, monsterById, nestRules, potionById, smithRules, trainingRules } from './data'
 import { heroGearMods } from './gear'
 import { heroTrinkets } from './magic'
 import { heroSkillEffects } from './skills'
@@ -84,6 +84,8 @@ export type BattleUnit = {
   blastAt: number
   braced: boolean
   blastTaken: number
+  // Less from charged blasts (Docs/identity.md 5b).
+  blastGuard: number
   // Natural silencers hunt healers first; the nest's silence affix does not.
   huntsCasters: boolean
   // How hard the opening ambush strikes (the nest's affix is gentler, 3d).
@@ -183,6 +185,7 @@ const STATUS_FREE = {
   blastAt: 0,
   braced: false,
   blastTaken: 0,
+  blastGuard: 0,
   huntsCasters: false,
   ambushPower: 1,
   guard: 0,
@@ -346,6 +349,7 @@ export function createHeroUnit(member: PartyMember, index: number): BattleUnit {
     healTaken: learned.healTaken,
     twinStrike: learned.twinStrike,
     trapGuard: learned.trapGuard,
+    blastGuard: Math.min(smithRules.blastGuardCap, learned.blastGuard),
     farsight: learned.farsight,
     undying: learned.undying,
     vanguard: learned.vanguard,
@@ -820,7 +824,7 @@ function enemyAct(actor: BattleUnit, heroes: BattleUnit[], rng: Rng, tick: numbe
       push(log, tick, 'log.blast', actorParams(actor))
       for (const target of living(heroes)) {
         const before = target.taken
-        strike(actor, target, rng, tick, log, actor.blastPower * (target.braced ? combatRules.braceFactor : 1))
+        strike(actor, target, rng, tick, log, actor.blastPower * (target.braced ? combatRules.braceFactor : 1) * (1 - target.blastGuard))
         target.blastTaken += target.taken - before
       }
       for (const hero of heroes) {

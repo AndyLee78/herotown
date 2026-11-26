@@ -1,6 +1,6 @@
 import { magicRules, tavernRules } from './data'
 import type { GameState } from './game'
-import { gearMods } from './gear'
+import { canWield, gearMods } from './gear'
 import { feel } from './personality'
 import type { Gear, Hero } from './types'
 
@@ -85,7 +85,8 @@ export function bequeath(state: GameState, retireeId: string, gearId: string, to
   }
   const [gift] = bequeathed(state, retiree.hero, [item])
   const retirees = state.retirees.map((entry) => (entry === retiree ? { ...entry, hero: { ...entry.hero, gear: entry.hero.gear.filter((gear) => gear.id !== gearId) } } : entry))
-  if (!heir) {
+  // A weapon the heir's class cannot wield goes to storage (Docs/identity.md 5b).
+  if (!heir || !canWield(heir.classId, gift!)) {
     return { ...state, notice: null, retirees, stash: [...state.stash, gift!] }
   }
   // Worn at once; whatever it replaces goes to the stash.

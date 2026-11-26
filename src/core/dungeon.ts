@@ -162,7 +162,9 @@ export function applyReport(hero: Hero, report: DungeonReport): Hero {
 export function gainXp(hero: Hero, amount: number): Hero {
   // A late bloomer learns faster past the middle levels (Docs/identity.md 5a).
   const bloom = hero.gift === 'lateBloomer' && hero.level >= giftRules.lateBloomerLevel ? 1 + giftRules.lateBloomerXp : 1
-  let xp = hero.xp + Math.round(amount * bloom)
+  // Gear with an experience option (Docs/identity.md 5b).
+  const study = 1 + heroSkillEffects(hero).xpGain
+  let xp = hero.xp + Math.round(amount * bloom * study)
   let level = hero.level
   while (xp >= level * progression.xpPerLevel) {
     xp -= level * progression.xpPerLevel

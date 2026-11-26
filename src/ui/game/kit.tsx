@@ -213,7 +213,7 @@ export function itemLabel(t: TFunction, item: Gear, fallback: Hero['classId'], h
   const extra = [
     t(`grade.${item.grade}`),
     item.element ? t(`element.${item.element}`) : '',
-    item.option ? t(`option.${item.option}`) : '',
+    ...(item.options ?? []).map((option) => t(`option.${option.id}`)),
     item.enhance > 0 ? `+${item.enhance}` : '',
   ].filter(Boolean)
   const heirloom = item.heirloom

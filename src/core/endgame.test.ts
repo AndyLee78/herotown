@@ -52,7 +52,7 @@ describe('heroic and legendary gear', () => {
     const rare = smithRules.recipes.find((recipe) => recipe.id === 'flame.blade')!
     expect(gearMods(forgeGear(legend, 'l')).attack).toBeGreaterThan(gearMods(forgeGear(epic, 'e')).attack)
     expect(gearMods(forgeGear(epic, 'e')).attack).toBeGreaterThan(gearMods(forgeGear(rare, 'r')).attack)
-    expect(forgeGear(legend, 'l', 'guard').option).toBe('guard')
+    expect(forgeGear(legend, 'l', 7).options).toHaveLength(3)
     const smith3 = town(2000, { buildings: { ...freshState(5, now).buildings, smith: 3 } })
     expect(reduce(smith3, { type: 'craft', recipeId: 'epic.blade', now }).notice).toBe('locked')
     const smith4 = town(2000, { buildings: { ...freshState(5, now).buildings, smith: 4 } })
@@ -64,7 +64,7 @@ describe('heroic and legendary gear', () => {
 
   it('keeps its grade in a save', () => {
     const legend = smithRules.recipes.find((recipe) => recipe.id === 'legend.mail')!
-    const saved = JSON.parse(JSON.stringify({ ...town(0), stash: [forgeGear(legend, 'lm', 'power')] })) as Record<string, unknown>
+    const saved = JSON.parse(JSON.stringify({ ...town(0), stash: [forgeGear(legend, 'lm', 7)] })) as Record<string, unknown>
     expect(migrate(saved, now).stash[0]?.grade).toBe('legend')
   })
 })

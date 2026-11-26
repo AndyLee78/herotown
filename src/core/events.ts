@@ -88,7 +88,9 @@ export function buyEvent(state: GameState, itemId: string): GameState {
   }
   const gearId = (item as { gear?: string }).gear
   const recipe = gearId ? smithRules.recipes.find((entry) => entry.id === gearId) : undefined
-  const stash = recipe ? [...state.stash, forgeGear(recipe, `${state.seed}-ev${event.season}-${item.id}-${event.bought[item.id] ?? 0}`, 'power')] : state.stash
+  // The piece's id doubles as the seed for its options (Docs/identity.md 5b).
+  const pieceId = `${state.seed}-ev${event.season}-${item.id}-${event.bought[item.id] ?? 0}`
+  const stash = recipe ? [...state.stash, forgeGear(recipe, pieceId, seedOf(pieceId))] : state.stash
   return {
     ...state,
     notice: null,
@@ -99,4 +101,12 @@ export function buyEvent(state: GameState, itemId: string): GameState {
     stash,
     event: { ...event, bought: { ...event.bought, [item.id]: (event.bought[item.id] ?? 0) + 1 } },
   }
+}
+
+function seedOf(text: string): number {
+  let hash = 2166136261
+  for (let index = 0; index < text.length; index += 1) {
+    hash = Math.imul(hash ^ text.charCodeAt(index), 16777619)
+  }
+  return hash >>> 0
 }

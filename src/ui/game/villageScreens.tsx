@@ -1173,7 +1173,7 @@ export function Smith({ save, onAction }: { save: GameState; onAction: Act }) {
               const limit = enhanceLimit(item)
               const canEnhance = item.slot !== 'trinket' && item.enhance < limit
               const lateChance = smithRules.lateEnhance.chance[item.enhance - smithRules.enhanceMax]
-              const canChange = item.grade === 'rare' || item.grade === 'epic' || item.grade === 'legend'
+              const canChange = (item.options?.length ?? 0) > 0
               return <li key={item.id} className="card column">
                 <span className={gearGradeClass(item.grade)}>{itemLabel(t, item, 'warrior')}</span>
                 {item.slot !== 'trinket' ? <Chip>{t('lateSmith.progress', { current: item.enhance, max: limit })}</Chip> : null}
@@ -1185,9 +1185,9 @@ export function Smith({ save, onAction }: { save: GameState; onAction: Act }) {
                 </> : null}
                 {canChange ? <>
                   <VaultAmount kind="valor" amount={smithRules.optionValor} />
-                  <div className="chips">{(['power', 'guard'] as const).filter((choice) => choice !== item.option).map((choice) => <button key={choice}
+                  <div className="chips">{(item.options ?? []).map((option, index) => <button key={option.id}
                     type="button" className="btn small" disabled={save.vault.valor < smithRules.optionValor}
-                    onClick={() => onAction({ type: 'setOption', gearId: item.id, option: choice })}>{t('lateSmith.option', { option: t(`option.${choice}`) })}</button>)}</div>
+                    onClick={() => onAction({ type: 'reroll', gearId: item.id, index })}>{t('lateSmith.option', { option: t(`option.${option.id}`) })}</button>)}</div>
                 </> : null}
               </li>
             })}

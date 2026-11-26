@@ -239,7 +239,8 @@ describe('game state', () => {
     const job = reduce(ready, { type: 'craft', recipeId: 'flame.blade', now })
     const done = reduce(job, { type: 'catchUp', now: now + 7_200_000 })
     expect(done.stash[0]?.element).toBe('flame')
-    expect(done.stash[0]?.option === 'power' || done.stash[0]?.option === 'guard').toBe(true)
+    // Rare gear rolls two options (Docs/identity.md 5b).
+    expect(done.stash[0]?.options).toHaveLength(2)
     expect(done.absence?.crafted).toEqual(['flame.blade'])
     const naked = createHero({
       id: 'a',

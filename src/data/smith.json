@@ -18,10 +18,244 @@
     "iron": 3,
     "ms": 1800000
   },
-  "options": [
-    "power",
-    "guard"
+  "weaponTypes": [
+    {
+      "id": "sword",
+      "classes": [
+        "warrior",
+        "rogue",
+        "dancer"
+      ],
+      "effect": {}
+    },
+    {
+      "id": "axe",
+      "classes": [
+        "warrior"
+      ],
+      "effect": {
+        "attack": 0.15,
+        "speed": -0.05
+      }
+    },
+    {
+      "id": "shieldsword",
+      "classes": [
+        "warrior"
+      ],
+      "effect": {
+        "attack": -0.15,
+        "guard": 0.1
+      }
+    },
+    {
+      "id": "dagger",
+      "classes": [
+        "rogue",
+        "dancer"
+      ],
+      "effect": {
+        "attack": -0.1,
+        "crit": 0.08
+      }
+    },
+    {
+      "id": "bow",
+      "classes": [
+        "archer"
+      ],
+      "effect": {}
+    },
+    {
+      "id": "crossbow",
+      "classes": [
+        "archer"
+      ],
+      "effect": {
+        "attack": 0.15,
+        "speed": -0.08,
+        "pierce": 0.1
+      }
+    },
+    {
+      "id": "staff",
+      "classes": [
+        "mage",
+        "cleric"
+      ],
+      "effect": {}
+    },
+    {
+      "id": "tome",
+      "classes": [
+        "mage"
+      ],
+      "effect": {
+        "attack": -0.1,
+        "speed": 0.06
+      }
+    },
+    {
+      "id": "scepter",
+      "classes": [
+        "cleric"
+      ],
+      "effect": {
+        "heal": 0.1
+      }
+    },
+    {
+      "id": "lute",
+      "classes": [
+        "bard"
+      ],
+      "effect": {}
+    },
+    {
+      "id": "drum",
+      "classes": [
+        "bard"
+      ],
+      "effect": {
+        "attack": -0.1,
+        "partyAttack": 0.03
+      }
+    },
+    {
+      "id": "fan",
+      "classes": [
+        "dancer"
+      ],
+      "effect": {
+        "dodge": 0.05
+      }
+    }
   ],
+  "armorTypes": [
+    {
+      "id": "plate",
+      "effect": {
+        "guard": 0.08,
+        "speed": -0.05
+      }
+    },
+    {
+      "id": "leather",
+      "effect": {
+        "dodge": 0.04,
+        "speed": 0.03
+      }
+    },
+    {
+      "id": "robe",
+      "effect": {
+        "heal": 0.08,
+        "aoePower": 0.08
+      }
+    }
+  ],
+  "optionCount": {
+    "common": 0,
+    "fine": 1,
+    "rare": 2,
+    "epic": 3,
+    "legend": 3
+  },
+  "optionScale": {
+    "common": 1,
+    "fine": 1,
+    "rare": 1.2,
+    "epic": 1.4,
+    "legend": 1.6
+  },
+  "optionPool": [
+    {
+      "id": "power",
+      "min": 2,
+      "max": 4,
+      "weapon": true,
+      "armor": false
+    },
+    {
+      "id": "guard",
+      "min": 2,
+      "max": 4,
+      "weapon": false,
+      "armor": true
+    },
+    {
+      "id": "hp",
+      "min": 0.03,
+      "max": 0.06,
+      "weapon": false,
+      "armor": true
+    },
+    {
+      "id": "crit",
+      "min": 0.02,
+      "max": 0.04,
+      "weapon": true,
+      "armor": false
+    },
+    {
+      "id": "speed",
+      "min": 0.02,
+      "max": 0.04,
+      "weapon": true,
+      "armor": true
+    },
+    {
+      "id": "heal",
+      "min": 0.04,
+      "max": 0.08,
+      "weapon": true,
+      "armor": true
+    },
+    {
+      "id": "blastGuard",
+      "min": 0.05,
+      "max": 0.1,
+      "weapon": false,
+      "armor": true
+    },
+    {
+      "id": "dotGuard",
+      "min": 0.08,
+      "max": 0.15,
+      "weapon": false,
+      "armor": true
+    },
+    {
+      "id": "bossDamage",
+      "min": 0.04,
+      "max": 0.08,
+      "weapon": true,
+      "armor": false
+    },
+    {
+      "id": "holy",
+      "min": 0.06,
+      "max": 0.12,
+      "weapon": true,
+      "armor": false
+    },
+    {
+      "id": "xp",
+      "min": 0.04,
+      "max": 0.08,
+      "weapon": true,
+      "armor": true
+    },
+    {
+      "id": "lucky",
+      "min": 0.03,
+      "max": 0.06,
+      "weapon": true,
+      "armor": true
+    }
+  ],
+  "blastGuardCap": 0.5,
+
   "recipes": [
     {
       "id": "starter",

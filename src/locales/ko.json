@@ -561,6 +561,7 @@
     "tavernFull": "이번 계절 술자리를 다 썼습니다.",
     "gatherSize": "술자리는 2–3명이 함께합니다.",
     "notHeir": "자손에게만 물려줄 수 있습니다.",
+    "wrongClass": "이 직업은 쓸 수 없는 무기입니다.",
     "noLegends": "명예의 전당이 없습니다.",
     "shrineFull": "전시할 자리가 다 찼습니다.",
     "trialDay": "오늘은 이 정수의 날이 아닙니다.",
@@ -1289,7 +1290,17 @@
   },
   "option": {
     "power": "공격",
-    "guard": "방어"
+    "guard": "방어",
+    "hp": "체력",
+    "crit": "치명",
+    "speed": "속도",
+    "heal": "회복",
+    "blastGuard": "광역기 저항",
+    "dotGuard": "지속 피해 저항",
+    "bossDamage": "보스 피해",
+    "holy": "언데드 피해",
+    "xp": "경험치",
+    "lucky": "전리품"
   },
   "item": {
     "epic": {

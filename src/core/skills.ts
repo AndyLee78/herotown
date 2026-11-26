@@ -1,4 +1,5 @@
 import { classById, giftRules, personalityRules, trainingRules } from './data'
+import { gearEffect } from './gear'
 import type { ClassId, GiftId, Hero, PersonalityId, SkillDef, SkillEffect } from './types'
 
 // Learned skills (Docs/skills.md, Docs/identity.md 5a): the first skill of a
@@ -84,7 +85,7 @@ const NUMBER_KEYS = [
   'attack', 'guard', 'speed', 'heal', 'threat', 'bleed', 'weaken', 'regen', 'partyGuard', 'partyAttack',
   'hp', 'crit', 'critDamage', 'pierce', 'lifesteal', 'execute', 'bossDamage', 'counter', 'dodge', 'stun', 'slow', 'burn',
   'shield', 'firstStrike', 'lastStand', 'revive', 'partySpeed', 'partyCrit', 'enemyMiss', 'holy', 'partyHoly', 'aoePower',
-  'weakenPower', 'burnPower', 'partyFirstStrike', 'fatigueCut', 'selfFatigueCut', 'healTaken', 'dotGuard', 'twinStrike', 'lucky', 'trapGuard',
+  'weakenPower', 'burnPower', 'partyFirstStrike', 'fatigueCut', 'selfFatigueCut', 'healTaken', 'dotGuard', 'twinStrike', 'lucky', 'trapGuard', 'blastGuard', 'xpGain',
 ] as const
 const FLAG_KEYS = ['cleanse', 'steadfast', 'alert', 'farsight', 'undying', 'vanguard', 'guardian'] as const
 
@@ -165,5 +166,9 @@ export function heroSkillEffects(hero: Hero, context: SkillContext = {}): SkillT
     }
   })
   addEffect(totals, giftEffect(hero.gift))
+  // Weapon and armour types and their options (Docs/identity.md 5b).
+  for (const item of hero.gear) {
+    addEffect(totals, gearEffect(item))
+  }
   return totals
 }

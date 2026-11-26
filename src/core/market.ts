@@ -280,7 +280,7 @@ function stockFor(state: GameState, nonce: number): MerchantOffer[] {
     const choice = pick(choices)
     pool = pool.filter((entry) => entry !== choice)
     if (choice.kind === 'gear') {
-      const gear = forgeGear(choice.recipe, `${state.seed}-m${nonce}-${index}`, rng.next() < 0.5 ? 'power' : 'guard')
+      const gear = forgeGear(choice.recipe, `${state.seed}-m${nonce}-${index}`, rng.int(2 ** 31))
       offers.push({ id, kind: 'gear', gear, price: Math.ceil(recipeValue(choice.recipe.id) * rules.markup), sold: false })
     } else if (choice.kind === 'potion') {
       const unit = bottleCost(choice.potionId)

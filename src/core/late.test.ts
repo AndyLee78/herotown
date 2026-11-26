@@ -80,14 +80,17 @@ describe('late enhancement and options', () => {
     expect(migrate(JSON.parse(JSON.stringify({ ...state, stash: [{ ...legend, enhance: 9 }] })), now).stash[0]?.enhance).toBe(9)
   })
 
-  it('lets valour set the option on rare and better gear', () => {
-    const rare = { ...forgeGear(recipeById('flame.blade')!, 'r', 'power') }
-    const fine = forgeGear(recipeById('fine.blade')!, 'f')
-    const state = town(9, { stash: [rare, fine] })
-    const set = reduce(state, { type: 'setOption', gearId: 'r', option: 'guard' })
-    expect(set.stash[0]?.option).toBe('guard')
+  it('lets valour reroll one option of a stored piece', () => {
+    const rare = forgeGear(recipeById('flame.blade')!, 'r', 3)
+    const plain = forgeGear(recipeById('fine.blade')!, 'f')
+    const state = town(9, { stash: [rare, plain] })
+    const set = reduce(state, { type: 'reroll', gearId: 'r', index: 0 })
+    expect(set.stash[0]?.options).toHaveLength(2)
+    expect(set.stash[0]?.options?.[1]).toEqual(rare.options?.[1])
+    expect(set.stash[0]?.options?.[0]?.id).not.toBe(rare.options?.[1]?.id)
     expect(set.vault.valor).toBe(rich.valor - smithRules.optionValor)
-    expect(reduce(state, { type: 'setOption', gearId: 'f', option: 'guard' }).notice).toBe('missing')
+    expect(reduce(state, { type: 'reroll', gearId: 'f', index: 0 }).notice).toBe('missing')
+    expect(reduce(state, { type: 'reroll', gearId: 'r', index: 2 }).notice).toBe('missing')
   })
 })
 

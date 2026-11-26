@@ -81,6 +81,9 @@ export type SkillEffect = {
   twinStrike?: number
   lucky?: number
   trapGuard?: number
+  // Gear options (Docs/identity.md 5b).
+  blastGuard?: number
+  xpGain?: number
   steadfast?: boolean
   alert?: boolean
   farsight?: boolean
@@ -218,7 +221,12 @@ export type GearSlot = 'weapon' | 'armor' | 'trinket'
 // Heroic and legendary gear come with smith levels 4 and 5 (Docs/endgame.md).
 export type GearGrade = 'common' | 'fine' | 'rare' | 'epic' | 'legend'
 export type GearElement = 'flame' | 'silver'
-export type GearOption = 'power' | 'guard'
+// Weapon and armour types and rolled options (Docs/identity.md 5b).
+export type WeaponType = 'sword' | 'axe' | 'shieldsword' | 'dagger' | 'bow' | 'crossbow' | 'staff' | 'tome' | 'scepter' | 'lute' | 'drum' | 'fan'
+export type ArmorType = 'plate' | 'leather' | 'robe'
+export type GearType = WeaponType | ArmorType
+export type GearOptionId = 'power' | 'guard' | 'hp' | 'crit' | 'speed' | 'heal' | 'blastGuard' | 'dotGuard' | 'bossDamage' | 'holy' | 'xp' | 'lucky'
+export type GearOption = { id: GearOptionId; value: number }
 
 export type Gear = {
   id: string
@@ -226,7 +234,9 @@ export type Gear = {
   slot: GearSlot
   grade: GearGrade
   element?: GearElement
-  option?: GearOption
+  // Missing: the wearer's balanced weapon, or plain armour.
+  type?: GearType
+  options?: GearOption[]
   enhance: number
   // Left behind or handed down by a hero (Docs/tavern.md).
   heirloom?: { ownerId: string; ownerName: string; family?: string; generations: number; comforted?: string[] }

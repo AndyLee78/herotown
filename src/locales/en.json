@@ -561,6 +561,7 @@
     "tavernFull": "No more rounds this season.",
     "gatherSize": "A round is for two or three heroes.",
     "notHeir": "Heirlooms go only to descendants.",
+    "wrongClass": "This class cannot wield that weapon.",
     "noLegends": "There is no hall of fame yet.",
     "shrineFull": "The display is full.",
     "trialDay": "Today is not this essence's day.",
@@ -1289,7 +1290,17 @@
   },
   "option": {
     "power": "Power",
-    "guard": "Guard"
+    "guard": "Guard",
+    "hp": "Health",
+    "crit": "Critical",
+    "speed": "Speed",
+    "heal": "Healing",
+    "blastGuard": "Blast ward",
+    "dotGuard": "Lingering ward",
+    "bossDamage": "Boss damage",
+    "holy": "Undead damage",
+    "xp": "Experience",
+    "lucky": "Spoils"
   },
   "item": {
     "epic": {
