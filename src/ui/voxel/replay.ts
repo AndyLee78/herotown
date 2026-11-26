@@ -3,7 +3,7 @@ import type { AffixId, DungeonReport, LogEntry, ReplayUnit } from '../../core'
 // Turns a dungeon report's log into steps a 3D replay can play one by one.
 // Pure data, so it can be tested without WebGL.
 
-export type Hit = { targetId: string; amount: number }
+export type Hit = { targetId: string; amount: number; absorbed?: number; crit?: boolean }
 
 export type StatusMark = 'poison' | 'paralyze' | 'slow' | 'silence'
 
@@ -11,10 +11,11 @@ type Base = { log: number; downs: string[] }
 
 export type ReplayStep =
   | (Base & { type: 'floor'; floor: number; units: ReplayUnit[]; affixes?: AffixId[] })
-  | (Base & { type: 'attack'; actorId: string; hits: Hit[] })
+  | (Base & { type: 'attack'; actorId: string; hits: Hit[]; counter?: boolean })
   | (Base & { type: 'heal'; actorId: string; targetId: string; amount: number })
   | (Base & { type: 'taunt' | 'buff' | 'debuff'; actorId: string })
   | (Base & { type: 'dot'; targetId: string; amount: number })
+  | (Base & { type: 'burn'; targetId: string; amount: number })
   | (Base & { type: 'status'; targetId: string; status: StatusMark; on: boolean })
   | (Base & { type: 'potion'; actorId: string; potion: string })
   | (Base & { type: 'trap' })
@@ -31,6 +32,11 @@ export type ReplayStep =
   | (Base & { type: 'volley'; actorId: string })
   | (Base & { type: 'weaken'; targetId: string })
   | (Base & { type: 'cleanse'; targetId: string })
+  | (Base & { type: 'miss'; actorId: string; targetId: string })
+  | (Base & { type: 'thorns'; actorId: string; targetId: string; amount: number })
+  | (Base & { type: 'twin'; actorId: string })
+  | (Base & { type: 'enrage' | 'purge' | 'undying' | 'guardian'; actorId: string })
+  | (Base & { type: 'revive'; actorId: string; targetId: string })
   | (Base & { type: 'clear'; floor: number })
   | (Base & { type: 'retreat' })
   | (Base & { type: 'end'; victory: boolean })
@@ -43,11 +49,14 @@ export function buildSteps(report: DungeonReport): ReplayStep[] {
   const steps: ReplayStep[] = []
   const floors = report.floors ?? []
   let lastTick = -1
+  let pendingCrit = false
+  let pendingCounter = false
   report.log.forEach((entry, index) => {
     const previous = steps[steps.length - 1]
     const actorId = text(entry, 'actorId')
     const targetId = text(entry, 'targetId')
     const amount = number(entry, 'amount')
+    const absorbed = number(entry, 'absorbed') || undefined
     switch (entry.key) {
       case 'log.floor': {
         const floor = number(entry, 'floor')
@@ -55,26 +64,72 @@ export function buildSteps(report: DungeonReport): ReplayStep[] {
         steps.push({ type: 'floor', floor, units: floors[floor - 1] ?? [], affixes, log: index, downs: [] })
         break
       }
-      case 'log.attack':
+      case 'log.crit':
+        // Marks the next blow from this actor on this tick as a critical hit.
+        pendingCrit = true
+        break
+      case 'log.counter':
+        // The next strike is a retaliate; fold the flag into that attack step.
+        pendingCounter = true
+        break
+      case 'log.attack': {
+        const hit: Hit = {
+          targetId,
+          amount,
+          ...(absorbed ? { absorbed } : {}),
+          ...(pendingCrit ? { crit: true } : {}),
+        }
+        pendingCrit = false
         // An ambush logs first, then the strike; fold the damage into that step.
         if (previous?.type === 'ambush' && previous.actorId === actorId && previous.targetId === targetId && entry.tick === lastTick) {
           previous.amount = amount
           previous.log = index
+          pendingCounter = false
           break
         }
         // A blast logs first, then one attack per hero on the same tick.
         if (previous?.type === 'blast' && previous.actorId === actorId && entry.tick === lastTick) {
-          previous.hits.push({ targetId, amount })
+          previous.hits.push(hit)
           previous.log = index
+          pendingCounter = false
           break
         }
         // One actor hitting several targets on the same tick is an area attack.
-        if (previous?.type === 'attack' && previous.actorId === actorId && entry.tick === lastTick) {
-          previous.hits.push({ targetId, amount })
+        if (previous?.type === 'attack' && previous.actorId === actorId && entry.tick === lastTick && !pendingCounter) {
+          previous.hits.push(hit)
           previous.log = index
         } else {
-          steps.push({ type: 'attack', actorId, hits: [{ targetId, amount }], log: index, downs: [] })
+          steps.push({
+            type: 'attack',
+            actorId,
+            hits: [hit],
+            ...(pendingCounter ? { counter: true } : {}),
+            log: index,
+            downs: [],
+          })
         }
+        pendingCounter = false
+        break
+      }
+      case 'log.miss':
+        steps.push({ type: 'miss', actorId, targetId, log: index, downs: [] })
+        pendingCrit = false
+        pendingCounter = false
+        break
+      case 'log.thorns':
+        steps.push({ type: 'thorns', actorId, targetId, amount, log: index, downs: [] })
+        break
+      case 'log.twin':
+        steps.push({ type: 'twin', actorId, log: index, downs: [] })
+        break
+      case 'log.enrage':
+      case 'log.purge':
+      case 'log.undying':
+      case 'log.guardian':
+        steps.push({ type: entry.key.slice(4) as 'enrage' | 'purge' | 'undying' | 'guardian', actorId, log: index, downs: [] })
+        break
+      case 'log.revive':
+        steps.push({ type: 'revive', actorId, targetId, log: index, downs: [] })
         break
       case 'log.heal':
         steps.push({ type: 'heal', actorId, targetId, amount, log: index, downs: [] })
@@ -86,6 +141,9 @@ export function buildSteps(report: DungeonReport): ReplayStep[] {
         break
       case 'log.dot':
         steps.push({ type: 'dot', targetId: actorId, amount, log: index, downs: [] })
+        break
+      case 'log.burn':
+        steps.push({ type: 'burn', targetId: actorId, amount, log: index, downs: [] })
         break
       case 'log.paralyze':
         steps.push({ type: 'status', targetId, status: 'paralyze', on: true, log: index, downs: [] })

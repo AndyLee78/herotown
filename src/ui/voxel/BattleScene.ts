@@ -59,7 +59,7 @@ export function raidPoolFromReport(report: DungeonReport): { start: number; left
 // Plays a dungeon report back as a 3D auto battle. The outcome is already
 // decided by the core; this only shows the steps in order.
 
-type AnimType = 'melee' | 'cast' | 'hit' | 'shout' | 'spawn' | 'die' | 'flee' | 'cheer' | 'drink' | 'disarm' | 'ambush' | 'brace' | 'charge' | 'exit'
+type AnimType = 'melee' | 'cast' | 'hit' | 'shout' | 'spawn' | 'die' | 'flee' | 'cheer' | 'drink' | 'disarm' | 'ambush' | 'brace' | 'charge' | 'exit' | 'dodge' | 'rise' | 'retaliate'
 
 type Anim = {
   type: AnimType
@@ -81,6 +81,7 @@ type Fighter = {
   side: 'hero' | 'enemy'
   ranged: boolean
   caster: boolean
+  elite: boolean
   actor: Actor
   root: THREE.Group
   home: THREE.Vector3
@@ -93,6 +94,7 @@ type Fighter = {
   // A downed hero carried out on a friend's shoulders after the fight.
   carriedBy: Fighter | null
   phase: number
+  baseScale: number
   bar: { group: THREE.Group; fill: THREE.Mesh }
   marks: THREE.Group
 }
@@ -123,6 +125,7 @@ const DURATION: Record<ReplayStep['type'], number> = {
   buff: 0.6,
   debuff: 0.6,
   dot: 0.45,
+  burn: 0.45,
   status: 0.35,
   potion: 0.7,
   trap: 0.7,
@@ -139,11 +142,22 @@ const DURATION: Record<ReplayStep['type'], number> = {
   volley: 0.55,
   weaken: 0.4,
   cleanse: 0.45,
+  miss: 0.4,
+  thorns: 0.4,
+  twin: 0.25,
+  enrage: 0.7,
+  purge: 0.5,
+  undying: 0.7,
+  revive: 0.85,
+  guardian: 1.0,
   clear: 0.8,
   retreat: 1.4,
   end: 0,
 }
-const CASTERS = new Set(['mage', 'cleric', 'bard', 'crypt_lord', 'wraith'])
+const CASTERS = new Set(['mage', 'cleric', 'bard', 'crypt_lord', 'wraith', 'necromancer', 'kobold_mystic'])
+const BURN_COLOR = '#ff8a3d'
+const SHIELD_COLOR = '#7fe3ff'
+const ELITE_SCALE = 1.12
 const STATUS_COLOR: Record<StatusMark, string> = { poison: '#6fbf4a', paralyze: '#ffe14a', slow: '#c4a574', silence: '#e05a4a' }
 const POTION_COLOR: Record<string, string> = { heal: '#8ef08a', antidote: '#7dff9a', tonic: '#ffe14a', clarity: '#d7c4ff' }
 const THEMES = {
@@ -245,6 +259,7 @@ export class BattleScene {
   private running = true
   private quiet = false
   private frame = 0
+  private shake = 0
   private readonly nest: boolean
   private readonly abyssFrom: number
   private readonly themeKind: BattleTheme['kind']
@@ -641,6 +656,14 @@ export class BattleScene {
       const material = this.wingShadow.material as THREE.MeshBasicMaterial
       material.opacity = 0.22 + (Math.sin(time * 0.9) * 0.5 + 0.5) * 0.18
     }
+    this.camera.position.copy(LOOK_AT).add(CAMERA_OFFSET)
+    if (this.shake > 0) {
+      this.shake = Math.max(0, this.shake - dt)
+      const strength = this.shake * 0.35
+      this.camera.position.x += (this.random() - 0.5) * strength
+      this.camera.position.y += (this.random() - 0.5) * strength * 0.5
+    }
+    this.camera.lookAt(LOOK_AT)
     this.renderer.render(this.scene, this.camera)
   }
 
@@ -656,15 +679,20 @@ export class BattleScene {
         }
         break
       case 'attack':
-        this.attack(step.actorId, step.hits, step.downs, instant)
+        this.attack(step.actorId, step.hits, step.downs, instant, step.counter)
         return
       case 'heal': {
         const target = this.fighters.get(step.targetId)
+        const healer = this.fighters.get(step.actorId)
         this.act(step.actorId, 'cast', instant, () => {
           if (target) {
             target.hp = Math.min(target.max, target.hp + step.amount)
             this.number(`+${step.amount}`, '#5fe07a', target)
             this.burst(this.chest(target), '#8ef08a', 10)
+            // Monster menders (necromancer, mystic, wisp) light the ally green.
+            if (healer?.side === 'enemy') {
+              this.burst(this.chest(target).setY(target.actor.height * 0.8), '#7dff9a', 8)
+            }
             if (!instant) {
               this.callbacks.onSound?.('heal')
             }
@@ -699,6 +727,102 @@ export class BattleScene {
         if (target) {
           this.setStatus(target, 'poison', true)
           this.damage(target, step.amount, '#9be36a', instant)
+        }
+        break
+      }
+      case 'burn': {
+        const target = this.fighters.get(step.targetId)
+        if (target) {
+          this.damage(target, step.amount, BURN_COLOR, instant)
+          if (!instant) {
+            this.burst(this.chest(target), BURN_COLOR, 10)
+            this.burst(this.chest(target).setY(target.actor.height * 0.9), '#ffcf5a', 6)
+          }
+        }
+        break
+      }
+      case 'miss': {
+        const target = this.fighters.get(step.targetId)
+        if (target && !instant) {
+          const away = target.side === 'hero' ? -1 : 1
+          target.anim = { type: 'dodge', t: 0, dur: DURATION.miss, dir: new THREE.Vector3(0, 0, away) }
+          this.burst(this.chest(target), '#dfe4ea', 5)
+        }
+        break
+      }
+      case 'thorns': {
+        const source = this.fighters.get(step.actorId)
+        const target = this.fighters.get(step.targetId)
+        if (target) {
+          if (source && !instant) {
+            source.anim = { type: 'retaliate', t: 0, dur: DURATION.thorns, dir: target.root.position.clone().sub(source.root.position).setY(0).normalize() }
+          }
+          this.damage(target, step.amount, '#9be36a', instant)
+          if (!instant) {
+            this.burst(this.chest(target), '#6fbf4a', 8)
+          }
+        }
+        break
+      }
+      case 'twin': {
+        const actor = this.fighters.get(step.actorId)
+        if (actor && !instant) {
+          this.burst(this.chest(actor), '#ffe27a', 6)
+          this.number('×2', '#ffe27a', actor)
+        }
+        break
+      }
+      case 'enrage': {
+        const boss = this.fighters.get(step.actorId)
+        if (boss) {
+          if (!instant) {
+            boss.anim = { type: 'shout', t: 0, dur: DURATION.enrage }
+            this.burst(this.chest(boss), '#e05a4a', 16)
+            this.burst(boss.root.position.clone().setY(0.2), '#ff4b3a', 10)
+          }
+          const next = boss.baseScale * 1.18
+          boss.actor.group.scale.setScalar(next)
+          boss.baseScale = next
+          this.number('!', '#ff4b3a', boss)
+        }
+        break
+      }
+      case 'purge': {
+        const boss = this.fighters.get(step.actorId)
+        if (boss && !instant) {
+          this.burst(this.chest(boss), '#f7f4ee', 14)
+          this.burst(boss.root.position.clone().setY(boss.actor.height * 0.4), '#ffffff', 8)
+        }
+        break
+      }
+      case 'undying': {
+        const hero = this.fighters.get(step.actorId)
+        if (hero && !instant) {
+          hero.anim = { type: 'rise', t: 0, dur: DURATION.undying }
+          this.burst(this.chest(hero), '#ffe27a', 10)
+          this.number('1', '#ffe27a', hero)
+        }
+        break
+      }
+      case 'revive': {
+        const fallen = this.fighters.get(step.targetId)
+        const saint = this.fighters.get(step.actorId)
+        if (saint && !instant) {
+          this.act(step.actorId, 'cast', instant, () => undefined)
+        }
+        if (fallen) {
+          this.raiseFighter(fallen, Math.max(1, Math.round(fallen.max * 0.3)), instant, '#fff6c8')
+        }
+        break
+      }
+      case 'guardian': {
+        if (!instant) {
+          this.shake = Math.max(this.shake, 0.25)
+        }
+        for (const fighter of this.fighters.values()) {
+          if (fighter.side === 'hero') {
+            this.raiseFighter(fighter, Math.max(1, Math.round(fighter.max * 0.4)), instant, '#ffe27a')
+          }
         }
         break
       }
@@ -1221,8 +1345,17 @@ export class BattleScene {
       actor = buildEnemy(unit.refId)
       caster = CASTERS.has(unit.refId)
     }
+    const elite = Boolean(unit.elite)
+    if (elite) {
+      actor.group.scale.multiplyScalar(ELITE_SCALE)
+      actor.height *= ELITE_SCALE
+    }
+    const baseScale = actor.group.scale.x
     const root = new THREE.Group()
     root.add(actor.group)
+    if (elite) {
+      root.add(eliteAura())
+    }
     const facing = unit.side === 'hero' ? HERO_FACING : ENEMY_FACING
     root.rotation.y = facing
     this.scene.add(root)
@@ -1230,7 +1363,7 @@ export class BattleScene {
     bar.add(new Builder().box(0.62, 0.09, 0.02, '#2b2b2b').build({ castShadow: false, receiveShadow: false }))
     const fill = new THREE.Mesh(
       new THREE.BoxGeometry(0.58, 0.055, 0.03),
-      new THREE.MeshBasicMaterial({ color: unit.side === 'hero' ? '#6cd26a' : '#e05a4a' }),
+      new THREE.MeshBasicMaterial({ color: unit.side === 'hero' ? '#6cd26a' : elite ? '#ff6a3a' : '#e05a4a' }),
     )
     fill.position.z = 0.01
     bar.add(fill)
@@ -1242,6 +1375,7 @@ export class BattleScene {
       side: unit.side,
       ranged: unit.reach === 'ranged',
       caster,
+      elite,
       actor,
       root,
       home: new THREE.Vector3(),
@@ -1253,6 +1387,7 @@ export class BattleScene {
       anim: null,
       carriedBy: null,
       phase: this.random() * 10,
+      baseScale,
       bar: { group: bar, fill },
       marks,
     }
@@ -1361,15 +1496,15 @@ export class BattleScene {
     fighter.actor.group.add(bottle)
   }
 
-  private attack(actorId: string, hits: Hit[], downs: string[], instant: boolean) {
+  private attack(actorId: string, hits: Hit[], downs: string[], instant: boolean, counter = false) {
     const actor = this.fighters.get(actorId)
     const targets = hits.flatMap((hit) => {
       const target = this.fighters.get(hit.targetId)
-      return target ? [{ target, amount: hit.amount }] : []
+      return target ? [{ target, amount: hit.amount, absorbed: hit.absorbed, crit: hit.crit }] : []
     })
     const landed = new Set<string>()
-    const strike = (target: Fighter, amount: number) => {
-      this.damage(target, amount, '#ffffff', instant)
+    const strike = (target: Fighter, amount: number, absorbed?: number, crit?: boolean) => {
+      this.damage(target, amount, crit ? '#ffcf5a' : '#ffffff', instant, { absorbed, crit })
       landed.add(target.id)
       if (downs.includes(target.id)) {
         this.down([target.id], instant)
@@ -1377,11 +1512,32 @@ export class BattleScene {
     }
     const finish = () => this.down(downs.filter((id) => !landed.has(id)), instant)
     if (instant || !actor || targets.length === 0) {
-      for (const { target, amount } of targets) {
-        strike(target, amount)
+      for (const { target, amount, absorbed, crit } of targets) {
+        strike(target, amount, absorbed, crit)
       }
       finish()
       return
+    }
+    if (counter) {
+      const prey = targets[0]?.target
+      if (prey) {
+        const beside = prey.root.position.clone()
+        beside.x += actor.side === 'enemy' ? -0.7 : 0.7
+        actor.anim = {
+          type: 'retaliate',
+          t: 0,
+          dur: 0.55,
+          to: beside,
+          impactAt: 0.28,
+          onImpact: () => {
+            for (const { target, amount, absorbed, crit } of targets) {
+              strike(target, amount, absorbed, crit)
+            }
+            finish()
+          },
+        }
+        return
+      }
     }
     if (actor.ranged || actor.caster) {
       actor.anim = {
@@ -1390,8 +1546,8 @@ export class BattleScene {
         dur: 0.55,
         impactAt: 0.2,
         onImpact: () => {
-          for (const { target, amount } of targets) {
-            this.shoot(actor, target, () => strike(target, amount))
+          for (const { target, amount, absorbed, crit } of targets) {
+            this.shoot(actor, target, () => strike(target, amount, absorbed, crit))
           }
           finish()
         },
@@ -1411,8 +1567,8 @@ export class BattleScene {
       impactAt: 0.3,
       to: centre.addScaledVector(direction, -0.8),
       onImpact: () => {
-        for (const { target, amount } of targets) {
-          strike(target, amount)
+        for (const { target, amount, absorbed, crit } of targets) {
+          strike(target, amount, absorbed, crit)
         }
         finish()
       },
@@ -1431,17 +1587,60 @@ export class BattleScene {
     }
   }
 
-  private damage(target: Fighter, amount: number, color: string, instant: boolean) {
+  private damage(
+    target: Fighter,
+    amount: number,
+    color: string,
+    instant: boolean,
+    extras: { absorbed?: number; crit?: boolean } = {},
+  ) {
     target.hp = Math.max(0, target.hp - amount)
     if (instant) {
       return
     }
-    this.number(String(amount), color, target)
-    this.burst(this.chest(target), color === '#ffffff' ? '#ffffff' : color, 6)
+    if (extras.absorbed && extras.absorbed > 0) {
+      this.burst(this.chest(target), SHIELD_COLOR, 12)
+      this.burst(target.root.position.clone().setY(0.15), SHIELD_COLOR, 6)
+    }
+    if (extras.crit) {
+      this.shake = Math.max(this.shake, 0.28)
+      this.number(String(amount), color, target, true)
+      this.burst(this.chest(target), '#ffcf5a', 12)
+    } else {
+      this.number(String(amount), color, target)
+      this.burst(this.chest(target), color === '#ffffff' ? '#ffffff' : color, 6)
+    }
     this.callbacks.onSound?.('hit')
     if (target.alive) {
       const source = target.side === 'hero' ? 1 : -1
       target.anim = { type: 'hit', t: 0, dur: 0.3, dir: new THREE.Vector3(-source, 0, 0) }
+    }
+  }
+
+  // Bring a fallen (or battered) fighter back for revive / guardian.
+  private raiseFighter(fighter: Fighter, hp: number, instant: boolean, color: string) {
+    const wasDown = !fighter.alive || fighter.dead
+    fighter.alive = true
+    fighter.dead = false
+    fighter.hp = Math.min(fighter.max, Math.max(fighter.hp, hp))
+    fighter.carriedBy = null
+    fighter.root.visible = true
+    fighter.bar.group.visible = true
+    fighter.root.position.copy(fighter.home)
+    fighter.actor.group.rotation.set(0, 0, 0)
+    fighter.actor.group.position.set(0, 0, 0)
+    if (instant) {
+      return
+    }
+    const chest = this.chest(fighter)
+    this.burst(chest, color, 14)
+    this.burst(chest.clone().setY(chest.y + 0.8), color, 8)
+    if (wasDown) {
+      // Light pillar: tall upward sparks.
+      for (let index = 0; index < 6; index += 1) {
+        this.burst(fighter.home.clone().setY(0.3 + index * 0.35), color, 3)
+      }
+      fighter.anim = { type: 'rise', t: 0, dur: 0.7 }
     }
   }
 
@@ -1653,7 +1852,37 @@ export class BattleScene {
       if (p < 0.2 || p > 0.8) {
         actor.group.scale.setScalar(0.2 + Math.min(1, p < 0.2 ? p / 0.2 : (1 - p) / 0.2) * 0.8)
       } else {
-        actor.group.scale.setScalar(1)
+        actor.group.scale.setScalar(fighter.baseScale)
+      }
+    } else if (anim.type === 'dodge' && anim.dir) {
+      // Sidestep whoosh — no floating "miss" text.
+      root.position.addScaledVector(anim.dir, Math.sin(p * Math.PI) * 0.55)
+      actor.group.rotation.y = Math.sin(p * Math.PI) * 0.35 * (anim.dir.z >= 0 ? 1 : -1)
+    } else if (anim.type === 'rise') {
+      // Kneel then stand (undying / revive).
+      const kneel = p < 0.45 ? easeOut(p / 0.45) : 1 - easeIn((p - 0.45) / 0.55)
+      if (humanoid) {
+        humanoid.torso.rotation.x = 0.55 * kneel
+        humanoid.legL.rotation.x = 0.9 * kneel
+        humanoid.legR.rotation.x = 1.1 * kneel
+        humanoid.armL.rotation.x = -0.4 * kneel
+        humanoid.armR.rotation.x = -0.4 * kneel
+        actor.group.position.y = -0.12 * kneel
+      } else {
+        actor.group.position.y = -0.1 * kneel
+        actor.group.scale.setScalar(fighter.baseScale * (1 - 0.08 * kneel))
+      }
+    } else if (anim.type === 'retaliate') {
+      if (anim.to) {
+        const k = p < 0.4 ? easeOut(p / 0.4) : 1 - easeIn((p - 0.4) / 0.6)
+        root.position.lerpVectors(fighter.home, anim.to, k * 0.7)
+      } else if (anim.dir) {
+        root.position.addScaledVector(anim.dir, Math.sin(p * Math.PI) * 0.35)
+      }
+      if (humanoid) {
+        humanoid.armR.rotation.x = -2.2 * Math.sin(p * Math.PI)
+      } else {
+        actor.group.position.y = Math.sin(p * Math.PI) * 0.2
       }
     } else if (anim.type === 'exit') {
       const hold = anim.hold ?? 0
@@ -1716,36 +1945,36 @@ export class BattleScene {
     return this.report.party?.find((entry) => entry.id === fighter.id)?.classId ?? ''
   }
 
-  private number(text: string, color: string, target: Fighter) {
+  private number(text: string, color: string, target: Fighter, big = false) {
     if (this.quiet) {
       return
     }
-    const key = text + color
+    const key = `${text}|${color}|${big ? 'b' : 'n'}`
     let texture = this.numberTextures.get(key)
     if (!texture) {
       const canvas = document.createElement('canvas')
-      canvas.width = 128
-      canvas.height = 64
+      canvas.width = big ? 192 : 128
+      canvas.height = big ? 96 : 64
       const context = canvas.getContext('2d')
       if (!context) {
         return
       }
-      context.font = '800 46px system-ui, sans-serif'
+      context.font = big ? '900 64px system-ui, sans-serif' : '800 46px system-ui, sans-serif'
       context.textAlign = 'center'
       context.textBaseline = 'middle'
-      context.lineWidth = 8
+      context.lineWidth = big ? 10 : 8
       context.strokeStyle = 'rgba(30, 30, 30, 0.85)'
-      context.strokeText(text, 64, 34)
+      context.strokeText(text, canvas.width / 2, canvas.height / 2 + 2)
       context.fillStyle = color
-      context.fillText(text, 64, 34)
+      context.fillText(text, canvas.width / 2, canvas.height / 2 + 2)
       texture = new THREE.CanvasTexture(canvas)
       texture.colorSpace = THREE.SRGBColorSpace
       this.numberTextures.set(key, texture)
     }
     const sprite = new THREE.Sprite(new THREE.SpriteMaterial({ map: texture, depthTest: false, transparent: true }))
     sprite.renderOrder = 20
-    sprite.scale.set(0.8, 0.4, 1)
-    sprite.position.copy(target.root.position).setY(target.actor.height + 0.4)
+    sprite.scale.set(big ? 1.35 : 0.8, big ? 0.7 : 0.4, 1)
+    sprite.position.copy(target.root.position).setY(target.actor.height + (big ? 0.55 : 0.4))
     sprite.position.x += (this.random() - 0.5) * 0.3
     this.scene.add(sprite)
     this.floaters.push({ sprite, t: 0 })
@@ -1834,6 +2063,14 @@ function gearIcon(): THREE.Group {
     .box(0.14, 0.14, 0.06, '#c9a36b')
     .box(0.06, 0.06, 0.08, '#6b4a30')
     .build({ castShadow: false })
+}
+
+// Subtle red rim under an elite — readable without drowning the model.
+function eliteAura(): THREE.Group {
+  return new Builder()
+    .box(0.7, 0.04, 0.7, '#e05a4a', 0, 0.04, 0, { glow: true })
+    .box(0.5, 0.03, 0.5, '#ff6a3a', 0, 0.08, 0, { glow: true })
+    .build({ castShadow: false, receiveShadow: false })
 }
 
 function statusIcon(status: StatusMark): THREE.Group {

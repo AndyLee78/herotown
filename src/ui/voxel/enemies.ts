@@ -165,6 +165,18 @@ const HUMANOIDS: Record<string, Omit<BodySpec, 'head' | 'stoop' | 'style' | 'bea
     style: 'spiky',
     scale: 0.78,
   },
+  // Sunken crypt backliner: hood, staff, sickly green glow (Docs/identity.md 5a).
+  necromancer: {
+    outfit: { body: '#2a2438', trim: '#3a8a4a', pants: '#1a1624', weapon: 'staff', robe: true, hat: 'hood' },
+    skin: '#c8c4b4',
+    eye: '#7dff9a',
+    eyeGlow: true,
+    eyeSize: 1.35,
+    hair: null,
+    style: 'bald',
+    stoop: 0.08,
+    scale: 1.05,
+  },
 }
 
 export function buildEnemy(refId: string): Actor {
@@ -179,6 +191,9 @@ export function buildEnemy(refId: string): Actor {
     }
     if (refId === 'citadel_lord') {
       addHorns(rig)
+    }
+    if (refId === 'necromancer') {
+      addNecromancerGlow(rig)
     }
     return rig
   }
@@ -246,6 +261,18 @@ function addHorns(rig: Rig) {
     .box(0.08, 0.12, 0.08, '#7a5ab8', 0.22, 0.78, -0.08, { rz: -0.45 })
     .box(0.5, 0.08, 0.28, '#1a1620', 0, 0.12, -0.18)
   rig.head.add(horns.build({ castShadow: false }))
+}
+
+function addNecromancerGlow(rig: Rig) {
+  const tip = new Builder()
+    .box(0.16, 0.16, 0.16, '#7dff9a', 0, 0.58, 0.05, { glow: true })
+    .box(0.08, 0.08, 0.08, '#b8f5c8', 0, 0.7, 0.05, { glow: true })
+  rig.armR.add(tip.build({ castShadow: false }))
+  const aura = new Builder()
+    .box(0.42, 0.08, 0.3, '#3a8a4a', 0, 0.08, 0.1, { glow: true })
+    .box(0.12, 0.2, 0.08, '#2a5a38', -0.22, 0.35, -0.08)
+    .box(0.12, 0.2, 0.08, '#2a5a38', 0.22, 0.35, -0.08)
+  rig.head.add(aura.build({ castShadow: false }))
 }
 
 function creature(kind: Creature['kind'], height: number, hover = 0): Creature {

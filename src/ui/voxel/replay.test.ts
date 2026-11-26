@@ -72,4 +72,48 @@ describe('battle replay steps', () => {
     const cave = report('hill_cave', standard)
     expect(canReplay({ ...cave, floors: undefined })).toBe(false)
   })
+
+  it('folds crit, counter, absorbed and the new 5a logs into steps', () => {
+    const fake: DungeonReport = {
+      ...report('hill_cave', [['warrior', 'front']]),
+      log: [
+        { tick: 0, key: 'log.floor', params: { floor: 1 } },
+        { tick: 1, key: 'log.miss', params: { actorId: 'e1', targetId: 'h0' } },
+        { tick: 2, key: 'log.crit', params: { actorId: 'h0' } },
+        { tick: 2, key: 'log.attack', params: { actorId: 'h0', targetId: 'e1', amount: 40, absorbed: 5 } },
+        { tick: 3, key: 'log.counter', params: { actorId: 'h0' } },
+        { tick: 3, key: 'log.attack', params: { actorId: 'h0', targetId: 'e1', amount: 12 } },
+        { tick: 4, key: 'log.thorns', params: { actorId: 'e1', targetId: 'h0', amount: 3 } },
+        { tick: 5, key: 'log.burn', params: { actorId: 'e1', amount: 4 } },
+        { tick: 6, key: 'log.twin', params: { actorId: 'h0' } },
+        { tick: 7, key: 'log.enrage', params: { actorId: 'e1' } },
+        { tick: 8, key: 'log.purge', params: { actorId: 'e1' } },
+        { tick: 9, key: 'log.undying', params: { actorId: 'h0' } },
+        { tick: 10, key: 'log.revive', params: { actorId: 'h0', targetId: 'h1' } },
+        { tick: 11, key: 'log.guardian', params: { actorId: 'h0' } },
+        { tick: 12, key: 'log.victory', params: {} },
+      ],
+      floors: [
+        [
+          { id: 'h0', refId: 'warrior', side: 'hero', row: 'front', reach: 'melee', hp: 100, maxHp: 100, boss: false },
+          { id: 'e1', refId: 'brigand', side: 'enemy', row: 'front', reach: 'melee', hp: 80, maxHp: 80, boss: false, elite: true },
+        ],
+      ],
+      victory: true,
+    }
+    const steps = buildSteps(fake)
+    expect(steps.some((step) => step.type === 'miss')).toBe(true)
+    const critHit = steps.find((step) => step.type === 'attack' && step.hits.some((hit) => hit.crit))
+    expect(critHit?.type === 'attack' && critHit.hits[0]?.absorbed).toBe(5)
+    expect(steps.some((step) => step.type === 'attack' && step.counter)).toBe(true)
+    expect(steps.some((step) => step.type === 'thorns')).toBe(true)
+    expect(steps.some((step) => step.type === 'burn')).toBe(true)
+    expect(steps.some((step) => step.type === 'twin')).toBe(true)
+    expect(steps.some((step) => step.type === 'enrage')).toBe(true)
+    expect(steps.some((step) => step.type === 'purge')).toBe(true)
+    expect(steps.some((step) => step.type === 'undying')).toBe(true)
+    expect(steps.some((step) => step.type === 'revive')).toBe(true)
+    expect(steps.some((step) => step.type === 'guardian')).toBe(true)
+    expect(steps.find((step) => step.type === 'floor')?.units.some((unit) => unit.elite)).toBe(true)
+  })
 })
