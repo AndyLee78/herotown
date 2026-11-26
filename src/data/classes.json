@@ -587,9 +587,9 @@
       "hpBase": 26,
       "hpPerVit": 4.5,
       "attackStat": "wil",
-      "attackScale": 0.45,
+      "attackScale": 0.62,
       "defenseScale": 0.3,
-      "healScale": 3.8,
+      "healScale": 4.6,
       "skills": [
         {
           "id": "cleric.smite",

@@ -116,14 +116,18 @@ function measure(parties: PartyMember[][], id: string, battles: number, scale?: 
 }
 
 function threshold(profile: Profile) {
-  const points = curveLevels.map((level) => {
+  const points: { level: number; rate: number }[] = []
+  for (const level of curveLevels) {
     const parties = [0, 1, 2, 3].map((sample) => lineup(sample, level, profile))
-    return { level, rate: mean(reference.map((id) => measure(parties, id, 2).win)) }
-  })
-  const crossing = points.findIndex(({ rate }) => rate >= 0.5)
-  if (crossing <= 0) throw new Error(`Unbracketed crossing: ${JSON.stringify(points)}`)
-  const low = points[crossing - 1]!, high = points[crossing]!
-  return low.level + (high.level - low.level) * (0.5 - low.rate) / (high.rate - low.rate)
+    const rate = mean(reference.map((id) => measure(parties, id, 2).win))
+    const previous = points.at(-1)
+    points.push({ level, rate })
+    if (rate >= 0.5) {
+      if (previous) return previous.level + (level - previous.level) * (0.5 - previous.rate) / (rate - previous.rate)
+      break
+    }
+  }
+  throw new Error(`Unbracketed crossing: ${JSON.stringify(points)}`)
 }
 
 function output(name: string, data: unknown) {
@@ -144,6 +148,9 @@ if (stage === 'all' || stage === 'branches') {
     })
     output('branches', { klass, rows, gap: round(Math.max(...rows.map(({ level }) => level)) - Math.min(...rows.map(({ level }) => level))) })
   }
+}
+
+if (stage === 'all' || stage === 'branches' || stage === 'classes') {
   output('classes', classList.map(({ id }) => ({ id, level: round(threshold({ klass: id, swap: true, tier: 4 })) })))
 }
 
