@@ -1012,6 +1012,7 @@
       }
     },
     "effect": {
+      "guardDrop": "Damage taken +{{percent}}%",
       "threat": "Threat +{{value}}",
       "attack": "Attack +{{percent}}%",
       "guard": "Damage taken −{{percent}}%",

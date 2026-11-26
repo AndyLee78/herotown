@@ -16,7 +16,10 @@ export function GiftBadge({ hero, compact = false }: { hero: Hero; compact?: boo
 
 function describe(effect: SkillEffect | undefined, t: TFunction) {
   return Object.entries(effect ?? {}).filter(([, value]) => value != null && value !== false).map(([key, value]) =>
-    t(`identity.effect.${key}`, { value, percent: typeof value === 'number' ? Math.round(value * 100) : 0 })).join(' · ')
+    // A drawback (berserk's fury lowers guard) reads as a plus, not "−-3%".
+    typeof value === 'number' && value < 0 && key === 'guard'
+      ? t('identity.effect.guardDrop', { percent: Math.round(-value * 100) })
+      : t(`identity.effect.${key}`, { value, percent: typeof value === 'number' ? Math.round(value * 100) : 0 })).join(' · ')
 }
 
 export function SkillTree({ hero, save, editable, onAction }: { hero: Hero; save: GameState; editable: boolean; onAction: (action: GameAction) => void }) {

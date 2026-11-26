@@ -1012,6 +1012,7 @@
       }
     },
     "effect": {
+      "guardDrop": "받는 피해 +{{percent}}%",
       "threat": "위협 +{{value}}",
       "attack": "공격 +{{percent}}%",
       "guard": "받는 피해 −{{percent}}%",
