@@ -242,7 +242,7 @@
     {
       "id": "xp",
       "min": 0.04,
-      "max": 0.08,
+      "max": 0.06,
       "weapon": true,
       "armor": true
     },

@@ -669,7 +669,7 @@
           "branch": 2,
           "tier": 1,
           "effect": {
-            "partyAttack": 0.02
+            "partyAttack": 0.03
           }
         },
         {
