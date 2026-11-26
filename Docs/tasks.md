@@ -160,9 +160,9 @@ Claude Code, Cursor, GPT(Codex)가 함께 쓰는 작업 목록이다. 작업 하
 | 118 | 5b core 코드 리뷰 (3ad100c) | GPT | `Docs/reviews/3ad100c.md` (새 파일만) | 완료 (ed66d7e) |
 | 119 | 5b 측정: 무기 종류·옵션 세기 | GPT | `tools/*`, `Docs/identity.md`의 측정 절 | 완료 (daf8722) |
 | 120 | 고유 장비·드롭 3D | Cursor | `src/ui/voxel/*`, `src/ui/BattleView.tsx`, `src/ui/ExpeditionPanel.tsx` | 완료 (c2806ab) |
-| 121 | 드롭·고유 장비·세트·교환 화면 | GPT | `src/ui/App.tsx`, `src/ui/game/*.tsx`, `src/ui/styles.css`, `src/locales/*` | 대기 (120과 함께 가능) |
-| 122 | 5c core 코드 리뷰 (2c287d8) | GPT | `Docs/reviews/2c287d8.md` (새 파일만) | 대기 (121 뒤) |
-| 123 | 5c 측정: 드롭 속도·고유 장비·세트 세기 | GPT | `tools/*`, `Docs/identity.md`의 측정 절 | 대기 (122 뒤) |
+| 121 | 드롭·고유 장비·세트·교환 화면 | GPT | `src/ui/App.tsx`, `src/ui/game/*.tsx`, `src/ui/styles.css`, `src/locales/*` | 완료 (d35b6d0) |
+| 122 | 5c core 코드 리뷰 (2c287d8) | GPT | `Docs/reviews/2c287d8.md` (새 파일만) | 완료 (9911bb8) |
+| 123 | 5c 측정: 드롭 속도·고유 장비·세트 세기 | GPT | `tools/*`, `Docs/identity.md`의 측정 절 | 완료 (44f32fa) |
 
 ---
 
@@ -2995,6 +2995,9 @@ core에 이미 있는 것('../../core'에서 export):
 
 **메모**
 
+375px Chrome에서 첫 클리어 지급 장비, 교환, 세트 2·3개 효과를 확인했다. 타입 검사·테스트 451개·빌드를 통과했다.
+원정 식별이 모호한 동시 정산의 드롭은 마을 알림에서 확인할 수 있다. 원정 결과에는 해당 원정에 배정할 수 있는 장비를 기록한다.
+
 ---
 
 ## 122. 5c core 코드 리뷰 (GPT)
@@ -3009,6 +3012,9 @@ core에 이미 있는 것('../../core'에서 export):
 ```
 
 **메모**
+
+원정 드롭 식별, 고유 장비 정규화, 고유 장신구 효과 중복, 정예 드롭률 연결에 관한 리뷰 4건을 남겼다.
+첫 클리어 장비 판매와 세이브 정규화, 같은 고유 장신구 두 개 장착을 재현했다.
 
 ---
 
@@ -3029,3 +3035,6 @@ Docs/identity.md 5c의 숫자를 측정한다. core는 고치지 않는다. 결�
 ```
 
 **메모**
+
+Lv10 도달 4시드의 30일 평균은 던전 장비 387.5개, 교환 5.75개였다. 네 세트 모두 전설 최상 3옵션 대비 우위가 1레벨 미만이었다.
+레이드 고유 6종 수집 중앙값은 단계별 51·19·10주였다. 측정 재현 명령과 수치 제안을 `Docs/identity.md`에 기록했다.
