@@ -1054,7 +1054,7 @@
       "healTaken": "Healing received +{{percent}}%",
       "dotGuard": "Damage over time −{{percent}}%",
       "twinStrike": "Extra hit chance {{percent}}%",
-      "lucky": "Expedition gold and materials +{{percent}}%",
+      "lucky": "Victory gold +{{percent}}%",
       "trapGuard": "Trap damage −{{percent}}%",
       "steadfast": "Immune to stun",
       "alert": "Warn the party of ambushes",
@@ -1099,7 +1099,7 @@
     },
     "lucky": {
       "name": "Lucky",
-      "description": "Gain 10% more expedition gold and materials."
+      "description": "Gain 10% more base gold on expedition victory."
     },
     "tactician": {
       "name": "Tactician",

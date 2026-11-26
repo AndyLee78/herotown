@@ -152,9 +152,9 @@ Claude Code, Cursor, GPT(Codex)가 함께 쓰는 작업 목록이다. 작업 하
 | 110 | 4d core 코드 리뷰 (1eeb27b) | GPT | `Docs/reviews/1eeb27b.md` (새 파일만) | 완료 (a2712d6) |
 | 111 | 4d 측정: Lv10 이후 한 달 | GPT | `tools/*`, `Docs/endgame.md`의 측정 절 | 완료 (4a39b9d) |
 | 112 | 정예·강령술사·새 전투 효과 3D | Cursor | `src/ui/voxel/*`, `src/ui/BattleView.tsx`, `src/ui/ExpeditionPanel.tsx` | 완료 (2ca1063) |
-| 113 | 스킬 갈래·천부·몬스터 특성 화면 | GPT | `src/ui/App.tsx`, `src/ui/game/*.tsx`, `src/ui/styles.css`, `src/locales/*` | 대기 (112와 함께 가능) |
-| 114 | 5a core 코드 리뷰 (318455b) | GPT | `Docs/reviews/318455b.md` (새 파일만) | 대기 (113 뒤) |
-| 115 | 5a 측정: 갈래 조합·천부·몬스터 세기 | GPT | `tools/*`, `Docs/identity.md`의 측정 절 | 대기 (114 뒤) |
+| 113 | 스킬 갈래·천부·몬스터 특성 화면 | GPT | `src/ui/App.tsx`, `src/ui/game/*.tsx`, `src/ui/styles.css`, `src/locales/*` | 완료 (ff89a13) |
+| 114 | 5a core 코드 리뷰 (318455b) | GPT | `Docs/reviews/318455b.md` (새 파일만) | 완료 (f5f51e0) |
+| 115 | 5a 측정: 갈래 조합·천부·몬스터 세기 | GPT | `tools/*`, `Docs/identity.md`의 측정 절 | 완료 (ab7c014) |
 
 ---
 
@@ -2787,6 +2787,8 @@ core에 이미 있는 것('../../core'에서 export):
 
 **메모**
 
+7직업의 배우기·숙련·잊기와 보호막 로그를 검증했다. Chrome 375px에서 전사의 스킬 조작, 천부 설명, 강령술사와 보스 특성 및 창 너비를 확인했다. 상태 기록과 함께 아이 목록의 천부 버튼 중첩과 둥지 특성 배치를 정리했다.
+
 ---
 
 ## 114. 5a core 코드 리뷰 (GPT)
@@ -2801,6 +2803,8 @@ core에 이미 있는 것('../../core'에서 export):
 ```
 
 **메모**
+
+수호천사 중복 부활과 저장의 레벨별 선택 상한 누락을 재현했다. 침공의 유대 조건, 장갑·관통, 골드·피로 조건과 행운아 재료 보상 차이도 리뷰에 기록했다.
 
 ---
 
@@ -2823,3 +2827,5 @@ Docs/identity.md 5a의 "세기 조정"을 측정한다. core는 고치지 않는
 ```
 
 **메모**
+
+6개 파티와 전투 시드 3개를 조합별로 비교했다. 최대 환산 차이는 궁수 1.30레벨이었다. 승률·천부·정예·분노 및 스케일 후보를 `Docs/identity.md`에 기록했다. 타입 검사·테스트 413개·빌드 통과.

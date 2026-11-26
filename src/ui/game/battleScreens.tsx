@@ -248,11 +248,10 @@ function NestCard({ save, onAction }: { save: GameState; onAction: Act }) {
               <strong>{t('nest.floor', { n: index + 1 })}</strong>
               <span className="chips">
                 {floor.monsters.map((id, slot) => (
-                  <Chip key={`${id}-${slot}`} tone={monsterById(id).boss ? 'bad' : undefined}>
-                    <MonsterFace refId={id} />
-                    {t(`enemy.${id}`)}
+                  <span className="card monster-profile" key={`${id}-${slot}`}>
+                    <span className="chips"><MonsterFace refId={id} /> {t(`enemy.${id}`)}</span>
                     <MonsterIdentity id={id} />
-                  </Chip>
+                  </span>
                 ))}
               </span>
             </div>

@@ -399,7 +399,7 @@ export function Town({
                     <Portrait hero={kid} />
                     <span className="hero-row-body">
                       <strong>{kid.name}</strong>
-                      <GiftBadge hero={kid} />
+                      <GiftBadge hero={kid} compact />
                       <span className="chips">
                         <Chip>{t('family.kidAge', { age: kid.age })}</Chip>
                         <Chip tone="info">{t('family.kidYears', { years: yearsUntilGrown(kid.age) })}</Chip>
