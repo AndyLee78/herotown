@@ -233,7 +233,7 @@ function lootForTrip(save: GameState, trip: Expedition) {
     }
   }
   return (save.loot ?? []).filter(
-    (entry) => sources.has(entry.source) && entry.at <= trip.returnAt && entry.at >= trip.departAt,
+    (entry) => (entry.trip ? entry.trip === trip.id : sources.has(entry.source) && entry.at <= trip.returnAt && entry.at >= trip.departAt),
   )
 }
 

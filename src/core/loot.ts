@@ -7,7 +7,10 @@ import type { Gear, GearGrade, GearSlot, GearType } from './types'
 // (Docs/identity.md 5c).
 
 export type UniqueDef = (typeof lootRules.uniques)[number]
-export type LootEntry = { gearId: string; source: string; at: number }
+// A find keeps a copy of the piece, so the list still reads after it is sold,
+// and the trip it came home with (review 2c287d8).
+export type LootEntry = { gearId: string; source: string; at: number; gear?: Gear; trip?: string }
+export type LootTag = { at: number; trip?: string }
 
 export function uniqueById(id: string | undefined): UniqueDef | undefined {
   return id ? lootRules.uniques.find((entry) => entry.id === id) : undefined
@@ -59,15 +62,16 @@ export function rollDrop(tier: number, id: string, rng: Rng): Gear | null {
   return forgeGear(recipe, id, rng.int(2 ** 31), type)
 }
 
-function remember(loot: LootEntry[] | undefined, found: Gear[], source: string, at: number): LootEntry[] {
-  return [...(loot ?? []), ...found.map((gear) => ({ gearId: gear.id, source, at }))].slice(-lootRules.recent)
+function remember(loot: LootEntry[] | undefined, found: Gear[], source: string, tag: LootTag): LootEntry[] {
+  return [...(loot ?? []), ...found.map((gear) => ({ gearId: gear.id, source, at: tag.at, gear, ...(tag.trip ? { trip: tag.trip } : {}) }))].slice(-lootRules.recent)
 }
 
 type LootState = { seed: number; craftNonce: number; stash: Gear[]; loot?: LootEntry[]; lastTickAt: number }
 
 // What a won regular dungeon leaves: a sure piece on the first clear, then a
-// chance; and a small chance at the boss's unique. Auto runs find half as much.
-export function dungeonLoot<S extends LootState>(state: S, dungeonId: string, first: boolean, auto: boolean, luck: number): S {
+// chance; and a small chance at the boss's unique. Auto runs find far less
+// and no uniques (5c measurement).
+export function dungeonLoot<S extends LootState>(state: S, dungeonId: string, first: boolean, auto: boolean, luck: number, tag: LootTag = { at: state.lastTickAt }): S {
   const dungeon = dungeonById(dungeonId)
   if (dungeon.special) {
     return state
@@ -75,6 +79,7 @@ export function dungeonLoot<S extends LootState>(state: S, dungeonId: string, fi
   const craftNonce = state.craftNonce + 1
   const rng = createRng(state.seed + craftNonce * 100003 + 29)
   const scale = (auto ? lootRules.autoDropScale : 1) * (1 + luck)
+  const uniqueScale = (auto ? lootRules.autoUniqueScale : 1) * (1 + luck)
   const found: Gear[] = []
   if (first || rng.next() < lootRules.dropChance * scale) {
     const piece = rollDrop(dungeon.tier, `${state.seed}-d${craftNonce}`, rng)
@@ -83,17 +88,17 @@ export function dungeonLoot<S extends LootState>(state: S, dungeonId: string, fi
     }
   }
   const unique = lootRules.uniques.find((entry) => 'dungeon' in entry && entry.dungeon === dungeonId)
-  if (unique && rng.next() < lootRules.uniqueChance * scale) {
+  if (unique && rng.next() < lootRules.uniqueChance * uniqueScale) {
     found.push(uniqueGear(unique, `${state.seed}-u${craftNonce}`))
   }
   if (found.length === 0) {
     return { ...state, craftNonce }
   }
-  return { ...state, craftNonce, stash: [...state.stash, ...found], loot: remember(state.loot, found, dungeonId, state.lastTickAt) }
+  return { ...state, craftNonce, stash: [...state.stash, ...found], loot: remember(state.loot, found, dungeonId, tag) }
 }
 
 // A raid boss brought down may leave one of its two uniques; later tiers more often.
-export function raidLoot<S extends LootState>(state: S, bossId: string, tier: number): S {
+export function raidLoot<S extends LootState>(state: S, bossId: string, tier: number, tag: LootTag = { at: state.lastTickAt }): S {
   const pieces = lootRules.uniques.filter((entry) => 'raid' in entry && entry.raid === bossId)
   const chance = lootRules.raidUniqueChance[Math.max(0, Math.min(lootRules.raidUniqueChance.length - 1, tier - 1))] ?? 0
   const craftNonce = state.craftNonce + 1
@@ -102,7 +107,7 @@ export function raidLoot<S extends LootState>(state: S, bossId: string, tier: nu
     return { ...state, craftNonce }
   }
   const piece = uniqueGear(rng.pick(pieces)!, `${state.seed}-r${craftNonce}`)
-  return { ...state, craftNonce, stash: [...state.stash, piece], loot: remember(state.loot, [piece], `raid.${bossId}`, state.lastTickAt) }
+  return { ...state, craftNonce, stash: [...state.stash, piece], loot: remember(state.loot, [piece], `raid.${bossId}`, tag) }
 }
 
 // Where a unique can be traded for: its dungeon cleared, or a raid unique's spoils in hand.

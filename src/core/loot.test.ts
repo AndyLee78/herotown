@@ -55,21 +55,30 @@ describe('dungeon drops', () => {
     }
   })
 
-  it('drops about one in ten on repeats by hand, half that on auto runs', () => {
+  it('drops about one in ten on repeats by hand, far less on auto runs', () => {
     let hand = 0
     let auto = 0
     let state = village()
-    for (let run = 0; run < 2000; run += 1) {
+    for (let run = 0; run < 4000; run += 1) {
       const handed = dungeonLoot(state, 'hill_cave', false, false, 0)
       hand += handed.stash.length - state.stash.length
       const autoed = dungeonLoot(state, 'hill_cave', false, true, 0)
       auto += autoed.stash.length - state.stash.length
       state = { ...state, craftNonce: handed.craftNonce }
     }
-    expect(hand / 2000).toBeGreaterThan(0.07)
-    expect(hand / 2000).toBeLessThan(0.13)
-    expect(auto / 2000).toBeGreaterThan(0.03)
-    expect(auto / 2000).toBeLessThan(0.07)
+    expect(hand / 4000).toBeGreaterThan(0.08)
+    expect(hand / 4000).toBeLessThan(0.12)
+    // 5c measurement: auto runs flooded the stash at half the rate.
+    expect(auto / 4000).toBeLessThan(lootRules.dropChance * lootRules.autoDropScale * 2)
+  })
+
+  it('never finds uniques on auto runs', () => {
+    let state = village()
+    for (let run = 0; run < 2000; run += 1) {
+      const next = dungeonLoot(state, 'dragon_nest', false, true, 0)
+      expect(next.stash.some((item) => item.unique)).toBe(false)
+      state = { ...state, craftNonce: next.craftNonce }
+    }
   })
 
   it('keeps only the last finds in the list', () => {
@@ -188,5 +197,35 @@ describe('the save', () => {
     const old = JSON.parse(JSON.stringify({ ...state, version: 28 }))
     delete old.loot
     expect(migrate(old, now).loot).toEqual([])
+  })
+})
+
+describe('review 2c287d8', () => {
+  it('tags finds with their trip and keeps a copy that outlives a sale', () => {
+    const found = dungeonLoot(village(), 'barrow', true, false, 0, { at: now + 5, trip: 'e7' })
+    const entry = found.loot.at(-1)!
+    expect(entry).toMatchObject({ source: 'barrow', at: now + 5, trip: 'e7' })
+    expect(entry.gear).toEqual(found.stash.find((item) => item.id === entry.gearId))
+    const raid = raidLoot(village(), 'titan', 3, { at: now + 9, trip: 'e8' })
+    if (raid.loot.length) {
+      expect(raid.loot.at(-1)).toMatchObject({ at: now + 9, trip: 'e8' })
+    }
+    const loaded = migrate(JSON.parse(JSON.stringify(found)), now)
+    expect(loaded.loot.at(-1)).toEqual(entry)
+  })
+
+  it('rebuilds a saved unique from its definition', () => {
+    const forged = { ...unique('dragonbane'), grade: 'fine', recipeId: 'iron.blade', element: 'flame', enhance: 99 } as Gear
+    const read = normalizeGear(forged, 'warrior')
+    expect(read).toMatchObject({ unique: 'dragonbane', grade: 'legend', recipeId: 'legend.blade', slot: 'weapon', enhance: 10 })
+    expect(read.element).toBeUndefined()
+    expect(normalizeGear({ ...unique('titanbell'), enhance: 3 }, 'warrior').enhance).toBe(0)
+  })
+
+  it('counts the same unique trinket once', () => {
+    const one = heroSkillEffects(hero('c', 'cleric', [unique('titanbell')]))
+    const two = heroSkillEffects(hero('c', 'cleric', [unique('titanbell'), unique('titanbell', 'b2')]))
+    expect(two.heal).toBeCloseTo(one.heal)
+    expect(two.shield).toBeCloseTo(one.shield)
   })
 })

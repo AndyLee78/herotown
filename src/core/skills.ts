@@ -167,7 +167,15 @@ export function heroSkillEffects(hero: Hero, context: SkillContext = {}): SkillT
   })
   addEffect(totals, giftEffect(hero.gift))
   // Weapon and armour types and their options (Docs/identity.md 5b).
+  const uniques = new Set<string>()
   for (const item of hero.gear) {
+    // The same unique twice counts once, as for sets (review 2c287d8).
+    if (item.unique) {
+      if (uniques.has(item.unique)) {
+        continue
+      }
+      uniques.add(item.unique)
+    }
     addEffect(totals, gearEffect(item))
   }
   // Unique sets (Docs/identity.md 5c).

@@ -67,7 +67,7 @@ export function raidVariant(state: GameState, now: number): DungeonVariant & { r
 
 // A party's damage lands when it comes home, on whatever is left by then,
 // so parties sent together each count. A raid from last week is over.
-export function settleRaid(state: GameState, week: string, start: number | null, left: number | undefined, max: number | undefined, returnAt?: number, fromTier = 1): GameState {
+export function settleRaid(state: GameState, week: string, start: number | null, left: number | undefined, max: number | undefined, returnAt?: number, fromTier = 1, trip?: string): GameState {
   const raid = state.raid
   // Damage from an earlier tier does not land on the next one (review 1eeb27b).
   if (raid && (raid.tier ?? 1) !== fromTier) {
@@ -100,5 +100,6 @@ export function settleRaid(state: GameState, week: string, start: number | null,
     },
     boss.id,
     tier,
+    { at: returnAt ?? state.lastTickAt, ...(trip ? { trip } : {}) },
   )
 }

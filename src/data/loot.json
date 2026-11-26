@@ -1,6 +1,7 @@
 {
   "dropChance": 0.1,
-  "autoDropScale": 0.5,
+  "autoDropScale": 0.05,
+  "autoUniqueScale": 0,
   "untypedChance": 0.3,
   "recent": 20,
   "grades": {

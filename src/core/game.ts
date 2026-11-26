@@ -22,7 +22,7 @@ import { TRINKET_IDS, enchantTime, finishEnchant, readMagicJob, startEnchant, ty
 import { POTION_IDS, brewTime, finishBrew, readAlchemyJob, readSupplies, returnSupplies, startBrew, takeSupplies, type AlchemyJob } from './alchemy'
 import { adRules, giftRules, automationRules, potionById, trinketById, moraleRules, magicRules, nestRules, classById, classList, combatRules, dungeonById, dungeons, expeditionRules, lifeRules, progression, retirementRules, smithRules, timeRules, villageRules, specialDungeons, endgameRules, lootRules } from './data'
 import { canWield, forgeGear, normalizeGear, orderId, recipeById, rerollOption, splitOrder } from './gear'
-import { canExchange, dungeonLoot, exchangeCost, uniqueById, uniqueGear, type LootEntry } from './loot'
+import { canExchange, dungeonLoot, exchangeCost, uniqueById, uniqueGear, type LootEntry, type LootTag } from './loot'
 import { applyReport, DEFAULT_TACTICS, gainXp, runDungeon } from './dungeon'
 import { canDeploy, generateHero, isChild, generateVisitors, normalizeHero, restHero, withAge } from './hero'
 import { acceptProposal, bedsTaken, bondParty, declineProposal, deliverBirths, femaleChance, graveFor, nextAge, partyParts, passAway, readBonds, readProposals, tidyFamily, turnSeason, wageCount, type FamilyEvents } from './family'
@@ -1466,7 +1466,7 @@ function autoRun(state: GameState, members: PartyMember[], presetId: string, dun
   return next
 }
 
-function grantVictoryRewards(state: GameState, report: DungeonReport, dungeonId: string, scale?: number): GameState {
+function grantVictoryRewards(state: GameState, report: DungeonReport, dungeonId: string, scale?: number, tag?: LootTag): GameState {
   if (!report.victory) {
     return state
   }
@@ -1498,7 +1498,7 @@ function grantVictoryRewards(state: GameState, report: DungeonReport, dungeonId:
     roster = cheer(roster, party, moraleRules.joy.firstClear)
   }
   // Gear drops: a sure piece on a first clear, then a chance (Docs/identity.md 5c).
-  const looted = dungeonLoot({ ...state, roster, materials, fame, cleared }, dungeonId, first, scale != null, report.luck ?? 0)
+  const looted = dungeonLoot({ ...state, roster, materials, fame, cleared }, dungeonId, first, scale != null, report.luck ?? 0, tag)
   // The old one-off cave quest gave way to the contract board (Docs/guild.md).
   return progressClear(looted, dungeonId)
 }
@@ -1939,8 +1939,8 @@ function settleExpedition(state: GameState, expedition: Expedition): GameState {
     expedition.heroIds,
     report.victory,
   )
-  const special = settleSpecial(grantVictoryRewards(afterTrip(home, expedition.heroIds, report.victory), report, dungeonId), dungeonId, report.floorsCleared, report.victory, expedition.abyssFrom)
-  const raided = expedition.raid ? settleRaid(special, expedition.raid.week, expedition.raid.start, expedition.raid.left, expedition.raid.max, expedition.returnAt, expedition.raid.tier ?? 1) : special
+  const special = settleSpecial(grantVictoryRewards(afterTrip(home, expedition.heroIds, report.victory), report, dungeonId, undefined, { at: expedition.returnAt, trip: expedition.id }), dungeonId, report.floorsCleared, report.victory, expedition.abyssFrom)
+  const raided = expedition.raid ? settleRaid(special, expedition.raid.week, expedition.raid.start, expedition.raid.left, expedition.raid.max, expedition.returnAt, expedition.raid.tier ?? 1, expedition.id) : special
   const rewarded = dungeonById(dungeonId).special === 'event' ? settleEvent(raided, report.victory) : raided
   const next = dropFromPresets(rewarded)
   const materials: Partial<Materials> = {}
@@ -2960,4 +2960,11 @@ function readLoot(value: unknown): LootEntry[] {
   return value
     .filter((entry): entry is LootEntry => entry != null && typeof entry === 'object' && typeof entry.gearId === 'string' && typeof entry.source === 'string' && typeof entry.at === 'number')
     .slice(-lootRules.recent)
+    .map((entry) => ({
+      gearId: entry.gearId,
+      source: entry.source,
+      at: entry.at,
+      ...(entry.gear && typeof entry.gear === 'object' ? { gear: normalizeGear(entry.gear, 'warrior') } : {}),
+      ...(typeof entry.trip === 'string' ? { trip: entry.trip } : {}),
+    }))
 }

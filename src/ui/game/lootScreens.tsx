@@ -66,7 +66,7 @@ export function LootInbox({ save, onAction }: { save: GameState; onAction: (acti
   return <details className="card fold loot-inbox">
     <summary><Chip tone="warn">{t('loot.new', { count: save.loot.length })}</Chip></summary>
     <ul className="plain">{[...save.loot].reverse().map((entry) => {
-      const item = items.get(entry.gearId)
+      const item = items.get(entry.gearId) ?? entry.gear
       return <li className="card column" key={entry.gearId}>
         {item ? <Item item={item} /> : <span>{t('loot.unavailable')}</span>}
         <span className="muted">{source(entry)}</span>

@@ -19,6 +19,9 @@ export function normalizeGear(item: Partial<Gear> | undefined, classId: ClassId)
   const element: GearElement | undefined = item?.element === 'flame' || item?.element === 'silver' ? item.element : undefined
   // Uniques keep their fixed effect: no type, no options (Docs/identity.md 5c).
   const unique = readUnique(item?.unique, slot)
+  if (unique) {
+    return uniqueFromSave(item!, unique, classId)
+  }
   const type = unique ? undefined : readType(item?.type, slot)
   const options = unique ? [] : readOptions(item, slot)
   return {
@@ -223,6 +226,25 @@ export function gearEffect(item: Gear): SkillEffect {
     effect[key] = (effect[key] ?? 0) + (value as number)
   }
   return effect as SkillEffect
+}
+
+// A saved unique takes its grade, base recipe and slot from its definition,
+// whatever the save says; only the id, enhance and heirloom carry over (review 2c287d8).
+function uniqueFromSave(item: Partial<Gear>, unique: string, classId: ClassId): Gear {
+  const def = lootRules.uniques.find((entry) => entry.id === unique)!
+  const grade = def.grade as GearGrade
+  const limit = grade === 'epic' || grade === 'legend' ? smithRules.lateEnhance.max : smithRules.enhanceMax
+  const heirloom = readHeirloom(item.heirloom)
+  return {
+    id: item.id || `${classId}.${def.slot}`,
+    recipeId: 'base' in def && def.base ? def.base : `unique.${def.id}`,
+    slot: def.slot as GearSlot,
+    grade,
+    unique: def.id,
+    // Trinkets are never enhanced.
+    enhance: def.slot === 'trinket' ? 0 : Math.max(0, Math.min(limit, Math.floor(Number.isFinite(item.enhance) ? item.enhance! : 0))),
+    ...(heirloom ? { heirloom } : {}),
+  }
 }
 
 function readUnique(value: unknown, slot: GearSlot): string | undefined {
