@@ -159,7 +159,7 @@ Claude Code, Cursor, GPT(Codex)가 함께 쓰는 작업 목록이다. 작업 하
 | 117 | 무기·방어구 종류·옵션·다시 굴리기 화면 | GPT | `src/ui/App.tsx`, `src/ui/game/*.tsx`, `src/ui/styles.css`, `src/locales/*` | 완료 (67552f8) |
 | 118 | 5b core 코드 리뷰 (3ad100c) | GPT | `Docs/reviews/3ad100c.md` (새 파일만) | 완료 (ed66d7e) |
 | 119 | 5b 측정: 무기 종류·옵션 세기 | GPT | `tools/*`, `Docs/identity.md`의 측정 절 | 완료 (daf8722) |
-| 120 | 고유 장비·드롭 3D | Cursor | `src/ui/voxel/*`, `src/ui/BattleView.tsx`, `src/ui/ExpeditionPanel.tsx` | 대기 (121과 함께 가능) |
+| 120 | 고유 장비·드롭 3D | Cursor | `src/ui/voxel/*`, `src/ui/BattleView.tsx`, `src/ui/ExpeditionPanel.tsx` | 완료 (c2806ab) |
 | 121 | 드롭·고유 장비·세트·교환 화면 | GPT | `src/ui/App.tsx`, `src/ui/game/*.tsx`, `src/ui/styles.css`, `src/locales/*` | 대기 (120과 함께 가능) |
 | 122 | 5c core 코드 리뷰 (2c287d8) | GPT | `Docs/reviews/2c287d8.md` (새 파일만) | 대기 (121 뒤) |
 | 123 | 5c 측정: 드롭 속도·고유 장비·세트 세기 | GPT | `tools/*`, `Docs/identity.md`의 측정 절 | 대기 (122 뒤) |
@@ -2962,6 +2962,8 @@ Docs/identity.md의 5c를 읽고 고유 장비를 복셀로 보인다. src/ui/vo
 ```
 
 **메모**
+
+고유 무기 4(무덤지기 칼날·쌍날·용잡이·망자의 홀)·방어구 4(이끼 망토·성채 성의·용비늘·리치 수의) 장식. 세트 3개면 용사냥꾼 붉/묘지기 녹/바람걸음 하늘/성가대 금 빛. 원정 `back`+승리 시 상자 열림(loot source·시각 매칭, 없으면 드롭 가능 던전 예상). 마을·초상은 gearStyleOf로 자동 반영. tsc·test·build 통과. 디버그 세이브로 마을·드롭은 눈으로 확인하지 못함.
 
 ---
 
