@@ -159,6 +159,10 @@ Claude Code, Cursor, GPT(Codex)가 함께 쓰는 작업 목록이다. 작업 하
 | 117 | 무기·방어구 종류·옵션·다시 굴리기 화면 | GPT | `src/ui/App.tsx`, `src/ui/game/*.tsx`, `src/ui/styles.css`, `src/locales/*` | 완료 (67552f8) |
 | 118 | 5b core 코드 리뷰 (3ad100c) | GPT | `Docs/reviews/3ad100c.md` (새 파일만) | 완료 (ed66d7e) |
 | 119 | 5b 측정: 무기 종류·옵션 세기 | GPT | `tools/*`, `Docs/identity.md`의 측정 절 | 완료 (daf8722) |
+| 120 | 고유 장비·드롭 3D | Cursor | `src/ui/voxel/*`, `src/ui/BattleView.tsx`, `src/ui/ExpeditionPanel.tsx` | 대기 (121과 함께 가능) |
+| 121 | 드롭·고유 장비·세트·교환 화면 | GPT | `src/ui/App.tsx`, `src/ui/game/*.tsx`, `src/ui/styles.css`, `src/locales/*` | 대기 (120과 함께 가능) |
+| 122 | 5c core 코드 리뷰 (2c287d8) | GPT | `Docs/reviews/2c287d8.md` (새 파일만) | 대기 (121 뒤) |
+| 123 | 5c 측정: 드롭 속도·고유 장비·세트 세기 | GPT | `tools/*`, `Docs/identity.md`의 측정 절 | 대기 (122 뒤) |
 
 ---
 
@@ -2933,3 +2937,93 @@ Docs/identity.md 5b의 숫자를 측정한다. core는 고치지 않는다. 결�
 **메모**
 
 최대 레벨 차이는 무기 0.14, 방어구 0.57, 전설 3옵션 0.40이었다. Lv10 도달 3시드의 30일 비교에서 경험치 옵션은 평균 +6.13레벨이었다. 타입 검사·테스트 432개·빌드 통과.
+
+---
+
+## 120. 고유 장비·드롭 3D (Cursor)
+
+**지금 시작할 수 있다. 작업 121(GPT)과 파일이 겹치지 않아 함께 돌릴 수 있다(같은 폴더에서 동시에 돌리려면 git worktree로 나눈다).** 설계: `Docs/identity.md` 5c.
+
+**전달할 내용**
+
+```
+Docs/identity.md의 5c를 읽고 고유 장비를 복셀로 보인다. src/ui/voxel/*, src/ui/BattleView.tsx, src/ui/ExpeditionPanel.tsx만 고친다. core, App.tsx, src/ui/game/*, src/locales/*는 고치지 않는다.
+
+이미 있는 것('../core'에서 export):
+- Gear.unique?: string(고유 장비 id 12개, src/data/loot.json). 고유 무기·방어구는 종류(type)가 없다. lootRules.uniques[].set: dragonslayer, gravekeeper, windwalker, choir.
+- GameState.loot: { gearId, source, at }[] (최근 얻은 장비).
+
+1. 고유 무기 4개(무덤지기 칼날, 두목의 쌍날, 용잡이, 망자의 홀)와 방어구 4개(이끼 망토, 성채의 성의, 용비늘 갑옷, 리치의 수의)에 모습을 준다. 기본 모습에 색과 장식(용비늘, 해골, 이끼, 금테 등)을 더하는 정도면 된다.
+2. 세트 3개를 낀 영웅에게 세트 색의 은은한 빛(용사냥꾼 붉은빛, 묘지기 녹빛, 바람걸음 하늘빛, 성가대 금빛).
+3. 원정에서 돌아온 결과(ExpeditionPanel)에서 이번에 얻은 장비가 있으면 상자가 열리는 짧은 연출. 이번 원정의 장비는 loot 중 at이 그 원정 정산 시각인 것으로 찾는다.
+4. 성능: 모델은 한 번 만들어 재사용.
+
+확인: npm run dev(127.0.0.1)에서 세이브를 고쳐 고유 장비·세트를 끼우고 마을·리플레이에서 본다. 드롭 연출은 첫 클리어로 본다. tsc·test·build 통과. 확인한 내용을 메모에.
+```
+
+**메모**
+
+---
+
+## 121. 드롭·고유 장비·세트·교환 화면 (GPT)
+
+**지금 시작할 수 있다. 작업 120(Cursor)과 함께 돌릴 수 있다.** 설계: `Docs/identity.md` 5c.
+
+**전달할 내용**
+
+```
+Docs/identity.md의 5c를 화면에 보인다. src/ui/App.tsx, src/ui/game/*.tsx, src/ui/styles.css, src/locales/*만 고친다. core, src/ui/voxel/*, src/ui/BattleView.tsx, src/ui/ExpeditionPanel.tsx는 고치지 않는다.
+
+core에 이미 있는 것('../../core'에서 export):
+- Gear.unique?: string. lootRules(src/data/loot.json): dropChance, autoDropScale, grades(티어별 등급 확률), uniqueChance, raidUniqueChance, uniques[{ id, dungeon? | raid?, slot, base?, grade, set, effect, cost, value }], sets[{ id, two, three }].
+- uniqueById(id), uniqueGear(def, id), canExchange(def, cleared), exchangeCost(def), setBonuses(gear) (from core/loot, core/gear), gearEffect(gear).
+- GameState.loot: { gearId, source(던전 id 또는 'raid.<보스 id>'), at }[] 최근 20개.
+- 행동: { type: 'exchange', uniqueId }(알림 locked·resources·missing), { type: 'seenLoot' }(loot 비우기).
+- 이미 넣은 것: ko/en의 unique.*(12개 이름), gearSet.*(4개 이름). itemLabel이 고유 장비 이름을 쓴다.
+
+1. 새 장비 알림: loot가 있으면 마을 화면에 "새 장비 n개" 배지. 누르면 목록(이름·등급·얻은 곳)과 "확인"(seenLoot). 원정 결과 화면에도 그 원정에서 얻은 장비 줄.
+2. 고유 장비 표시: 이름을 금빛·보라빛 등 등급색과 다른 "고유" 색으로. 효과 한 줄, 세트 이름과 세트 효과(2개·3개, 지금 낀 개수에 따라 켜짐/꺼짐). 다시 굴리기 버튼은 없다.
+3. 던전 정보: "첫 클리어 보상: 장비 1개(등급 범위)", "보스 고유 장비: 이름(4%)". 레이드 화면에 보스별 고유 장비 둘과 단계별 확률.
+4. 교환: 대장간(또는 용맹 훈장을 쓰는 곳)에 "고유 장비 교환" 칸. 12개 목록, 비용, 잠김 이유("○○ 클리어 필요"), 가진 개수.
+5. 영웅 상세 장비 효과 합계에 세트 효과를 포함하고, 세트 진행("용사냥꾼 2/3")을 보인다.
+6. 문구 ko/en 같은 키. 좁은 화면(375px)에서 넘치지 않게.
+
+확인: npm run dev(127.0.0.1)에서 첫 클리어 드롭, 교환, 세트 2·3개 효과를 본다(세이브를 고쳐도 된다). tsc·test·build 통과. 확인한 내용을 메모에.
+```
+
+**메모**
+
+---
+
+## 122. 5c core 코드 리뷰 (GPT)
+
+**작업 121 뒤에 시작한다(같은 도구라 순서대로).** core 커밋은 **2c287d8**이다.
+
+**전달할 내용**
+
+```
+5c core 커밋 2c287d8을 리뷰한다. 코드는 고치지 않고 Docs/reviews/2c287d8.md 새 파일 하나에만 쓴다(Docs/reviews/README.md 형식).
+볼 것: Docs/identity.md 5c와 차이, 드롭이 붙는 길(손 출정·자동 출정·침공·특수 던전·레이드, 첫 클리어 판정 순서), 시드(craftNonce를 드롭·제작·다시 굴리기·교환이 같이 쓰는 것, 같은 상태에서 같은 결과), 행운 배율, 등급 표와 레시피 고르기(희귀 방어구 없음), 고유 장비(바탕 레시피 수치·강화·판매가·정규화·장신구 고유 장비와 trinketOf), 세트(같은 고유 둘, 장신구 두 칸), 교환(비용·잠김·훈장 부족), loot 목록(20개, 세이브 29, seenLoot), 레이드 고유 장비 확률과 단계.
+```
+
+**메모**
+
+---
+
+## 123. 5c 측정: 드롭 속도·고유 장비·세트 세기 (GPT)
+
+**작업 122 뒤에 시작한다.**
+
+**전달할 내용**
+
+```
+Docs/identity.md 5c의 숫자를 측정한다. core는 고치지 않는다. 결과는 Docs/identity.md 끝에 "5c 측정 (날짜)" 절로 적는다.
+
+1. 4d 측정과 같은 조건으로 Lv10 이후 30일: 얻은 장비 수(등급별), 고유 장비 수, 교환으로 산 수, 대장간 제작과 비교.
+2. 고유 장비 하나가 주는 세기(같은 등급 일반 장비 옵션 평균과 비교, 레벨 차이로).
+3. 세트 2개·3개 효과의 세기(레벨 차이). 목표: 3세트가 전설 3옵션 최상 조합보다 1레벨 이상 세지 않게.
+4. 레이드 고유 장비를 모으는 데 걸리는 주 수(단계별 처치 가정).
+5. 숫자를 바꿀 제안은 파일·키·값으로 적는다(고치지는 않는다).
+```
+
+**메모**
