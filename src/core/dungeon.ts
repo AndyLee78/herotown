@@ -44,6 +44,8 @@ export function runDungeon(party: PartyMember[], dungeonId: string, tactics: Tac
   const rng = createRng(seed)
   // Skills that answer to who comes along see the party's classes (Docs/identity.md 5a).
   const allies = party.map((member) => member.hero.classId)
+  // Conditions are judged once at departure, the same for battle and settling up (review 318455b).
+  const effects = new Map(party.map((member) => [member.hero.id, heroSkillEffects(member.hero, { allies: member.allies ?? allies, bonded: (member.healBonus ?? member.bonus ?? 0) > 0 })]))
   const heroes = party.map((member, index) => createHeroUnit({ ...member, allies: member.allies ?? allies }, index))
   applyAuras(heroes)
   const elite = dungeon.tier >= combatRules.eliteTier ? combatRules.eliteChance : 0
@@ -88,7 +90,7 @@ export function runDungeon(party: PartyMember[], dungeonId: string, tactics: Tac
   const hadHealer = party.some((member) => classById(member.hero.classId).role === 'healer') || (supplies.heal ?? 0) > 0
   const treasure = party.some((member) => member.hero.traitIds.includes('treasure') && member.hero.condition !== 'dead')
   // A lucky hero's share of the spoils (Docs/identity.md 5a).
-  const luck = Math.max(0, ...party.map((member) => (member.hero.condition !== 'dead' ? heroSkillEffects(member.hero).lucky : 0)))
+  const luck = Math.max(0, ...party.map((member) => (member.hero.condition !== 'dead' ? effects.get(member.hero.id)!.lucky : 0)))
   // A loss still brings home a little loot from the floors that were cleared,
   // so a struggling village always has some income.
   // A disarmed trap also gives up what it guarded (Docs/depth.md 3b).
@@ -103,8 +105,8 @@ export function runDungeon(party: PartyMember[], dungeonId: string, tactics: Tac
     log.push({ tick: ticks, key: 'log.victory', params: {} })
   }
 
-  const fatigueCut = Math.min(trainingRules.partyAuraCap.fatigue, party.reduce((sum, member) => sum + heroSkillEffects(member.hero).fatigueCut, 0))
-  const fatigueOwn = new Map(party.map((member) => [member.hero.id, heroSkillEffects(member.hero).selfFatigueCut]))
+  const fatigueCut = Math.min(trainingRules.partyAuraCap.fatigue, party.reduce((sum, member) => sum + effects.get(member.hero.id)!.fatigueCut, 0))
+  const fatigueOwn = new Map(party.map((member) => [member.hero.id, effects.get(member.hero.id)!.selfFatigueCut]))
   const report: DungeonReport = {
     dungeonId,
     party: party.map(({ hero }) => ({ id: hero.id, classId: hero.classId, gender: hero.gender, age: hero.age, ...(hero.genes ? { genes: hero.genes } : {}) })),
@@ -120,6 +122,7 @@ export function runDungeon(party: PartyMember[], dungeonId: string, tactics: Tac
     ...(carried ? { potionsUsed: kit.used } : {}),
     ...(hasTraps ? { traps } : {}),
     ...(affixes.length ? { affixes } : {}),
+    ...(luck > 0 ? { luck } : {}),
     units: heroUnitsToReport(heroes),
     log,
     conditions: heroes.map((hero) => ({

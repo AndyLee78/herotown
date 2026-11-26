@@ -1054,7 +1054,7 @@
       "healTaken": "받는 회복 +{{percent}}%",
       "dotGuard": "지속 피해 {{percent}}% 감소",
       "twinStrike": "추가 공격 확률 {{percent}}%",
-      "lucky": "원정 승리 골드 +{{percent}}%",
+      "lucky": "원정 승리 골드·재료 +{{percent}}%",
       "trapGuard": "함정 피해 −{{percent}}%",
       "steadfast": "기절 면역",
       "alert": "기습 경고",
@@ -1099,7 +1099,7 @@
     },
     "lucky": {
       "name": "행운아",
-      "description": "원정에서 승리하면 기본 골드가 10% 늘어납니다."
+      "description": "원정에서 승리하면 기본 골드와 재료가 10% 늘어납니다."
     },
     "tactician": {
       "name": "전술가",

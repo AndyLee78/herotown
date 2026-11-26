@@ -462,8 +462,9 @@ export function simulateFloor(
     // The guardian angel stands the whole party up once a trip.
     const angel = !living(heroes).length ? heroes.find((hero) => hero.guardian && !hero.guardianUsed) : undefined
     if (angel) {
-      angel.guardianUsed = true
+      // Once a trip for the whole party, however many angels it carries.
       for (const hero of heroes) {
+        hero.guardianUsed = true
         hero.hp = Math.max(1, Math.round(hero.maxHp * giftRules.guardianHp))
         hero.dot = 0
         hero.burn = 0
@@ -933,8 +934,9 @@ function strike(actor: BattleUnit, target: BattleUnit, rng: Rng, tick: number, l
   if (crit) {
     multiplier *= combatRules.critMultiplier + actor.critDamage
   } else if (target.armor) {
-    // Armour turns plain blows; a critical hit gets through.
-    multiplier *= 1 - combatRules.armorCut
+    // Armour turns plain blows; a critical hit gets through, and piercing
+    // wears the cut down in step with the defence it ignores (review 318455b).
+    multiplier *= 1 - combatRules.armorCut * (1 - Math.min(1, actor.pierce))
   }
   attack *= multiplier
   const rolled = vary(rng, attack - target.defense * (1 - actor.pierce))

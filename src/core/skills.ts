@@ -54,8 +54,11 @@ export function normalizeLearned(classId: ClassId, learned: string[] | undefined
   const skills = classById(classId).skills.map((skill) => skill.id)
   const starter = starterSkill(classId)
   const extras: string[] = []
+  // No more picks than the level has earned; old saves (picks at Lv3 and 7)
+  // never had more than that (review 318455b).
+  const cap = Math.min(maxExtraSkills(), skillPicks(level))
   for (const id of learned ?? []) {
-    if (id === starter || !skills.includes(id) || extras.includes(id) || extras.length >= maxExtraSkills()) {
+    if (id === starter || !skills.includes(id) || extras.includes(id) || extras.length >= cap) {
       continue
     }
     const before = skillPrerequisite(classId, id)

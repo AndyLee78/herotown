@@ -1310,7 +1310,7 @@ function autoMembers(state: GameState, presetId = state.presetId): PartyMember[]
 }
 
 // Friends and lovers fight better side by side.
-function withBonds(state: GameState, members: PartyMember[]): PartyMember[] {
+export function withBonds(state: GameState, members: PartyMember[]): PartyMember[] {
   const parts = partyParts(state, members.map((member) => member.hero.id))
   return members.map((member) => {
     const part = parts[member.hero.id]
@@ -1441,7 +1441,7 @@ function grantVictoryRewards(state: GameState, report: DungeonReport, dungeonId:
     return state
   }
   const first = !state.cleared.includes(dungeonId)
-  const applied = scale ?? (first ? 1 : villageRules.repeatReward)
+  const applied = (scale ?? (first ? 1 : villageRules.repeatReward)) * (1 + (report.luck ?? 0))
   const gained = Math.max(1, Math.floor(drop.amount * applied))
   const material = drop.material as MaterialName
   const materials = { ...state.materials, [material]: state.materials[material] + gained }

@@ -241,3 +241,28 @@ describe('the road home', () => {
     expect(progression.xpPerLevel).toBeGreaterThan(0)
   })
 })
+
+describe('review 318455b', () => {
+  it('stands the party up once, however many guardian angels it carries', () => {
+    let saves = 0
+    for (let seed = 1; seed <= 12; seed += 1) {
+      const pair = [unit(hero('g1', 'warrior', 1, [], { gift: 'guardian' })), unit(hero('g2', 'warrior', 1, [], { gift: 'guardian' }), 1)]
+      const count = keys(pair, ['mine_boss'], seed).filter((entry) => entry.key === 'log.guardian').length
+      expect(count).toBeLessThanOrEqual(1)
+      saves += count
+    }
+    expect(saves).toBeGreaterThan(0)
+  })
+
+  it('keeps no more picks than the level has earned', () => {
+    const branch = ['warrior.guard', 'warrior.wall', 'warrior.counter', 'warrior.slam', 'warrior.fury', 'warrior.thirst']
+    expect(hero('a', 'warrior', 1, branch).learned).toHaveLength(1)
+    expect(hero('b', 'warrior', 7, branch).learned).toEqual([classById('warrior').skills[0]!.id, 'warrior.guard', 'warrior.wall'])
+    expect(hero('c', 'warrior', 25, branch).learned).toHaveLength(7)
+  })
+
+  it('carries the lucky share to the materials', () => {
+    const result = runDungeon([{ hero: hero('w', 'warrior', 25, [], { gift: 'lucky' }), row: 'front' }], 'hill_cave', DEFAULT_TACTICS, 3)
+    expect(result.ok && result.report.luck).toBeGreaterThan(0)
+  })
+})

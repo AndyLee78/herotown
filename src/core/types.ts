@@ -377,6 +377,8 @@ export type DungeonReport = {
   traps?: { sprung: number; disarmed: number }
   // The nest's affixes on this trip (Docs/depth.md 3d).
   affixes?: AffixId[]
+  // A lucky hero's share, also on the materials (Docs/identity.md 5a).
+  luck?: number
   victory: boolean
   defeatReason: DefeatReason | null
   ticks: number

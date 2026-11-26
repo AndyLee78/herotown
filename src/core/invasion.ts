@@ -1,7 +1,7 @@
 import { classById, endgameRules } from './data'
 import { DEFAULT_TACTICS, runDungeon } from './dungeon'
 import type { GameState } from './game'
-import { busyHeroIds, presetById } from './game'
+import { busyHeroIds, presetById, withBonds } from './game'
 import { canDeploy } from './hero'
 import { feel } from './personality'
 import { freshVault } from './trials'
@@ -85,7 +85,8 @@ export function resolveInvasion(state: GameState, settle: (state: GameState, rep
     if (!party.length) {
       continue
     }
-    const result = runDungeon(party, 'invasion', DEFAULT_TACTICS, state.seed + 5_000_011 + invasion.count * 977 + turn, {}, { floors })
+    // Bonds, heirlooms and blessings count in defence too (review 318455b).
+    const result = runDungeon(withBonds(next, party), 'invasion', DEFAULT_TACTICS, state.seed + 5_000_011 + invasion.count * 977 + turn, {}, { floors })
     if (!result.ok) {
       continue
     }
