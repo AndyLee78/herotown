@@ -2453,3 +2453,19 @@ button.chip {
   font-size: 0.85rem;
   color: var(--muted, inherit);
 }
+/* Spare gear in storage sits indented under its slot, so it never reads as a second slot. */
+.gear-spares {
+  margin: 4px 0 0 14px;
+  padding-left: 8px;
+  border-left: 2px dashed var(--line);
+}
+.gear-spares-title {
+  display: block;
+  margin-bottom: 2px;
+  font-size: 0.75rem;
+  color: var(--muted);
+}
+.line.spare-line {
+  background: transparent;
+  border-style: dashed;
+}

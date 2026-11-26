@@ -357,6 +357,7 @@ function HeroDetail({
       {save.retirees.some(({ hero: retiree }) => retiree.id === hero.id) ? <Inheritance save={save} hero={hero} onAction={onAction} /> : null}
       {(['weapon', 'armor'] as const).map((slot) => {
         const worn = hero.gear.find((item) => item.slot === slot)
+        const spares = inRoster ? save.stash.filter((item) => item.slot === slot) : []
         return (
           <div key={slot} className="gear-slot">
             <h4 className="gear-slot-title">{t(`label.slot.${slot}`)}</h4>
@@ -375,19 +376,22 @@ function HeroDetail({
                   <span className="muted">{t(`hero.slotEmpty.${slot}`)}</span>
                 )}
               </li>
-              {inRoster
-                ? save.stash
-                    .filter((item) => item.slot === slot)
-                    .map((item) => (
-                      <li key={item.id} className="line">
-                        <span className={gearGradeClass(item.grade, 'muted')}>{itemLabel(t, item, hero.classId, heirloomBonus(save, hero, item))}</span>
-                        <button type="button" className="btn small" onClick={() => onAction({ type: 'equip', heroId: hero.id, gearId: item.id })}>
-                          {t(worn ? 'ui.swap' : 'ui.equip')}
-                        </button>
-                      </li>
-                    ))
-                : null}
             </ul>
+            {spares.length > 0 ? (
+              <div className="gear-spares">
+                <span className="gear-spares-title">{t('hero.spares', { count: spares.length })}</span>
+                <ul className="plain">
+                  {spares.map((item) => (
+                    <li key={item.id} className="line spare-line">
+                      <span className={gearGradeClass(item.grade, 'muted')}>{itemLabel(t, item, hero.classId, heirloomBonus(save, hero, item))}</span>
+                      <button type="button" className="btn small" onClick={() => onAction({ type: 'equip', heroId: hero.id, gearId: item.id })}>
+                        {t(worn ? 'ui.swap' : 'ui.equip')}
+                      </button>
+                    </li>
+                  ))}
+                </ul>
+              </div>
+            ) : null}
           </div>
         )
       })}

@@ -859,6 +859,7 @@
     "reviving": "Revival {{time}}",
     "noGear": "No gear",
     "trinketEmpty": "Empty trinket slot",
+    "spares": "In storage ({{count}})",
     "slotEmpty": {
       "weapon": "Empty weapon slot",
       "armor": "Empty armor slot"
