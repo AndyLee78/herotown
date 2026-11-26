@@ -1291,8 +1291,9 @@
   "gearDetail": {
     "choose": "종류 고르기",
     "balanced": "종류 없음(균형)",
+    "even": "균형 (효과 없음)",
     "typed": "{{material}} {{type}}",
-    "wielders": "장착 가능 · {{classes}}",
+    "wielders": "{{classes}}만 쓸 수 있음",
     "summary": "장비 · {{values}}",
     "takeOff": "옵션을 다시 굴리려면 먼저 장비를 빼세요.",
     "reroll": "다시 굴리기",

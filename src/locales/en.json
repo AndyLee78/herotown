@@ -1291,6 +1291,7 @@
   "gearDetail": {
     "choose": "Choose type",
     "balanced": "Untyped (balanced)",
+    "even": "Balanced (no effect)",
     "typed": "{{material}} {{type}}",
     "wielders": "Usable by {{classes}}",
     "summary": "Gear · {{values}}",

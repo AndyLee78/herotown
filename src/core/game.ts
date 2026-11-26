@@ -535,12 +535,27 @@ export function migrate(raw: unknown, now: number): GameState {
     return fromLegacy(record, now)
   }
   if (typeof record.version === 'number' && record.version >= 2 && record.version <= SAVE_VERSION) {
-    return dropUnpaidOrders(fitShrine(normalize(record, now)), record.version)
+    return unequipMisfits(dropUnpaidOrders(fitShrine(normalize(record, now)), record.version))
   }
   if (typeof record.version === 'number' && record.version > SAVE_VERSION) {
     throw new Error('newer')
   }
   return freshState(1, now)
+}
+
+// A weapon a hero's class cannot wield, from an edited or older save, goes
+// to storage (review 3ad100c).
+function unequipMisfits(state: GameState): GameState {
+  const off: Gear[] = []
+  const roster = state.roster.map((hero) => {
+    const misfits = hero.gear.filter((item) => !canWield(hero.classId, item))
+    if (misfits.length === 0) {
+      return hero
+    }
+    off.push(...misfits)
+    return { ...hero, gear: hero.gear.filter((item) => !misfits.includes(item)) }
+  })
+  return off.length ? { ...state, roster, stash: [...state.stash, ...off] } : state
 }
 
 function apply(state: GameState, action: GameAction): GameState {
@@ -2330,7 +2345,8 @@ function normalize(record: Record<string, unknown>, now: number): GameState {
       : base.visitors,
     roster: validHeroes(record.roster) ? record.roster.map((hero) => withRecovery(hero, now)) : [],
     graveyard: Array.isArray(record.graveyard) ? (record.graveyard as Grave[]) : [],
-    smith: isSmith(record.smith) ? record.smith : null,
+    // Gear on the anvil is read like stored gear (review 3ad100c).
+    smith: isSmith(record.smith) ? { ...record.smith, gear: record.smith.gear ? normalizeGear(record.smith.gear, 'warrior') : null } : null,
     stash: Array.isArray(record.stash) ? (record.stash as Partial<Gear>[]).map((item) => normalizeGear(item, 'warrior')) : [],
     craftNonce: numberOr(record.craftNonce, 0),
     presets: readPresets(record, base.presets),
@@ -2518,7 +2534,7 @@ function holdFestival(state: GameState): GameState {
   let roster = state.roster.map((hero) => feel(hero, 'joy', rules.morale * scale))
   let materials = state.materials
   if (kind === 'summer') {
-    roster = roster.map((hero) => (isChild(hero) || hero.condition === 'dead' ? hero : gainXp(hero, Math.round(hero.level * progression.xpPerLevel * rules.xpShare))))
+    roster = roster.map((hero) => (isChild(hero) || hero.condition === 'dead' ? hero : gainXp(hero, Math.round(hero.level * progression.xpPerLevel * rules.xpShare), { gear: false })))
   }
   if (kind === 'autumn') {
     materials = { ...materials, wood: materials.wood + rules.harvest.wood, stone: materials.stone + rules.harvest.stone, iron: materials.iron + rules.harvest.iron }
@@ -2869,7 +2885,12 @@ function readMarket(value: unknown, now: number): Market {
   const merchant = record.merchant
   const okMerchant =
     merchant != null && typeof merchant.arriveAt === 'number' && typeof merchant.leaveAt === 'number' && Array.isArray(merchant.offers)
-      ? { arriveAt: merchant.arriveAt, leaveAt: merchant.leaveAt, offers: merchant.offers as MerchantOffer[] }
+      ? {
+          arriveAt: merchant.arriveAt,
+          leaveAt: merchant.leaveAt,
+          // Gear on sale is read like stored gear (review 3ad100c).
+          offers: (merchant.offers as MerchantOffer[]).map((offer) => (offer.kind === 'gear' ? { ...offer, gear: normalizeGear(offer.gear, 'warrior') } : offer)),
+        }
       : null
   return {
     pressure,

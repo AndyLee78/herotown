@@ -68,7 +68,7 @@ export function GearTypePicker({ slot, onCraft, disabled, queued }: { slot: 'wea
         const effect = effectLine(t, definitions.find((entry) => entry.id === id)?.effect ?? {})
         return <button type="button" className="btn small gear-type-option" key={id} aria-pressed={type === id} onClick={() => choose(id)}>
           <strong>{t(`gearDetail.type.${id}`)}</strong>
-          <span>{effect || t('gearDetail.balanced')}</span>
+          <span>{effect || t('gearDetail.even')}</span>
         </button>
       })}
     </div>)}

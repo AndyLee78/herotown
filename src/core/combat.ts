@@ -856,7 +856,8 @@ function enemyAct(actor: BattleUnit, heroes: BattleUnit[], rng: Rng, tick: numbe
   if (actor.aoeEvery > 0 && (actor.actions + 1) % actor.aoeEvery === 0) {
     push(log, tick, 'log.sweep', actorParams(actor))
     for (const target of living(heroes)) {
-      strike(actor, target, rng, tick, log, combatRules.aoeMultiplier)
+      // Blast ward covers sweeps too (review 3ad100c).
+      strike(actor, target, rng, tick, log, combatRules.aoeMultiplier * (1 - target.blastGuard))
     }
     return
   }

@@ -175,15 +175,19 @@ function readOptions(item: Partial<Gear> | undefined, slot: GearSlot): GearOptio
     }
     return []
   }
+  // Only what this slot and grade could roll: the slot's pool, the grade's
+  // count, and its range, whole numbers for flat options (review 3ad100c).
+  const grade: GearGrade = item.grade === 'fine' || item.grade === 'rare' || item.grade === 'epic' || item.grade === 'legend' ? item.grade : 'common'
   const options: GearOption[] = []
   for (const entry of item.options) {
     const def = entry && typeof entry === 'object' ? optionDef(entry.id) : undefined
-    if (!def || options.some((option) => option.id === def.id) || !Number.isFinite(entry.value) || options.length >= 3) {
+    if (!def || !(slot === 'armor' ? def.armor : def.weapon) || options.some((option) => option.id === def.id) || !Number.isFinite(entry.value) || options.length >= smithRules.optionCount[grade]) {
       continue
     }
-    // Clamped to what the best grade could roll.
-    const top = optionValue(def, 'legend', 1)
-    options.push({ id: def.id as GearOptionId, value: Math.max(0, Math.min(top, entry.value)) })
+    const low = optionValue(def, grade, 0)
+    const high = optionValue(def, grade, 1)
+    const value = Math.max(low, Math.min(high, entry.value))
+    options.push({ id: def.id as GearOptionId, value: def.min >= 1 ? Math.round(value) : value })
   }
   return options
 }

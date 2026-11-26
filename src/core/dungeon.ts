@@ -159,11 +159,12 @@ export function applyReport(hero: Hero, report: DungeonReport): Hero {
 // Experience from a trip or the training ground. Each level is a round of
 // hard-won experience: every stat grows by the training it adds, and skill
 // picks open at their levels.
-export function gainXp(hero: Hero, amount: number): Hero {
+// Gear experience options count for trips and training, not festivals (review 3ad100c).
+export function gainXp(hero: Hero, amount: number, { gear = true }: { gear?: boolean } = {}): Hero {
   // A late bloomer learns faster past the middle levels (Docs/identity.md 5a).
   const bloom = hero.gift === 'lateBloomer' && hero.level >= giftRules.lateBloomerLevel ? 1 + giftRules.lateBloomerXp : 1
   // Gear with an experience option (Docs/identity.md 5b).
-  const study = 1 + heroSkillEffects(hero).xpGain
+  const study = gear ? 1 + heroSkillEffects(hero).xpGain : 1
   let xp = hero.xp + Math.round(amount * bloom * study)
   let level = hero.level
   while (xp >= level * progression.xpPerLevel) {

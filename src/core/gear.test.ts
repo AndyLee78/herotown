@@ -1,10 +1,11 @@
 import { describe, expect, it } from 'vitest'
-import { createHeroUnit } from './combat'
+import { createHeroUnit, simulateFloor } from './combat'
 import { classById, smithRules } from './data'
-import { gainXp } from './dungeon'
+import { DEFAULT_TACTICS, gainXp } from './dungeon'
 import { exportSave, freshState, importSave, migrate, reduce, SAVE_VERSION, type GameState } from './game'
 import { canWield, forgeGear, gearEffect, normalizeGear, optionRange, recipeById, splitOrder, weaponTypes } from './gear'
 import { createHero } from './hero'
+import { createRng } from './rng'
 import { heroSkillEffects } from './skills'
 import type { ClassId, Gear, GearGrade, Hero } from './types'
 
@@ -69,7 +70,7 @@ describe('rolled options', () => {
   it('drops unknown or repeated options and clamps values from a save', () => {
     const odd = { id: 'o', recipeId: 'epic.mail', slot: 'armor', grade: 'epic', enhance: 0, options: [{ id: 'hp', value: 9 }, { id: 'hp', value: 0.04 }, { id: 'nope', value: 1 }] } as unknown as Gear
     const read = normalizeGear(odd, 'warrior')
-    expect(read.options).toEqual([{ id: 'hp', value: optionRange('hp', 'legend')!.max }])
+    expect(read.options).toEqual([{ id: 'hp', value: optionRange('hp', 'epic')!.max }])
   })
 
   it('adds flat options to attack and defence and the rest to the hero totals', () => {
@@ -165,5 +166,58 @@ describe('the save', () => {
     expect(SAVE_VERSION).toBe(28)
     expect(loaded.stash[0]).toEqual(piece)
     expect(migrate(JSON.parse(JSON.stringify(state)), now).stash[0]).toEqual(piece)
+  })
+})
+
+describe('review 3ad100c', () => {
+  it('reads gear on the anvil and on sale like stored gear', () => {
+    const old = { id: 'o', recipeId: 'flame.blade', slot: 'weapon', grade: 'rare', enhance: 2, option: 'power' }
+    const state = smithy()
+    const saved = JSON.parse(JSON.stringify({
+      ...state,
+      version: 27,
+      smith: { kind: 'enhance', recipeId: 'flame.blade', gear: old, finishAt: now + 1000 },
+      market: { ...state.market, merchant: { arriveAt: now, leaveAt: now + 1000, offers: [{ id: 'm1', kind: 'gear', gear: old, price: 10, sold: false }] } },
+    }))
+    const loaded = migrate(saved, now)
+    expect(loaded.smith?.gear?.options).toEqual([{ id: 'power', value: smithRules.optionPower }])
+    const offer = loaded.market.merchant?.offers[0]
+    expect(offer?.kind === 'gear' ? offer.gear.options : null).toEqual([{ id: 'power', value: smithRules.optionPower }])
+  })
+
+  it('keeps saved options to the slot, the grade’s count and its range', () => {
+    const odd = { id: 'o', recipeId: 'iron.blade', slot: 'weapon', grade: 'fine', enhance: 0, options: [{ id: 'guard', value: 1.7 }, { id: 'power', value: 2.6 }, { id: 'crit', value: 0.5 }] } as unknown as Gear
+    expect(normalizeGear(odd, 'warrior').options).toEqual([{ id: 'power', value: 3 }])
+    const common = { ...odd, grade: 'common', options: [{ id: 'power', value: 3 }] } as unknown as Gear
+    expect(normalizeGear(common, 'warrior').options).toBeUndefined()
+  })
+
+  it('moves a weapon the class cannot wield from a save to storage', () => {
+    const bow = forgeGear(recipe('iron.blade'), 'bw', undefined, 'crossbow')
+    const warrior = hero('w', 'warrior', [bow])
+    const loaded = migrate(JSON.parse(JSON.stringify(smithy({ roster: [warrior] }))), now)
+    expect(loaded.roster[0]!.gear.some((item) => item.id === 'bw')).toBe(false)
+    expect(loaded.stash.some((item) => item.id === 'bw')).toBe(true)
+  })
+
+  it('wards against boss sweeps too', () => {
+    const ward: Gear = { id: 'm', recipeId: 'iron.mail', slot: 'armor', grade: 'common', enhance: 0, options: [{ id: 'blastGuard', value: 0.5 }] }
+    const party = (gear: Gear[]) => [hero('a', 'warrior', gear), hero('b', 'cleric', gear), hero('c', 'mage', gear)].map((entry, index) => createHeroUnit({ hero: entry, row: index === 0 ? 'front' : 'back' }, index))
+    const sweepTaken = (gear: Gear[]) => {
+      const heroes = party(gear)
+      const log: Parameters<typeof simulateFloor>[4] = []
+      simulateFloor(heroes, ['bandit_chief'], DEFAULT_TACTICS, createRng(3), log, 1)
+      const sweeps = log.filter((entry) => entry.key === 'log.sweep').length
+      return { sweeps, taken: heroes.reduce((sum, unit) => sum + unit.taken, 0) }
+    }
+    const bare = sweepTaken([])
+    const warded = sweepTaken([ward])
+    expect(bare.sweeps).toBeGreaterThan(0)
+    expect(warded.taken).toBeLessThan(bare.taken)
+  })
+
+  it('leaves the summer festival’s experience to the festival', () => {
+    const scholar = hero('s', 'mage', [{ id: 'w', recipeId: 'iron.blade', slot: 'weapon', grade: 'common', enhance: 0, options: [{ id: 'xp', value: 0.1 }] }])
+    expect(gainXp(scholar, 100, { gear: false }).xp).toBe(gainXp(hero('s', 'mage'), 100).xp)
   })
 })
