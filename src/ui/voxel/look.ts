@@ -1,9 +1,26 @@
 import type { ClassId, Gender, Genes, Gear, Hero } from '../../core'
 import { STYLES, genesFor, hashString, mixHex, seeded } from '../../core'
 import type { HairStyle } from '../../core'
+import type { ArmorType, WeaponType } from '../../core/types'
 
 // Highest worn gear grade that gets a glow: heroic purple, legendary gold.
 export type GearAura = 'epic' | 'legend' | null
+
+const WEAPON_TYPES: readonly WeaponType[] = [
+  'sword',
+  'axe',
+  'shieldsword',
+  'dagger',
+  'bow',
+  'crossbow',
+  'staff',
+  'tome',
+  'scepter',
+  'lute',
+  'drum',
+  'fan',
+]
+const ARMOR_TYPES: readonly ArmorType[] = ['plate', 'leather', 'robe']
 
 export function gearAuraOf(gear: Pick<Gear, 'grade'>[] | undefined | null): GearAura {
   let best: GearAura = null
@@ -16,6 +33,36 @@ export function gearAuraOf(gear: Pick<Gear, 'grade'>[] | undefined | null): Gear
     }
   }
   return best
+}
+
+// Worn weapon/armour kinds for voxel models (Docs/identity.md 5b). Missing type
+// keeps the class default look, same path gearAuraOf already walks.
+export type GearStyle = {
+  aura: GearAura
+  weapon?: WeaponType
+  armor?: ArmorType
+}
+
+export function gearStyleOf(gear: Pick<Gear, 'grade' | 'slot' | 'type'>[] | undefined | null): GearStyle {
+  let weapon: WeaponType | undefined
+  let armor: ArmorType | undefined
+  for (const item of gear ?? []) {
+    if (item.slot === 'weapon' && item.type && (WEAPON_TYPES as readonly string[]).includes(item.type)) {
+      weapon = item.type as WeaponType
+    }
+    if (item.slot === 'armor' && item.type && (ARMOR_TYPES as readonly string[]).includes(item.type)) {
+      armor = item.type as ArmorType
+    }
+  }
+  return {
+    aura: gearAuraOf(gear),
+    ...(weapon ? { weapon } : {}),
+    ...(armor ? { armor } : {}),
+  }
+}
+
+export function gearStyleKey(style: GearStyle): string {
+  return `${style.aura ?? ''}|${style.weapon ?? ''}|${style.armor ?? ''}`
 }
 
 // Appearance is drawn from the hero's genes (src/core/genes.ts). Heroes born

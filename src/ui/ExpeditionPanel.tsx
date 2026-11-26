@@ -68,7 +68,7 @@ export function ExpeditionPanel({ save }: { save: GameState }) {
         </button>
       </header>
       <Stages trip={trip} now={now} />
-      {collapsed ? null : <LiveFight key={trip.id} trip={trip} phase={phase} />}
+      {collapsed ? null : <LiveFight key={trip.id} trip={trip} phase={phase} save={save} />}
     </section>
   )
 }
@@ -97,11 +97,21 @@ function Stages({ trip, now }: { trip: Expedition; now: number }) {
   )
 }
 
-function LiveFight({ trip, phase }: { trip: Expedition; phase: Phase }) {
+function LiveFight({ trip, phase, save }: { trip: Expedition; phase: Phase; save: GameState }) {
   const { t } = useTranslation()
   const canvasRef = useRef<HTMLCanvasElement>(null)
   const sceneRef = useRef<BattleScene | null>(null)
   const steps = useMemo(() => buildSteps(trip.report), [trip.report])
+  const gearByHero = useMemo(() => {
+    const map: Record<string, GameState['roster'][number]['gear']> = {}
+    for (const member of trip.report.party ?? []) {
+      const hero = save.roster.find((entry) => entry.id === member.id)
+      if (hero) {
+        map[hero.id] = hero.gear
+      }
+    }
+    return map
+  }, [save.roster, trip.report.party])
   const [logIndex, setLogIndex] = useState(-1)
   const [resync, setResync] = useState(0)
 
@@ -146,6 +156,7 @@ function LiveFight({ trip, phase }: { trip: Expedition; phase: Phase }) {
         : fromReport
           ? { start: fromReport.start, left: fromReport.left, max: fromReport.max }
           : undefined,
+      gearByHero,
     })
     sceneRef.current = scene
     // Play the whole replay in exactly the time the fight takes on the clock.
@@ -156,7 +167,7 @@ function LiveFight({ trip, phase }: { trip: Expedition; phase: Phase }) {
       scene.dispose()
       sceneRef.current = null
     }
-  }, [trip, steps, resync])
+  }, [trip, steps, resync, gearByHero])
 
   // Keep the replay paused while travelling out, and in step with the clock.
   const clockNow = useNow(true)

@@ -1,13 +1,21 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { useTranslation } from 'react-i18next'
-import { dungeonById, type DungeonReport } from '../core'
+import { dungeonById, type DungeonReport, type Gear } from '../core'
 import { play } from './sound'
 import { BattleScene, raidPoolFromReport } from './voxel/BattleScene'
 import { buildSteps } from './voxel/replay'
 
 const SPEEDS = [1, 2, 4] as const
 
-export function BattleView({ report, describe }: { report: DungeonReport; describe: (index: number) => string }) {
+export function BattleView({
+  report,
+  describe,
+  gearByHero,
+}: {
+  report: DungeonReport
+  describe: (index: number) => string
+  gearByHero?: Record<string, Pick<Gear, 'grade' | 'slot' | 'type'>[]>
+}) {
   const { t } = useTranslation()
   const canvasRef = useRef<HTMLCanvasElement>(null)
   const sceneRef = useRef<BattleScene | null>(null)
@@ -41,6 +49,7 @@ export function BattleView({ report, describe }: { report: DungeonReport; descri
       difficulty: dungeon?.difficulty,
       raidBossId: raid?.bossId,
       raid: raid ? { start: raid.start, left: raid.left, max: raid.max } : undefined,
+      gearByHero,
     })
     sceneRef.current = scene
     setDone(false)
@@ -49,7 +58,7 @@ export function BattleView({ report, describe }: { report: DungeonReport; descri
       scene.dispose()
       sceneRef.current = null
     }
-  }, [report, steps])
+  }, [report, steps, gearByHero])
 
   useEffect(() => {
     sceneRef.current?.setSpeed(speed)

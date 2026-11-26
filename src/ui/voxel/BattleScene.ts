@@ -1,9 +1,9 @@
 import * as THREE from 'three'
-import { monsterById, type AffixId, type DungeonReport, type ReplayUnit } from '../../core'
+import { monsterById, type AffixId, type DungeonReport, type Gear, type ReplayUnit } from '../../core'
 import { buildCharacter, walkPose } from './character'
 import { buildEnemy, idleActor, type Actor } from './enemies'
 import { Builder, disposeTree } from './kit'
-import { lookFor, seeded } from './look'
+import { gearStyleOf, lookFor, seeded } from './look'
 import type { Hit, ReplayStep, StatusMark } from './replay'
 
 export type RaidBossId = 'wyrm' | 'lich' | 'titan'
@@ -19,6 +19,8 @@ export type BattleBackdrop = {
   // Weekly raid boss and its health pool for the big bar on floor 2 (Docs/endgame.md 4c).
   raidBossId?: RaidBossId
   raid?: { start: number | null; left?: number; max?: number }
+  // Worn gear by hero id so weapon/armour types show in the replay (5b).
+  gearByHero?: Record<string, Pick<Gear, 'grade' | 'slot' | 'type'>[]>
 }
 
 type BattleTheme = {
@@ -270,6 +272,7 @@ export class BattleScene {
   private wingShadow: THREE.Mesh | null = null
   private raidBar: { root: THREE.Group; fill: THREE.Mesh; max: number } | null = null
   private raidBossId: string | null = null
+  private readonly gearByHero: Record<string, Pick<Gear, 'grade' | 'slot' | 'type'>[]>
 
   constructor(
     private readonly canvas: HTMLCanvasElement,
@@ -285,6 +288,7 @@ export class BattleScene {
     this.renderer.shadowMap.type = THREE.PCFSoftShadowMap
     this.nest = report.dungeonId === 'dragon_nest'
     this.abyssFrom = backdrop.abyssFrom ?? 0
+    this.gearByHero = backdrop.gearByHero ?? {}
     this.raidSpecial = backdrop.special === 'raid'
     const fromReport = this.raidSpecial ? raidPoolFromReport(report) : null
     const bossId = backdrop.raidBossId ?? fromReport?.bossId
@@ -1339,7 +1343,8 @@ export class BattleScene {
     let caster = false
     if (unit.side === 'hero') {
       const hero = this.report.party?.find((entry) => entry.id === unit.id)
-      actor = buildCharacter(lookFor(hero ?? { id: unit.id, classId: 'warrior', gender: 'male', age: 25 }))
+      const face = hero ?? { id: unit.id, classId: 'warrior' as const, gender: 'male' as const, age: 25 }
+      actor = buildCharacter(lookFor(face), gearStyleOf(this.gearByHero[unit.id] ?? []))
       caster = CASTERS.has(hero?.classId ?? '')
     } else {
       actor = buildEnemy(unit.refId)

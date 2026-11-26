@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { ageLook, gearAuraOf, hairColor, lookFor, lookKey, mixHex } from './look'
+import { ageLook, gearAuraOf, gearStyleKey, gearStyleOf, hairColor, lookFor, lookKey, mixHex } from './look'
 
 const hero = { id: '4-0', classId: 'warrior' as const, gender: 'male' as const, age: 24 }
 
@@ -45,6 +45,23 @@ describe('gear aura', () => {
     expect(gearAuraOf([{ grade: 'rare' }])).toBeNull()
     expect(gearAuraOf([{ grade: 'epic' }, { grade: 'fine' }])).toBe('epic')
     expect(gearAuraOf([{ grade: 'epic' }, { grade: 'legend' }])).toBe('legend')
+  })
+})
+
+describe('gear style', () => {
+  it('reads worn weapon and armour types', () => {
+    expect(gearStyleOf([])).toEqual({ aura: null })
+    expect(
+      gearStyleOf([
+        { grade: 'fine', slot: 'weapon', type: 'axe' },
+        { grade: 'epic', slot: 'armor', type: 'plate' },
+      ]),
+    ).toEqual({ aura: 'epic', weapon: 'axe', armor: 'plate' })
+    expect(gearStyleKey({ aura: 'epic', weapon: 'axe', armor: 'plate' })).toBe('epic|axe|plate')
+  })
+
+  it('ignores unknown types so class defaults stay', () => {
+    expect(gearStyleOf([{ grade: 'common', slot: 'weapon' }])).toEqual({ aura: null })
   })
 })
 

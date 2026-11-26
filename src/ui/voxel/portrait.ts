@@ -3,7 +3,7 @@ import type { Gear, Hero } from '../../core'
 import { buildCharacter, idlePose, type Rig } from './character'
 import { buildEnemy } from './enemies'
 import { Builder, disposeTree } from './kit'
-import { gearAuraOf, lookFor, lookKey } from './look'
+import { gearStyleKey, gearStyleOf, lookFor, lookKey } from './look'
 
 // Hero cards and monster chips share one offscreen renderer. Each picture is
 // taken once and cached, so a list costs no extra WebGL contexts.
@@ -14,8 +14,8 @@ let stage: { renderer: THREE.WebGLRenderer; scene: THREE.Scene; camera: THREE.Or
 
 export function portraitUrl(hero: Pick<Hero, 'id' | 'classId' | 'gender' | 'age'> & { gear?: Gear[] }): string {
   const look = lookFor(hero)
-  const aura = gearAuraOf(hero.gear)
-  const key = `${hero.id}|${lookKey(look)}|${aura ?? ''}`
+  const style = gearStyleOf(hero.gear)
+  const key = `${hero.id}|${lookKey(look)}|${gearStyleKey(style)}`
   const cached = cache.get(key)
   if (cached) {
     return cached
@@ -23,7 +23,7 @@ export function portraitUrl(hero: Pick<Hero, 'id' | 'classId' | 'gender' | 'age'
   const { renderer, scene, camera } = getStage()
   renderer.setClearColor(0x000000, 0)
   renderer.setSize(SIZE, SIZE, false)
-  const rig = buildCharacter(look, aura)
+  const rig = buildCharacter(look, style)
   idlePose(rig, 0, 0)
   rig.group.rotation.y = -0.45
   scene.add(rig.group)
