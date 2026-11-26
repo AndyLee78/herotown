@@ -165,6 +165,8 @@ Claude Code, Cursor, GPT(Codex)가 함께 쓰는 작업 목록이다. 작업 하
 | 123 | 5c 측정: 드롭 속도·고유 장비·세트 세기 | GPT | `tools/*`, `Docs/identity.md`의 측정 절 | 완료 (44f32fa) |
 | 124 | 5d 밸런스 측정 | GPT | `tools/*`, `Docs/identity.md`의 측정 절 | 완료 (92f6b1a) |
 | 125 | 5d 수치 조정 | GPT | `src/data/*.json`, `src/core/*.test.ts`, `Docs/identity.md` | 완료 (066e4e3) |
+| 126 | 직업 사이 차이 줄이기 | GPT | `src/data/classes.json`, `src/data/*.json`, `src/core/*.test.ts`, `tools/*`, `Docs/identity.md` | 대기 |
+| 127 | 정예 처치 드롭 보너스 | GPT | `src/core/dungeon.ts`, `src/core/loot.ts`, `src/core/game.ts`, `src/core/types.ts`, `src/data/loot.json`, `src/core/loot.test.ts`, `Docs/identity.md` | 대기 (126과 함께 가능: 파일이 겹치지 않는다) |
 
 ---
 
@@ -3094,3 +3096,48 @@ Docs/identity.md 5d를 측정한다. core와 src/data는 고치지 않는다. �
 
 성직자 갈래 격차는 1.876레벨, 같은 Lv10 시작 저장에서 XP 옵션의 30일 이득은 평균 +3.20레벨로 줄었다. 정예 드롭은 코드 필요로 기록했다.
 타입 검사·테스트 455개·빌드 통과. 5175 사용 중으로 격리한 5176 Chrome에서 대장간과 동굴 원정 승리를 확인했다.
+
+---
+
+## 126. 직업 사이 차이 줄이기 (GPT)
+
+**지금 시작할 수 있다.** 배경: `Docs/identity.md`의 "5d 측정"과 "5d 조정". 직업 교체 차이가 2.786레벨(도적 10.714, 성직자 13.500)로 목표 2레벨을 넘는다.
+
+**전달할 내용**
+
+```
+직업 사이의 차이를 2레벨 이하로 줄인다. 데이터 숫자만 바꾼다(src/data/*.json). src/core/*.ts의 코드는 고치지 않는다. 세이브 형식은 바꾸지 않는다.
+
+1. 5d 측정의 직업 교체 측정을 다시 돌려 지금 값을 확인한다(명령·시드·표본을 적는다).
+2. 가장 느린 직업(성직자 등)을 조금 올리고, 필요하면 가장 빠른 직업(도적 등)을 조금 내린다. 한 번에 한두 값만 바꾸고 다시 잰다. 후보 예: classes.json의 기본 수치(hpBase, attackScale, healScale 등)나 갈래 스킬 효과값.
+3. 다른 목표를 깨지 않는지 함께 본다: 같은 직업 안 갈래 조합 차이 2레벨 이하, 권장 레벨 하위 25% 승률 75–85%, 밸런스 가드 테스트(src/core/prototype.test.ts 등)는 기준을 낮추지 않고 통과.
+4. 2레벨 이하로 못 맞추면 가장 가까운 값에서 멈추고 이유를 적는다.
+5. Docs/identity.md 끝에 "직업 차이 조정 (날짜)" 절: 바꾼 파일·키·이전 값·새 값·다시 잰 결과.
+
+확인: tsc·test·build 통과. 테스트는 바뀐 숫자에 맞춰 기대값만 고친다. 사용자의 localhost:5174 세이브는 건드리지 않는다. 확인한 내용을 메모에.
+```
+
+**메모**
+
+---
+
+## 127. 정예 처치 드롭 보너스 (GPT)
+
+**지금 시작할 수 있다. 126과 함께 돌려도 된다(파일이 겹치지 않는다. 같은 폴더에서 동시에 돌리려면 git worktree로 나눈다).** 배경: `Docs/identity.md` 5a "정예 몬스터"(5c에서 정예는 장비를 조금 더 잘 떨어뜨린다), 5c 리뷰에서 미룬 항목. 5d 측정 7번에 알맞은 배율 제안이 있으면 그 값을 쓴다.
+
+**전달할 내용**
+
+```
+정예 몬스터를 쓰러뜨린 원정이 장비를 조금 더 잘 떨어뜨리게 한다. 고칠 파일: src/core/dungeon.ts, src/core/loot.ts, src/core/game.ts, src/core/types.ts, src/data/loot.json, src/core/loot.test.ts, Docs/identity.md. UI·3D 파일은 고치지 않는다.
+
+1. 원정 보고서(DungeonReport)에 쓰러뜨린 정예 수를 남긴다(예: elites?: number, 0이면 생략). 정예는 combat의 BattleUnit.elite로 알 수 있다.
+2. src/data/loot.json에 정예 하나당 드롭 확률 배율(예: eliteDropBonus)과 상한을 더한다. 일반 장비 드롭에만 붙이고, 첫 클리어 확정·고유 장비 확률·자동 출정 배율 규칙은 지금처럼 둔다(값은 5d 측정 7번 제안을 따르고, 없으면 정예 하나당 +20%, 상한 +60%).
+3. grantVictoryRewards → dungeonLoot에 정예 수를 넘겨 반복 승리 확률에 곱한다.
+4. 예전 보고서(elites 없음)는 0으로 읽는다. 세이브 버전은 올리지 않는다(선택 필드).
+5. 테스트: 정예 수에 따라 확률이 오르고 상한에서 멈추는지, 정예가 없으면 지금과 같은지, 같은 시드는 같은 결과인지. 기존 테스트는 그대로 통과해야 한다.
+6. Docs/identity.md 5c "던전 드롭"에 규칙 한 줄, 5c 리뷰 반영 절의 "정예 드롭 보너스는 넣지 않는다"를 고친다.
+
+확인: tsc·test·build 통과. 사용자의 localhost:5174 세이브는 건드리지 않는다. 확인한 내용을 메모에.
+```
+
+**메모**
