@@ -55,6 +55,7 @@ export function runDungeon(party: PartyMember[], dungeonId: string, tactics: Tac
   const floors: NonNullable<DungeonReport['floors']> = []
   let ticks = 0
   let floorsCleared = 0
+  let elites = 0
   let outcome: 'victory' | 'wipe' | 'retreat' | 'timeout' = 'victory'
   const hasTraps = dungeon.floors.some((entry) => (entry.trapChance ?? 0) > 0)
   const traps = { sprung: 0, disarmed: 0 }
@@ -64,7 +65,18 @@ export function runDungeon(party: PartyMember[], dungeonId: string, tactics: Tac
     if (!floorDef) {
       break
     }
+    const logStart = log.length
     const result = simulateFloor(heroes, floorDef.monsters, tactics, rng, log, floor + 1, floors, floorDef.scale ?? dungeon.monsterScale ?? 1, carried ? kit : undefined, floorDef.trapChance ?? 0, affixes, variant.raid, elite)
+    if (elite > 0) {
+      // Enemy IDs may recur on later floors. Count defeats in this floor's log only.
+      const remainingElites = new Set(floors[floor]?.filter((unit) => unit.side === 'enemy' && unit.elite).map(({ id }) => id))
+      for (let index = logStart; remainingElites.size && index < log.length; index += 1) {
+        const { key, params } = log[index]!
+        if (key === 'log.down' && typeof params.actorId === 'string' && remainingElites.delete(params.actorId)) {
+          elites += 1
+        }
+      }
+    }
     ticks += result.ticks
     if (result.trap !== 'none') {
       traps[result.trap] += 1
@@ -117,6 +129,7 @@ export function runDungeon(party: PartyMember[], dungeonId: string, tactics: Tac
       : defeatReason(outcome, dungeon.tier, hadTank, hadHealer, averageLevel(party), dungeon.recommendedLevel, statusToll(heroes)),
     ticks,
     floorsCleared,
+    ...(elites ? { elites } : {}),
     gold,
     xp,
     ...(carried ? { potionsUsed: kit.used } : {}),

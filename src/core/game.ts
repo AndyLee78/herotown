@@ -1498,7 +1498,7 @@ function grantVictoryRewards(state: GameState, report: DungeonReport, dungeonId:
     roster = cheer(roster, party, moraleRules.joy.firstClear)
   }
   // Gear drops: a sure piece on a first clear, then a chance (Docs/identity.md 5c).
-  const looted = dungeonLoot({ ...state, roster, materials, fame, cleared }, dungeonId, first, scale != null, report.luck ?? 0, tag)
+  const looted = dungeonLoot({ ...state, roster, materials, fame, cleared }, dungeonId, first, scale != null, report.luck ?? 0, tag, report.elites ?? 0)
   // The old one-off cave quest gave way to the contract board (Docs/guild.md).
   return progressClear(looted, dungeonId)
 }

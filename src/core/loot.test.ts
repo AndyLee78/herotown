@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest'
 import { createHeroUnit } from './combat'
 import { classById, lootRules } from './data'
+import { DEFAULT_TACTICS, runDungeon } from './dungeon'
 import { freshState, migrate, reduce, type GameState } from './game'
 import { gearEffect, gearMods, normalizeGear, recipeById } from './gear'
 import { createHero } from './hero'
@@ -70,6 +71,69 @@ describe('dungeon drops', () => {
     expect(hand / 4000).toBeLessThan(0.12)
     // 5c measurement: auto runs flooded the stash at half the rate.
     expect(auto / 4000).toBeLessThan(lootRules.dropChance * lootRules.autoDropScale * 2)
+  })
+
+  it('adds a capped, deterministic bonus only to regular drops on manual repeats', () => {
+    let added = 0
+    for (let nonce = 0; nonce < 600; nonce += 1) {
+      const state = village({ craftNonce: nonce })
+      const roll = createRng(state.seed + (nonce + 1) * 100003 + 29).next()
+      const manual = (elites?: number) => dungeonLoot(state, 'bandit_fort', false, false, 0, undefined, elites)
+      const plain = manual()
+      const elite = manual(1)
+      const regular = ({ stash }: GameState) => stash.filter((item) => !item.unique)
+      expect(manual(0)).toEqual(plain)
+      expect(manual(1)).toEqual(elite)
+      expect(manual(20)).toEqual(elite)
+      expect(regular(plain)).toHaveLength(Number(roll < 0.1))
+      expect(regular(elite)).toHaveLength(Number(roll < 0.12))
+      expect(elite.stash.filter((item) => item.unique)).toEqual(plain.stash.filter((item) => item.unique))
+      expect(dungeonLoot(state, 'bandit_fort', true, false, 0, undefined, 1)).toEqual(dungeonLoot(state, 'bandit_fort', true, false, 0))
+      expect(dungeonLoot(state, 'bandit_fort', false, true, 0, undefined, 1)).toEqual(dungeonLoot(state, 'bandit_fort', false, true, 0))
+      added += regular(elite).length - regular(plain).length
+    }
+    expect(added).toBeGreaterThan(0)
+  })
+
+  it('counts defeated elites and pays the bonus when a repeat expedition returns', () => {
+    const roster = [hero('tank', 'warrior'), hero('blade', 'rogue'), hero('bow', 'archer'), hero('magic', 'mage'), hero('heal', 'cleric')]
+    const start = village({ dungeonId: 'venom_marsh', cleared: ['barrow', 'sunken_crypt', 'venom_marsh'], roster })
+    const slots = roster.map(({ id }, index) => ({ id, row: index < 2 ? 'front' as const : 'back' as const }))
+    const ready = { ...start, presets: start.presets.map((preset, i) => i === 0 ? { ...preset, slots } : preset) }
+    let checked = false
+    for (let nonce = 0; nonce < 600; nonce += 1) {
+      const seed = ready.seed + (nonce + 1) * 100003 + 29
+      const roll = createRng(seed).next()
+      if (roll < 0.1 || roll >= 0.12) continue
+      const sent = reduce({ ...ready, craftNonce: nonce, expeditionNonce: nonce }, { type: 'depart' })
+      const trip = sent.expeditions[0]
+      expect(trip?.report.victory).toBe(true)
+      const elites = trip!.report.floors!.flat().filter(({ elite }) => elite).length
+      expect(trip!.report.elites).toBe(elites || undefined)
+      if (!elites) continue
+      const returned = reduce(sent, { type: 'catchUp', now: trip!.returnAt })
+      const oldReport = { ...trip!.report, elites: undefined }
+      const legacy = reduce({ ...sent, expeditions: [{ ...trip!, report: oldReport }] }, { type: 'catchUp', now: trip!.returnAt })
+      expect(returned.history[0]?.elites).toBe(elites)
+      expect(returned.stash).toHaveLength(1)
+      expect(legacy.stash).toHaveLength(0)
+      checked = true
+      break
+    }
+    expect(checked).toBe(true)
+  })
+
+  it('does not count an elite that is still alive after a defeat', () => {
+    const party = [{ hero: hero('bow', 'archer'), row: 'back' as const }]
+    const variant = { floors: [{ monsters: ['venom_toad'], scale: 1000 }] }
+    for (let seed = 1; seed <= 100; seed += 1) {
+      const result = runDungeon(party, 'venom_marsh', DEFAULT_TACTICS, seed, {}, variant)
+      if (!result.ok || !result.report.floors?.[0]?.some(({ elite }) => elite)) continue
+      expect(result.report.victory).toBe(false)
+      expect(result.report.elites).toBeUndefined()
+      return
+    }
+    throw new Error('No elite appeared in the seeded sample')
   })
 
   it('never finds uniques on auto runs', () => {

@@ -1,5 +1,7 @@
 {
   "dropChance": 0.1,
+  "eliteDropBonus": 0.2,
+  "eliteDropBonusCap": 0.2,
   "autoDropScale": 0.05,
   "autoUniqueScale": 0,
   "untypedChance": 0.3,

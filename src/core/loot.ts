@@ -71,7 +71,7 @@ type LootState = { seed: number; craftNonce: number; stash: Gear[]; loot?: LootE
 // What a won regular dungeon leaves: a sure piece on the first clear, then a
 // chance; and a small chance at the boss's unique. Auto runs find far less
 // and no uniques (5c measurement).
-export function dungeonLoot<S extends LootState>(state: S, dungeonId: string, first: boolean, auto: boolean, luck: number, tag: LootTag = { at: state.lastTickAt }): S {
+export function dungeonLoot<S extends LootState>(state: S, dungeonId: string, first: boolean, auto: boolean, luck: number, tag: LootTag = { at: state.lastTickAt }, elites = 0): S {
   const dungeon = dungeonById(dungeonId)
   if (dungeon.special) {
     return state
@@ -81,8 +81,11 @@ export function dungeonLoot<S extends LootState>(state: S, dungeonId: string, fi
   const scale = (auto ? lootRules.autoDropScale : 1) * (1 + luck)
   const uniqueScale = (auto ? lootRules.autoUniqueScale : 1) * (1 + luck)
   const found: Gear[] = []
-  if (first || rng.next() < lootRules.dropChance * scale) {
-    const piece = rollDrop(dungeon.tier, `${state.seed}-d${craftNonce}`, rng)
+  const regularChance = lootRules.dropChance * scale
+  const dropRoll = first ? 0 : rng.next()
+  const rollRegular = () => rollDrop(dungeon.tier, `${state.seed}-d${craftNonce}`, rng)
+  if (first || dropRoll < regularChance) {
+    const piece = rollRegular()
     if (piece) {
       found.push(piece)
     }
@@ -90,6 +93,12 @@ export function dungeonLoot<S extends LootState>(state: S, dungeonId: string, fi
   const unique = lootRules.uniques.find((entry) => 'dungeon' in entry && entry.dungeon === dungeonId)
   if (unique && rng.next() < lootRules.uniqueChance * uniqueScale) {
     found.push(uniqueGear(unique, `${state.seed}-u${craftNonce}`))
+  }
+  // Roll bonus-only gear after the unique check to preserve the unique's seeded outcome.
+  const bonus = Math.min(lootRules.eliteDropBonusCap, Math.max(0, elites) * lootRules.eliteDropBonus)
+  if (!first && !auto && dropRoll >= regularChance && dropRoll < regularChance * (1 + bonus)) {
+    const piece = rollRegular()
+    if (piece) found.unshift(piece)
   }
   if (found.length === 0) {
     return { ...state, craftNonce }

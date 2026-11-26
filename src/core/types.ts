@@ -395,6 +395,8 @@ export type DungeonReport = {
   defeatReason: DefeatReason | null
   ticks: number
   floorsCleared: number
+  // Elite enemies defeated, including on an uncleared floor.
+  elites?: number
   gold: number
   xp: number
   units: UnitReport[]
