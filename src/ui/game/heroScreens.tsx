@@ -1,7 +1,6 @@
 import { ChevronLeft, Clock, Hourglass, Sparkles, Swords } from 'lucide-react'
 import { useMemo, useState } from 'react'
 import { useTranslation } from 'react-i18next'
-import type { TFunction } from 'i18next'
 import {
   STAT_KEYS,
   adRules,
@@ -11,7 +10,6 @@ import {
   adsRemaining,
   ancestorsOf,
   canDeploy,
-  classById,
   deployAge,
   isChild,
   familyLegends,
@@ -25,18 +23,15 @@ import {
   knowledge,
   legendBonus,
   lifeRules,
-  maxExtraSkills,
   moraleRules,
   potentialBand,
   personalityOf,
   peakStats,
   progression,
   residents,
-  starterSkill,
   statRange,
   scoutingRules,
   topBonds,
-  trainingRules,
   visitorCap,
   visitorStay,
   type GameAction,
@@ -47,11 +42,11 @@ import {
   magicRules,
   retirementAdvised,
   retirementRules,
-  type SkillEffect,
   trinketOf,
   villageRules,
   type BuildingId,
 } from '../../core'
+import { GiftBadge, SkillTree } from './identity'
 import { gameNow } from '../clock'
 import { josa } from '../josa'
 import { portraitUrl } from '../voxel/portrait'
@@ -84,6 +79,7 @@ function HeroChips({ hero, scouting = false, drilling = false }: { hero: Hero; s
   const { t } = useTranslation()
   return (
     <span className="chips">
+      <GiftBadge hero={hero} compact />
       <Chip tone="info">{t(`class.${hero.classId}`)}</Chip>
       <Chip>{t('ui.level', { level: hero.level })}</Chip>
       <Chip>{t('hero.age', { age: hero.age })}</Chip>
@@ -94,49 +90,6 @@ function HeroChips({ hero, scouting = false, drilling = false }: { hero: Hero; s
       {retirementAdvised(hero) ? <Chip tone="warn">{t('retire.advised')}</Chip> : null}
     </span>
   )
-}
-
-function describeSkillEffect(effect: SkillEffect | undefined, t: TFunction): string {
-  if (!effect) {
-    return ''
-  }
-  if (effect.threat != null) {
-    return t('skill.effect.threat', { value: effect.threat })
-  }
-  if (effect.guard != null) {
-    return t('skill.effect.guard', { percent: Math.round(effect.guard * 100) })
-  }
-  if (effect.attack != null) {
-    return t('skill.effect.attack', { percent: Math.round(effect.attack * 100) })
-  }
-  if (effect.speed != null) {
-    return t('skill.effect.speed', { percent: Math.round(effect.speed * 100) })
-  }
-  if (effect.heal != null) {
-    return t('skill.effect.heal', { percent: Math.round(effect.heal * 100) })
-  }
-  if (effect.bleed != null) {
-    return t('skill.effect.bleed', { value: effect.bleed })
-  }
-  if (effect.weaken != null) {
-    return t('skill.effect.weaken', { percent: Math.round(effect.weaken * 100) })
-  }
-  if (effect.regen != null) {
-    return t('skill.effect.regen', { percent: Math.round(effect.regen * 100) })
-  }
-  if (effect.partyGuard != null) {
-    return t('skill.effect.partyGuard', { percent: Math.round(effect.partyGuard * 100) })
-  }
-  if (effect.partyAttack != null) {
-    return t('skill.effect.partyAttack', { percent: Math.round(effect.partyAttack * 100) })
-  }
-  if (effect.volleyEvery != null) {
-    return t('skill.effect.volley', { every: effect.volleyEvery })
-  }
-  if (effect.cleanse) {
-    return t('skill.effect.cleanse')
-  }
-  return t('skill.innate')
 }
 
 export function Inn({ save, onAction }: { save: GameState; onAction: Act }) {
@@ -169,6 +122,7 @@ export function Inn({ save, onAction }: { save: GameState; onAction: Act }) {
                 <Portrait hero={hero} large />
                 <div>
                   <strong className="name">{hero.name}</strong>
+                  <GiftBadge hero={hero} />
                   <span className="chips">
                     <Chip tone="info">{t(`class.${hero.classId}`)}</Chip>
                     <Chip>{t(`gender.${hero.gender}`)}</Chip>
@@ -332,7 +286,6 @@ function HeroDetail({
   const [confirmRetire, setConfirmRetire] = useState(false)
   const waiting = hero.treatAt != null || hero.resurrectAt != null || hero.recoverAt != null || hero.expecting != null
   const now = useNow(waiting)
-  const skills = classById(hero.classId).skills
   const careAt = hero.resurrectAt ?? hero.treatAt
   const recovery = recoveryText(t, hero, now)
   const personality = personalityOf(hero)
@@ -365,6 +318,7 @@ function HeroDetail({
           </span>
         </div>
       </div>
+      <GiftBadge hero={hero} />
       <div className="personality-detail">
         <span>{t(`personality.descriptions.${personality}`)}</span>
         {strongEmotions ? <span className="muted">{t('personality.strong', { emotions: strongEmotions })}</span> : null}
@@ -397,46 +351,7 @@ function HeroDetail({
         ))}
       </dl>
 
-      <h3 className="section-title">
-        {t('label.skills')} <Chip>{t('hero.points', { count: hero.skillPoints })}</Chip>
-      </h3>
-      <p className="muted">
-        {t('skill.pickHint', { a: trainingRules.pickLevels[0], b: trainingRules.pickLevels[1] })}
-      </p>
-      <ul className="plain skill-list">
-        {skills.map((skill, index) => {
-          const innate = index === 0 || skill.id === starterSkill(hero.classId)
-          const learned = hero.learned.includes(skill.id)
-          const extras = hero.learned.filter((id) => id !== starterSkill(hero.classId)).length
-          const full = extras >= maxExtraSkills()
-          const canLearn = !innate && !learned && hero.skillPoints > 0 && !full && inRoster
-          const locked = !innate && !learned && full
-          const canForget = !innate && learned && save.buildings.training >= 1 && inRoster
-          return (
-            <li key={skill.id} className={locked ? 'skill-row locked' : 'skill-row'}>
-              <div className="skill-row-body">
-                <strong>{t(`skill.${skill.id}`)}</strong>
-                <span className="muted">{describeSkillEffect(skill.effect, t)}</span>
-              </div>
-              <span className="skill-row-actions">
-                {innate ? <Chip tone="info">{t('skill.innate')}</Chip> : null}
-                {learned && !innate ? <Chip tone="good">{t('hero.learned')}</Chip> : null}
-                {locked ? <Chip>{t('skill.locked')}</Chip> : null}
-                {canLearn ? (
-                  <button type="button" className="btn small" onClick={() => onAction({ type: 'learn', id: hero.id, skillId: skill.id })}>
-                    {t('action.learn')}
-                  </button>
-                ) : null}
-                {canForget ? (
-                  <button type="button" className="btn small" disabled={save.gold < trainingRules.forgetGold} onClick={() => onAction({ type: 'forget', heroId: hero.id, skillId: skill.id })}>
-                    {t('action.forget')} <Res kind="gold" amount={trainingRules.forgetGold} light />
-                  </button>
-                ) : null}
-              </span>
-            </li>
-          )
-        })}
-      </ul>
+      <SkillTree hero={hero} save={save} editable={inRoster} onAction={onAction} />
 
       <h3 className="section-title">{t('ui.gear')}</h3>
       {save.retirees.some(({ hero: retiree }) => retiree.id === hero.id) ? <Inheritance save={save} hero={hero} onAction={onAction} /> : null}

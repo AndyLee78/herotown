@@ -866,6 +866,308 @@
     "scouting": "정찰 중",
     "drilling": "훈련 중"
   },
+  "identity": {
+    "picks": "{{levels}}에 하나씩, {{total}}개 중 {{picks}}개를 선택합니다.",
+    "affinity": "잘 맞음 +{{percent}}%",
+    "active": "숙련 활성",
+    "completeBranch": "세 스킬을 모두 배우면 활성",
+    "requires": "잠김 · {{skill}} 필요",
+    "withClass": "{{name}}와 동행",
+    "bonded": "친한 동료와 동행",
+    "moraleAbove": "사기 {{value}} 이상",
+    "moraleBelow": "사기 {{value}} 이하",
+    "condition": "조건: {{condition}} · {{effect}}",
+    "elite": "정예 {{name}}",
+    "absorbed": "보호막이 피해 {{amount}}를 막았습니다.",
+    "branch": {
+      "warrior": {
+        "bulwark": "수호",
+        "provoke": "도발",
+        "berserk": "광전"
+      },
+      "rogue": {
+        "venom": "독",
+        "shadow": "그림자",
+        "assassin": "암살"
+      },
+      "archer": {
+        "sniper": "저격",
+        "rapid": "연사",
+        "hunter": "사냥"
+      },
+      "mage": {
+        "fire": "화염",
+        "frost": "서리",
+        "arcane": "비전"
+      },
+      "cleric": {
+        "mercy": "치유",
+        "sanctuary": "수호",
+        "judgment": "심판"
+      },
+      "bard": {
+        "valor": "용기",
+        "calm": "평온",
+        "discord": "불협"
+      },
+      "dancer": {
+        "charm": "매혹",
+        "blade": "칼날",
+        "wind": "바람"
+      }
+    },
+    "mastery": {
+      "warrior": {
+        "bulwark": "수호 숙련",
+        "provoke": "도발 숙련",
+        "berserk": "광전 숙련"
+      },
+      "rogue": {
+        "venom": "독 숙련",
+        "shadow": "그림자 숙련",
+        "assassin": "암살 숙련"
+      },
+      "archer": {
+        "sniper": "저격 숙련",
+        "rapid": "연사 숙련",
+        "hunter": "사냥 숙련"
+      },
+      "mage": {
+        "fire": "화염 숙련",
+        "frost": "서리 숙련",
+        "arcane": "비전 숙련"
+      },
+      "cleric": {
+        "mercy": "치유 숙련",
+        "sanctuary": "수호 숙련",
+        "judgment": "심판 숙련"
+      },
+      "bard": {
+        "valor": "용기 숙련",
+        "calm": "평온 숙련",
+        "discord": "불협 숙련"
+      },
+      "dancer": {
+        "charm": "매혹 숙련",
+        "blade": "칼날 숙련",
+        "wind": "바람 숙련"
+      }
+    },
+    "skill": {
+      "warrior": {
+        "wall": "철벽",
+        "counter": "반격",
+        "cow": "위압",
+        "laststand": "결사",
+        "fury": "분노",
+        "thirst": "피의 갈증"
+      },
+      "rogue": {
+        "toxin": "맹독",
+        "numb": "마비독",
+        "evade": "회피",
+        "ambush": "기습",
+        "vital": "급소",
+        "execute": "처형"
+      },
+      "archer": {
+        "weakspot": "급소 사격",
+        "pierce": "관통",
+        "quick": "속사",
+        "rain": "화살비",
+        "snare": "덫",
+        "beast": "맹수 사냥"
+      },
+      "mage": {
+        "flame": "불꽃",
+        "storm": "화염 폭풍",
+        "frost": "서리",
+        "freeze": "빙결",
+        "flow": "마나 흐름",
+        "amplify": "증폭"
+      },
+      "cleric": {
+        "renew": "재생",
+        "miracle": "기적",
+        "consecrate": "축성",
+        "aegis": "보호의 빛",
+        "wrath": "성스러운 일격",
+        "exorcise": "퇴마"
+      },
+      "bard": {
+        "drum": "전투 북",
+        "saga": "영웅담",
+        "lullaby": "자장가",
+        "solace": "위로",
+        "scream": "비명",
+        "confuse": "혼란"
+      },
+      "dancer": {
+        "charm": "매혹",
+        "tempt": "유혹의 춤",
+        "bladedance": "칼춤",
+        "climax": "절정",
+        "gale": "질풍",
+        "whirl": "회오리"
+      }
+    },
+    "effect": {
+      "threat": "위협 +{{value}}",
+      "attack": "공격 +{{percent}}%",
+      "guard": "받는 피해 −{{percent}}%",
+      "speed": "속도 +{{percent}}%",
+      "heal": "회복 +{{percent}}%",
+      "bleed": "출혈 피해 +{{value}}",
+      "weaken": "약화 확률 {{percent}}%",
+      "regen": "파티 재생 {{percent}}%",
+      "partyGuard": "파티 받는 피해 −{{percent}}%",
+      "partyAttack": "파티 공격 +{{percent}}%",
+      "volleyEvery": "{{value}}번째 행동마다 광역 공격",
+      "cleanse": "회복 시 중독 절반",
+      "hp": "최대 체력 +{{percent}}%",
+      "crit": "치명타 확률 +{{percent}}%",
+      "critDamage": "치명타 피해 +{{percent}}%",
+      "pierce": "방어 {{percent}}% 무시",
+      "lifesteal": "준 피해의 {{percent}}%만큼 회복",
+      "execute": "체력이 낮은 적에게 피해 +{{percent}}%",
+      "bossDamage": "보스 피해 +{{percent}}%",
+      "counter": "반격 확률 {{percent}}%",
+      "dodge": "회피 확률 {{percent}}%",
+      "stun": "기절 확률 {{percent}}%",
+      "slow": "감속 확률 {{percent}}%",
+      "burn": "화상 피해 +{{value}}",
+      "shield": "파티 최대 체력 {{percent}}% 보호막",
+      "firstStrike": "첫 행동 피해 +{{percent}}%",
+      "lastStand": "체력 30% 미만에서 공격·방어 +{{percent}}%",
+      "revive": "층마다 한 번 동료를 체력 {{percent}}%로 부활",
+      "partySpeed": "파티 속도 +{{percent}}%",
+      "partyCrit": "파티 치명타 확률 +{{percent}}%",
+      "enemyMiss": "적 빗나감 +{{percent}}%",
+      "holy": "언데드 피해 +{{percent}}%",
+      "partyHoly": "파티 언데드 피해 +{{percent}}%",
+      "aoePower": "광역 피해 +{{percent}}%",
+      "weakenPower": "약화 효과 +{{percent}}%",
+      "burnPower": "화상 효과 +{{percent}}%",
+      "partyFirstStrike": "파티 첫 행동 피해 +{{percent}}%",
+      "fatigueCut": "파티 원정 피로 −{{percent}}%",
+      "selfFatigueCut": "자신의 원정 피로 −{{percent}}%",
+      "healTaken": "받는 회복 +{{percent}}%",
+      "dotGuard": "지속 피해 {{percent}}% 감소",
+      "twinStrike": "추가 공격 확률 {{percent}}%",
+      "lucky": "원정 골드·재료 +{{percent}}%",
+      "trapGuard": "함정 피해 −{{percent}}%",
+      "steadfast": "기절 면역",
+      "alert": "기습 경고",
+      "farsight": "파티 함정·기습 면역",
+      "undying": "층마다 한 번 치명 피해를 버팀",
+      "vanguard": "첫 행동을 두 번 수행",
+      "guardian": "원정마다 한 번 파티 부활"
+    }
+  },
+  "gift": {
+    "undying": {
+      "name": "불굴",
+      "description": "층마다 한 번 쓰러질 피해를 체력 1로 버팁니다."
+    },
+    "vanguard": {
+      "name": "선봉",
+      "description": "층의 첫 행동을 두 번 합니다."
+    },
+    "twinStrike": {
+      "name": "쌍격",
+      "description": "공격이 10% 확률로 한 번 더 맞습니다."
+    },
+    "farsight": {
+      "name": "천리안",
+      "description": "파티가 함정과 기습을 피합니다."
+    },
+    "ironBody": {
+      "name": "강철 체질",
+      "description": "원정 피로가 25% 줄어듭니다."
+    },
+    "healingHands": {
+      "name": "치유의 손",
+      "description": "주는 회복이 10%, 받는 회복이 15% 증가합니다."
+    },
+    "dragonBlood": {
+      "name": "용의 피",
+      "description": "지속 피해를 40% 줄입니다."
+    },
+    "marksman": {
+      "name": "명사수",
+      "description": "치명타 확률 +8%, 치명타 배율 +0.2."
+    },
+    "lucky": {
+      "name": "행운아",
+      "description": "원정 골드와 재료가 10% 늘어납니다."
+    },
+    "tactician": {
+      "name": "전술가",
+      "description": "파티 속도가 3% 증가합니다."
+    },
+    "lateBloomer": {
+      "name": "늦깎이",
+      "description": "Lv15부터 경험치를 30% 더 얻습니다."
+    },
+    "heroBlood": {
+      "name": "영웅의 핏줄",
+      "description": "모든 잠재력이 2 높습니다."
+    },
+    "guardian": {
+      "name": "수호천사",
+      "description": "원정마다 한 번 전멸한 파티를 체력 20%로 일으킵니다."
+    },
+    "songbird": {
+      "name": "노래꾼",
+      "description": "파티 공격이 2% 증가합니다."
+    }
+  },
+  "monsterKind": {
+    "beast": "짐승",
+    "undead": "언데드",
+    "human": "사람",
+    "construct": "골렘류",
+    "dragon": "용족",
+    "spirit": "정령"
+  },
+  "monsterTrait": {
+    "armor": {
+      "name": "장갑",
+      "description": "일반 공격 피해를 줄입니다."
+    },
+    "evasive": {
+      "name": "회피",
+      "description": "단일 공격을 피합니다."
+    },
+    "nodot": {
+      "name": "출혈 면역",
+      "description": "출혈과 독을 무시합니다."
+    },
+    "fireproof": {
+      "name": "화염 저항",
+      "description": "화염 무기와 화상에 강합니다."
+    },
+    "healer": {
+      "name": "회복",
+      "description": "가장 많이 다친 동료를 회복합니다."
+    },
+    "thorns": {
+      "name": "가시",
+      "description": "피해를 되돌립니다."
+    },
+    "purge": {
+      "name": "약화 해제",
+      "description": "주기적으로 약화와 감속을 지웁니다."
+    },
+    "steadfast": {
+      "name": "제어에 강함",
+      "description": "기절과 감속이 걸릴 확률이 낮습니다."
+    },
+    "enrage": {
+      "name": "분노",
+      "description": "24번째 행동부터 공격력이 올라갑니다."
+    }
+  },
   "skill": {
     "innate": "기본기",
     "pickHint": "Lv{{a}}에 하나, Lv{{b}}에 하나. 세 개 중 두 개만 배운다.",
@@ -1066,6 +1368,7 @@
     "hp": "HP {{hp}}/{{maxHp}}"
   },
   "enemy": {
+    "necromancer": "강령술사",
     "wolf": "늑대",
     "bat": "박쥐",
     "boar": "멧돼지",
@@ -1179,6 +1482,17 @@
     "expecting": "출산 예정"
   },
   "log": {
+    "miss": "{{actor}}의 공격이 {{target}}에게 빗나갑니다.",
+    "crit": "{{actor}}의 치명타!",
+    "burn": "{{actor}}가 화상 피해 {{amount}}를 받습니다.",
+    "thorns": "{{actor}}의 가시가 {{target}}에게 피해 {{amount}}를 줍니다.",
+    "counter": "{{actor}}가 반격합니다.",
+    "twin": "{{actor}}가 연달아 공격합니다.",
+    "enrage": "{{actor}}가 분노합니다.",
+    "purge": "{{actor}}가 약화와 감속을 지웁니다.",
+    "revive": "{{actor}}가 {{target}}을 일으킵니다.",
+    "undying": "{{actor}}가 쓰러지지 않고 버팁니다.",
+    "guardian": "{{actor}}가 파티를 부활시킵니다.",
     "floor": "{{floor}}층",
     "floorClear": "{{floor}}층을 클리어했다.",
     "attack": "{{actor}} → {{target}}, 피해 {{amount}}",

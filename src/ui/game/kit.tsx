@@ -235,13 +235,16 @@ export function formatEntry(t: TFunction, entry: LogEntry): string {
           .map((id) => t(`enemy.${id.trim()}`))
           .join(', ')
       : ''
-  return t(entry.key, {
+  const line = t(entry.key, {
     ...entry.params,
     actor: labelFrom(t, entry.params, 'actor'),
     target: labelFrom(t, entry.params, 'target'),
     potion: typeof potion === 'string' ? t(`potion.${potion}`) : potion,
     summoned,
   })
+  return typeof entry.params.absorbed === 'number' && entry.params.absorbed > 0
+    ? `${line} ${t('identity.absorbed', { amount: entry.params.absorbed })}`
+    : line
 }
 
 function labelFrom(t: TFunction, params: LogEntry['params'], prefix: 'actor' | 'target'): string {

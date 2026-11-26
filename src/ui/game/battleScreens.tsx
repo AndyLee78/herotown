@@ -47,6 +47,7 @@ import { josa } from '../josa'
 import { ResourceIcon, type ResourceKind } from './icons'
 import { Bar, Chip, Portrait, Res, clampPercent, needsWarning, useNow, waitLabel } from './kit'
 import { Report } from './villageScreens'
+import { EliteMonsters, MonsterIdentity } from './identity'
 import { RaidCard, SpecialDungeons, SpecialRewardChips } from './specialDungeons'
 import { dungeonPreviewUrl, monsterPortraitUrl } from '../voxel/portrait'
 
@@ -161,19 +162,21 @@ function DungeonBoard({ save, onAction, onPrepare }: { save: GameState; onAction
                 <h3 className="section-title">{t('battle.boss')}</h3>
                 <span className="chips">
                   {bosses.map((id) => (
-                    <Chip key={id} tone="bad">
-                      <MonsterFace refId={id} large />
-                      {t(`enemy.${id}`)}
-                    </Chip>
+                    <span className="card monster-profile" key={id}>
+                      <span className="chips"><MonsterFace refId={id} large />
+                      {t(`enemy.${id}`)}</span>
+                      <MonsterIdentity id={id} />
+                    </span>
                   ))}
                 </span>
                 <h3 className="section-title">{t('battle.monsters')}</h3>
                 <span className="chips">
                   {regulars.map((id) => (
-                    <Chip key={id}>
-                      <MonsterFace refId={id} />
-                      {t(`enemy.${id}`)}
-                    </Chip>
+                    <span className="card monster-profile" key={id}>
+                      <span className="chips"><MonsterFace refId={id} />
+                      {t(`enemy.${id}`)}</span>
+                      <MonsterIdentity id={id} />
+                    </span>
                   ))}
                 </span>
               </>
@@ -248,6 +251,7 @@ function NestCard({ save, onAction }: { save: GameState; onAction: Act }) {
                   <Chip key={`${id}-${slot}`} tone={monsterById(id).boss ? 'bad' : undefined}>
                     <MonsterFace refId={id} />
                     {t(`enemy.${id}`)}
+                    <MonsterIdentity id={id} />
                   </Chip>
                 ))}
               </span>
@@ -1013,6 +1017,7 @@ function History({ save, onOpen }: { save: GameState; onOpen: (report: DungeonRe
               ))}
               {report.gained?.fame ? <Res kind="fame" amount={`+${report.gained.fame}`} light /> : null}
               <SpecialRewardChips report={report} />
+              <EliteMonsters report={report} />
               <Chip>{t('result.xp', { xp: report.xp })}</Chip>
               {POTION_IDS.filter((id) => (report.potionsUsed?.[id] ?? 0) > 0).map((id) => (
                 <Chip key={id}>{t('battle.usedPotion', { potion: t(`potion.${id}`), count: report.potionsUsed?.[id] ?? 0 })}</Chip>

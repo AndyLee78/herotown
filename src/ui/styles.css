@@ -2392,3 +2392,24 @@ button.chip {
     display: none;
   }
 }
+.skill-branches {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(min(240px, 100%), 1fr));
+  gap: 8px;
+}
+
+.skill-branches .skill-row, .monster-profile {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  min-width: 0;
+}
+
+.skill-branches .skill-row-body, .gift-details {
+  overflow-wrap: anywhere;
+  min-width: 0;
+}
+
+.gift-details summary, .monster-trait {
+  cursor: help;
+}

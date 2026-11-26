@@ -79,6 +79,7 @@ import { GraveFace, bonusValue } from './heroScreens'
 import { Bar, Chip, CostList, Portrait, Res, SchoolInfo, VaultAmount, Window, affordable, formatEntry, gearGradeClass, itemLabel, useNow, vaultKinds, waitLabel } from './kit'
 import { josa } from '../josa'
 import { InvasionCard } from './invasion'
+import { EliteMonsters, GiftBadge } from './identity'
 import { Monuments, Prosperity } from './lateTown'
 import { SpecialRewardChips } from './specialDungeons'
 
@@ -398,6 +399,7 @@ export function Town({
                     <Portrait hero={kid} />
                     <span className="hero-row-body">
                       <strong>{kid.name}</strong>
+                      <GiftBadge hero={kid} />
                       <span className="chips">
                         <Chip>{t('family.kidAge', { age: kid.age })}</Chip>
                         <Chip tone="info">{t('family.kidYears', { years: yearsUntilGrown(kid.age) })}</Chip>
@@ -1257,6 +1259,7 @@ export function Report({ report }: { report: DungeonReport | null }) {
           <Chip>{t('result.floors', { count: report.floorsCleared })}</Chip>
         </span>
       </div>
+      <EliteMonsters report={report} />
       {canReplay(report) ? (
         <Suspense fallback={<div className="battle-canvas" />}>
           <BattleView report={report} describe={describe} />

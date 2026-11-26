@@ -866,6 +866,308 @@
     "scouting": "Scouting",
     "drilling": "Training"
   },
+  "identity": {
+    "picks": "Choose one at {{levels}}. Learn {{picks}} of {{total}}.",
+    "affinity": "Affinity +{{percent}}%",
+    "active": "Mastery active",
+    "completeBranch": "Learn all three to activate",
+    "requires": "Locked · requires {{skill}}",
+    "withClass": "With {{name}}",
+    "bonded": "With a bonded ally",
+    "moraleAbove": "Morale {{value}} or higher",
+    "moraleBelow": "Morale {{value}} or lower",
+    "condition": "Condition: {{condition}} · {{effect}}",
+    "elite": "Elite {{name}}",
+    "absorbed": "Shield absorbed {{amount}} damage.",
+    "branch": {
+      "warrior": {
+        "bulwark": "Bulwark",
+        "provoke": "Provoke",
+        "berserk": "Berserk"
+      },
+      "rogue": {
+        "venom": "Venom",
+        "shadow": "Shadow",
+        "assassin": "Assassin"
+      },
+      "archer": {
+        "sniper": "Sniper",
+        "rapid": "Rapid",
+        "hunter": "Hunter"
+      },
+      "mage": {
+        "fire": "Fire",
+        "frost": "Frost",
+        "arcane": "Arcane"
+      },
+      "cleric": {
+        "mercy": "Mercy",
+        "sanctuary": "Sanctuary",
+        "judgment": "Judgment"
+      },
+      "bard": {
+        "valor": "Valour",
+        "calm": "Calm",
+        "discord": "Discord"
+      },
+      "dancer": {
+        "charm": "Charm",
+        "blade": "Blade",
+        "wind": "Wind"
+      }
+    },
+    "mastery": {
+      "warrior": {
+        "bulwark": "Bulwark mastery",
+        "provoke": "Provoke mastery",
+        "berserk": "Berserk mastery"
+      },
+      "rogue": {
+        "venom": "Venom mastery",
+        "shadow": "Shadow mastery",
+        "assassin": "Assassin mastery"
+      },
+      "archer": {
+        "sniper": "Sniper mastery",
+        "rapid": "Rapid mastery",
+        "hunter": "Hunter mastery"
+      },
+      "mage": {
+        "fire": "Fire mastery",
+        "frost": "Frost mastery",
+        "arcane": "Arcane mastery"
+      },
+      "cleric": {
+        "mercy": "Mercy mastery",
+        "sanctuary": "Sanctuary mastery",
+        "judgment": "Judgment mastery"
+      },
+      "bard": {
+        "valor": "Valour mastery",
+        "calm": "Calm mastery",
+        "discord": "Discord mastery"
+      },
+      "dancer": {
+        "charm": "Charm mastery",
+        "blade": "Blade mastery",
+        "wind": "Wind mastery"
+      }
+    },
+    "skill": {
+      "warrior": {
+        "wall": "Iron Wall",
+        "counter": "Counter",
+        "cow": "Intimidate",
+        "laststand": "Last Stand",
+        "fury": "Fury",
+        "thirst": "Bloodthirst"
+      },
+      "rogue": {
+        "toxin": "Venom",
+        "numb": "Numbing Poison",
+        "evade": "Evade",
+        "ambush": "Ambush",
+        "vital": "Vital Strike",
+        "execute": "Execute"
+      },
+      "archer": {
+        "weakspot": "Precision Shot",
+        "pierce": "Pierce",
+        "quick": "Quick Shot",
+        "rain": "Arrow Rain",
+        "snare": "Snare",
+        "beast": "Beast Hunt"
+      },
+      "mage": {
+        "flame": "Flame",
+        "storm": "Firestorm",
+        "frost": "Frost",
+        "freeze": "Freeze",
+        "flow": "Mana Flow",
+        "amplify": "Amplify"
+      },
+      "cleric": {
+        "renew": "Renewal",
+        "miracle": "Miracle",
+        "consecrate": "Consecration",
+        "aegis": "Aegis",
+        "wrath": "Holy Strike",
+        "exorcise": "Exorcism"
+      },
+      "bard": {
+        "drum": "War Drums",
+        "saga": "Heroic Tale",
+        "lullaby": "Lullaby",
+        "solace": "Solace",
+        "scream": "Scream",
+        "confuse": "Confusion"
+      },
+      "dancer": {
+        "charm": "Charm",
+        "tempt": "Dance of Temptation",
+        "bladedance": "Blade Dance",
+        "climax": "Climax",
+        "gale": "Gale",
+        "whirl": "Whirlwind"
+      }
+    },
+    "effect": {
+      "threat": "Threat +{{value}}",
+      "attack": "Attack +{{percent}}%",
+      "guard": "Damage taken −{{percent}}%",
+      "speed": "Speed +{{percent}}%",
+      "heal": "Healing +{{percent}}%",
+      "bleed": "Bleed damage +{{value}}",
+      "weaken": "Weaken chance {{percent}}%",
+      "regen": "Party regeneration {{percent}}%",
+      "partyGuard": "Party damage taken −{{percent}}%",
+      "partyAttack": "Party attack +{{percent}}%",
+      "volleyEvery": "Area attack every {{value}} actions",
+      "cleanse": "Healing halves poison",
+      "hp": "Max HP +{{percent}}%",
+      "crit": "Critical chance +{{percent}}%",
+      "critDamage": "Critical damage +{{percent}}%",
+      "pierce": "Ignore {{percent}}% of defence",
+      "lifesteal": "Heal for {{percent}}% of damage dealt",
+      "execute": "Low-HP target damage +{{percent}}%",
+      "bossDamage": "Boss damage +{{percent}}%",
+      "counter": "Counter chance {{percent}}%",
+      "dodge": "Dodge chance {{percent}}%",
+      "stun": "Stun chance {{percent}}%",
+      "slow": "Slow chance {{percent}}%",
+      "burn": "Burn damage +{{value}}",
+      "shield": "Party shield {{percent}}% of max HP",
+      "firstStrike": "First action damage +{{percent}}%",
+      "lastStand": "Attack and defence +{{percent}}% below 30% HP",
+      "revive": "Revive an ally at {{percent}}% HP once per floor",
+      "partySpeed": "Party speed +{{percent}}%",
+      "partyCrit": "Party critical chance +{{percent}}%",
+      "enemyMiss": "Enemy miss chance +{{percent}}%",
+      "holy": "Damage to undead +{{percent}}%",
+      "partyHoly": "Party damage to undead +{{percent}}%",
+      "aoePower": "Area damage +{{percent}}%",
+      "weakenPower": "Weaken effect +{{percent}}%",
+      "burnPower": "Burn effect +{{percent}}%",
+      "partyFirstStrike": "Party first action damage +{{percent}}%",
+      "fatigueCut": "Party expedition fatigue −{{percent}}%",
+      "selfFatigueCut": "Own expedition fatigue −{{percent}}%",
+      "healTaken": "Healing received +{{percent}}%",
+      "dotGuard": "Damage over time −{{percent}}%",
+      "twinStrike": "Extra hit chance {{percent}}%",
+      "lucky": "Expedition gold and materials +{{percent}}%",
+      "trapGuard": "Trap damage −{{percent}}%",
+      "steadfast": "Immune to stun",
+      "alert": "Warn the party of ambushes",
+      "farsight": "Party avoids traps and ambushes",
+      "undying": "Survive a lethal hit once per floor",
+      "vanguard": "Act twice on the first action",
+      "guardian": "Revive the party once per expedition"
+    }
+  },
+  "gift": {
+    "undying": {
+      "name": "Undying",
+      "description": "Survive a lethal hit at 1 HP once per floor."
+    },
+    "vanguard": {
+      "name": "Vanguard",
+      "description": "Act twice on the first action each floor."
+    },
+    "twinStrike": {
+      "name": "Twin Strike",
+      "description": "Attacks have a 10% chance to hit again."
+    },
+    "farsight": {
+      "name": "Farsight",
+      "description": "The party avoids traps and ambushes."
+    },
+    "ironBody": {
+      "name": "Iron Body",
+      "description": "Take 25% less expedition fatigue."
+    },
+    "healingHands": {
+      "name": "Healing Hands",
+      "description": "Give 10% more healing and receive 15% more."
+    },
+    "dragonBlood": {
+      "name": "Dragon Blood",
+      "description": "Take 40% less damage over time."
+    },
+    "marksman": {
+      "name": "Marksman",
+      "description": "Gain 8% critical chance and 0.2 critical multiplier."
+    },
+    "lucky": {
+      "name": "Lucky",
+      "description": "Gain 10% more expedition gold and materials."
+    },
+    "tactician": {
+      "name": "Tactician",
+      "description": "Increase party speed by 3%."
+    },
+    "lateBloomer": {
+      "name": "Late Bloomer",
+      "description": "Gain 30% more XP from Lv15."
+    },
+    "heroBlood": {
+      "name": "Hero Blood",
+      "description": "Gain 2 potential in every stat."
+    },
+    "guardian": {
+      "name": "Guardian Angel",
+      "description": "Revive the wiped party at 20% HP once per expedition."
+    },
+    "songbird": {
+      "name": "Songbird",
+      "description": "Increase party attack by 2%."
+    }
+  },
+  "monsterKind": {
+    "beast": "Beast",
+    "undead": "Undead",
+    "human": "Human",
+    "construct": "Construct",
+    "dragon": "Dragon",
+    "spirit": "Spirit"
+  },
+  "monsterTrait": {
+    "armor": {
+      "name": "Armoured",
+      "description": "Reduces ordinary hits."
+    },
+    "evasive": {
+      "name": "Evasive",
+      "description": "Dodges single-target attacks."
+    },
+    "nodot": {
+      "name": "Bleed immune",
+      "description": "Ignores bleed and poison."
+    },
+    "fireproof": {
+      "name": "Fireproof",
+      "description": "Resists flame weapons and burn."
+    },
+    "healer": {
+      "name": "Healer",
+      "description": "Heals the most injured ally."
+    },
+    "thorns": {
+      "name": "Thorns",
+      "description": "Reflects damage."
+    },
+    "purge": {
+      "name": "Purge",
+      "description": "Clears weaken and slow periodically."
+    },
+    "steadfast": {
+      "name": "Control resistant",
+      "description": "Stun and slow are less likely to land."
+    },
+    "enrage": {
+      "name": "Enrage",
+      "description": "Attack rises after 24 actions."
+    }
+  },
   "skill": {
     "innate": "Innate",
     "pickHint": "One at Lv{{a}}, one at Lv{{b}}. Pick two of the three.",
@@ -1066,6 +1368,7 @@
     "hp": "HP {{hp}}/{{maxHp}}"
   },
   "enemy": {
+    "necromancer": "Necromancer",
     "wolf": "Wolf",
     "bat": "Bat",
     "boar": "Boar",
@@ -1179,6 +1482,17 @@
     "expecting": "Expecting"
   },
   "log": {
+    "miss": "{{actor}} misses {{target}}.",
+    "crit": "{{actor}} lands a critical hit!",
+    "burn": "{{actor}} takes {{amount}} burn damage.",
+    "thorns": "{{actor}}’s thorns deal {{amount}} damage to {{target}}.",
+    "counter": "{{actor}} counters.",
+    "twin": "{{actor}} strikes again.",
+    "enrage": "{{actor}} enrages.",
+    "purge": "{{actor}} clears weaken and slow.",
+    "revive": "{{actor}} revives {{target}}.",
+    "undying": "{{actor}} survives a lethal hit.",
+    "guardian": "{{actor}} revives the party.",
     "floor": "Floor {{floor}}",
     "floorClear": "Floor {{floor}} is clear.",
     "attack": "{{actor}} hits {{target}} for {{amount}}.",
