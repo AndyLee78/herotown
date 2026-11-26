@@ -155,6 +155,10 @@ Claude Code, Cursor, GPT(Codex)가 함께 쓰는 작업 목록이다. 작업 하
 | 113 | 스킬 갈래·천부·몬스터 특성 화면 | GPT | `src/ui/App.tsx`, `src/ui/game/*.tsx`, `src/ui/styles.css`, `src/locales/*` | 완료 (ff89a13) |
 | 114 | 5a core 코드 리뷰 (318455b) | GPT | `Docs/reviews/318455b.md` (새 파일만) | 완료 (f5f51e0) |
 | 115 | 5a 측정: 갈래 조합·천부·몬스터 세기 | GPT | `tools/*`, `Docs/identity.md`의 측정 절 | 완료 (ab7c014) |
+| 116 | 무기·방어구 종류 3D | Cursor | `src/ui/voxel/*`, `src/ui/BattleView.tsx`, `src/ui/ExpeditionPanel.tsx` | 대기 (117과 함께 가능) |
+| 117 | 무기·방어구 종류·옵션·다시 굴리기 화면 | GPT | `src/ui/App.tsx`, `src/ui/game/*.tsx`, `src/ui/styles.css`, `src/locales/*` | 대기 (116과 함께 가능) |
+| 118 | 5b core 코드 리뷰 (3ad100c) | GPT | `Docs/reviews/3ad100c.md` (새 파일만) | 대기 (117 뒤) |
+| 119 | 5b 측정: 무기 종류·옵션 세기 | GPT | `tools/*`, `Docs/identity.md`의 측정 절 | 대기 (118 뒤) |
 
 ---
 
@@ -2829,3 +2833,95 @@ Docs/identity.md 5a의 "세기 조정"을 측정한다. core는 고치지 않는
 **메모**
 
 6개 파티와 전투 시드 3개를 조합별로 비교했다. 최대 환산 차이는 궁수 1.30레벨이었다. 승률·천부·정예·분노 및 스케일 후보를 `Docs/identity.md`에 기록했다. 타입 검사·테스트 413개·빌드 통과.
+
+---
+
+## 116. 무기·방어구 종류 3D (Cursor)
+
+**지금 시작할 수 있다. 작업 117(GPT)과 파일이 겹치지 않아 함께 돌릴 수 있다(같은 폴더에서 동시에 돌리려면 git worktree로 나눈다).** 설계: `Docs/identity.md` 5b.
+
+**전달할 내용**
+
+```
+Docs/identity.md의 5b를 읽고 영웅 복셀 모델에 무기·방어구 종류를 보인다. src/ui/voxel/*, src/ui/BattleView.tsx, src/ui/ExpeditionPanel.tsx만 고친다. core, App.tsx, src/ui/game/*, src/locales/*는 고치지 않는다.
+
+이미 있는 것('../core' 또는 '../../core'에서 export):
+- Gear.type?: WeaponType(sword, axe, shieldsword, dagger, bow, crossbow, staff, tome, scepter, lute, drum, fan) | ArmorType(plate, leather, robe). 없으면 그 직업의 기본 모습(지금 character.ts의 weapon)을 그대로 쓴다.
+- Gear.options?: { id, value }[] (모습에는 쓰지 않아도 된다).
+
+1. 무기 모델: 지금 없는 것을 더한다. 도끼, 방패검(한손검 + 작은 방패), 석궁, 마도서(손에 든 책), 홀, 북, 부채. 손에 맞게 크기를 맞춘다.
+2. 방어구 모습: 판금(어깨 판·두꺼운 몸통, 금속색), 가죽(갈색 조끼), 로브(긴 옷자락). 종류 없는 방어구와 방어구 없음은 지금 모습 그대로.
+3. 마을(VillageScene)과 전투(BattleScene)·원정 화면 모두에서 영웅이 낀 무기·방어구 종류가 보인다. 영웅의 gear를 찾는 길은 지금 gearAuraOf가 쓰는 길을 따른다.
+4. 성능: 모델은 종류별로 한 번 만들고 재사용한다.
+
+확인: npm run dev에서 디버그 세이브의 영웅에게 종류별 무기·방어구를 끼워(세이브를 고쳐도 된다) 마을과 리플레이에서 본다. tsc·test·build 통과. 확인한 내용을 메모에.
+```
+
+**메모**
+
+---
+
+## 117. 무기·방어구 종류·옵션·다시 굴리기 화면 (GPT)
+
+**지금 시작할 수 있다. 작업 116(Cursor)과 함께 돌릴 수 있다.** 설계: `Docs/identity.md` 5b.
+
+**전달할 내용**
+
+```
+Docs/identity.md의 5b를 화면에 보인다. src/ui/App.tsx, src/ui/game/*.tsx, src/ui/styles.css, src/locales/*만 고친다. core, src/ui/voxel/*, src/ui/BattleView.tsx, src/ui/ExpeditionPanel.tsx는 고치지 않는다.
+
+core에 이미 있는 것('../../core'에서 export):
+- Gear.type?: GearType, Gear.options?: { id: GearOptionId, value }[]. 옵션 id: power, guard(고정 수치), hp, crit, speed, heal, blastGuard, dotGuard, bossDamage, holy, xp, lucky(비율, 0.05 = 5%).
+- smithRules.weaponTypes([{ id, classes, effect }]), smithRules.armorTypes([{ id, effect }]), smithRules.optionCount, smithRules.optionPool, smithRules.optionValor(다시 굴리기 용맹 훈장 수).
+- weaponTypes(classId?), armorTypes(), canWield(classId, gear), gearEffect(gear), optionRange(id, grade), splitOrder(order), recipeById(id).
+- 행동: { type: 'craft', recipeId, gearType?, now }(대기열 항목은 'iron.mail@leather' 꼴, splitOrder로 읽는다), { type: 'reroll', gearId, index }. 예전 setOption은 없어졌다.
+- 알림 'wrongClass'(문구는 이미 있다).
+- 이미 넣어 둔 임시 처리: itemLabel이 옵션 이름을 괄호에 늘어놓고, 대장간 후반 강화 칸에 옵션마다 다시 굴리기 버튼이 있다. ko/en의 option.* 12개, result.wrongClass 문구가 있다. 이것들은 고쳐도 된다.
+
+1. 대장간 제작: 무기·방어구 레시피를 누르면 종류를 고른다(무기는 직업별로 묶어 보인다. 예: "전사: 검·도끼·방패검"). 종류마다 효과 한 줄. "종류 없음(균형)"도 고를 수 있다. 대기열 목록은 splitOrder로 "철 도끼"처럼 보인다.
+2. 장비 이름: 종류가 있으면 "등급 재료 + 종류 이름"(예: 철 도끼, 강철 판금, 화염 석궁). 종류 이름 ko/en(검, 도끼, 방패검, 단검, 활, 석궁, 지팡이, 마도서, 홀, 류트, 북, 부채, 판금, 가죽, 로브).
+3. 옵션 보기: 장비 줄 아래에 옵션을 한 줄씩("치명 +3.2%", "공격 +3"). 고정 수치는 정수, 비율은 소수 한 자리 %. 범위의 최댓값에 가까우면 강조(optionRange).
+4. 다시 굴리기: 창고 장비에서 옵션 하나를 골라 용맹 훈장으로 다시 굴린다. 결과를 바로 보인다. 끼고 있는 장비에는 "먼저 빼야 한다"는 안내.
+5. 영웅 상세 무기 칸: 교체 목록에서 그 직업이 못 쓰는 무기는 흐리게 하고 "전사만"처럼 쓸 수 있는 직업을 보인다(누르지 못하게).
+6. 영웅 상세·파티 준비에 장비 효과 합계 한 줄(예: "장비: 공격 +15%, 치명 +6%, 경험치 +5%").
+7. 문구 ko/en 같은 키. 좁은 화면(375px)에서 넘치지 않게.
+
+확인: npm run dev(127.0.0.1)에서 디버그 세이브로 종류를 골라 제작·대기열, 옵션 보기, 다시 굴리기, 못 쓰는 무기 표시를 본다. tsc·test·build 통과. 확인한 내용을 메모에.
+```
+
+**메모**
+
+---
+
+## 118. 5b core 코드 리뷰 (GPT)
+
+**작업 117 뒤에 시작한다(같은 도구라 순서대로).** core 커밋은 **3ad100c**다.
+
+**전달할 내용**
+
+```
+5b core 커밋 3ad100c를 리뷰한다. 코드는 고치지 않고 Docs/reviews/3ad100c.md 새 파일 하나에만 쓴다(Docs/reviews/README.md 형식).
+볼 것: Docs/identity.md 5b와 차이, 옵션 굴림(등급별 개수, 겹침, 범위, 같은 시드), 예전 option 세이브 변환과 값 제한, 장비 효과가 붙는 곳(heroSkillEffects를 쓰는 모든 길: 전투·원정 정산·경험치·피로, 아이·은퇴자·유품), 무기 종류 제한(장착·유품·자동 장착이 있는지), 대장간 주문('@type')이 대기열·환불·자동 제작·예전 세이브에서 맞는지, 다시 굴리기(시드, 훈장, 끼고 있는 장비), 상인·행사 장비 시드, 세이브 28, 광역기 피해 감소 상한, 경험치 옵션이 훈련·축제 경험치에도 붙는 것이 맞는지.
+```
+
+**메모**
+
+---
+
+## 119. 5b 측정: 무기 종류·옵션 세기 (GPT)
+
+**작업 118 뒤에 시작한다.**
+
+**전달할 내용**
+
+```
+Docs/identity.md 5b의 숫자를 측정한다. core는 고치지 않는다. 결과는 Docs/identity.md 끝에 "5b 측정 (날짜)" 절로 적는다.
+
+1. 직업마다 무기 종류별(같은 등급·옵션 없음) 승률을 Lv11·15·20·25 파티로 티어 3–7 던전과 시련·심연·레이드에 돌린다. 하위 25% 승률과 중앙값. 가장 센 종류와 균형 무기의 차이를 "레벨 몇 차이"로(목표: 1 이하).
+2. 방어구 종류별 같은 측정.
+3. 옵션: 같은 등급에서 옵션 최상(그 직업에 가장 좋은 조합·최댓값)과 최하의 차이를 레벨로(목표: 전설 3옵션 기준 2 이하).
+4. 경험치·전리품 옵션이 한 달(4d 측정과 같은 조건) 동안 레벨·골드에 주는 차이.
+5. 숫자를 바꿀 제안은 파일·키·값으로 적는다(고치지는 않는다).
+```
+
+**메모**
