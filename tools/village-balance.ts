@@ -85,6 +85,11 @@ export function simulateVillage(seed: number, days: number, stopAtTown?: number,
   const acquired: Gear[] = []
   const knownGear = new Set<string>()
   const exchanged = new Set<string>()
+  const rememberOwnedGear = () => {
+    const owned = [...state.stash, ...state.roster.flatMap(({ gear }) => gear), ...state.retirees.flatMap(({ hero }) => hero.gear), ...(state.shrine?.gear ?? []), ...(state.smith?.gear ? [state.smith.gear] : [])]
+    for (const { id } of owned) knownGear.add(id)
+  }
+  if (lootStudy && study) rememberOwnedGear()
   const studyIds = new Set(study ? presetById(study.initial, study.initial.presetId)?.slots.map(({ id }) => id) : [])
   const studyLevels = new Map<string, number>()
   const careerLevel = (hero: Hero) => hero.level + hero.xp / (hero.level * progression.xpPerLevel)
@@ -172,7 +177,7 @@ export function simulateVillage(seed: number, days: number, stopAtTown?: number,
         purchases[item.id] = (purchases[item.id] ?? 0) + 1
       }
     }
-    if (lootStudy) for (const def of lootRules.uniques) {
+    if (lootStudy && !study) for (const def of lootRules.uniques) {
       if (exchanged.has(def.id)) continue
       if (cast({ type: 'exchange', uniqueId: def.id })) exchanged.add(def.id)
     }
@@ -569,10 +574,7 @@ export function simulateVillage(seed: number, days: number, stopAtTown?: number,
       if (postTownDays > 0 && lateStart == null && townLevelOf(state).level >= 10) {
         lateStart = now
         lateInitial = stock(state)
-        if (lootStudy) {
-          const owned = [...state.stash, ...state.roster.flatMap(({ gear }) => gear), ...state.retirees.flatMap(({ hero }) => hero.gear), ...(state.shrine?.gear ?? []), ...(state.smith?.gear ? [state.smith.gear] : [])]
-          for (const { id } of owned) knownGear.add(id)
-        }
+        if (lootStudy) rememberOwnedGear()
       }
       if (lateStart != null) {
         const raid = currentRaid(state, now)
