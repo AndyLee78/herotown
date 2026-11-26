@@ -156,9 +156,9 @@ Claude Code, Cursor, GPT(Codex)가 함께 쓰는 작업 목록이다. 작업 하
 | 114 | 5a core 코드 리뷰 (318455b) | GPT | `Docs/reviews/318455b.md` (새 파일만) | 완료 (f5f51e0) |
 | 115 | 5a 측정: 갈래 조합·천부·몬스터 세기 | GPT | `tools/*`, `Docs/identity.md`의 측정 절 | 완료 (ab7c014) |
 | 116 | 무기·방어구 종류 3D | Cursor | `src/ui/voxel/*`, `src/ui/BattleView.tsx`, `src/ui/ExpeditionPanel.tsx` | 완료 (d9e9664) |
-| 117 | 무기·방어구 종류·옵션·다시 굴리기 화면 | GPT | `src/ui/App.tsx`, `src/ui/game/*.tsx`, `src/ui/styles.css`, `src/locales/*` | 대기 (116과 함께 가능) |
-| 118 | 5b core 코드 리뷰 (3ad100c) | GPT | `Docs/reviews/3ad100c.md` (새 파일만) | 대기 (117 뒤) |
-| 119 | 5b 측정: 무기 종류·옵션 세기 | GPT | `tools/*`, `Docs/identity.md`의 측정 절 | 대기 (118 뒤) |
+| 117 | 무기·방어구 종류·옵션·다시 굴리기 화면 | GPT | `src/ui/App.tsx`, `src/ui/game/*.tsx`, `src/ui/styles.css`, `src/locales/*` | 완료 (67552f8) |
+| 118 | 5b core 코드 리뷰 (3ad100c) | GPT | `Docs/reviews/3ad100c.md` (새 파일만) | 완료 (ed66d7e) |
+| 119 | 5b 측정: 무기 종류·옵션 세기 | GPT | `tools/*`, `Docs/identity.md`의 측정 절 | 완료 (daf8722) |
 
 ---
 
@@ -2893,6 +2893,8 @@ core에 이미 있는 것('../../core'에서 export):
 
 **메모**
 
+375px Chrome에서 철 도끼 제작, 철 가죽 대기열, 옵션 다시 굴리기, 전사의 활 장착 제한을 확인했다. 코어 정산에서 제작과 대기열의 선택 종류가 그대로 완성됐다.
+
 ---
 
 ## 118. 5b core 코드 리뷰 (GPT)
@@ -2907,6 +2909,8 @@ core에 이미 있는 것('../../core'에서 export):
 ```
 
 **메모**
+
+구버전 진행 중 장비 옵션 유실과 장착·옵션 정규화 누락을 재현했다. 광역기 저항과 여름 축제 경험치 적용 범위를 포함해 리뷰에 5건을 남겼다.
 
 ---
 
@@ -2927,3 +2931,5 @@ Docs/identity.md 5b의 숫자를 측정한다. core는 고치지 않는다. 결�
 ```
 
 **메모**
+
+최대 레벨 차이는 무기 0.14, 방어구 0.57, 전설 3옵션 0.40이었다. Lv10 도달 3시드의 30일 비교에서 경험치 옵션은 평균 +6.13레벨이었다. 타입 검사·테스트 432개·빌드 통과.
