@@ -6,7 +6,7 @@ import { alchemyRules, classById, combatRules, dungeons, endgameRules, guildRule
 import { bedsTaken, isLegend } from '../src/core/family'
 import { fountainWishes } from '../src/core/fountain'
 import { bedCount, busyHeroIds, dungeonUnlocked, enhanceCostFor, enhanceLimit, festivalCost, freshState, presetById, reduce, retireeBonus, townLevelOf, type BuildingId, type GameAction, type GameState, type MaterialName } from '../src/core/game'
-import { gearMods } from '../src/core/gear'
+import { gearMods, optionRange } from '../src/core/gear'
 import { guideStatus } from '../src/core/guide'
 import { canDeploy, isChild } from '../src/core/hero'
 import { warned } from '../src/core/invasion'
@@ -43,9 +43,11 @@ const roleRank = (hero: Hero) => ({ tank: 0, healer: 1, dps: 2, support: 3 })[cl
 
 type RaidWeekSample = { week: string; boss: string; openedAt: number; departures: number; killedAt?: number }
 
-export function simulateVillage(seed: number, days: number, stopAtTown?: number, lateGame = false, raidAndInvasion = false, postTownDays = 0) {
-  let state = freshState(seed, start)
-  let now = start
+type GearStudy = { initial: GameState; option: 'control' | 'xp' | 'lucky' }
+
+export function simulateVillage(seed: number, days: number, stopAtTown?: number, lateGame = false, raidAndInvasion = false, postTownDays = 0, study?: GearStudy) {
+  let state = study?.initial ?? freshState(seed, start)
+  let now = state.lastTickAt
   let acted = false
   let substantive = false
   let onlineMs = 0
@@ -78,8 +80,12 @@ export function simulateVillage(seed: number, days: number, stopAtTown?: number,
   const invasions: { round: number; won: boolean; waves: number; goldLost: number; materialsLost: Record<MaterialName, number>; valor: number }[] = []
   let abyssRetryAt = start
   let raidRetryAt = start
-  let lateStart: number | undefined
-  let lateInitial: ReturnType<typeof stock> | undefined
+  let lateStart = study?.initial.lastTickAt
+  let lateInitial = study ? stock(state) : undefined
+  const studyIds = new Set(study ? presetById(study.initial, study.initial.presetId)?.slots.map(({ id }) => id) : [])
+  const studyLevels = new Map<string, number>()
+  const careerLevel = (hero: Hero) => hero.level + hero.xp / (hero.level * progression.xpPerLevel)
+  const studyStart = new Map(state.roster.filter(({ id }) => studyIds.has(id)).map((hero) => [hero.id, careerLevel(hero)]))
   const lateIncome: ResourceAmounts = {}
   const lateSpent: ResourceAmounts = {}
   const purchases: Record<string, number> = {}
@@ -119,6 +125,23 @@ export function simulateVillage(seed: number, days: number, stopAtTown?: number,
       if (delta > 0) lateIncome[key] = (lateIncome[key] ?? 0) + delta
       if (delta < 0) lateSpent[key] = (lateSpent[key] ?? 0) - delta
     }
+    if (study) for (const hero of [...next.roster, ...next.retirees.map(({ hero }) => hero)]) {
+      if (studyIds.has(hero.id)) studyLevels.set(hero.id, Math.max(studyLevels.get(hero.id) ?? 0, careerLevel(hero)))
+    }
+  }
+
+  function applyStudyOptions() {
+    if (!study) return
+    state = { ...state, roster: state.roster.map((hero) => ({ ...hero, gear: hero.gear.map((item) => {
+      const options = (item.options ?? []).filter(({ id }) => id !== 'xp' && id !== 'lucky')
+      if (item.slot !== 'weapon' || item.grade === 'common') return { ...item, options }
+      const retained = options.slice(0, smithRules.optionCount[item.grade] - 1)
+      if (study.option !== 'control') {
+        const range = optionRange(study.option, item.grade)
+        if (range) retained.push({ id: study.option, value: range.max })
+      }
+      return { ...item, options: retained }
+    }) })) }
   }
 
   function lateProjects() {
@@ -511,6 +534,7 @@ export function simulateVillage(seed: number, days: number, stopAtTown?: number,
     }
   }
 
+  applyStudyOptions()
   while (true) {
     record()
     const endAt = lateStart == null ? start + days * day : lateStart + postTownDays * day
@@ -542,6 +566,7 @@ export function simulateVillage(seed: number, days: number, stopAtTown?: number,
       }
       const short = projects(blocks)
       workshops()
+      applyStudyOptions()
       expedition(blocks, short)
       if (!acted) blocks.add('idle')
       if (acted && !substantive) blocks.add('routine only')
@@ -614,6 +639,7 @@ export function simulateVillage(seed: number, days: number, stopAtTown?: number,
   return { state, times, totals, beforeSeven, longest, materialWait, onlineMs, progressionMs, offlineMs, manualRuns, autoRuns, queued, bought, gatherings, festivals, fame: state.fame, gold: state.gold, cleared: state.cleared.length, peakUnlocks, fastUnlocks, income, spending, promotionWait, specialRuns, raidWeeks: [...raidWeeks.values()], invasions, late: lateStart == null ? undefined : {
     startDay: (lateStart - start) / day, initial: lateInitial!, final: stock(state), income: lateIncome, spent: lateSpent,
     purchases, enhancements: [...enhancements.values()], tiers: [...raidTiers.values()], activity: lateActivity,
+    studyLevels: [...studyStart].map(([id, initial]) => (studyLevels.get(id) ?? initial) - initial),
   } }
 }
 
