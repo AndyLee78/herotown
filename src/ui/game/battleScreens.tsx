@@ -1,5 +1,5 @@
 import { ChevronLeft, Clock, Lock } from 'lucide-react'
-import { useMemo, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import type { TFunction } from 'i18next'
 import { useTranslation } from 'react-i18next'
 import {
@@ -58,9 +58,34 @@ type Sort = 'level' | 'power' | 'fatigue'
 
 // The battle window: pick a dungeon, prepare a party preset, edit presets,
 // and look back at past expeditions.
-export function BattleHub({ save, onAction, onDepart }: { save: GameState; onAction: Act; onDepart: (presetId: string) => void }) {
+export type BattleView = 'dungeons' | 'special' | 'raid'
+
+// The window's foot: ordinary dungeons, special dungeons, the weekly raid.
+export function BattleViewTabs({ view, onView }: { view: BattleView; onView: (view: BattleView) => void }) {
+  const { t } = useTranslation()
+  return (
+    <div className="foot-tabs" role="tablist">
+      {(['dungeons', 'special', 'raid'] as const).map((item) => (
+        <button key={item} type="button" role="tab" aria-selected={view === item} onClick={() => onView(item)}>
+          {t(`battle.view.${item}`)}
+        </button>
+      ))}
+    </div>
+  )
+}
+
+export function BattleHub({ save, view = 'dungeons', onAction, onDepart }: { save: GameState; view?: BattleView; onAction: Act; onDepart: (presetId: string) => void }) {
   const { t } = useTranslation()
   const [tab, setTab] = useState<Tab>('dungeons')
+  const now = useNow(true)
+  // A new foot tab always opens on its list.
+  useEffect(() => {
+    setTab('dungeons')
+  }, [view])
+  const choose = (id: string) => {
+    onAction({ type: 'dungeon', id })
+    setTab('prep')
+  }
   const [opened, setOpened] = useState<DungeonReport | null>(null)
   const tabs: Tab[] = ['dungeons', 'prep', 'history']
   return (
@@ -77,11 +102,13 @@ export function BattleHub({ save, onAction, onDepart }: { save: GameState; onAct
               setOpened(null)
             }}
           >
-            {t(`battle.tab.${item}`)}
+            {item === 'dungeons' ? t(`battle.view.${view}`) : t(`battle.tab.${item}`)}
           </button>
         ))}
       </div>
-      {tab === 'dungeons' ? <DungeonBoard save={save} onAction={onAction} onPrepare={() => setTab('prep')} /> : null}
+      {tab === 'dungeons' && view === 'dungeons' ? <DungeonBoard save={save} onAction={onAction} onPrepare={() => setTab('prep')} /> : null}
+      {tab === 'dungeons' && view === 'special' ? <SpecialDungeons save={save} now={now} onAction={onAction} onSelect={choose} /> : null}
+      {tab === 'dungeons' && view === 'raid' ? <RaidCard save={save} now={now} onSelect={choose} /> : null}
       {tab === 'prep' ? <Prep save={save} onAction={onAction} onEdit={() => setTab('editor')} onDepart={onDepart} onDungeons={() => setTab('dungeons')} /> : null}
       {tab === 'editor' ? <PartyEditor save={save} onAction={onAction} onBack={() => setTab('prep')} /> : null}
       {tab === 'history' ? (
@@ -104,7 +131,6 @@ function DungeonBoard({ save, onAction, onPrepare }: { save: GameState; onAction
   const { t } = useTranslation()
   const selected = dungeonById(save.dungeonId)
   const dungeon = selected.special ? dungeons[0]! : selected
-  const now = useNow(true)
   const open = dungeonUnlocked(save, dungeon.id)
   const drop = villageRules.drops[dungeon.id as keyof typeof villageRules.drops]
   const season = isNest(dungeon.id) ? nestSeason(save.seed, save.calendar) : null
@@ -208,10 +234,6 @@ function DungeonBoard({ save, onAction, onPrepare }: { save: GameState; onAction
         </button>
       </div>
     </div>
-    <SpecialDungeons save={save} now={now} onAction={onAction} onSelect={(id) => {
-      onAction({ type: 'dungeon', id })
-      onPrepare()
-    }} />
     </div>
   )
 }

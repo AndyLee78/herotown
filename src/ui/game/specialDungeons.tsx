@@ -1,4 +1,3 @@
-import { useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { ESSENCES, MARKET_MATERIALS, abyssFloors, abyssShards, currentRaid, dungeonById, dungeonUnlocked, endgameRules, eventDungeonId, eventRunsLeft, eventShop, raidBoss, reduce, specialBlock, specialDungeons, todayElement, trialsLeft, type DungeonReport, type GameAction, type GameState, type VaultKey } from '../../core'
 import { Bar, Chip, Res, VaultAmount, vaultKinds, waitLabel } from './kit'
@@ -64,17 +63,7 @@ export function SpecialDungeons({ save, now, onSelect, onAction }: { save: GameS
   const weekdayLocked = specialBlock(save, first.id, now) === 'lockedDungeon'
   const abyssLocked = specialBlock(save, 'abyss', now) === 'lockedDungeon'
   const abyss = dungeonById('abyss')
-  const [view, setView] = useState<'special' | 'raid'>('special')
   return <section className="column">
-    {/* Special dungeons and the weekly raid each get their own tab. */}
-    <div className="tabs" role="tablist">
-      {(['special', 'raid'] as const).map((item) => (
-        <button key={item} type="button" role="tab" aria-selected={view === item} onClick={() => setView(item)}>
-          {t(item === 'special' ? 'special.title' : 'dungeon.raid.name')}
-        </button>
-      ))}
-    </div>
-    {view === 'raid' ? <RaidCard save={save} now={now} onSelect={onSelect} /> : <>
     <div className="card column">
       <strong>{t('special.weekday')}</strong>
       <span>{t('special.today', { element: element === 'choice' ? t('special.choice') : t(`vault.${element}`) })}</span>
@@ -110,7 +99,6 @@ export function SpecialDungeons({ save, now, onSelect, onAction }: { save: GameS
       </>}
     </div>
     <EventCard save={save} onSelect={onSelect} onAction={onAction} />
-    </>}
   </section>
 }
 

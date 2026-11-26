@@ -45,7 +45,7 @@ export function SchoolInfo({ hero }: { hero: Hero }) {
 }
 
 // A framed game window: wooden title bar, close button, scrolling body.
-export function Window({ title, icon, onClose, children, small = false }: { title: string; icon?: ReactNode; onClose?: () => void; children: ReactNode; small?: boolean }) {
+export function Window({ title, icon, onClose, children, footer, small = false }: { title: string; icon?: ReactNode; onClose?: () => void; children: ReactNode; footer?: ReactNode; small?: boolean }) {
   const { t } = useTranslation()
   useEffect(() => {
     if (!onClose) {
@@ -72,6 +72,8 @@ export function Window({ title, icon, onClose, children, small = false }: { titl
           ) : null}
         </header>
         <div className="window-body">{children}</div>
+        {/* Tabs that stay at the window's foot while the body scrolls. */}
+        {footer ? <nav className="window-foot">{footer}</nav> : null}
       </section>
     </div>
   )

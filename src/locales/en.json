@@ -1411,6 +1411,11 @@
     "replay": "Watch again",
     "skip": "Skip",
     "speed": "{{speed}}× speed",
+    "view": {
+      "dungeons": "Dungeons",
+      "special": "Special",
+      "raid": "Raid"
+    },
     "tab": {
       "dungeons": "Dungeons",
       "prep": "Prepare",

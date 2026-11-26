@@ -2005,6 +2005,36 @@ button.chip {
   border-color: var(--wood-dark);
 }
 
+/* Battle window foot tabs: dungeons, special dungeons, raid. */
+.window-foot {
+  flex: none;
+  padding: 0 12px calc(8px + var(--safe-bottom, 0px));
+  background: var(--paper-2);
+  border-top: 3px solid var(--line);
+}
+
+.foot-tabs {
+  display: flex;
+  gap: 6px;
+}
+
+.foot-tabs button {
+  flex: 1;
+  min-height: 44px;
+  font-weight: 900;
+  color: var(--muted);
+  background: var(--paper);
+  border: 2px solid var(--line);
+  border-top: none;
+  border-radius: 0 0 12px 12px;
+}
+
+.foot-tabs button[aria-selected='true'] {
+  color: #fff;
+  background: var(--wood);
+  border-color: var(--wood-dark);
+}
+
 .board {
   display: grid;
   grid-template-columns: minmax(200px, 260px) minmax(0, 1fr) minmax(220px, 280px);

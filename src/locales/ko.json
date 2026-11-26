@@ -1411,6 +1411,11 @@
     "replay": "다시 보기",
     "skip": "결과로 건너뛰기",
     "speed": "{{speed}}배속",
+    "view": {
+      "dungeons": "던전",
+      "special": "특수 던전",
+      "raid": "레이드"
+    },
     "tab": {
       "dungeons": "던전",
       "prep": "출발 준비",

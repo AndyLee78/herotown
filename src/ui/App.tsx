@@ -30,7 +30,7 @@ import {
 import { rewardedAds } from './ads'
 import { addGameOffset, gameNow, offsetSteps, resetGameOffset } from './clock'
 import { josa } from './josa'
-import { BattleHub } from './game/battleScreens'
+import { BattleHub, BattleViewTabs, type BattleView } from './game/battleScreens'
 import { applyWithVaultHistory } from './game/specialDungeons'
 import { Market } from './game/marketScreens'
 import { Tavern } from './game/tavernScreens'
@@ -112,6 +112,7 @@ export function App() {
   saveRef.current = save
   const [screen, setScreen] = useState<Screen | null>(null)
   const [selectedId, setSelectedId] = useState<string | null>(null)
+  const [battleView, setBattleView] = useState<BattleView>('dungeons')
   const [fileNotice, setFileNotice] = useState<string | null>(null)
   const [adBusy, setAdBusy] = useState(false)
   const [toasts, setToasts] = useState<Toast[]>([])
@@ -521,6 +522,7 @@ export function App() {
             screen === 'alchemy' ? <UiIcon name="alchemy" size={24} /> : screen === 'magic' ? <UiIcon name="magic" size={24} /> : screen === 'training' || screen === 'school' ? <UiIcon name="roster" size={24} /> : screen === 'guild' ? <UiIcon name="party" size={24} /> : screen === 'house' ? <UiIcon name="town" size={24} /> : DOCK.find((item) => item.screen === screen)?.icon ?? <UiIcon name="settings" size={24} />
           }
           onClose={() => { play('close'); setScreen(null) }}
+          footer={screen === 'battle' ? <BattleViewTabs view={battleView} onView={setBattleView} /> : undefined}
         >
           {screen === 'town' ? (
             <Town save={save} onAction={apply} busy={adBusy} onWatch={() => watchAd('construction')} onAlchemy={() => open('alchemy')} onMagic={() => open('magic')} onTraining={() => open('training')} onSchool={() => open('school')} onGuild={() => open('guild')} onMarket={() => open('market')} onTavern={() => open('tavern')} onLegends={() => open('legends')} onFestival={() => open('festival')} onSelectHero={(id) => { setSelectedId(id); open('roster') }} />
@@ -530,7 +532,7 @@ export function App() {
           {screen === 'roster' ? (
             <Roster save={save} selectedId={selectedId} onSelect={setSelectedId} onAction={apply} busy={adBusy} onWatch={() => watchAd('temple')} />
           ) : null}
-          {screen === 'battle' ? <BattleHub save={save} onAction={apply} onDepart={depart} /> : null}
+          {screen === 'battle' ? <BattleHub save={save} view={battleView} onAction={apply} onDepart={depart} /> : null}
           {screen === 'smith' ? <Smith save={save} onAction={apply} /> : null}
           {screen === 'alchemy' ? <Alchemy save={save} onAction={apply} /> : null}
           {screen === 'magic' ? <Magic save={save} onAction={apply} /> : null}
