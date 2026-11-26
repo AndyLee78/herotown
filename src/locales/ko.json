@@ -1787,5 +1787,25 @@
       "noRest": "회복 물약",
       "swift": "빠른 영웅·레벨"
     }
+  },
+  "unique": {
+    "gravecleaver": "무덤지기 칼날",
+    "cryptcrown": "묘실 군주의 왕관",
+    "mossmantle": "이끼 망토",
+    "twinfang": "두목의 쌍날",
+    "citadelvestment": "성채의 성의",
+    "dragonbane": "용잡이",
+    "wyrmscale": "용비늘 갑옷",
+    "wyrmeye": "용의 눈",
+    "lichshroud": "리치의 수의",
+    "lichscepter": "망자의 홀",
+    "titanstride": "거인의 걸음",
+    "titanbell": "성가대의 종"
+  },
+  "gearSet": {
+    "dragonslayer": "용사냥꾼",
+    "gravekeeper": "묘지기",
+    "windwalker": "바람걸음",
+    "choir": "성가대"
   }
 }

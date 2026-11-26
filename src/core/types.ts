@@ -237,6 +237,8 @@ export type Gear = {
   // Missing: the wearer's balanced weapon, or plain armour.
   type?: GearType
   options?: GearOption[]
+  // A boss or raid unique (Docs/identity.md 5c).
+  unique?: string
   enhance: number
   // Left behind or handed down by a hero (Docs/tavern.md).
   heirloom?: { ownerId: string; ownerName: string; family?: string; generations: number; comforted?: string[] }

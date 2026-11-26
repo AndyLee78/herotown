@@ -1,0 +1,37 @@
+{
+  "dropChance": 0.1,
+  "autoDropScale": 0.5,
+  "untypedChance": 0.3,
+  "recent": 20,
+  "grades": {
+    "1": { "common": 1 },
+    "2": { "common": 0.5, "fine": 0.5 },
+    "3": { "fine": 0.6, "rare": 0.4 },
+    "4": { "fine": 0.3, "rare": 0.6, "epic": 0.1 },
+    "5": { "rare": 0.6, "epic": 0.4 },
+    "6": { "rare": 0.3, "epic": 0.6, "legend": 0.1 },
+    "7": { "epic": 0.6, "legend": 0.4 }
+  },
+  "uniqueChance": 0.04,
+  "raidUniqueChance": [0.25, 0.4, 0.6],
+  "uniques": [
+    { "id": "gravecleaver", "dungeon": "barrow", "slot": "weapon", "base": "epic.blade", "grade": "epic", "set": "gravekeeper", "effect": { "holy": 0.15 }, "cost": { "valor": 40 }, "value": 300 },
+    { "id": "cryptcrown", "dungeon": "sunken_crypt", "slot": "trinket", "grade": "epic", "set": "gravekeeper", "effect": { "holy": 0.1, "healTaken": 0.1 }, "cost": { "valor": 50 }, "value": 300 },
+    { "id": "mossmantle", "dungeon": "venom_marsh", "slot": "armor", "base": "epic.mail", "grade": "epic", "set": "windwalker", "effect": { "dodge": 0.05 }, "cost": { "valor": 60 }, "value": 350 },
+    { "id": "twinfang", "dungeon": "bandit_fort", "slot": "weapon", "base": "epic.blade", "grade": "epic", "set": "windwalker", "effect": { "twinStrike": 0.08 }, "cost": { "valor": 70 }, "value": 350 },
+    { "id": "citadelvestment", "dungeon": "haunted_citadel", "slot": "armor", "base": "legend.mail", "grade": "legend", "set": "choir", "effect": { "healTaken": 0.15 }, "cost": { "valor": 80 }, "value": 450 },
+    { "id": "dragonbane", "dungeon": "dragon_nest", "slot": "weapon", "base": "legend.blade", "grade": "legend", "set": "dragonslayer", "effect": { "bossDamage": 0.1 }, "cost": { "valor": 100 }, "value": 500 },
+    { "id": "wyrmscale", "raid": "wyrm", "slot": "armor", "base": "legend.mail", "grade": "legend", "set": "dragonslayer", "effect": { "blastGuard": 0.15 }, "cost": { "valor": 80, "scale": 8 }, "value": 500 },
+    { "id": "wyrmeye", "raid": "wyrm", "slot": "trinket", "grade": "legend", "set": "dragonslayer", "effect": { "crit": 0.05 }, "cost": { "valor": 80, "scale": 8 }, "value": 500 },
+    { "id": "lichshroud", "raid": "lich", "slot": "armor", "base": "legend.mail", "grade": "legend", "set": "gravekeeper", "effect": { "dotGuard": 0.25 }, "cost": { "valor": 80, "crown": 8 }, "value": 500 },
+    { "id": "lichscepter", "raid": "lich", "slot": "weapon", "base": "legend.blade", "grade": "legend", "set": "choir", "effect": { "heal": 0.15 }, "cost": { "valor": 80, "crown": 8 }, "value": 500 },
+    { "id": "titanstride", "raid": "titan", "slot": "trinket", "grade": "legend", "set": "windwalker", "effect": { "speed": 0.05 }, "cost": { "valor": 80, "core": 8 }, "value": 500 },
+    { "id": "titanbell", "raid": "titan", "slot": "trinket", "grade": "legend", "set": "choir", "effect": { "heal": 0.08, "shield": 0.05 }, "cost": { "valor": 80, "core": 8 }, "value": 500 }
+  ],
+  "sets": [
+    { "id": "dragonslayer", "two": { "blastGuard": 0.1 }, "three": { "bossDamage": 0.15 } },
+    { "id": "gravekeeper", "two": { "holy": 0.1 }, "three": { "undying": true } },
+    { "id": "windwalker", "two": { "speed": 0.05 }, "three": { "dodge": 0.06, "firstStrike": 0.2 } },
+    { "id": "choir", "two": { "heal": 0.1 }, "three": { "shield": 0.1 } }
+  ]
+}

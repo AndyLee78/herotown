@@ -20,8 +20,9 @@ import { forgetSkill, readDrills, runDrills, startDrill, type Drill } from './dr
 import { buyIntel, finishScout, isNest, nestSeason, readScout, seasonKey, startScout, type ScoutJob } from './nest'
 import { TRINKET_IDS, enchantTime, finishEnchant, readMagicJob, startEnchant, type MagicJob } from './magic'
 import { POTION_IDS, brewTime, finishBrew, readAlchemyJob, readSupplies, returnSupplies, startBrew, takeSupplies, type AlchemyJob } from './alchemy'
-import { adRules, giftRules, automationRules, potionById, trinketById, moraleRules, magicRules, nestRules, classById, classList, combatRules, dungeonById, dungeons, expeditionRules, lifeRules, progression, retirementRules, smithRules, timeRules, villageRules, specialDungeons, endgameRules } from './data'
+import { adRules, giftRules, automationRules, potionById, trinketById, moraleRules, magicRules, nestRules, classById, classList, combatRules, dungeonById, dungeons, expeditionRules, lifeRules, progression, retirementRules, smithRules, timeRules, villageRules, specialDungeons, endgameRules, lootRules } from './data'
 import { canWield, forgeGear, normalizeGear, orderId, recipeById, rerollOption, splitOrder } from './gear'
+import { canExchange, dungeonLoot, exchangeCost, uniqueById, uniqueGear, type LootEntry } from './loot'
 import { applyReport, DEFAULT_TACTICS, gainXp, runDungeon } from './dungeon'
 import { canDeploy, generateHero, isChild, generateVisitors, normalizeHero, restHero, withAge } from './hero'
 import { acceptProposal, bedsTaken, bondParty, declineProposal, deliverBirths, femaleChance, graveFor, nextAge, partyParts, passAway, readBonds, readProposals, tidyFamily, turnSeason, wageCount, type FamilyEvents } from './family'
@@ -30,7 +31,7 @@ import type { Rng } from './rng'
 import type { Genes } from './genes'
 import type { Bond, ClassId, CombatError, DungeonReport, Gear, GearSlot, GearType, Gender, Hero, PartyMember, PotionId, Proposal, Role, Row, Supplies, Tactics, TrinketId , StatKey } from './types'
 
-export const SAVE_VERSION = 28
+export const SAVE_VERSION = 29
 
 // Town levels up to here come with fame alone (Docs/endgame.md 4b).
 export const PROMOTION_FREE = 7
@@ -312,6 +313,8 @@ export type GameState = {
   // This week's raid, raids won, and the coming invasion (Docs/endgame.md 4c).
   raid: Raid | null
   raidKills: number
+  // The last pieces found in dungeons and raids, for the new-gear notice (Docs/identity.md 5c).
+  loot: LootEntry[]
   invasion: Invasion | null
   // Seasonal event runs and shop, monuments, prosperity rank (Docs/endgame.md 4d).
   event: EventState | null
@@ -403,6 +406,8 @@ export type GameAction =
   | { type: 'raiseMonument'; id: MonumentId }
   | { type: 'prosper' }
   | { type: 'reroll'; gearId: string; index: number }
+  | { type: 'exchange'; uniqueId: string }
+  | { type: 'seenLoot' }
   | { type: 'enshrine'; gearId: string }
   | { type: 'unshrine'; gearId: string }
   | { type: 'declineProposal'; a: string; b: string; now?: number }
@@ -472,6 +477,7 @@ export function freshState(seed: number, now: number): GameState {
     promoted: PROMOTION_FREE,
     raid: null,
     raidKills: 0,
+    loot: [],
     invasion: null,
     event: null,
     monuments: {},
@@ -769,6 +775,12 @@ function apply(state: GameState, action: GameAction): GameState {
   }
   if (action.type === 'reroll') {
     return reroll(state, action.gearId, action.index)
+  }
+  if (action.type === 'exchange') {
+    return exchange(state, action.uniqueId)
+  }
+  if (action.type === 'seenLoot') {
+    return { ...state, notice: null, loot: [] }
   }
   if (action.type === 'defend') {
     return setDefenders(state, action.presetIds)
@@ -1485,8 +1497,10 @@ function grantVictoryRewards(state: GameState, report: DungeonReport, dungeonId:
   if (first) {
     roster = cheer(roster, party, moraleRules.joy.firstClear)
   }
+  // Gear drops: a sure piece on a first clear, then a chance (Docs/identity.md 5c).
+  const looted = dungeonLoot({ ...state, roster, materials, fame, cleared }, dungeonId, first, scale != null, report.luck ?? 0)
   // The old one-off cave quest gave way to the contract board (Docs/guild.md).
-  return progressClear({ ...state, roster, materials, fame, cleared }, dungeonId)
+  return progressClear(looted, dungeonId)
 }
 
 function scheduleVisitor(state: GameState, now: number): GameState {
@@ -2151,6 +2165,28 @@ export function enhanceCostFor(gear: Gear): Cost & { ms: number } {
   return { gold: late.gold * step, wood: 0, stone: 0, iron: late.iron * step, bone: late.bonePerStep * step, crystal: late.crystalPerStep * step, [essence]: late.essencePerStep * step, abyss: late.abyssPerStep * step, ms: smithRules.enhanceCost.ms }
 }
 
+// Valour (and a raid unique's spoils) buys a unique (Docs/identity.md 5c).
+function exchange(state: GameState, uniqueId: string): GameState {
+  const def = uniqueById(uniqueId)
+  if (!def) {
+    return { ...state, notice: 'missing' }
+  }
+  if (!canExchange(def, state.cleared)) {
+    return { ...state, notice: 'locked' }
+  }
+  const cost = exchangeCost(def)
+  const vault = { ...state.vault }
+  for (const [key, amount] of Object.entries(cost)) {
+    if ((vault[key as VaultKey] ?? 0) < amount) {
+      return { ...state, notice: 'resources' }
+    }
+    vault[key as VaultKey] -= amount
+  }
+  const craftNonce = state.craftNonce + 1
+  const piece = uniqueGear(def, `${state.seed}-x${craftNonce}`)
+  return { ...state, notice: null, vault, craftNonce, stash: [...state.stash, piece] }
+}
+
 // Valour rerolls one option of a stored piece (Docs/identity.md 5b).
 function reroll(state: GameState, gearId: string, index: number): GameState {
   const gear = state.stash.find((item) => item.id === gearId)
@@ -2397,6 +2433,7 @@ function normalize(record: Record<string, unknown>, now: number): GameState {
     abyss: readAbyss(record.abyss),
     raid: readRaid(record.raid),
     raidKills: numberOr(record.raidKills, 0),
+    loot: readLoot(record.loot),
     invasion: readInvasion(record.invasion),
     event: readEvent(record.event),
     monuments: readMonuments(record.monuments),
@@ -2915,3 +2952,12 @@ function knownBefore18(record: Record<string, unknown>, hero: Hero): Hero {
   return version < 18 && !hero.interviewed ? { ...hero, interviewed: 1 } : hero
 }
 
+
+function readLoot(value: unknown): LootEntry[] {
+  if (!Array.isArray(value)) {
+    return []
+  }
+  return value
+    .filter((entry): entry is LootEntry => entry != null && typeof entry === 'object' && typeof entry.gearId === 'string' && typeof entry.source === 'string' && typeof entry.at === 'number')
+    .slice(-lootRules.recent)
+}

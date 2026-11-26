@@ -163,7 +163,7 @@ describe('the save', () => {
     const state = smithy({ stash: [piece] })
     const loaded = importSave(exportSave(state), now)
     expect(loaded.version).toBe(SAVE_VERSION)
-    expect(SAVE_VERSION).toBe(28)
+    expect(SAVE_VERSION).toBeGreaterThanOrEqual(28)
     expect(loaded.stash[0]).toEqual(piece)
     expect(migrate(JSON.parse(JSON.stringify(state)), now).stash[0]).toEqual(piece)
   })

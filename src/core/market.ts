@@ -1,4 +1,4 @@
-import { alchemyRules, magicRules, marketRules, retirementRules, smithRules } from './data'
+import { alchemyRules, lootRules, magicRules, marketRules, retirementRules, smithRules } from './data'
 import type { GameState, MaterialName } from './game'
 import { forgeGear } from './gear'
 import { seasonKey } from './nest'
@@ -156,7 +156,9 @@ function recipeValue(recipeId: string): number {
 
 // What a spare piece of gear fetches: part of what it took to make, more when enhanced.
 export function gearValue(gear: Gear): number {
-  return Math.floor(recipeValue(gear.recipeId) * marketRules.gearSellRatio * (1 + gear.enhance * marketRules.enhanceSellBonus))
+  // A unique fetches its own price (Docs/identity.md 5c).
+  const unique = gear.unique ? lootRules.uniques.find((entry) => entry.id === gear.unique) : undefined
+  return Math.floor((unique ? unique.value : recipeValue(gear.recipeId)) * marketRules.gearSellRatio * (1 + gear.enhance * marketRules.enhanceSellBonus))
 }
 
 // What one bottle takes to brew: a batch makes several (review bb1c2cf).

@@ -17,6 +17,7 @@ import tavernFile from '../data/tavern.json'
 import legendsFile from '../data/legends.json'
 import endgameFile from '../data/endgame.json'
 import smithFile from '../data/smith.json'
+import lootFile from '../data/loot.json'
 import combatFile from '../data/combat.json'
 import dungeonsFile from '../data/dungeons.json'
 import expeditionFile from '../data/expedition.json'
@@ -200,6 +201,7 @@ export const timeRules = timeFile
 export const villageRules = villageFile
 export const lifeRules = lifeFile
 export const smithRules = smithFile
+export const lootRules = lootFile
 export const adRules = adsFile
 export const expeditionRules = expeditionFile
 export const retirementRules = retirementFile

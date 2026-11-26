@@ -1,3 +1,4 @@
+import { raidLoot } from './loot'
 import { endgameRules } from './data'
 import type { DungeonVariant } from './dungeon'
 import type { GameState } from './game'
@@ -88,11 +89,16 @@ export function settleRaid(state: GameState, week: string, start: number | null,
   vault[boss.spoil as VaultKey] += tiers[tier - 1]?.spoils ?? endgameRules.raid.spoils
   // The next tier opens at once the same week; after the last the raid is done.
   const next = tier < tiers.length ? { ...raid, hp: null, max: null, killed: false, tier: tier + 1 } : { ...raid, hp: 0, max, killed: true }
-  return {
-    ...state,
-    vault,
-    fame: state.fame + Math.round(endgameRules.raid.fame * (1 + rewardBonus(state))),
-    raid: next,
-    raidKills: (state.raidKills ?? 0) + 1,
-  }
+  // The boss may leave one of its uniques (Docs/identity.md 5c).
+  return raidLoot(
+    {
+      ...state,
+      vault,
+      fame: state.fame + Math.round(endgameRules.raid.fame * (1 + rewardBonus(state))),
+      raid: next,
+      raidKills: (state.raidKills ?? 0) + 1,
+    },
+    boss.id,
+    tier,
+  )
 }

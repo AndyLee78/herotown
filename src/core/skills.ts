@@ -1,5 +1,5 @@
 import { classById, giftRules, personalityRules, trainingRules } from './data'
-import { gearEffect } from './gear'
+import { gearEffect, setBonuses } from './gear'
 import type { ClassId, GiftId, Hero, PersonalityId, SkillDef, SkillEffect } from './types'
 
 // Learned skills (Docs/skills.md, Docs/identity.md 5a): the first skill of a
@@ -169,6 +169,10 @@ export function heroSkillEffects(hero: Hero, context: SkillContext = {}): SkillT
   // Weapon and armour types and their options (Docs/identity.md 5b).
   for (const item of hero.gear) {
     addEffect(totals, gearEffect(item))
+  }
+  // Unique sets (Docs/identity.md 5c).
+  for (const bonus of setBonuses(hero.gear)) {
+    addEffect(totals, bonus)
   }
   return totals
 }

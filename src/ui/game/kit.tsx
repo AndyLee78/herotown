@@ -210,7 +210,8 @@ export function itemLabel(t: TFunction, item: Gear, fallback: Hero['classId'], h
   const owner = item.id.split('.')[0] ?? fallback
   const classes = ['warrior', 'rogue', 'archer', 'mage', 'cleric', 'bard', 'dancer']
   const classId = classes.includes(owner) ? owner : fallback
-  const name = item.recipeId === 'starter' ? t(`gear.${classId}.${item.slot}`) : recipeLabel(t, item.recipeId, item.type)
+  // Uniques go by their own name (Docs/identity.md 5c).
+  const name = item.unique ? t(`unique.${item.unique}`) : item.recipeId === 'starter' ? t(`gear.${classId}.${item.slot}`) : recipeLabel(t, item.recipeId, item.type)
   const extra = [
     t(`grade.${item.grade}`),
     item.element ? t(`element.${item.element}`) : '',

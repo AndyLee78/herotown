@@ -1787,5 +1787,25 @@
       "noRest": "Healing potions",
       "swift": "Fast heroes and levels"
     }
+  },
+  "unique": {
+    "gravecleaver": "Gravecleaver",
+    "cryptcrown": "Crown of the Crypt Lord",
+    "mossmantle": "Moss Mantle",
+    "twinfang": "Chief’s Twinfang",
+    "citadelvestment": "Citadel Vestment",
+    "dragonbane": "Dragonbane",
+    "wyrmscale": "Wyrmscale Armor",
+    "wyrmeye": "Wyrm’s Eye",
+    "lichshroud": "Lich Shroud",
+    "lichscepter": "Scepter of the Dead",
+    "titanstride": "Titan’s Stride",
+    "titanbell": "Choir Bell"
+  },
+  "gearSet": {
+    "dragonslayer": "Dragonslayer",
+    "gravekeeper": "Gravekeeper",
+    "windwalker": "Windwalker",
+    "choir": "Choir"
   }
 }

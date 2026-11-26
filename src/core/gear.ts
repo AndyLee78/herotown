@@ -1,4 +1,4 @@
-import { smithRules } from './data'
+import { lootRules, smithRules } from './data'
 import { createRng, type Rng } from './rng'
 import type { ArmorType, ClassId, Gear, GearElement, GearGrade, GearOption, GearOptionId, GearSlot, GearType, Hero, SkillEffect, WeaponType } from './types'
 
@@ -17,8 +17,10 @@ export function normalizeGear(item: Partial<Gear> | undefined, classId: ClassId)
   const slot: GearSlot = item?.slot === 'armor' || item?.slot === 'trinket' ? item.slot : 'weapon'
   const grade: GearGrade = item?.grade === 'fine' || item?.grade === 'rare' || item?.grade === 'epic' || item?.grade === 'legend' ? item.grade : 'common'
   const element: GearElement | undefined = item?.element === 'flame' || item?.element === 'silver' ? item.element : undefined
-  const type = readType(item?.type, slot)
-  const options = readOptions(item, slot)
+  // Uniques keep their fixed effect: no type, no options (Docs/identity.md 5c).
+  const unique = readUnique(item?.unique, slot)
+  const type = unique ? undefined : readType(item?.type, slot)
+  const options = unique ? [] : readOptions(item, slot)
   return {
     id: item?.id || `${classId}.${slot}`,
     recipeId: item?.recipeId || 'starter',
@@ -27,6 +29,7 @@ export function normalizeGear(item: Partial<Gear> | undefined, classId: ClassId)
     element,
     ...(type ? { type } : {}),
     ...(options.length ? { options } : {}),
+    ...(unique ? { unique } : {}),
     // Heroic and legendary gear goes up to +10 (Docs/endgame.md 4d).
     // Whole steps only (review 1eeb27b).
     enhance: Math.max(0, Math.min(grade === 'epic' || grade === 'legend' ? smithRules.lateEnhance.max : smithRules.enhanceMax, Math.floor(Number.isFinite(item?.enhance) ? item!.enhance! : 0))),
@@ -215,7 +218,39 @@ export function gearEffect(item: Gear): SkillEffect {
     const key = option.id === 'xp' ? 'xpGain' : option.id
     effect[key] = (effect[key] ?? 0) + option.value
   }
+  const unique = item.unique ? lootRules.uniques.find((entry) => entry.id === item.unique) : undefined
+  for (const [key, value] of Object.entries(unique?.effect ?? {})) {
+    effect[key] = (effect[key] ?? 0) + (value as number)
+  }
   return effect as SkillEffect
+}
+
+function readUnique(value: unknown, slot: GearSlot): string | undefined {
+  const def = typeof value === 'string' ? lootRules.uniques.find((entry) => entry.id === value) : undefined
+  return def && def.slot === slot ? def.id : undefined
+}
+
+// Set bonuses for the uniques a hero wears: two pieces of a set, then three
+// (Docs/identity.md 5c). The same unique twice counts once.
+export function setBonuses(gear: Gear[]): SkillEffect[] {
+  const worn = new Map<string, Set<string>>()
+  for (const item of gear) {
+    const def = item.unique ? lootRules.uniques.find((entry) => entry.id === item.unique) : undefined
+    if (def) {
+      worn.set(def.set, (worn.get(def.set) ?? new Set()).add(def.id))
+    }
+  }
+  const bonuses: SkillEffect[] = []
+  for (const set of lootRules.sets) {
+    const count = worn.get(set.id)?.size ?? 0
+    if (count >= 2) {
+      bonuses.push(set.two as SkillEffect)
+    }
+    if (count >= 3) {
+      bonuses.push(set.three as SkillEffect)
+    }
+  }
+  return bonuses
 }
 
 // A smith order is a recipe id, with "@type" when a type was chosen
