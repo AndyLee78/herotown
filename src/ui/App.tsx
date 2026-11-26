@@ -436,6 +436,7 @@ export function App() {
     away.add(save.scout.heroId)
   }
   const badges: Partial<Record<Screen, number | boolean>> = {
+    town: save.loot.length,
     inn: save.visitors.length,
     roster: save.roster.some((hero) => needsWarning(hero) || hero.skillPoints > 0 || (!isChild(hero) && hero.condition !== 'dead' && lowMorale(hero))),
     battle: reportUnseen || save.expeditions.length > 0,

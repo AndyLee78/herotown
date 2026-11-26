@@ -49,6 +49,7 @@ import { Bar, Chip, Portrait, Res, clampPercent, needsWarning, useNow, waitLabel
 import { Report } from './villageScreens'
 import { EliteMonsters, MonsterIdentity } from './identity'
 import { GearSummary } from './gearDetails'
+import { DungeonLootHint } from './lootScreens'
 import { RaidCard, SpecialDungeons, SpecialRewardChips } from './specialDungeons'
 import { dungeonPreviewUrl, monsterPortraitUrl } from '../voxel/portrait'
 
@@ -182,6 +183,7 @@ function DungeonBoard({ save, onAction, onPrepare }: { save: GameState; onAction
               </div>
             </div>
             <p>{t(`dungeon.${dungeon.id}.hint`)}</p>
+            <DungeonLootHint id={dungeon.id} tier={dungeon.tier} />
             {isNest(dungeon.id) ? (
               <NestCard save={save} onAction={onAction} />
             ) : (

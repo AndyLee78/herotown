@@ -1288,6 +1288,27 @@
     "flame": "화염",
     "silver": "은"
   },
+  "loot": {
+    "unique": "고유",
+    "setOn": "{{pieces}}개 효과 활성",
+    "setOff": "{{pieces}}개 효과 비활성",
+    "found": "획득 장비",
+    "new": "새 장비 {{count}}개",
+    "unavailable": "현재 보유하지 않는 장비",
+    "markSeen": "확인",
+    "exchange": "고유 장비 교환",
+    "owned": "보유 {{count}}개",
+    "locked": "{{dungeon}} 클리어 필요",
+    "trade": "교환",
+    "first": "첫 클리어 보상 · 장비 1개 ({{grades}})",
+    "bossUnique": "보스 고유 장비 · {{name}} ({{percent}}%)",
+    "raidUnique": "레이드 고유 장비",
+    "boss": {
+      "wyrm": "고룡 레이드",
+      "lich": "리치 왕 레이드",
+      "titan": "거신 레이드"
+    }
+  },
   "gearDetail": {
     "choose": "종류 고르기",
     "balanced": "종류 없음(균형)",

@@ -47,7 +47,7 @@ import {
   type BuildingId,
 } from '../../core'
 import { GiftBadge, SkillTree } from './identity'
-import { GearOptions, GearSummary, Wielders } from './gearDetails'
+import { GearOptions, GearSummary, SetProgress, Wielders } from './gearDetails'
 import { canWield } from '../../core/gear'
 import { gameNow } from '../clock'
 import { josa } from '../josa'
@@ -63,7 +63,7 @@ import {
   conditionTone,
   fatigueText,
   fatigueTone,
-  gearGradeClass,
+  gearNameClass,
   itemLabel,
   needsWarning,
   recoveryText,
@@ -359,6 +359,7 @@ function HeroDetail({
 
       <h3 className="section-title">{t('ui.gear')}</h3>
       <GearSummary hero={hero} />
+      <SetProgress hero={hero} />
       {save.retirees.some(({ hero: retiree }) => retiree.id === hero.id) ? <Inheritance save={save} hero={hero} onAction={onAction} /> : null}
       {(['weapon', 'armor'] as const).map((slot) => {
         const worn = hero.gear.find((item) => item.slot === slot)
@@ -371,7 +372,7 @@ function HeroDetail({
               <li className="line">
                 {worn ? (
                   <div className="column gear-entry">
-                    <span className={gearGradeClass(worn.grade)}>{itemLabel(t, worn, hero.classId, heirloomBonus(save, hero, worn))}</span>
+                    <span className={gearNameClass(worn)}>{itemLabel(t, worn, hero.classId, heirloomBonus(save, hero, worn))}</span>
                     <GearOptions item={worn} />
                     {worn.options?.length ? <span className="muted">{t('gearDetail.takeOff')}</span> : null}
                   </div>
@@ -393,7 +394,7 @@ function HeroDetail({
                     const allowed = canWield(hero.classId, item)
                     return <li key={item.id} className={allowed ? 'line spare-line' : 'line spare-line gear-incompatible'}>
                       <div className="column gear-entry">
-                        <span className={gearGradeClass(item.grade)}>{itemLabel(t, item, hero.classId, heirloomBonus(save, hero, item))}</span>
+                        <span className={gearNameClass(item)}>{itemLabel(t, item, hero.classId, heirloomBonus(save, hero, item))}</span>
                         {!allowed ? <Wielders item={item} /> : null}
                         <GearOptions item={item} />
                       </div>
@@ -447,7 +448,8 @@ function HeroDetail({
           return (
             <li key={item.id} className="line trinket-line">
               <span>
-                <strong className={gearGradeClass(item.grade)}>{itemLabel(t, item, hero.classId, heirloomBonus(save, hero, item))}</strong>
+                <strong className={gearNameClass(item)}>{itemLabel(t, item, hero.classId, heirloomBonus(save, hero, item))}</strong>
+                      <GearOptions item={item} />
                 {id ? <span className="muted">{t(`trinket.hint.${id}`)}</span> : null}
               </span>
               {inRoster ? (
@@ -466,7 +468,8 @@ function HeroDetail({
                 return (
                   <li key={item.id} className="line trinket-line">
                     <span>
-                      <span className={gearGradeClass(item.grade)}>{itemLabel(t, item, hero.classId, heirloomBonus(save, hero, item))}</span>
+                      <span className={gearNameClass(item)}>{itemLabel(t, item, hero.classId, heirloomBonus(save, hero, item))}</span>
+                      <GearOptions item={item} />
                       {id ? <span className="muted">{t(`trinket.hint.${id}`)}</span> : null}
                     </span>
                     <button type="button" className="btn small" onClick={() => onAction({ type: 'equip', heroId: hero.id, gearId: item.id })}>
@@ -771,7 +774,7 @@ function Inheritance({ save, hero, onAction }: { save: GameState; hero: Hero; on
     <div className="column">
       {gifts.map((item) => <div key={item.id} className="card column">
         <div className="line">
-          <span className={gearGradeClass(item.grade)}>{itemLabel(t, item, hero.classId, heirloomBonus(save, hero, item))}</span>
+          <span className={gearNameClass(item)}>{itemLabel(t, item, hero.classId, heirloomBonus(save, hero, item))}</span>
           <GearOptions item={item} />
           <button className="btn small" type="button" aria-expanded={selected === item.id} onClick={() => setSelected(selected === item.id ? null : item.id)}>{t('heirloom.bequeath')}</button>
         </div>

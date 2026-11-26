@@ -1288,6 +1288,27 @@
     "flame": "Flame",
     "silver": "Silver"
   },
+  "loot": {
+    "unique": "Unique",
+    "setOn": "{{pieces}}-piece bonus active",
+    "setOff": "{{pieces}}-piece bonus inactive",
+    "found": "Gear found",
+    "new": "New gear · {{count}}",
+    "unavailable": "Gear no longer owned",
+    "markSeen": "Mark seen",
+    "exchange": "Unique gear exchange",
+    "owned": "Owned {{count}}",
+    "locked": "Clear {{dungeon}} to unlock",
+    "trade": "Exchange",
+    "first": "First clear reward · 1 item ({{grades}})",
+    "bossUnique": "Boss unique · {{name}} ({{percent}}%)",
+    "raidUnique": "Raid uniques",
+    "boss": {
+      "wyrm": "Wyrm raid",
+      "lich": "Lich raid",
+      "titan": "Titan raid"
+    }
+  },
   "gearDetail": {
     "choose": "Choose type",
     "balanced": "Untyped (balanced)",

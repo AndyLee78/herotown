@@ -237,6 +237,10 @@ export function gearGradeClass(grade: string, fallback?: string) {
   return grade === 'epic' || grade === 'legend' ? `gear-grade-${grade}` : fallback
 }
 
+export function gearNameClass(item: Gear) {
+  return item.unique ? 'gear-unique' : gearGradeClass(item.grade)
+}
+
 export function formatEntry(t: TFunction, entry: LogEntry): string {
   const potion = entry.params.potion
   const refs = entry.params.refs

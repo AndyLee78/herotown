@@ -1,12 +1,15 @@
 import { useTranslation } from 'react-i18next'
 import { ESSENCES, MARKET_MATERIALS, abyssFloors, abyssShards, currentRaid, dungeonById, dungeonUnlocked, endgameRules, eventDungeonId, eventRunsLeft, eventShop, raidBoss, reduce, specialBlock, specialDungeons, todayElement, trialsLeft, type DungeonReport, type GameAction, type GameState, type VaultKey } from '../../core'
 import { Bar, Chip, Res, VaultAmount, vaultKinds, waitLabel } from './kit'
+import { lootRules } from '../../core/data'
+import { attachReportLoot } from './lootScreens'
 
 type SpecialReward = { key: VaultKey; amount: number; best?: number }
 type SpecialReport = DungeonReport & { specialReward?: SpecialReward }
 
 export function applyWithVaultHistory(state: GameState, action: GameAction): GameState {
-  const next = reduce(state, action)
+  const reduced = reduce(state, action)
+  const next = action.type === 'catchUp' ? attachReportLoot(state, reduced) : reduced
   if (action.type !== 'catchUp' || next.history === state.history) return next
   const returning = state.expeditions.filter((trip) => !next.expeditions.some(({ id }) => id === trip.id))
     .sort((a, b) => a.returnAt - b.returnAt)
@@ -126,6 +129,11 @@ export function RaidCard({ save, now, onSelect }: { save: GameState; now: number
     <div className="chips">{endgameRules.raid.tiers.map(({ spoils }, index) => (
       <span className="chips" key={index}>{t('raid.tier', { tier: index + 1 })} <VaultAmount kind={boss.spoil as VaultKey} amount={`+${spoils}`} /></span>
     ))}</div>
+    <div className="column">
+      <strong>{t('loot.raidUnique')}</strong>
+      <span>{lootRules.uniques.filter((def) => 'raid' in def && def.raid === boss.id).map(({ id }) => t(`unique.${id}`)).join(' · ')}</span>
+      <span className="chips">{lootRules.raidUniqueChance.map((chance, index) => <Chip key={index}>{t('raid.tier', { tier: index + 1 })} · {chance * 100}%</Chip>)}</span>
+    </div>
     {locked ? <p className="muted">{t('special.unlock', { level: endgameRules.raid.unlockTown })}</p> : null}
     {!locked && !raid.killed ? <p className="muted">{t('raid.onReturn')}</p> : null}
     {onSelect && !locked && !raid.killed ? <button type="button" className="btn primary" onClick={() => onSelect('raid')}>{t('battle.prepare')}</button> : null}

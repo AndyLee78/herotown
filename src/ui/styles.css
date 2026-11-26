@@ -2481,6 +2481,16 @@ button.chip {
   opacity: .63;
 }
 
+.gear-unique {
+  color: #884530;
+  font-weight: 800;
+  overflow-wrap: anywhere;
+}
+
+.loot-inbox > ul {
+  margin: 8px 0;
+}
+
 /* Hero gear: one block per slot (weapon, armour) above the trinkets. */
 .gear-slot + .gear-slot {
   margin-top: 8px;

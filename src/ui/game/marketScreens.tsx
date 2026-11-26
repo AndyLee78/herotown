@@ -2,7 +2,7 @@ import { useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { MARKET_MATERIALS, POTION_IDS, buyQuote, gearValue, marketRules, merchantHere, potionValue, pressureOf, seasonDeal, sellQuote, type GameAction, type GameState, type MerchantOffer } from '../../core'
 import { gearMods } from '../../core/gear'
-import { Chip, Res, gearGradeClass, itemLabel, useNow, waitLabel } from './kit'
+import { Chip, Res, gearNameClass, itemLabel, useNow, waitLabel } from './kit'
 import { GearOptions } from './gearDetails'
 
 const tabs = ['materials', 'sell', 'merchant'] as const
@@ -66,7 +66,7 @@ export function Market({ save, onAction }: { save: GameState; onAction: (action:
             const name = itemLabel(t, gear, 'warrior')
             const value = gearValue(gear)
             return <li key={gear.id} className="line">
-              <div className="column gear-entry"><span className={gearGradeClass(gear.grade)}>{name}</span><GearOptions item={gear} /></div>
+              <div className="column gear-entry"><span className={gearNameClass(gear)}>{name}</span><GearOptions item={gear} /></div>
               <button type="button" className="btn small" disabled={value <= 0} onClick={() => setSale({ action: { type: 'sellGear', gearId: gear.id }, name })}>{t('market.sellGold', { gold: value })}</button>
             </li>
           })}</ul>
@@ -100,7 +100,7 @@ function Offer({ offer, gold, onBuy }: { offer: MerchantOffer; gold: number; onB
     : t('market.bundle', { name: t(`potion.${offer.potionId}`), count: offer.count })
   return (
     <article className="card column">
-      <strong className={offer.kind === 'gear' ? gearGradeClass(offer.gear.grade) : undefined}>{name}</strong>
+      <strong className={offer.kind === 'gear' ? gearNameClass(offer.gear) : undefined}>{name}</strong>
       {offer.kind === 'gear' ? <GearOptions item={offer.gear} /> : null}
       {stats ? <span className="muted">{t('smith.stats', stats)}</span> : null}
       <div className="row">

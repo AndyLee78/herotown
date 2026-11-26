@@ -76,8 +76,9 @@ import { loadSoundPrefs, saveSoundPrefs, SOUND_NAMES } from '../sound'
 import { canReplay } from '../voxel/replay'
 import { dungeonPreviewUrl } from '../voxel/portrait'
 import { GraveFace, bonusValue } from './heroScreens'
-import { Bar, Chip, CostList, Portrait, Res, SchoolInfo, VaultAmount, Window, affordable, formatEntry, gearGradeClass, itemLabel, recipeLabel, useNow, vaultKinds, waitLabel } from './kit'
+import { Bar, Chip, CostList, Portrait, Res, SchoolInfo, VaultAmount, Window, affordable, formatEntry, gearGradeClass, gearNameClass, itemLabel, recipeLabel, useNow, vaultKinds, waitLabel } from './kit'
 import { GearOptions, GearTypePicker } from './gearDetails'
+import { GearExchange, LootInbox, ReportLoot } from './lootScreens'
 import { josa } from '../josa'
 import { InvasionCard } from './invasion'
 import { EliteMonsters, GiftBadge } from './identity'
@@ -265,6 +266,7 @@ export function Town({
       </div>
 
       {!next ? <Prosperity save={save} onAction={onAction} /> : level.level >= PROMOTION_FREE ? <Promotion save={save} onAction={onAction} /> : null}
+      <LootInbox save={save} onAction={onAction} />
       <InvasionCard save={save} now={now} onAction={onAction} />
       <Monuments save={save} onAction={onAction} />
 
@@ -650,13 +652,13 @@ export function Legends({ save, onAction }: { save: GameState; onAction: Act }) 
         <p className="muted">{t('legends.displayHint', { fame: legendsRules.shrineFame, morale: legendsRules.shrineMorale, current: shrineMorale(save) })}</p>
         {onDisplay.length === 0 ? <p className="muted">{t('legends.noDisplay')}</p> : null}
         <ul className="plain">{onDisplay.map((gear) => <li key={gear.id} className="line">
-          <div className="column gear-entry"><span className={gearGradeClass(gear.grade)}>{itemLabel(t, gear, 'warrior')}</span><GearOptions item={gear} /></div>
+          <div className="column gear-entry"><span className={gearNameClass(gear)}>{itemLabel(t, gear, 'warrior')}</span><GearOptions item={gear} /></div>
           <button type="button" className="btn small" onClick={() => onAction({ type: 'unshrine', gearId: gear.id })}>{t('legends.withdraw')}</button>
         </li>)}</ul>
         <h3 className="section-title">{t('legends.spare')}</h3>
         {stash.length === 0 ? <p className="muted">{t('legends.noSpare')}</p> : null}
         <ul className="plain">{stash.map((gear) => <li key={gear.id} className="line">
-          <div className="column gear-entry"><span className={gearGradeClass(gear.grade)}>{itemLabel(t, gear, 'warrior')}</span><GearOptions item={gear} /></div>
+          <div className="column gear-entry"><span className={gearNameClass(gear)}>{itemLabel(t, gear, 'warrior')}</span><GearOptions item={gear} /></div>
           <button type="button" className="btn small" disabled={onDisplay.length >= slots} onClick={() => onAction({ type: 'enshrine', gearId: gear.id })}>{t('legends.place')}</button>
         </li>)}</ul>
       </section>
@@ -1138,6 +1140,7 @@ export function Smith({ save, onAction }: { save: GameState; onAction: Act }) {
         {save.smith ? t('smith.working', { name: recipeLabel(t, save.smith.recipeId, save.smith.gearType ?? save.smith.gear?.type), time: waitLabel(save.smith.finishAt - now) }) : t('smith.idle')}
       </p>
       <WorkshopQueue save={save} building="smith" onAction={onAction} />
+      <GearExchange save={save} onAction={onAction} />
       <div className="split wide-right">
         <div>
           <h3 className="section-title">{t('label.smith')}</h3>
@@ -1185,9 +1188,9 @@ export function Smith({ save, onAction }: { save: GameState; onAction: Act }) {
               const limit = enhanceLimit(item)
               const canEnhance = item.slot !== 'trinket' && item.enhance < limit
               const lateChance = smithRules.lateEnhance.chance[item.enhance - smithRules.enhanceMax]
-              const canChange = (item.options?.length ?? 0) > 0
+              const canChange = !item.unique && (item.options?.length ?? 0) > 0
               return <li key={item.id} className="card column">
-                <span className={gearGradeClass(item.grade)}>{itemLabel(t, item, 'warrior')}</span>
+                <span className={gearNameClass(item)}>{itemLabel(t, item, 'warrior')}</span>
                 {item.slot !== 'trinket' ? <Chip>{t('lateSmith.progress', { current: item.enhance, max: limit })}</Chip> : null}
                 {canEnhance ? <>
                   {lateChance != null ? <span>{t('lateSmith.chance', { chance: Math.round(Math.min(1, lateChance + retireeBonus(save, 'smith')) * 100) })}</span> : null}
@@ -1199,7 +1202,7 @@ export function Smith({ save, onAction }: { save: GameState; onAction: Act }) {
                   <VaultAmount kind="valor" amount={smithRules.optionValor} short={save.vault.valor < smithRules.optionValor} />
                   <GearOptions item={item} disabled={save.vault.valor < smithRules.optionValor}
                     onReroll={(index) => onAction({ type: 'reroll', gearId: item.id, index })} />
-                </div> : null}
+                </div> : <GearOptions item={item} />}
               </li>
             })}
           </ul>
@@ -1271,6 +1274,7 @@ export function Report({ report }: { report: DungeonReport | null }) {
         </span>
       </div>
       <EliteMonsters report={report} />
+      <ReportLoot report={report} />
       {canReplay(report) ? (
         <Suspense fallback={<div className="battle-canvas" />}>
           <BattleView report={report} describe={describe} />
