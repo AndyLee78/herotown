@@ -5,6 +5,7 @@ import { useTranslation } from 'react-i18next'
 import { ESSENCES, lifeRules, lowMorale, moraleOf, moraleRules, type GameState, type Gear, type Hero, type LogEntry, type VaultKey } from '../../core'
 import { gameNow, subscribeGameClock } from '../clock'
 import { ResourceIcon, type ResourceKind } from './icons'
+import { splitOrder } from '../../core/gear'
 
 const HeroPortrait = lazy(() => import('../VillageView').then((mod) => ({ default: mod.HeroPortrait })))
 
@@ -209,11 +210,10 @@ export function itemLabel(t: TFunction, item: Gear, fallback: Hero['classId'], h
   const owner = item.id.split('.')[0] ?? fallback
   const classes = ['warrior', 'rogue', 'archer', 'mage', 'cleric', 'bard', 'dancer']
   const classId = classes.includes(owner) ? owner : fallback
-  const name = item.recipeId === 'starter' ? t(`gear.${classId}.${item.slot}`) : t(`item.${item.recipeId}`)
+  const name = item.recipeId === 'starter' ? t(`gear.${classId}.${item.slot}`) : recipeLabel(t, item.recipeId, item.type)
   const extra = [
     t(`grade.${item.grade}`),
     item.element ? t(`element.${item.element}`) : '',
-    ...(item.options ?? []).map((option) => t(`option.${option.id}`)),
     item.enhance > 0 ? `+${item.enhance}` : '',
   ].filter(Boolean)
   const heirloom = item.heirloom
@@ -221,6 +221,15 @@ export function itemLabel(t: TFunction, item: Gear, fallback: Hero['classId'], h
   if (heirloom) extra.push(t('heirloom.generation', { count: heirloom.generations }))
   if (heirBonus > 0) extra.push(t('heirloom.bonus', { percent: Math.round(heirBonus * 100) }))
   return `${title} (${extra.join(', ')})`
+}
+
+export function recipeLabel(t: TFunction, order: string, gearType?: Gear['type']): string {
+  const { recipeId, type } = splitOrder(order)
+  const kind = gearType ?? type
+  return kind ? t('gearDetail.typed', {
+    material: t(`gearDetail.material.${recipeId.split('.')[0]}`),
+    type: t(`gearDetail.type.${kind}`),
+  }) : t(`item.${recipeId}`)
 }
 
 export function gearGradeClass(grade: string, fallback?: string) {

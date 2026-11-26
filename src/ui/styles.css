@@ -2444,6 +2444,43 @@ button.chip {
   cursor: help;
 }
 
+.gear-type-picker {
+  display: grid;
+  gap: 8px;
+  min-width: 0;
+  margin: 8px 0 0;
+  border: 1px solid var(--line);
+  border-radius: 10px;
+}
+
+.gear-type-option, .gear-option {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 4px 8px;
+  white-space: normal;
+  text-align: start;
+}
+
+.gear-type-option[aria-pressed="true"] {
+  outline: 2px solid currentColor;
+}
+
+.gear-entry, .gear-summary {
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+
+.gear-option-high {
+  color: #805500;
+  font-weight: 800;
+}
+
+.gear-incompatible > .gear-entry {
+  opacity: .63;
+}
+
 /* Hero gear: one block per slot (weapon, armour) above the trinkets. */
 .gear-slot + .gear-slot {
   margin-top: 8px;

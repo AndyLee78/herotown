@@ -48,6 +48,7 @@ import { ResourceIcon, type ResourceKind } from './icons'
 import { Bar, Chip, Portrait, Res, clampPercent, needsWarning, useNow, waitLabel } from './kit'
 import { Report } from './villageScreens'
 import { EliteMonsters, MonsterIdentity } from './identity'
+import { GearSummary } from './gearDetails'
 import { RaidCard, SpecialDungeons, SpecialRewardChips } from './specialDungeons'
 import { dungeonPreviewUrl, monsterPortraitUrl } from '../voxel/portrait'
 
@@ -552,6 +553,7 @@ export function Prep({
               <span className="hero-row-body">
                 <strong>{hero.name}</strong>
                 <HeroStatus save={save} hero={hero} presetId={preset.id} now={now} />
+                <GearSummary hero={hero} />
               </span>
             </div>
           ) : null

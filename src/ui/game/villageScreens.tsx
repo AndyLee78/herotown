@@ -76,7 +76,8 @@ import { loadSoundPrefs, saveSoundPrefs, SOUND_NAMES } from '../sound'
 import { canReplay } from '../voxel/replay'
 import { dungeonPreviewUrl } from '../voxel/portrait'
 import { GraveFace, bonusValue } from './heroScreens'
-import { Bar, Chip, CostList, Portrait, Res, SchoolInfo, VaultAmount, Window, affordable, formatEntry, gearGradeClass, itemLabel, useNow, vaultKinds, waitLabel } from './kit'
+import { Bar, Chip, CostList, Portrait, Res, SchoolInfo, VaultAmount, Window, affordable, formatEntry, gearGradeClass, itemLabel, recipeLabel, useNow, vaultKinds, waitLabel } from './kit'
+import { GearOptions, GearTypePicker } from './gearDetails'
 import { josa } from '../josa'
 import { InvasionCard } from './invasion'
 import { EliteMonsters, GiftBadge } from './identity'
@@ -168,7 +169,7 @@ function WorkshopQueue({ save, building, onAction }: { save: GameState; building
         <ol className="plain">
           {queue.map((id, index) => (
             <li key={`${id}-${index}`} className="line">
-              <span>{t('automation.order', { number: index + 1, name: t(`${prefix}.${id}`) })}</span>
+              <span>{t('automation.order', { number: index + 1, name: building === 'smith' ? recipeLabel(t, id) : t(`${prefix}.${id}`) })}</span>
               <button type="button" className="btn small" onClick={() => onAction({ type: 'dequeue', building, index })}>{t('ui.cancel')}</button>
             </li>
           ))}
@@ -649,13 +650,13 @@ export function Legends({ save, onAction }: { save: GameState; onAction: Act }) 
         <p className="muted">{t('legends.displayHint', { fame: legendsRules.shrineFame, morale: legendsRules.shrineMorale, current: shrineMorale(save) })}</p>
         {onDisplay.length === 0 ? <p className="muted">{t('legends.noDisplay')}</p> : null}
         <ul className="plain">{onDisplay.map((gear) => <li key={gear.id} className="line">
-          <span className={gearGradeClass(gear.grade)}>{itemLabel(t, gear, 'warrior')}</span>
+          <div className="column gear-entry"><span className={gearGradeClass(gear.grade)}>{itemLabel(t, gear, 'warrior')}</span><GearOptions item={gear} /></div>
           <button type="button" className="btn small" onClick={() => onAction({ type: 'unshrine', gearId: gear.id })}>{t('legends.withdraw')}</button>
         </li>)}</ul>
         <h3 className="section-title">{t('legends.spare')}</h3>
         {stash.length === 0 ? <p className="muted">{t('legends.noSpare')}</p> : null}
         <ul className="plain">{stash.map((gear) => <li key={gear.id} className="line">
-          <span className={gearGradeClass(gear.grade)}>{itemLabel(t, gear, 'warrior')}</span>
+          <div className="column gear-entry"><span className={gearGradeClass(gear.grade)}>{itemLabel(t, gear, 'warrior')}</span><GearOptions item={gear} /></div>
           <button type="button" className="btn small" disabled={onDisplay.length >= slots} onClick={() => onAction({ type: 'enshrine', gearId: gear.id })}>{t('legends.place')}</button>
         </li>)}</ul>
       </section>
@@ -1124,6 +1125,7 @@ function Promotion({ save, onAction }: { save: GameState; onAction: Act }) {
 
 export function Smith({ save, onAction }: { save: GameState; onAction: Act }) {
   const { t } = useTranslation()
+  const [selected, setSelected] = useState<string | null>(null)
   const working = save.smith != null
   const now = useNow(working)
   const recipes = smithRules.recipes.filter((recipe) => recipe.smithLevel < 99)
@@ -1133,7 +1135,7 @@ export function Smith({ save, onAction }: { save: GameState; onAction: Act }) {
       <p className="banner">
         <UiIcon name="smith" size={18} />
         {t('smith.level', { level: save.buildings.smith })} ·{' '}
-        {save.smith ? t('smith.working', { name: t(`item.${save.smith.recipeId}`), time: waitLabel(save.smith.finishAt - now) }) : t('smith.idle')}
+        {save.smith ? t('smith.working', { name: recipeLabel(t, save.smith.recipeId, save.smith.gearType ?? save.smith.gear?.type), time: waitLabel(save.smith.finishAt - now) }) : t('smith.idle')}
       </p>
       <WorkshopQueue save={save} building="smith" onAction={onAction} />
       <div className="split wide-right">
@@ -1154,11 +1156,21 @@ export function Smith({ save, onAction }: { save: GameState; onAction: Act }) {
                   <button
                     type="button"
                     className="btn primary"
-                    disabled={locked || (working && queueFull) || !affordable(recipe, save)}
-                    onClick={() => onAction({ type: 'craft', recipeId: recipe.id, now: gameNow() })}
+                    disabled={locked}
+                    aria-expanded={selected === recipe.id}
+                    onClick={() => setSelected(selected === recipe.id ? null : recipe.id)}
                   >
-                    {locked ? t('smith.locked', { level: recipe.smithLevel }) : t(working ? 'automation.enqueue' : 'action.craft')}
+                    {locked ? t('smith.locked', { level: recipe.smithLevel }) : t('gearDetail.choose')}
                   </button>
+                  {selected === recipe.id && !locked ? <GearTypePicker
+                    slot={recipe.slot === 'armor' ? 'armor' : 'weapon'}
+                    disabled={(working && queueFull) || !affordable(recipe, save)}
+                    queued={working}
+                    onCraft={(gearType) => {
+                      onAction({ type: 'craft', recipeId: recipe.id, gearType, now: gameNow() })
+                      setSelected(null)
+                    }}
+                  /> : null}
                 </article>
               )
             })}
@@ -1183,12 +1195,11 @@ export function Smith({ save, onAction }: { save: GameState; onAction: Act }) {
                   <button type="button" className="btn small" disabled={working || save.buildings.smith < 1 || !affordable(cost, save)}
                     onClick={() => onAction({ type: 'enhance', gearId: item.id, now: gameNow() })}>{t('lateSmith.enhance', { level: item.enhance + 1 })}</button>
                 </> : null}
-                {canChange ? <>
-                  <VaultAmount kind="valor" amount={smithRules.optionValor} />
-                  <div className="chips">{(item.options ?? []).map((option, index) => <button key={option.id}
-                    type="button" className="btn small" disabled={save.vault.valor < smithRules.optionValor}
-                    onClick={() => onAction({ type: 'reroll', gearId: item.id, index })}>{t('lateSmith.option', { option: t(`option.${option.id}`) })}</button>)}</div>
-                </> : null}
+                {canChange ? <div className="column">
+                  <VaultAmount kind="valor" amount={smithRules.optionValor} short={save.vault.valor < smithRules.optionValor} />
+                  <GearOptions item={item} disabled={save.vault.valor < smithRules.optionValor}
+                    onReroll={(index) => onAction({ type: 'reroll', gearId: item.id, index })} />
+                </div> : null}
               </li>
             })}
           </ul>
