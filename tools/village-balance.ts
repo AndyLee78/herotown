@@ -2,7 +2,7 @@
 import { pathToFileURL } from 'node:url'
 import { eventDungeonId, eventRunsLeft, eventShop } from '../src/core/events'
 import { monumentStage, monumentCost, type MonumentId } from '../src/core/monuments'
-import { alchemyRules, classById, combatRules, dungeons, endgameRules, guildRules, lifeRules, magicRules, marketRules, progression, retirementRules, schoolRules, smithRules, specialDungeons, villageRules } from '../src/core/data'
+import { alchemyRules, classById, combatRules, dungeons, endgameRules, guildRules, lifeRules, lootRules, magicRules, marketRules, progression, retirementRules, schoolRules, smithRules, specialDungeons, villageRules } from '../src/core/data'
 import { bedsTaken, isLegend } from '../src/core/family'
 import { fountainWishes } from '../src/core/fountain'
 import { bedCount, busyHeroIds, dungeonUnlocked, enhanceCostFor, enhanceLimit, festivalCost, freshState, presetById, reduce, retireeBonus, townLevelOf, type BuildingId, type GameAction, type GameState, type MaterialName } from '../src/core/game'
@@ -16,7 +16,7 @@ import { nestRevealed, seasonKey } from '../src/core/nest'
 import { currentRaid, raidBoss, raidWeek } from '../src/core/raid'
 import { gatherLeft } from '../src/core/tavern'
 import { ESSENCES, freshVault, specialBlock, type Vault, type VaultKey } from '../src/core/trials'
-import type { Hero, PotionId } from '../src/core/types'
+import type { Gear, Hero, PotionId } from '../src/core/types'
 import { skillChoices } from './curve'
 
 const minute = 60_000
@@ -45,7 +45,7 @@ type RaidWeekSample = { week: string; boss: string; openedAt: number; departures
 
 type GearStudy = { initial: GameState; option: 'control' | 'xp' | 'lucky' }
 
-export function simulateVillage(seed: number, days: number, stopAtTown?: number, lateGame = false, raidAndInvasion = false, postTownDays = 0, study?: GearStudy) {
+export function simulateVillage(seed: number, days: number, stopAtTown?: number, lateGame = false, raidAndInvasion = false, postTownDays = 0, study?: GearStudy, lootStudy = false) {
   let state = study?.initial ?? freshState(seed, start)
   let now = state.lastTickAt
   let acted = false
@@ -82,6 +82,9 @@ export function simulateVillage(seed: number, days: number, stopAtTown?: number,
   let raidRetryAt = start
   let lateStart = study?.initial.lastTickAt
   let lateInitial = study ? stock(state) : undefined
+  const acquired: Gear[] = []
+  const knownGear = new Set<string>()
+  const exchanged = new Set<string>()
   const studyIds = new Set(study ? presetById(study.initial, study.initial.presetId)?.slots.map(({ id }) => id) : [])
   const studyLevels = new Map<string, number>()
   const careerLevel = (hero: Hero) => hero.level + hero.xp / (hero.level * progression.xpPerLevel)
@@ -128,6 +131,12 @@ export function simulateVillage(seed: number, days: number, stopAtTown?: number,
     if (study) for (const hero of [...next.roster, ...next.retirees.map(({ hero }) => hero)]) {
       if (studyIds.has(hero.id)) studyLevels.set(hero.id, Math.max(studyLevels.get(hero.id) ?? 0, careerLevel(hero)))
     }
+    if (lootStudy) for (const item of next.stash) {
+      if (!knownGear.has(item.id)) {
+        knownGear.add(item.id)
+        acquired.push(item)
+      }
+    }
   }
 
   function applyStudyOptions() {
@@ -162,6 +171,10 @@ export function simulateVillage(seed: number, days: number, stopAtTown?: number,
         if (!cast({ type: 'buyEvent', itemId: item.id })) break
         purchases[item.id] = (purchases[item.id] ?? 0) + 1
       }
+    }
+    if (lootStudy) for (const def of lootRules.uniques) {
+      if (exchanged.has(def.id)) continue
+      if (cast({ type: 'exchange', uniqueId: def.id })) exchanged.add(def.id)
     }
   }
 
@@ -556,6 +569,10 @@ export function simulateVillage(seed: number, days: number, stopAtTown?: number,
       if (postTownDays > 0 && lateStart == null && townLevelOf(state).level >= 10) {
         lateStart = now
         lateInitial = stock(state)
+        if (lootStudy) {
+          const owned = [...state.stash, ...state.roster.flatMap(({ gear }) => gear), ...state.retirees.flatMap(({ hero }) => hero.gear), ...(state.shrine?.gear ?? []), ...(state.smith?.gear ? [state.smith.gear] : [])]
+          for (const { id } of owned) knownGear.add(id)
+        }
       }
       if (lateStart != null) {
         const raid = currentRaid(state, now)
@@ -640,6 +657,7 @@ export function simulateVillage(seed: number, days: number, stopAtTown?: number,
     startDay: (lateStart - start) / day, initial: lateInitial!, final: stock(state), income: lateIncome, spent: lateSpent,
     purchases, enhancements: [...enhancements.values()], tiers: [...raidTiers.values()], activity: lateActivity,
     studyLevels: [...studyStart].map(([id, initial]) => (studyLevels.get(id) ?? initial) - initial),
+    acquired,
   } }
 }
 
