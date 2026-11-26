@@ -14,7 +14,7 @@ export function BattleView({
 }: {
   report: DungeonReport
   describe: (index: number) => string
-  gearByHero?: Record<string, Pick<Gear, 'grade' | 'slot' | 'type'>[]>
+  gearByHero?: Record<string, Pick<Gear, 'grade' | 'slot' | 'type' | 'unique'>[]>
 }) {
   const { t } = useTranslation()
   const canvasRef = useRef<HTMLCanvasElement>(null)

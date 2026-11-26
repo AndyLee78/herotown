@@ -200,6 +200,8 @@ function LiveFight({ trip, phase, save }: { trip: Expedition; phase: Phase; save
 
   const lines = trip.report.log.slice(Math.max(0, logIndex - 3), logIndex + 1)
   const meters = useMemo(() => tally(trip, logIndex), [trip, logIndex])
+  const lootDrops = useMemo(() => lootForTrip(save, trip), [save, trip])
+  const showChest = phase === 'back' && trip.report.victory && (lootDrops.length > 0 || mayDropGear(trip))
   return (
     <div className="live">
       <ol className="live-log">
@@ -207,11 +209,103 @@ function LiveFight({ trip, phase, save }: { trip: Expedition; phase: Phase; save
         {phase !== 'out' ? lines.map((entry, index) => <li key={`${entry.tick}-${index}`}>{formatEntry(t, entry)}</li>) : null}
         {phase === 'back' ? <li>{t(trip.report.victory ? 'expedition.homeWin' : 'expedition.homeLose')}</li> : null}
       </ol>
-      <canvas ref={canvasRef} className="live-canvas" aria-label={t('battle.label')} />
+      <div style={{ position: 'relative', minHeight: 0 }}>
+        <canvas ref={canvasRef} className="live-canvas" aria-label={t('battle.label')} />
+        {showChest ? <LootChest key={trip.id} count={Math.max(1, lootDrops.length)} /> : null}
+      </div>
       <div className="meters">
         <MeterList title={t('expedition.damage')} rows={meters.damage} tone="bad" />
         <MeterList title={t('expedition.healing')} rows={meters.healing} tone="good" />
       </div>
+    </div>
+  )
+}
+
+// Gear found for this trip: loot rows whose source matches and whose stamp is
+// the settlement time (returnAt) or the catch-up piece that covered it.
+function lootForTrip(save: GameState, trip: Expedition) {
+  const sources = new Set<string>([trip.dungeonId])
+  if (trip.raid) {
+    const boss = trip.report.floors?.[1]?.find((unit) => unit.boss && unit.side === 'enemy')
+    const id = boss ? raidBossIdOf(boss.refId) : null
+    if (id) {
+      sources.add(`raid.${id}`)
+    }
+  }
+  return (save.loot ?? []).filter(
+    (entry) => sources.has(entry.source) && entry.at <= trip.returnAt && entry.at >= trip.departAt,
+  )
+}
+
+function mayDropGear(trip: Expedition): boolean {
+  const dungeon = dungeonById(trip.dungeonId)
+  return !dungeon.special || dungeon.special === 'raid'
+}
+
+function LootChest({ count }: { count: number }) {
+  const [open, setOpen] = useState(false)
+  useEffect(() => {
+    const timer = window.setTimeout(() => setOpen(true), 80)
+    return () => window.clearTimeout(timer)
+  }, [])
+  return (
+    <div
+      aria-hidden
+      style={{
+        position: 'absolute',
+        right: 10,
+        bottom: 10,
+        display: 'flex',
+        flexDirection: 'column',
+        alignItems: 'center',
+        gap: 4,
+        pointerEvents: 'none',
+      }}
+    >
+      <div
+        style={{
+          position: 'relative',
+          width: 54,
+          height: 40,
+          background: '#6b4a30',
+          border: '2px solid #3a2a20',
+          borderRadius: 6,
+          boxShadow: '0 4px 0 #3a2a20',
+        }}
+      >
+        <div
+          style={{
+            position: 'absolute',
+            left: -2,
+            right: -2,
+            top: -2,
+            height: 18,
+            background: '#c9a43a',
+            border: '2px solid #8a6a28',
+            borderRadius: '6px 6px 2px 2px',
+            transformOrigin: 'bottom center',
+            transform: open ? 'translateY(-10px) rotate(-28deg)' : 'none',
+            transition: 'transform 0.65s ease-out',
+          }}
+        />
+        <div
+          style={{
+            position: 'absolute',
+            left: '50%',
+            top: 8,
+            width: 14,
+            height: 14,
+            marginLeft: -7,
+            background: '#ffe27a',
+            borderRadius: 3,
+            boxShadow: open ? '0 0 10px #ffe27a' : 'none',
+            opacity: open ? 1 : 0,
+            transform: open ? 'translateY(-18px) scale(1.15)' : 'translateY(0) scale(0.6)',
+            transition: 'opacity 0.35s 0.25s, transform 0.55s 0.15s ease-out',
+          }}
+        />
+      </div>
+      <span style={{ fontSize: 11, fontWeight: 800, color: '#ffe27a' }}>×{count}</span>
     </div>
   )
 }

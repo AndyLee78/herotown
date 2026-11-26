@@ -20,7 +20,7 @@ export type BattleBackdrop = {
   raidBossId?: RaidBossId
   raid?: { start: number | null; left?: number; max?: number }
   // Worn gear by hero id so weapon/armour types show in the replay (5b).
-  gearByHero?: Record<string, Pick<Gear, 'grade' | 'slot' | 'type'>[]>
+  gearByHero?: Record<string, Pick<Gear, 'grade' | 'slot' | 'type' | 'unique'>[]>
 }
 
 type BattleTheme = {
@@ -272,7 +272,7 @@ export class BattleScene {
   private wingShadow: THREE.Mesh | null = null
   private raidBar: { root: THREE.Group; fill: THREE.Mesh; max: number } | null = null
   private raidBossId: string | null = null
-  private readonly gearByHero: Record<string, Pick<Gear, 'grade' | 'slot' | 'type'>[]>
+  private readonly gearByHero: Record<string, Pick<Gear, 'grade' | 'slot' | 'type' | 'unique'>[]>
 
   constructor(
     private readonly canvas: HTMLCanvasElement,

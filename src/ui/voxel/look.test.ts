@@ -57,11 +57,27 @@ describe('gear style', () => {
         { grade: 'epic', slot: 'armor', type: 'plate' },
       ]),
     ).toEqual({ aura: 'epic', weapon: 'axe', armor: 'plate' })
-    expect(gearStyleKey({ aura: 'epic', weapon: 'axe', armor: 'plate' })).toBe('epic|axe|plate')
+    expect(gearStyleKey({ aura: 'epic', weapon: 'axe', armor: 'plate' })).toBe('epic|axe|plate|||')
   })
 
   it('ignores unknown types so class defaults stay', () => {
     expect(gearStyleOf([{ grade: 'common', slot: 'weapon' }])).toEqual({ aura: null })
+  })
+
+  it('reads unique gear and a three-piece set glow', () => {
+    expect(
+      gearStyleOf([
+        { grade: 'legend', slot: 'weapon', unique: 'dragonbane' },
+        { grade: 'legend', slot: 'armor', unique: 'wyrmscale' },
+      ]),
+    ).toMatchObject({ uniqueWeapon: 'dragonbane', uniqueArmor: 'wyrmscale' })
+    expect(
+      gearStyleOf([
+        { grade: 'legend', slot: 'weapon', unique: 'dragonbane' },
+        { grade: 'legend', slot: 'armor', unique: 'wyrmscale' },
+        { grade: 'legend', slot: 'trinket', unique: 'wyrmeye' },
+      ]).setGlow,
+    ).toBe('dragonslayer')
   })
 })
 

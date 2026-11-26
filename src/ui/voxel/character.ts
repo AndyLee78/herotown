@@ -1,7 +1,17 @@
 import * as THREE from 'three'
 import type { ClassId, WeaponType } from '../../core/types'
 import { Builder } from './kit'
-import { ageLook, hairColor, type GearAura, type GearStyle, type HairStyle, type Look } from './look'
+import {
+  ageLook,
+  hairColor,
+  SET_GLOW,
+  type GearAura,
+  type GearStyle,
+  type HairStyle,
+  type Look,
+  type UniqueArmorId,
+  type UniqueWeaponId,
+} from './look'
 
 export type { GearAura, GearStyle }
 
@@ -48,6 +58,8 @@ export type Outfit = {
   // Extra plate thickness when the worn armour is plate.
   plate?: boolean
   leather?: boolean
+  uniqueWeapon?: UniqueWeaponId
+  uniqueArmor?: UniqueArmorId
 }
 
 const OUTFITS: Record<ClassId, Outfit> = {
@@ -78,6 +90,7 @@ export type BodySpec = {
   stoop: number
   shoe?: string
   aura?: GearAura
+  setGlow?: string
 }
 
 export type Rig = {
@@ -112,6 +125,7 @@ export function buildCharacter(look: Look, style: GearAura | GearStyle | null = 
     head: age.head,
     stoop: age.stoop,
     aura: gear.aura,
+    setGlow: gear.setGlow ? SET_GLOW[gear.setGlow] : undefined,
   })
   return rig
 }
@@ -121,7 +135,14 @@ function asGearStyle(style: GearAura | GearStyle | null): GearStyle {
     return { aura: style }
   }
   if (style && typeof style === 'object') {
-    return { aura: style.aura ?? null, ...(style.weapon ? { weapon: style.weapon } : {}), ...(style.armor ? { armor: style.armor } : {}) }
+    return {
+      aura: style.aura ?? null,
+      ...(style.weapon ? { weapon: style.weapon } : {}),
+      ...(style.armor ? { armor: style.armor } : {}),
+      ...(style.uniqueWeapon ? { uniqueWeapon: style.uniqueWeapon } : {}),
+      ...(style.uniqueArmor ? { uniqueArmor: style.uniqueArmor } : {}),
+      ...(style.setGlow ? { setGlow: style.setGlow } : {}),
+    }
   }
   return { aura: null }
 }
@@ -133,6 +154,14 @@ function dressOutfit(base: Outfit, gear: GearStyle): Outfit {
   }
   if (gear.weapon) {
     outfit = { ...outfit, weapon: weaponVisual(gear.weapon), quiver: gear.weapon === 'bow' || gear.weapon === 'crossbow' || outfit.quiver }
+  }
+  if (gear.uniqueWeapon) {
+    outfit = {
+      ...outfit,
+      uniqueWeapon: gear.uniqueWeapon,
+      weapon: uniqueWeaponBase(gear.uniqueWeapon),
+      quiver: false,
+    }
   }
   if (gear.armor === 'plate') {
     outfit = {
@@ -171,7 +200,34 @@ function dressOutfit(base: Outfit, gear: GearStyle): Outfit {
       pads: false,
     }
   }
+  if (gear.uniqueArmor) {
+    outfit = { ...outfit, ...uniqueArmorOutfit(gear.uniqueArmor, gear.aura) }
+  }
   return outfit
+}
+
+function uniqueWeaponBase(id: UniqueWeaponId): Weapon {
+  if (id === 'lichscepter') {
+    return 'scepter'
+  }
+  if (id === 'twinfang') {
+    return 'dagger'
+  }
+  return 'sword'
+}
+
+function uniqueArmorOutfit(id: UniqueArmorId, aura: GearAura): Partial<Outfit> {
+  const trim = (color: string) => (aura ? {} : { trim: color })
+  if (id === 'mossmantle') {
+    return { body: '#4a6a3a', ...trim('#7dff9a'), pants: '#3a4a2e', robe: true, plate: false, leather: false, pads: false, bareArms: false, skirt: false, uniqueArmor: id }
+  }
+  if (id === 'citadelvestment') {
+    return { body: '#2a2438', ...trim('#c79bff'), pants: '#1e1a28', robe: true, plate: false, leather: false, pads: false, bareArms: false, skirt: false, uniqueArmor: id }
+  }
+  if (id === 'wyrmscale') {
+    return { body: '#8a2e1a', ...trim('#ff8a3d'), pants: '#5a1e12', plate: true, robe: false, leather: false, pads: true, bareArms: false, skirt: false, uniqueArmor: id }
+  }
+  return { body: '#2a2030', ...trim('#b48cff'), pants: '#1a1420', robe: true, plate: false, leather: false, pads: false, bareArms: false, skirt: false, uniqueArmor: id }
 }
 
 function weaponVisual(type: WeaponType): Weapon {
@@ -235,6 +291,7 @@ export function buildBody(spec: BodySpec): Rig {
   if (outfit.quiver) {
     body.box(0.12, 0.34, 0.1, '#7a5236', 0.08, 0.22, -0.17, { rz: 0.3 }).box(0.1, 0.06, 0.08, '#f2efe6', 0.13, 0.4, -0.17, { rz: 0.3 })
   }
+  decorateUniqueArmor(body, outfit.uniqueArmor)
   torso.add(body.build())
 
   const armL = new THREE.Group()
@@ -247,23 +304,31 @@ export function buildBody(spec: BodySpec): Rig {
       .box(0.1, 0.08, 0.11, skin, 0, -0.25, 0)
     if (outfit.pads) {
       const pad = outfit.plate ? 0.2 : 0.16
-      parts.box(pad, outfit.plate ? 0.1 : 0.08, outfit.plate ? 0.22 : 0.19, outfit.trim === '#c9a43a' || outfit.plate ? '#b8c0c8' : outfit.trim, 0, 0.02, 0)
+      const padColor = outfit.uniqueArmor === 'wyrmscale' ? '#ff8a3d' : outfit.trim === '#c9a43a' || outfit.plate ? '#b8c0c8' : outfit.trim
+      parts.box(pad, outfit.plate ? 0.1 : 0.08, outfit.plate ? 0.22 : 0.19, padColor, 0, 0.02, 0)
     }
     if (arm === armR) {
-      drawWeapon(parts, outfit.weapon, spec.aura ?? null)
+      if (outfit.uniqueWeapon) {
+        drawUniqueWeapon(parts, outfit.uniqueWeapon, spec.aura ?? null)
+      } else {
+        drawWeapon(parts, outfit.weapon, spec.aura ?? null)
+      }
     }
-    if (arm === armL && outfit.weapon === 'shieldsword') {
+    if (arm === armL && outfit.weapon === 'shieldsword' && !outfit.uniqueWeapon) {
       drawOffhandShield(parts, spec.aura ?? null)
+    }
+    if (arm === armL && outfit.uniqueWeapon === 'twinfang') {
+      drawUniqueWeapon(parts, 'twinfang', spec.aura ?? null, true)
     }
     arm.add(parts.build({ castShadow: false }))
   }
   torso.add(armL, armR)
-  if (spec.aura) {
-    const glow = AURA_BLADE[spec.aura]
+  const glowColor = spec.setGlow ?? (spec.aura ? AURA_BLADE[spec.aura] : null)
+  if (glowColor) {
     const spark = new Builder()
-      .box(0.1, 0.1, 0.1, glow, 0.16, 0.38, -0.12, { glow: true })
-      .box(0.08, 0.08, 0.08, glow, -0.14, 0.48, -0.08, { glow: true })
-      .box(0.06, 0.06, 0.06, glow, 0.02, 0.55, -0.16, { glow: true })
+      .box(0.1, 0.1, 0.1, glowColor, 0.16, 0.38, -0.12, { glow: true })
+      .box(0.08, 0.08, 0.08, glowColor, -0.14, 0.48, -0.08, { glow: true })
+      .box(0.06, 0.06, 0.06, glowColor, 0.02, 0.55, -0.16, { glow: true })
       .build({ castShadow: false, receiveShadow: false })
     spark.name = 'gearAura'
     torso.add(spark)
@@ -347,6 +412,63 @@ function drawHair(b: Builder, style: HairStyle, color: string) {
       .box(0.07, 0.34, 0.42, color, -0.25, 0.26, 0)
       .box(0.07, 0.34, 0.42, color, 0.25, 0.26, 0)
       .box(0.48, 0.1, 0.06, color, 0, 0.35, 0.215)
+  }
+}
+
+function decorateUniqueArmor(b: Builder, id: UniqueArmorId | undefined) {
+  if (id === 'mossmantle') {
+    b.box(0.48, 0.2, 0.1, '#6fbf4a', 0, 0.28, -0.16, { glow: true })
+      .box(0.1, 0.14, 0.08, '#4a8a3a', -0.2, 0.1, 0.12)
+      .box(0.1, 0.14, 0.08, '#4a8a3a', 0.2, 0.1, 0.12)
+  } else if (id === 'citadelvestment') {
+    b.box(0.36, 0.06, 0.28, '#d9b54a', 0, 0.34, 0, { glow: true })
+      .box(0.08, 0.2, 0.08, '#c79bff', 0, 0.2, 0.14, { glow: true })
+  } else if (id === 'wyrmscale') {
+    for (const [x, y] of [[-0.12, 0.2], [0.12, 0.22], [0, 0.12], [-0.08, 0.28], [0.1, 0.14]] as const) {
+      b.box(0.1, 0.08, 0.04, '#ff8a3d', x, y, 0.14, { glow: true })
+    }
+  } else if (id === 'lichshroud') {
+    b.box(0.46, 0.12, 0.08, '#b48cff', 0, 0.34, -0.1, { glow: true })
+      .box(0.08, 0.1, 0.06, '#e9e4d4', -0.12, 0.18, 0.13)
+      .box(0.08, 0.1, 0.06, '#e9e4d4', 0.12, 0.18, 0.13)
+  }
+}
+
+// Unique weapons (Docs/identity.md 5c): colour and ornament on a class-sized base.
+function drawUniqueWeapon(b: Builder, id: UniqueWeaponId, aura: GearAura = null, offhand = false) {
+  const forward = Math.PI / 2
+  const glow = aura ? AURA_BLADE[aura] : null
+  if (id === 'gravecleaver') {
+    b.within(0, -0.27, 0.03, forward, 0, 0, () => {
+      b.box(0.05, 0.12, 0.05, '#3a3d44')
+        .box(0.22, 0.05, 0.06, '#7dff9a', 0, 0.08, 0, { glow: true })
+        .box(0.08, 0.5, 0.04, glow ?? '#e9e4d4', 0, 0.34, 0, glow ? { glow: true } : {})
+        .box(0.1, 0.1, 0.1, '#7dff9a', 0, 0.58, 0, { glow: true })
+    })
+  } else if (id === 'twinfang') {
+    const side = offhand ? -1 : 1
+    b.within(side * 0.02, -0.27, 0.03, forward, 0, 0, () => {
+      b.box(0.04, 0.1, 0.04, '#2a1e18')
+        .box(0.12, 0.03, 0.04, '#8a3434', 0, 0.06, 0)
+        .box(0.045, 0.28, 0.03, glow ?? '#cfd5dc', 0, 0.2, 0, glow ? { glow: true } : {})
+        .box(0.03, 0.08, 0.03, '#ff6a3a', 0, 0.36, 0, { glow: true })
+    })
+  } else if (id === 'dragonbane') {
+    b.within(0, -0.27, 0.03, forward, 0, 0, () => {
+      b.box(0.05, 0.12, 0.05, '#5a1810')
+        .box(0.22, 0.05, 0.06, '#d9b54a', 0, 0.08, 0, { glow: true })
+        .box(0.09, 0.52, 0.04, glow ?? '#ff6a3a', 0, 0.36, 0, { glow: true })
+        .box(0.12, 0.08, 0.08, '#ffe27a', 0, 0.62, 0, { glow: true })
+        .box(0.06, 0.1, 0.06, '#8a1e12', -0.1, 0.55, 0, { rz: 0.5 })
+        .box(0.06, 0.1, 0.06, '#8a1e12', 0.1, 0.55, 0, { rz: -0.5 })
+    })
+  } else if (id === 'lichscepter') {
+    b.within(0, -0.27, 0.03, forward, 0, 0, () => {
+      b.box(0.045, 0.36, 0.045, '#e9e4d4', 0, 0.12, 0)
+        .box(0.14, 0.14, 0.14, glow ?? '#b48cff', 0, 0.36, 0, { glow: true })
+        .box(0.08, 0.16, 0.08, '#7fe3ff', 0, 0.5, 0, { glow: true })
+        .box(0.1, 0.06, 0.1, '#2a2030', 0, 0.28, 0)
+    })
   }
 }
 

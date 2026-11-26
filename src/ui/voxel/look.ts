@@ -35,17 +35,54 @@ export function gearAuraOf(gear: Pick<Gear, 'grade'>[] | undefined | null): Gear
   return best
 }
 
+export type GearSetId = 'dragonslayer' | 'gravekeeper' | 'windwalker' | 'choir'
+
+// Unique weapon/armour ids that get a distinct voxel look (Docs/identity.md 5c).
+export const UNIQUE_WEAPONS = ['gravecleaver', 'twinfang', 'dragonbane', 'lichscepter'] as const
+export const UNIQUE_ARMORS = ['mossmantle', 'citadelvestment', 'wyrmscale', 'lichshroud'] as const
+export type UniqueWeaponId = (typeof UNIQUE_WEAPONS)[number]
+export type UniqueArmorId = (typeof UNIQUE_ARMORS)[number]
+
+const UNIQUE_SET: Record<string, GearSetId> = {
+  gravecleaver: 'gravekeeper',
+  cryptcrown: 'gravekeeper',
+  mossmantle: 'windwalker',
+  twinfang: 'windwalker',
+  citadelvestment: 'choir',
+  dragonbane: 'dragonslayer',
+  wyrmscale: 'dragonslayer',
+  wyrmeye: 'dragonslayer',
+  lichshroud: 'gravekeeper',
+  lichscepter: 'choir',
+  titanstride: 'windwalker',
+  titanbell: 'choir',
+}
+
+export const SET_GLOW: Record<GearSetId, string> = {
+  dragonslayer: '#ff6a3a',
+  gravekeeper: '#6fbf4a',
+  windwalker: '#7fe3ff',
+  choir: '#ffe27a',
+}
+
 // Worn weapon/armour kinds for voxel models (Docs/identity.md 5b). Missing type
 // keeps the class default look, same path gearAuraOf already walks.
 export type GearStyle = {
   aura: GearAura
   weapon?: WeaponType
   armor?: ArmorType
+  uniqueWeapon?: UniqueWeaponId
+  uniqueArmor?: UniqueArmorId
+  // Soft set-coloured light when three pieces of one set are worn (5c).
+  setGlow?: GearSetId
 }
 
-export function gearStyleOf(gear: Pick<Gear, 'grade' | 'slot' | 'type'>[] | undefined | null): GearStyle {
+export function gearStyleOf(gear: Pick<Gear, 'grade' | 'slot' | 'type' | 'unique'>[] | undefined | null): GearStyle {
   let weapon: WeaponType | undefined
   let armor: ArmorType | undefined
+  let uniqueWeapon: UniqueWeaponId | undefined
+  let uniqueArmor: UniqueArmorId | undefined
+  const worn = new Map<GearSetId, Set<string>>()
   for (const item of gear ?? []) {
     if (item.slot === 'weapon' && item.type && (WEAPON_TYPES as readonly string[]).includes(item.type)) {
       weapon = item.type as WeaponType
@@ -53,16 +90,36 @@ export function gearStyleOf(gear: Pick<Gear, 'grade' | 'slot' | 'type'>[] | unde
     if (item.slot === 'armor' && item.type && (ARMOR_TYPES as readonly string[]).includes(item.type)) {
       armor = item.type as ArmorType
     }
+    if (item.unique && item.slot === 'weapon' && (UNIQUE_WEAPONS as readonly string[]).includes(item.unique)) {
+      uniqueWeapon = item.unique as UniqueWeaponId
+    }
+    if (item.unique && item.slot === 'armor' && (UNIQUE_ARMORS as readonly string[]).includes(item.unique)) {
+      uniqueArmor = item.unique as UniqueArmorId
+    }
+    const set = item.unique ? UNIQUE_SET[item.unique] : undefined
+    if (set && item.unique) {
+      worn.set(set, (worn.get(set) ?? new Set()).add(item.unique))
+    }
+  }
+  let setGlow: GearSetId | undefined
+  for (const [set, pieces] of worn) {
+    if (pieces.size >= 3) {
+      setGlow = set
+      break
+    }
   }
   return {
     aura: gearAuraOf(gear),
     ...(weapon ? { weapon } : {}),
     ...(armor ? { armor } : {}),
+    ...(uniqueWeapon ? { uniqueWeapon } : {}),
+    ...(uniqueArmor ? { uniqueArmor } : {}),
+    ...(setGlow ? { setGlow } : {}),
   }
 }
 
 export function gearStyleKey(style: GearStyle): string {
-  return `${style.aura ?? ''}|${style.weapon ?? ''}|${style.armor ?? ''}`
+  return `${style.aura ?? ''}|${style.weapon ?? ''}|${style.armor ?? ''}|${style.uniqueWeapon ?? ''}|${style.uniqueArmor ?? ''}|${style.setGlow ?? ''}`
 }
 
 // Appearance is drawn from the hero's genes (src/core/genes.ts). Heroes born
