@@ -163,8 +163,8 @@ Claude Code, Cursor, GPT(Codex)가 함께 쓰는 작업 목록이다. 작업 하
 | 121 | 드롭·고유 장비·세트·교환 화면 | GPT | `src/ui/App.tsx`, `src/ui/game/*.tsx`, `src/ui/styles.css`, `src/locales/*` | 완료 (d35b6d0) |
 | 122 | 5c core 코드 리뷰 (2c287d8) | GPT | `Docs/reviews/2c287d8.md` (새 파일만) | 완료 (9911bb8) |
 | 123 | 5c 측정: 드롭 속도·고유 장비·세트 세기 | GPT | `tools/*`, `Docs/identity.md`의 측정 절 | 완료 (44f32fa) |
-| 124 | 5d 밸런스 측정 | GPT | `tools/*`, `Docs/identity.md`의 측정 절 | 대기 |
-| 125 | 5d 수치 조정 | GPT | `src/data/*.json`, `src/core/*.test.ts`, `Docs/identity.md` | 대기 (124 뒤) |
+| 124 | 5d 밸런스 측정 | GPT | `tools/*`, `Docs/identity.md`의 측정 절 | 완료 (92f6b1a) |
+| 125 | 5d 수치 조정 | GPT | `src/data/*.json`, `src/core/*.test.ts`, `Docs/identity.md` | 완료 (066e4e3) |
 
 ---
 
@@ -3068,6 +3068,9 @@ Docs/identity.md 5d를 측정한다. core와 src/data는 고치지 않는다. �
 
 **메모**
 
+갈래 배분과 천부·장비·권장 레벨·정예·월간 성장 비교를 재현할 도구와 조건을 기록했다. 성직자 갈래 격차 2.160레벨, 직업 교체 격차 3.000레벨이었다.
+권장 레벨의 드롭 장비 파티에서 일반 던전 P25가 모두 100%였다. 관측된 목표 후보와 방문자 가드 결과를 함께 기록했다.
+
 ---
 
 ## 125. 5d 수치 조정 (GPT)
@@ -3088,3 +3091,6 @@ Docs/identity.md 5d를 측정한다. core와 src/data는 고치지 않는다. �
 ```
 
 **메모**
+
+성직자 갈래 격차는 1.876레벨, 같은 Lv10 시작 저장에서 XP 옵션의 30일 이득은 평균 +3.20레벨로 줄었다. 정예 드롭은 코드 필요로 기록했다.
+타입 검사·테스트 455개·빌드 통과. 5175 사용 중으로 격리한 5176 Chrome에서 대장간과 동굴 원정 승리를 확인했다.
