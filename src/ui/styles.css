@@ -2435,6 +2435,12 @@ button.chip {
   width: min(100%, 14rem);
 }
 
+.hero-xp.fatigue {
+  grid-template-columns: minmax(0, 120px) auto;
+  gap: 8px;
+  font-size: 0.85rem;
+}
+
 .storage-filters {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(min(100%, 8rem), 1fr));

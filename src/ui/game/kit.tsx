@@ -12,11 +12,13 @@ const HeroPortrait = lazy(() => import('../VillageView').then((mod) => ({ defaul
 export function HeroXp({ hero, detailed = false }: { hero: Hero; detailed?: boolean }) {
   const { t } = useTranslation()
   const max = hero.level * progression.xpPerLevel
-  return <span className="hero-xp">
-    <span role="progressbar" aria-label={t('storage.xpLabel')} aria-valuemin={0} aria-valuemax={max} aria-valuenow={Math.max(0, Math.min(max, hero.xp))}>
+  const value = Math.max(0, Math.min(max, hero.xp))
+  const total = t('storage.xp', { xp: hero.xp, max })
+  return <span className={detailed ? 'hero-xp' : 'hero-xp fatigue'} title={total}>
+    <span role="progressbar" aria-label={t('storage.xpLabel')} aria-valuemin={0} aria-valuemax={max} aria-valuenow={value} aria-valuetext={total}>
       <Bar value={hero.xp} max={max} tone="info" />
     </span>
-    {detailed ? <span className="muted">{t('storage.xp', { xp: hero.xp, max })}</span> : null}
+    <span className="muted">{detailed ? total : t('storage.xpPercent', { percent: Math.floor(value * 100 / max) })}</span>
   </span>
 }
 

@@ -1292,6 +1292,7 @@
   "storage": {
     "xpLabel": "Experience to next level",
     "xp": "XP {{xp}} / {{max}}",
+    "xpPercent": "XP {{percent}}%",
     "partyAverage": "Party average Lv {{level}}",
     "slot": "Slot",
     "grade": "Grade",

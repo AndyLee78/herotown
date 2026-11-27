@@ -1292,6 +1292,7 @@
   "storage": {
     "xpLabel": "다음 레벨까지 경험치",
     "xp": "경험치 {{xp}} / {{max}}",
+    "xpPercent": "경험치 {{percent}}%",
     "partyAverage": "파티 평균 Lv {{level}}",
     "slot": "부위",
     "grade": "등급",
