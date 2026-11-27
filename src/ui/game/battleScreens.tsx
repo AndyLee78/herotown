@@ -563,9 +563,14 @@ export function Prep({
           ) : null
         })}
       </div>
-      <button type="button" className="btn" onClick={onEdit}>
-        {t('battle.editParty', { number: save.presets.indexOf(preset) + 1 })}
-      </button>
+      <div className="chips">
+        <button type="button" className="btn" onClick={onEdit}>
+          {t('battle.editParty', { number: save.presets.indexOf(preset) + 1 })}
+        </button>
+        <button type="button" className="btn" onClick={() => onAction({ type: 'autoFill', presetId: preset.id })}>
+          {t('battle.autoFill')}
+        </button>
+      </div>
 
       <details className="fold">
         <summary>{t('label.tactics')}</summary>

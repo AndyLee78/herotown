@@ -16,6 +16,7 @@ import { buyEvent, eventBlock, settleEvent, spendEvent, type EventState } from '
 import { lighthousePotential, monumentStage, raiseMonument, statueXp, type MonumentId } from './monuments'
 import { prosper } from './prosperity'
 import { buyOffer, freshMarket, sellGear, sellPotion, trade, updateMerchant, type Market, type MerchantOffer } from './market'
+import { autoFormation } from './formation'
 import { forgetSkill, readDrills, runDrills, startDrill, type Drill } from './drill'
 import { buyIntel, finishScout, isNest, nestSeason, readScout, seasonKey, startScout, type ScoutJob } from './nest'
 import { TRINKET_IDS, enchantTime, finishEnchant, readMagicJob, startEnchant, type MagicJob } from './magic'
@@ -362,6 +363,7 @@ export type GameAction =
   | { type: 'unequip'; heroId: string; slot: GearSlot; gearId?: string }
   | { type: 'enchant'; trinketId: TrinketId; now: number }
   | { type: 'add'; id: string; presetId?: string }
+  | { type: 'autoFill'; presetId: string }
   | { type: 'row'; id: string; row: Row; presetId?: string }
   | { type: 'remove'; id: string; presetId?: string }
   | { type: 'preset'; id: string }
@@ -663,6 +665,12 @@ function apply(state: GameState, action: GameAction): GameState {
   if (action.type === 'autoParty') {
     const preset = presetById(state, state.presetId)
     return { ...state, notice: null, auto: { ...state.auto, party: (preset?.slots ?? []).map((slot) => ({ ...slot })) } }
+  }
+  if (action.type === 'autoFill') {
+    return editPreset(state, action.presetId, (preset) => ({
+      ...preset,
+      slots: autoFormation(state.roster, busyHeroIds(state), state.dungeonId),
+    }))
   }
   if (action.type === 'add') {
     return editPreset(state, action.presetId, (preset) => {

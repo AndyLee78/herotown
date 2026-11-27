@@ -1557,6 +1557,7 @@
     "away": "원정 중 · {{time}}",
     "emptyPreset": "비어 있는 파티",
     "editParty": "파티 {{number}} 구성하기",
+    "autoFill": "자동 편성",
     "supplies": "준비물",
     "suppliesLater": "연금술 공방이 생기면 물약과 폭탄을 챙길 수 있다.",
     "carry": "이번 출정 {{count}}/{{max}}",

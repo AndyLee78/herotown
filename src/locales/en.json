@@ -1557,6 +1557,7 @@
     "away": "Away · {{time}}",
     "emptyPreset": "Empty party",
     "editParty": "Edit party {{number}}",
+    "autoFill": "Auto-fill party",
     "supplies": "Supplies",
     "suppliesLater": "Potions and bombs arrive with the alchemy workshop.",
     "carry": "This trip {{count}}/{{max}}",
