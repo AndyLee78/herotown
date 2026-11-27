@@ -85,6 +85,7 @@ import { InvasionCard } from './invasion'
 import { EliteMonsters, GiftBadge } from './identity'
 import { Monuments, Prosperity } from './lateTown'
 import { SpecialRewardChips } from './specialDungeons'
+import type { useGameNotifications } from '../notifications'
 
 const BattleView = lazy(() => import('../BattleView').then((mod) => ({ default: mod.BattleView })))
 
@@ -1313,6 +1314,7 @@ export function Report({ report }: { report: DungeonReport | null }) {
 
 export function Settings({
   save,
+  notifications,
   notice,
   onLanguage,
   onExport,
@@ -1322,6 +1324,7 @@ export function Settings({
   onResetClock,
 }: {
   save: GameState
+  notifications: ReturnType<typeof useGameNotifications>
   notice: string | null
   onLanguage: (lng: 'en' | 'ko') => void
   onExport: () => void
@@ -1374,6 +1377,14 @@ export function Settings({
           {sound.muted ? t('sound.unmute') : t('sound.mute')}
         </button>
       </div>
+      <h3 className="section-title">{t('notifications.title')}</h3>
+      <label className="field">
+        <span>{t('notifications.enable')}</span>
+        <input type="checkbox" checked={notifications.enabled} disabled={!notifications.supported} onChange={(event) => void notifications.toggle(event.target.checked)} />
+      </label>
+      {!notifications.supported ? <p className="muted">{t('notifications.unsupported')}</p>
+        : notifications.denied ? <p className="muted">{t('notifications.denied')}</p>
+          : <p className="muted">{t('notifications.hint')}</p>}
       <h3 className="section-title">{t('label.save')}</h3>
       <p className="muted">{t('hint.backup')}</p>
       <div className="row">

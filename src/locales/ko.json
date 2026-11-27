@@ -1291,6 +1291,20 @@
     "flame": "화염",
     "silver": "은"
   },
+  "notifications": {
+    "title": "알림",
+    "enable": "알림 받기",
+    "unsupported": "이 브라우저에서는 게임 알림을 사용할 수 없습니다.",
+    "denied": "알림 권한이 허용되지 않았습니다. 브라우저나 기기 설정을 확인하세요.",
+    "hint": "게임을 열어 둔 채 다른 창이나 탭을 볼 때 알려 줍니다.",
+    "event": {
+      "expedition": "원정 파티가 돌아왔습니다.",
+      "build": "{{building}} 공사가 끝났습니다.",
+      "workshop": "{{building}} 작업이 끝났습니다.",
+      "visitor": "여관에 새 손님이 도착했습니다.",
+      "raid": "새 레이드 주간이 시작됐습니다."
+    }
+  },
   "codex": {
     "kind": {
       "monsters": "몬스터",

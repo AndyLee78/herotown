@@ -33,6 +33,7 @@ import { josa } from './josa'
 import { BattleHub, BattleViewTabs, type BattleView } from './game/battleScreens'
 import { AchievementsScreen, CodexScreen } from './game/codexScreens'
 import { achievementProgress } from '../core/codex'
+import { useGameNotifications } from './notifications'
 import { applyWithVaultHistory } from './game/specialDungeons'
 import { Market } from './game/marketScreens'
 import { Tavern } from './game/tavernScreens'
@@ -115,6 +116,7 @@ export function App() {
   const [screen, setScreen] = useState<Screen | null>(null)
   const [selectedId, setSelectedId] = useState<string | null>(null)
   const [battleView, setBattleView] = useState<BattleView>('dungeons')
+  const notifications = useGameNotifications(save)
   const [fileNotice, setFileNotice] = useState<string | null>(null)
   const [adBusy, setAdBusy] = useState(false)
   const [toasts, setToasts] = useState<Toast[]>([])
@@ -556,6 +558,7 @@ export function App() {
           {screen === 'settings' ? (
             <Settings
               save={save}
+              notifications={notifications}
               notice={fileNotice}
               onLanguage={(lng) => {
                 void i18n.changeLanguage(lng)

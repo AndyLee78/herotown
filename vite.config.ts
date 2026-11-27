@@ -28,6 +28,7 @@ export default defineConfig({
         ],
       },
       workbox: {
+        importScripts: ['notification-worker.js'],
         globPatterns: ['**/*.{js,css,html,svg,woff2,png,webmanifest}'],
         maximumFileSizeToCacheInBytes: 4 * 1024 * 1024,
       },

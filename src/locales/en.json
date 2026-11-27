@@ -1291,6 +1291,20 @@
     "flame": "Flame",
     "silver": "Silver"
   },
+  "notifications": {
+    "title": "Notifications",
+    "enable": "Get notifications",
+    "unsupported": "This browser does not support game notifications.",
+    "denied": "Notification permission was not granted. Check your browser or system settings.",
+    "hint": "Get reminders while the game is open in the background.",
+    "event": {
+      "expedition": "An expedition has returned.",
+      "build": "{{building}} construction is complete.",
+      "workshop": "A job at {{building}} is complete.",
+      "visitor": "A new visitor has arrived at the inn.",
+      "raid": "A new raid week has begun."
+    }
+  },
   "codex": {
     "kind": {
       "monsters": "Monsters",
