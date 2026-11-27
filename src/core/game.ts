@@ -41,6 +41,11 @@ export function townLevelOf(state: Pick<GameState, 'fame' | 'promoted'>) {
   return townLevel(state.fame, state.promoted ?? PROMOTION_FREE)
 }
 
+export function innRefreshCost(state: Pick<GameState, 'fame' | 'promoted'>): number {
+  const { base, perTownLevel } = villageRules.inn.refreshCost
+  return base + perTownLevel * townLevelOf(state).level
+}
+
 export type SeasonId = 'spring' | 'summer' | 'autumn' | 'winter'
 
 export type Calendar = {
@@ -380,6 +385,7 @@ export type GameAction =
   | { type: 'catchUp'; now: number }
   | { type: 'debugGold' }
   | { type: 'refreshVisitors' }
+  | { type: 'innRefresh' }
   | { type: 'lockSeed'; locked: boolean }
   | { type: 'setSeed'; seed: number }
   | { type: 'reset'; now: number }
@@ -721,8 +727,11 @@ function apply(state: GameState, action: GameAction): GameState {
   if (action.type === 'debugGold') {
     return { ...state, notice: null, gold: state.gold + progression.debugGold }
   }
-  if (action.type === 'refreshVisitors') {
-    const visitorNonce = state.seedLocked ? state.visitorNonce : state.visitorNonce + 1
+  if (action.type === 'refreshVisitors' || action.type === 'innRefresh') {
+    const paid = action.type === 'innRefresh'
+    const cost = paid ? innRefreshCost(state) : 0
+    if (paid && state.gold < cost) return { ...state, notice: 'poor' }
+    const visitorNonce = !paid && state.seedLocked ? state.visitorNonce : state.visitorNonce + 1
     const now = state.lastTickAt
     const visitors = generateVisitors(
       state.seed + visitorNonce * progression.visitorNonceStride,
@@ -735,6 +744,7 @@ function apply(state: GameState, action: GameAction): GameState {
     return {
       ...state,
       notice: null,
+      gold: state.gold - cost,
       visitorNonce,
       visitors,
       nextVisitorAt: now + villageRules.inn.arriveEveryMs,

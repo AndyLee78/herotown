@@ -83,7 +83,8 @@
     ],
     "stayMs": 180000,
     "stayPerLevelMs": 120000,
-    "arriveEveryMs": 60000
+    "arriveEveryMs": 60000,
+    "refreshCost": { "base": 30, "perTownLevel": 15 }
   },
   "house": {
     "bedsPerLevel": 5,

@@ -233,6 +233,8 @@
     "save": "계획 저장"
   },
   "interview": {
+    "refresh": "새 손님 부르기 (골드 {{gold}})",
+    "refreshHint": "면담한 손님을 포함해 지금 여관에 있는 손님이 모두 떠납니다.",
     "allowance": "이번 계절 무료 면담 {{free}}/{{total}}",
     "action": "면담",
     "deep": "더 깊이 면담",

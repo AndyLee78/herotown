@@ -49,6 +49,7 @@ import {
 import { GiftBadge, SkillTree } from './identity'
 import { GearOptions, GearSummary, SetProgress, Wielders } from './gearDetails'
 import { canWield } from '../../core/gear'
+import { innRefreshCost } from '../../core/game'
 import { gameNow } from '../clock'
 import { josa } from '../josa'
 import { portraitUrl } from '../voxel/portrait'
@@ -105,6 +106,7 @@ export function Inn({ save, onAction }: { save: GameState; onAction: Act }) {
   const korean = i18n.language.startsWith('ko')
   const free = interviewsLeft(save)
   const total = freeInterviews(save)
+  const refreshCost = innRefreshCost(save)
   return (
     <>
       <p className="banner">
@@ -112,6 +114,12 @@ export function Inn({ save, onAction }: { save: GameState; onAction: Act }) {
         {waiting ? t('hint.nextVisitor', { time: waitLabel(save.nextVisitorAt - now) }) : t('hint.innFull', { count: cap, time: waitLabel(nextLeave - now) })}
       </p>
       <p className="muted">{t('interview.allowance', { free, total })}</p>
+      <div className="card column">
+        <button type="button" className="btn" disabled={save.gold < refreshCost} onClick={() => onAction({ type: 'innRefresh' })}>
+          {t('interview.refresh', { gold: refreshCost })}
+        </button>
+        <span className="muted">{t('interview.refreshHint')}</span>
+      </div>
       {save.visitors.length === 0 ? <p className="empty">{t('hint.innEmpty')}</p> : null}
       <div className="grid">
         {save.visitors.map((hero) => {

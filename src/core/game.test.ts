@@ -2,13 +2,49 @@ import { describe, expect, it } from 'vitest'
 import { adRules, lifeRules, progression, smithRules, timeRules, villageRules } from './data'
 import { createHeroUnit } from './combat'
 import { DEFAULT_TACTICS, runDungeon } from './dungeon'
-import { SAVE_VERSION, applyCasualty, exportSave, freshState, importSave, migrate, reduce, townLevel, visitorStay } from './game'
+import { SAVE_VERSION, applyCasualty, exportSave, freshState, importSave, innRefreshCost, migrate, reduce, townLevel, visitorStay } from './game'
 import type { AbsenceReport, GameState } from './game'
 import { forgeGear, recipeById } from './gear'
 import { createHero, generateHero, withAge } from './hero'
 import { createRng } from './rng'
 
 const now = 1_700_000_000_000
+
+describe('paid inn refresh', () => {
+  it('charges the town-level price and replaces even interviewed visitors deterministically', () => {
+    const start = { ...freshState(7, now), fame: villageRules.levels[1]!.fame }
+    const interviewed = reduce(start, { type: 'interview', id: start.visitors[0]!.id })
+    expect(interviewed.visitors[0]?.interviewed).toBe(1)
+    expect(innRefreshCost(start)).toBe(60)
+    expect(innRefreshCost(freshState(7, now))).toBe(45)
+    const next = reduce(interviewed, { type: 'innRefresh' })
+    expect(next.gold).toBe(interviewed.gold - 60)
+    expect(next.visitorNonce).toBe(interviewed.visitorNonce + 1)
+    expect(next.visitors).toEqual(reduce(interviewed, { type: 'refreshVisitors' }).visitors)
+    expect(next.visitors.every((hero) => !interviewed.visitors.some(({ id }) => id === hero.id) && !hero.interviewed)).toBe(true)
+    expect(next.interviews).toEqual(interviewed.interviews)
+    expect(next.nextVisitorAt).toBe(now + villageRules.inn.arriveEveryMs)
+    expect(reduce(interviewed, { type: 'innRefresh' })).toEqual(next)
+  })
+
+  it('keeps the visitors when funds are short and permits a refresh at the exact price', () => {
+    const start = freshState(7, now)
+    const cost = innRefreshCost(start)
+    const poor = { ...start, gold: cost - 1 }
+    expect(reduce(poor, { type: 'innRefresh' })).toEqual({ ...poor, notice: 'poor' })
+    expect(reduce({ ...start, gold: cost }, { type: 'innRefresh' }).gold).toBe(0)
+  })
+
+  it('keeps the free debug behavior with a locked seed', () => {
+    const start = { ...freshState(7, now), seedLocked: true }
+    const debug = reduce(start, { type: 'refreshVisitors' })
+    expect(debug.gold).toBe(start.gold)
+    expect(debug.visitorNonce).toBe(start.visitorNonce)
+    const paid = reduce(start, { type: 'innRefresh' })
+    expect(paid.visitorNonce).toBe(start.visitorNonce + 1)
+    expect(paid.visitors).not.toEqual(debug.visitors)
+  })
+})
 
 function withParty<T extends GameState>(state: T, slots: { id: string; row: 'front' | 'back' }[]): T {
   return { ...state, presets: state.presets.map((preset, index) => (index === 0 ? { ...preset, slots } : preset)) }

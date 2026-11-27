@@ -233,6 +233,8 @@
     "save": "Save plan"
   },
   "interview": {
+    "refresh": "Call new visitors ({{gold}} gold)",
+    "refreshHint": "All current visitors leave, including those you interviewed.",
     "allowance": "Free interviews this season {{free}}/{{total}}",
     "action": "Interview",
     "deep": "Interview in depth",
