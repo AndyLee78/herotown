@@ -175,6 +175,8 @@ Claude Code, Cursor, GPT(Codex)가 함께 쓰는 작업 목록이다. 작업 하
 | 133 | 마을 건물 위치 조정 | Cursor | `src/ui/voxel/*` | 완료 (3d1538e) |
 | 134 | 명예의 전당이 여관 뒤에 가려지는 배치 고치기 | Cursor | `src/ui/voxel/*` | 완료 (b8bdbff) |
 | 135 | 영웅 카드 경험치 막대에 설명 붙이기 | GPT | `src/ui/game/*.tsx`, `src/ui/styles.css`, `src/locales/*` | 완료 (05fd01b) |
+| 136 | 도감·업적 | GPT | `src/core/*`, `src/data/codex.json`(새 파일), `src/core/*.test.ts`, `src/ui/*`, `src/locales/*`, `Docs/codex.md` | 대기 |
+| 137 | 알림 1단계(웹) | GPT | `src/core/*`(upcomingEvents), PWA 설정(`vite.config.ts`·서비스 워커), `src/ui/*`, `src/locales/*`, `Docs/codex.md` | 대기 (136 뒤) |
 
 ---
 
@@ -3352,3 +3354,49 @@ Docs/identity.md 5d를 측정한다. core와 src/data는 고치지 않는다. �
 
 영웅 목록과 여관 카드에 경험치 백분율을 표시하고, 툴팁과 접근성 안내에는 현재·필요 경험치를 표시한다. 영웅 상세는 숫자를 계속 보여 준다.
 5176의 격리된 375px Chrome에서 한국어·영어 문구와 가로 폭을 확인했다. 타입 검사·테스트 473개·빌드를 통과했다.
+
+---
+
+## 136. 도감·업적 (GPT)
+
+**지금 시작할 수 있다.** 설계: `Docs/codex.md`의 "도감"과 "업적".
+
+**전달할 내용**
+
+```
+Docs/codex.md의 도감과 업적을 만든다. core·데이터·테스트·화면을 모두 한다. 사용자의 localhost:5174 세이브는 건드리지 않고 127.0.0.1:5175(쓰이면 5176)에서 확인한다. tsconfig.tsbuildinfo는 커밋하지 않는다.
+
+1. core: GameState.codex와 GameState.achievements(설계 문서의 모양). 기록하는 곳(원정 정산의 몬스터·정예, dungeonLoot·raidLoot·exchange의 고유 장비, 장착 때 세트 3개, 고용·출생의 천부·직업). 같은 id는 한 번만. 기록 함수는 한 파일(예: src/core/codex.ts)에 모은다.
+2. 세이브 버전을 하나 올린다. 예전 세이브는 지금 상태(roster·retirees·graveyard의 천부·직업, stash와 장비의 고유 장비, history 보고서의 적, cleared)에서 채울 수 있는 만큼 채운다. normalize에서 잘못된 id는 버린다.
+3. src/data/codex.json: 업적 목록(id, 묶음, 조건 종류와 목표 수, 보상). 조건 종류는 설계 문서 표의 것들. 보상은 작게(5d 측정의 30일 획득량의 5% 안팎) 잡고, 정한 숫자를 Docs/codex.md에 표로 남긴다.
+4. 행동 { type: 'claimAchievement', id }: 달성 전 'locked', 이미 받음 'missing', 받으면 보상 지급과 achievements에 추가. 달성 판정 함수(예: achievementProgress(state))는 순수 함수.
+5. 테스트: 각 기록 경로, 중복 없음, 예전 세이브 채우기, 업적 판정·받기·보상, 같은 상태 같은 결과.
+6. 화면: 마을 운영(또는 새 탭)에 "도감"과 "업적". 도감은 칸별 진행(예: 몬스터 23/41), 아직 못 만난 것은 실루엣·"???"(이름 숨김). 업적은 진행 막대, 받을 수 있는 것 강조, 받기 버튼. 받을 업적이 있으면 메뉴에 배지. 문구 ko/en, 375px.
+
+확인: tsc·test·build 통과. 127.0.0.1에서 도감 채우기·업적 받기를 본다. 확인한 내용을 메모에.
+```
+
+**메모**
+
+---
+
+## 137. 알림 1단계(웹) (GPT)
+
+**작업 136 뒤에 시작한다.** 설계: `Docs/codex.md`의 "알림". 서버 없는 정적 사이트라 "게임이 열려 있거나 백그라운드에 있는 동안"의 알림만 한다. 완전히 닫힌 상태의 푸시는 하지 않는다.
+
+**전달할 내용**
+
+```
+Docs/codex.md "알림"의 1단계를 만든다. 사용자의 localhost:5174 세이브는 건드리지 않는다. tsconfig.tsbuildinfo는 커밋하지 않는다.
+
+1. core 순수 함수 upcomingEvents(state): 앞으로 일어날 일의 { kind, at, refId } 목록. kind: 원정 귀환(expedition), 건설 완료(build), 대장간·연금·마법 공방 완료(workshop), 다음 방문자 도착(visitor), 레이드 새 주(raid). 테스트 몇 개.
+2. 설정에 "알림 받기"(기본 꺼짐). 켜면 Notification.requestPermission. 거절되면 안내 한 줄. 설정값은 세이브가 아닌 브라우저 저장(localStorage, try/catch)에 둔다.
+3. 켜져 있고 권한이 있으면, 게임이 열려 있는 동안 upcomingEvents의 가장 가까운 시각들에 맞춰 서비스 워커의 showNotification으로 알림을 띄운다(registration.showNotification; 탭이 백그라운드여도). 같은 이벤트(kind+refId+at)는 한 번만. 탭이 보이는 상태(document.visibilityState === 'visible')면 알림 대신 기존 화면 안내만.
+4. 알림을 누르면 열린 게임 창으로 포커스(서비스 워커 notificationclick → clients.matchAll → focus, 없으면 openWindow). 지금 PWA 설정(vite-plugin-pwa, workbox)을 확인하고, 필요하면 injectManifest 등으로 알림 처리 코드를 넣는다. 오프라인 캐시·업데이트 알림이 깨지지 않게.
+5. 문구 ko/en(원정 귀환: "○○ 파티가 돌아왔다" 수준, 개인정보 없음). 설정 화면 375px.
+6. Docs/codex.md 알림 절에 실제 동작(지원 브라우저, iOS는 홈 화면에 설치한 PWA에서만 되는 점 등)을 적는다.
+
+확인: tsc·test·build 통과. 127.0.0.1에서 알림을 켜고 탭을 백그라운드로 둔 채 짧은 원정이 돌아올 때 알림이 오는지, 누르면 게임으로 돌아오는지. 확인한 내용을 메모에.
+```
+
+**메모**
