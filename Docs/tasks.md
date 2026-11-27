@@ -167,7 +167,7 @@ Claude Code, Cursor, GPT(Codex)가 함께 쓰는 작업 목록이다. 작업 하
 | 125 | 5d 수치 조정 | GPT | `src/data/*.json`, `src/core/*.test.ts`, `Docs/identity.md` | 완료 (066e4e3) |
 | 126 | 직업 사이 차이 줄이기 | GPT | `src/data/classes.json`, `src/data/*.json`, `src/core/*.test.ts`, `tools/*`, `Docs/identity.md` | 완료 (e062b37) |
 | 127 | 정예 처치 드롭 보너스 | GPT | `src/core/dungeon.ts`, `src/core/loot.ts`, `src/core/game.ts`, `src/core/types.ts`, `src/data/loot.json`, `src/core/loot.test.ts`, `Docs/identity.md` | 완료 (b212ded) |
-| 128 | 5단계 뒤 초반 흐름 점검 | GPT | `tools/*`, `Docs/balance.md`의 측정 절, 필요하면 `src/data/*.json`·`src/ui/styles.css`·`src/locales/*` | 대기 |
+| 128 | 5단계 뒤 초반 흐름 점검 | GPT | `tools/*`, `Docs/balance.md`의 측정 절, 필요하면 `src/data/*.json`·`src/ui/styles.css`·`src/locales/*` | 완료 (42a28ae) |
 
 ---
 
@@ -3170,3 +3170,6 @@ Docs/identity.md 5d를 측정한다. core와 src/data는 고치지 않는다. �
 ```
 
 **메모**
+
+10시드 × 3시간 짝 비교에서 같은 던전 3연패는 없었다. 드롭 장착 시 가라앉은 묘지 첫 클리어는 12.75분 빨랐다. 대장간 제작 시간 후보를 재측정했고 수치는 유지했다.
+5175의 격리된 Chrome에서 게임 시간 30분과 375px 장비 화면을 점검했다. 창고·알림 문구를 개선했고 타입 검사·테스트 458개·빌드를 통과했다.
