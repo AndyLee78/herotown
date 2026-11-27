@@ -174,7 +174,7 @@ Claude Code, Cursor, GPT(Codex)가 함께 쓰는 작업 목록이다. 작업 하
 | 132 | 결혼하면 2인실 배정(신혼방 없애기) | GPT | `src/core/family.ts`, `src/core/rooms.ts`, `src/data/family.json`, `src/core/*.test.ts`, `src/ui/game/*.tsx`, `src/locales/*`, `Docs/house.md` | 완료 (1f6e55f) |
 | 133 | 마을 건물 위치 조정 | Cursor | `src/ui/voxel/*` | 완료 (3d1538e) |
 | 134 | 명예의 전당이 여관 뒤에 가려지는 배치 고치기 | Cursor | `src/ui/voxel/*` | 대기 (135와 함께 가능) |
-| 135 | 영웅 카드 경험치 막대에 설명 붙이기 | GPT | `src/ui/game/*.tsx`, `src/ui/styles.css`, `src/locales/*` | 대기 (134와 함께 가능) |
+| 135 | 영웅 카드 경험치 막대에 설명 붙이기 | GPT | `src/ui/game/*.tsx`, `src/ui/styles.css`, `src/locales/*` | 완료 (05fd01b) |
 
 ---
 
@@ -3347,3 +3347,6 @@ Docs/identity.md 5d를 측정한다. core와 src/data는 고치지 않는다. �
 ```
 
 **메모**
+
+영웅 목록과 여관 카드에 경험치 백분율을 표시하고, 툴팁과 접근성 안내에는 현재·필요 경험치를 표시한다. 영웅 상세는 숫자를 계속 보여 준다.
+5176의 격리된 375px Chrome에서 한국어·영어 문구와 가로 폭을 확인했다. 타입 검사·테스트 473개·빌드를 통과했다.
