@@ -171,7 +171,7 @@ Claude Code, Cursor, GPT(Codex)가 함께 쓰는 작업 목록이다. 작업 하
 | 129 | 레벨·경험치 표시, 창고 화면, 재접속 자동 출정 보고 | GPT | `src/ui/App.tsx`, `src/ui/game/*.tsx`, `src/ui/styles.css`, `src/locales/*`, 보고에 필요한 만큼 `src/core/game.ts`·`src/core/*.test.ts` | 완료 (a2ffc69) |
 | 130 | 파티 자동 편성 | GPT | `src/core/*`(새 함수·행동), `src/ui/game/battleScreens.tsx`, `src/locales/*` | 완료 (c7b2eaf) |
 | 131 | 여관 유료 갱신 | GPT | `src/core/game.ts`, `src/data/village.json`, `src/core/*.test.ts`, `src/ui/game/*.tsx`, `src/locales/*` | 완료 (5e422a7) |
-| 132 | 결혼하면 2인실 배정(신혼방 없애기) | GPT | `src/core/family.ts`, `src/core/rooms.ts`, `src/data/family.json`, `src/core/*.test.ts`, `src/ui/game/*.tsx`, `src/locales/*`, `Docs/house.md` | 대기 (131 뒤) |
+| 132 | 결혼하면 2인실 배정(신혼방 없애기) | GPT | `src/core/family.ts`, `src/core/rooms.ts`, `src/data/family.json`, `src/core/*.test.ts`, `src/ui/game/*.tsx`, `src/locales/*`, `Docs/house.md` | 완료 (1f6e55f) |
 | 133 | 마을 건물 위치 조정 | Cursor | `src/ui/voxel/*` | 대기 (129와 함께 가능) |
 
 ---
@@ -3277,6 +3277,9 @@ Docs/identity.md 5d를 측정한다. core와 src/data는 고치지 않는다. �
 ```
 
 **메모**
+
+부부 전용 정원을 없애고 기존 침대를 부부 2인실로 묶는다. 미성년 자녀는 함께 지내며 성인이 되면 일반 2인실로 옮긴다. 임신에 필요한 빈 침대는 계속 확인한다.
+5175의 375px Chrome에서 침대 5/5 상태의 청혼 승낙과 출산 뒤 집 화면을 확인했다. 타입 검사·테스트 468개·빌드를 통과했다.
 
 ---
 
