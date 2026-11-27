@@ -15,7 +15,11 @@ export const LOTS: Record<BuildingId, Lot> = {
   // North row.
   hall: { x: -8.5, z: -8.5, w: 5, d: 4 },
   temple: { x: -1.5, z: -10.5, w: 4, d: 3.2 },
-  inn: { x: 8.5, z: -8.5, w: 4, d: 3 },
+  // Between temple and inn on the north grass (Docs/legends.md). Kept inside
+  // the flat village rim (|x|,|z| <= 12.5) so statues stay on the lawn.
+  legends: { x: 3.2, z: -10.2, w: 3.4, d: 2.8 },
+  // Pulled west and a little south so the hall of fame fits beside it.
+  inn: { x: 7.4, z: -7.6, w: 4, d: 3 },
   // West column, north to south.
   alchemy: { x: -10.5, z: -4, w: 3, d: 2.6 },
   magic: { x: -10.5, z: 1, w: 3, d: 2.6 },
@@ -28,9 +32,6 @@ export const LOTS: Record<BuildingId, Lot> = {
   // North-west of the square it stood in front of the hall and hid its door
   // from the camera; here nothing stands behind it. The yard opens south.
   tavern: { x: 7.3, z: -2.1, w: 3.2, d: 2.8 },
-  // East of the inn, clear of the wheat field and the inn yard (Docs/legends.md).
-  // Front opens south for statues; trees south-east of here were nudged away.
-  legends: { x: 12.6, z: -9.4, w: 3.4, d: 2.8 },
   // South-west of the square: the training yard, in plain view.
   training: { x: -5.6, z: 8.4, w: 3.6, d: 3.2 },
   // East and south-east.
@@ -94,7 +95,7 @@ export const PLAZA = { min: -5.3, max: 5.3 }
 // Parties gather here, then leave and come back through the south gate.
 export const GATHER = { x: 0, z: 4.2 }
 export const GATE = { x: 0, z: 12.2 }
-export const INN_YARD = { minX: 6.9, maxX: 10.1, minZ: -6.5, maxZ: -5.5 }
+export const INN_YARD = { minX: 5.6, maxX: 9.2, minZ: -5.7, maxZ: -4.7 }
 
 const HALF = 15
 const GRASS = ['#a5d46a', '#9acb5e', '#b0da78', '#94c55a']
@@ -135,32 +136,16 @@ export function buildTerrain(): THREE.Group {
       .box(0.5 * s, 0.4 * s, 0.5 * s, leaf, x, y + 0.7 + 1.6 * s, z)
   }
 
-  for (const [x, z] of [[-6.4, -6.4], [6.4, -6.4], [-6.4, 6.4], [6.4, 6.4], [2.2, 10]] as const) {
+  // SE plaza lamp sits west of the inn yard so it is not inside the inn lot.
+  for (const [x, z] of [[-6.4, -6.4], [4.6, -5.4], [-6.4, 6.4], [6.4, 6.4], [2.2, 10]] as const) {
     b.box(0.32, 0.16, 0.32, '#6d6d6d', x, 0.08, z)
       .box(0.12, 1.4, 0.12, '#3a3a3a', x, 0.8, z)
       .box(0.24, 0.26, 0.24, x < 0 && z < 0 ? '#9fe8ff' : '#ffd36b', x, 1.6, z, { glow: true })
       .box(0.3, 0.05, 0.3, '#3a3a3a', x, 1.76, z)
   }
 
-  // Wheat field with a fence, between the temple and the inn (it is low, so
-  // nothing behind it hides).
-  b.within(4.4, 0, -10.5, 0, 0, 0, () => {
-    b.box(3.6, 0.08, 2.4, '#7a5a3a', 0, 0.04, 0)
-    for (let ix = 0; ix < 7; ix += 1) {
-      for (let iz = 0; iz < 4; iz += 1) {
-        b.box(0.1, range(0.35, 0.5), 0.1, pick(['#e8c95a', '#dcb945', '#f0d470']), -1.5 + ix * 0.5, 0.25, -0.75 + iz * 0.5)
-      }
-    }
-    for (const [px, pz, w, d] of [[0, -1.35, 4, 0.08], [0, 1.35, 4, 0.08], [-2, 0, 0.08, 2.7], [2, 0, 0.08, 2.7]] as const) {
-      b.box(w, 0.08, d, '#8d6e4f', px, 0.45, pz).box(w, 0.08, d, '#8d6e4f', px, 0.25, pz)
-    }
-    for (const [px, pz] of [[-2, -1.35], [2, -1.35], [-2, 1.35], [2, 1.35]] as const) {
-      b.box(0.14, 0.6, 0.14, WOOD, px, 0.3, pz)
-    }
-  })
-
-  // Well and a picnic table by the inn.
-  b.within(7.6, 0, -3.4, 0, 0, 0, () => {
+  // Well and a picnic table by the inn yard.
+  b.within(6.8, 0, -4.0, 0, 0, 0, () => {
     for (const [px, pz, sx, sz] of [[0, -0.45, 1.1, 0.2], [0, 0.45, 1.1, 0.2], [-0.45, 0, 0.2, 0.7], [0.45, 0, 0.2, 0.7]] as const) {
       b.box(sx, 0.5, sz, '#9e9a92', px, 0.25, pz)
     }
@@ -169,7 +154,7 @@ export function buildTerrain(): THREE.Group {
       .box(0.1, 1.2, 0.1, WOOD, 0.5, 0.6, 0)
       .box(1.4, 0.12, 0.9, '#b8443a', 0, 1.25, 0)
   })
-  b.within(10.6, 0, -4.8, 0, 0, 0, () => {
+  b.within(10.4, 0, -5.0, 0, 0, 0, () => {
     b.box(1.4, 0.1, 0.8, '#7a5a40', 0, 0.6, 0)
       .box(0.1, 0.55, 0.1, '#5d4433', -0.55, 0.28, 0)
       .box(0.1, 0.55, 0.1, '#5d4433', 0.55, 0.28, 0)
