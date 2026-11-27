@@ -177,7 +177,7 @@ Claude Code, Cursor, GPT(Codex)가 함께 쓰는 작업 목록이다. 작업 하
 | 135 | 영웅 카드 경험치 막대에 설명 붙이기 | GPT | `src/ui/game/*.tsx`, `src/ui/styles.css`, `src/locales/*` | 완료 (05fd01b) |
 | 136 | 도감·업적 | GPT | `src/core/*`, `src/data/codex.json`(새 파일), `src/core/*.test.ts`, `src/ui/*`, `src/locales/*`, `Docs/codex.md` | 완료 (703461a) |
 | 137 | 알림 1단계(웹) | GPT | `src/core/*`(upcomingEvents), PWA 설정(`vite.config.ts`·서비스 워커), `src/ui/*`, `src/locales/*`, `Docs/codex.md` | 완료 (c280ba6) |
-| 138 | 축제 장식이 명예의 전당 터와 겹치는 문제 | Cursor | `src/ui/voxel/*` | 대기 |
+| 138 | 축제 장식이 명예의 전당 터와 겹치는 문제 | Cursor | `src/ui/voxel/*` | 완료 (d59a8c3) |
 
 ---
 
@@ -3427,3 +3427,5 @@ Docs/codex.md "알림"의 1단계를 만든다. 사용자의 localhost:5174 세�
 ```
 
 **메모**
+
+`onBuildingLot`/`pickClearSpots`로 사계절 축제 소품을 LOTS 밖으로 두고, 광장 산책도 명예의 전당 터를 피하게 했다. `festival.test.ts`가 네 계절 앵커를 검사한다. 127.0.0.1:5175에서 가을 축제를 개최해 확인(빈 터 세이브). 스크린샷은 창이 가려져 저장하지 못했다. 타입 검사·테스트 485개·빌드 통과.
