@@ -38,6 +38,7 @@ import {
   legendStatuePads,
   marketFront,
   merchantPark,
+  onBuildingLot,
   shrinePedestals,
   tavernTableSpot,
   tavernYard,
@@ -139,7 +140,7 @@ const EDGE_SPOTS: { x: number; z: number }[] = [
   { x: PLAZA.max + 1.2, z: 1.2 },
   { x: -3.5, z: PLAZA.min - 1 },
   { x: 3.5, z: PLAZA.min - 1 },
-]
+].filter((spot) => !onBuildingLot(spot.x, spot.z, 0.5))
 
 type LotView = { key: string; group: THREE.Group; label: THREE.Sprite | null; labelText: string; top: number }
 
@@ -744,7 +745,7 @@ export class VillageScene {
       const radius = 1.6 + (index % 3) * 0.35
       walker.state = 'promote'
       walker.target.set(Math.cos(angle) * radius, 0, Math.sin(angle) * radius)
-      keepOffFountain(walker.target)
+      keepClear(walker.target)
       walker.timer = 4.8
       walker.root.visible = true
       index += 1
@@ -1521,7 +1522,7 @@ export class VillageScene {
   private pickStrollTarget(walker: Walker) {
     const personality = walker.personality
     if (walker.kind === 'roster' && personality && this.rollPersonalityTarget(walker, personality)) {
-      keepOffFountain(walker.target)
+      keepClear(walker.target)
       return
     }
     const yardChance = personality === 'social' ? 0.22 : 0.08
@@ -1547,7 +1548,7 @@ export class VillageScene {
         area.minZ + walker.random() * (area.maxZ - area.minZ),
       )
     }
-    keepOffFountain(walker.target)
+    keepClear(walker.target)
   }
 
   private rollPersonalityTarget(walker: Walker, personality: PersonalityId): boolean {
@@ -1659,7 +1660,7 @@ export class VillageScene {
         walker.state = 'idle'
         walker.timer = 0.8
         walker.target.set(PLAZA.min + walker.random() * (PLAZA.max - PLAZA.min), 0, walker.random() * PLAZA.max)
-        keepOffFountain(walker.target)
+        keepClear(walker.target)
       }
     }
   }
@@ -1761,7 +1762,7 @@ export class VillageScene {
       0,
       area.minZ + walker.random() * (area.maxZ - area.minZ),
     )
-    keepOffFountain(walker.root.position)
+    keepClear(walker.root.position)
     walker.state = 'idle'
   }
 
@@ -1931,7 +1932,7 @@ export class VillageScene {
         const stepLength = Math.min(distance, walker.speed * pace * 1.55 * delta)
         position.x += (dx / distance) * stepLength
         position.z += (dz / distance) * stepLength
-        keepOffFountain(position)
+        keepClear(position)
         walker.root.rotation.y = turnToward(walker.root.rotation.y, Math.atan2(dx, dz), delta * 8)
         walkPose(walker.rig, time, walker.phase, 1.2)
         return
@@ -2076,6 +2077,7 @@ export class VillageScene {
       position.z += (ox / FOUNTAIN_CLEAR) * side * stepLength * 0.5
       keepOffFountain(position)
     }
+    keepOffLots(position)
     walker.root.rotation.y = turnToward(walker.root.rotation.y, Math.atan2(dx, dz), delta * 8)
     walkPose(walker.rig, time, walker.phase, walker.speed * pace * trait)
     this.applyMoralePose(walker)
@@ -2212,6 +2214,38 @@ function keepOffFountain(point: { x: number; z: number }): boolean {
   point.x = fountain.x + (dx / distance) * FOUNTAIN_CLEAR
   point.z = fountain.z + (dz / distance) * FOUNTAIN_CLEAR
   return true
+}
+
+// Push plaza strolls out of building lots so festival crowds do not stand on the
+// hall of fame with shrine visitors. Training stays walkable for drills.
+function keepOffLots(point: { x: number; z: number }, pad = 0.3): boolean {
+  let moved = false
+  for (const [id, lot] of Object.entries(LOTS)) {
+    if (id === 'fountain' || id === 'training') {
+      continue
+    }
+    const hx = lot.w / 2 + pad
+    const hz = lot.d / 2 + pad
+    const dx = point.x - lot.x
+    const dz = point.z - lot.z
+    if (Math.abs(dx) > hx || Math.abs(dz) > hz) {
+      continue
+    }
+    const pushX = (hx - Math.abs(dx) + 0.05) * (dx < 0 ? -1 : 1)
+    const pushZ = (hz - Math.abs(dz) + 0.05) * (dz < 0 ? -1 : 1)
+    if (Math.abs(dx) / hx > Math.abs(dz) / hz) {
+      point.x += pushX
+    } else {
+      point.z += pushZ
+    }
+    moved = true
+  }
+  return moved
+}
+
+function keepClear(point: { x: number; z: number }): void {
+  keepOffFountain(point)
+  keepOffLots(point)
 }
 
 function turnToward(current: number, target: number, step: number): number {
