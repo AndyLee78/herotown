@@ -2,12 +2,23 @@ import type { TFunction } from 'i18next'
 import { Award, Crown, Gem, Hexagon, Shield, Ticket, X } from 'lucide-react'
 import { lazy, Suspense, useEffect, useState, type ReactNode } from 'react'
 import { useTranslation } from 'react-i18next'
-import { ESSENCES, lifeRules, lowMorale, moraleOf, moraleRules, type GameState, type Gear, type Hero, type LogEntry, type VaultKey } from '../../core'
+import { ESSENCES, lifeRules, lowMorale, moraleOf, moraleRules, progression, type GameState, type Gear, type Hero, type LogEntry, type VaultKey } from '../../core'
 import { gameNow, subscribeGameClock } from '../clock'
 import { ResourceIcon, type ResourceKind } from './icons'
 import { splitOrder } from '../../core/gear'
 
 const HeroPortrait = lazy(() => import('../VillageView').then((mod) => ({ default: mod.HeroPortrait })))
+
+export function HeroXp({ hero, detailed = false }: { hero: Hero; detailed?: boolean }) {
+  const { t } = useTranslation()
+  const max = hero.level * progression.xpPerLevel
+  return <span className="hero-xp">
+    <span role="progressbar" aria-label={t('storage.xpLabel')} aria-valuemin={0} aria-valuemax={max} aria-valuenow={Math.max(0, Math.min(max, hero.xp))}>
+      <Bar value={hero.xp} max={max} tone="info" />
+    </span>
+    {detailed ? <span className="muted">{t('storage.xp', { xp: hero.xp, max })}</span> : null}
+  </span>
+}
 
 export function Portrait({ hero, large = false }: { hero: Hero; large?: boolean }) {
   return (

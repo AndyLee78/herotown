@@ -79,6 +79,7 @@ import { GraveFace, bonusValue } from './heroScreens'
 import { Bar, Chip, CostList, Portrait, Res, SchoolInfo, VaultAmount, Window, affordable, formatEntry, gearGradeClass, gearNameClass, itemLabel, recipeLabel, useNow, vaultKinds, waitLabel } from './kit'
 import { GearOptions, GearTypePicker } from './gearDetails'
 import { GearExchange, LootInbox, ReportLoot } from './lootScreens'
+import { Storage } from './storageScreen'
 import { josa } from '../josa'
 import { InvasionCard } from './invasion'
 import { EliteMonsters, GiftBadge } from './identity'
@@ -1127,13 +1128,20 @@ function Promotion({ save, onAction }: { save: GameState; onAction: Act }) {
 
 export function Smith({ save, onAction }: { save: GameState; onAction: Act }) {
   const { t } = useTranslation()
+  const [tab, setTab] = useState<'smith' | 'storage'>('smith')
   const [selected, setSelected] = useState<string | null>(null)
   const working = save.smith != null
   const now = useNow(working)
   const recipes = smithRules.recipes.filter((recipe) => recipe.smithLevel < 99)
   const queueFull = save.automation.queues.smith.length >= save.buildings.smith
+  const tabs = <div className="tabs" role="tablist" aria-label={t('screen.smith')}>
+    <button type="button" role="tab" aria-selected={tab === 'smith'} onClick={() => setTab('smith')}>{t('screen.smith')}</button>
+    <button type="button" role="tab" aria-selected={tab === 'storage'} onClick={() => setTab('storage')}>{t('label.stash')}</button>
+  </div>
+  if (tab === 'storage') return <>{tabs}<div role="tabpanel" aria-label={t('label.stash')}><Storage save={save} onAction={onAction} /></div></>
   return (
     <>
+      {tabs}
       <p className="banner">
         <UiIcon name="smith" size={18} />
         {t('smith.level', { level: save.buildings.smith })} ·{' '}
@@ -1472,6 +1480,16 @@ export function Absence({ save, busy, onWatch, onClose }: { save: GameState; bus
         {(report.wagesPaid ?? 0) > 0 ? <Chip tone="warn">{t('absence.wages', { gold: report.wagesPaid })}</Chip> : null}
       </div>
       {(report.autoRuns ?? 0) > 0 ? <p>{t('absence.auto', { count: report.autoRuns, gold: report.autoGold })}</p> : null}
+      {report.autoDetails?.dungeons.map(({ dungeonId, wins, losses, xp, materials }) => <section className="card column" key={dungeonId}>
+        <strong>{t(`dungeon.${dungeonId}.name`)}</strong>
+        <span>{t('storage.autoRecord', { count: wins + losses, wins, losses, xp })}</span>
+        <div className="chips">{(Object.keys(materials) as (keyof GameState['materials'])[]).map((id) => <Res key={id} kind={id} amount={`+${materials[id]}`} />)}</div>
+      </section>)}
+      {report.autoDetails?.gear.length ? <section className="card column">
+        <strong>{t('storage.absenceGear')}</strong>
+        <ul className="plain">{report.autoDetails.gear.map((item) => <li key={item.id} className={gearNameClass(item)}>{itemLabel(t, item, 'warrior')} · {t(`grade.${item.grade}`)}</li>)}</ul>
+      </section> : null}
+      {report.autoDetails?.injured.length ? <p>{t('storage.autoInjured', { names: report.autoDetails.injured.map(({ name }) => name).join(', ') })}</p> : null}
       {report.completed.length > 0 ? <p>{t('absence.completed', { names: report.completed.map((id) => t(`building.${id}`)).join(', ') })}</p> : null}
       {crafted.length > 0 ? <p>{t('absence.crafted', { names: crafted.map((id) => t(`item.${id}`)).join(', ') })}</p> : null}
       {report.visitors.length > 0 ? <p>{t('absence.visitors', { names: report.visitors.join(', ') })}</p> : null}
@@ -1481,7 +1499,7 @@ export function Absence({ save, busy, onWatch, onClose }: { save: GameState; bus
       {(report.proposals ?? 0) > 0 ? <p>{t('absence.proposals', { count: report.proposals })}</p> : null}
       {(report.births ?? []).length > 0 ? <p>{t('absence.births', { names: (report.births ?? []).join(', ') })}</p> : null}
       {(report.deaths ?? []).length > 0 ? <p>{t('absence.deaths', { names: (report.deaths ?? []).join(', ') })}</p> : null}
-      {report.completed.length === 0 && report.visitors.length === 0 && crafted.length === 0 && (report.aged ?? []).length === 0 && (report.proposals ?? 0) === 0 && (report.births ?? []).length === 0 && (report.deaths ?? []).length === 0 ? <p className="muted">{t('absence.quiet')}</p> : null}
+      {report.completed.length === 0 && report.visitors.length === 0 && crafted.length === 0 && (report.aged ?? []).length === 0 && (report.proposals ?? 0) === 0 && (report.births ?? []).length === 0 && (report.deaths ?? []).length === 0 && !report.autoRuns && !report.autoDetails?.gear.length && !report.autoDetails?.injured.length ? <p className="muted">{t('absence.quiet')}</p> : null}
       <div className="actions">
         {report.adClaimed ? null : (
           <button type="button" className="btn ad" disabled={busy} onClick={onWatch}>

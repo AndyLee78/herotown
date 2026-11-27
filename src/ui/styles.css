@@ -2428,6 +2428,24 @@ button.chip {
   gap: 8px;
 }
 
+.hero-xp {
+  display: grid;
+  gap: 3px;
+  min-width: 0;
+  width: min(100%, 14rem);
+}
+
+.storage-filters {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 8rem), 1fr));
+  gap: 8px;
+}
+
+.storage-filters select {
+  min-width: 0;
+  max-width: 100%;
+}
+
 .skill-branches .skill-row, .monster-profile {
   display: flex;
   flex-wrap: wrap;

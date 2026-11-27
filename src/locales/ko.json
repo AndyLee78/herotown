@@ -1288,6 +1288,27 @@
     "flame": "화염",
     "silver": "은"
   },
+  "storage": {
+    "xpLabel": "다음 레벨까지 경험치",
+    "xp": "경험치 {{xp}} / {{max}}",
+    "partyAverage": "파티 평균 Lv {{level}}",
+    "slot": "부위",
+    "grade": "등급",
+    "kind": "장비 구분",
+    "unique": "고유",
+    "ordinary": "일반 장비",
+    "sort": "정렬",
+    "recent": "최근 입고순",
+    "attack": "공격",
+    "defense": "방어",
+    "empty": "조건에 맞는 장비가 없습니다.",
+    "anyClass": "모든 직업 사용 가능",
+    "selectHero": "장착할 영웅 선택",
+    "noHero": "이 장비를 장착할 수 있는 대기 중 영웅이 없습니다.",
+    "autoRecord": "{{count}}회 · {{wins}}승 {{losses}}패 · 파티 경험치 +{{xp}}",
+    "absenceGear": "비운 동안 얻은 장비",
+    "autoInjured": "부상으로 자동 출정에서 빠진 영웅 · {{names}}"
+  },
   "loot": {
     "unique": "고유",
     "setOn": "{{pieces}}개 효과 활성",

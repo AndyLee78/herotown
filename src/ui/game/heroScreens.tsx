@@ -55,6 +55,7 @@ import { portraitUrl } from '../voxel/portrait'
 import {
   Bar,
   Chip,
+  HeroXp,
   MoraleBar,
   SchoolInfo,
   Portrait,
@@ -124,6 +125,8 @@ export function Inn({ save, onAction }: { save: GameState; onAction: Act }) {
                 <Portrait hero={hero} large />
                 <div>
                   <strong className="name">{hero.name}</strong>
+                  <Chip>{t('ui.level', { level: hero.level })}</Chip>
+                  <HeroXp hero={hero} />
                   <GiftBadge hero={hero} />
                   <span className="chips">
                     <Chip tone="info">{t(`class.${hero.classId}`)}</Chip>
@@ -208,6 +211,7 @@ export function Roster({
                   scouting={save.scout?.heroId === hero.id}
                   drilling={save.drills.some((drill) => drill.heroId === hero.id)}
                 />
+                <HeroXp hero={hero} />
                 <span className="fatigue">
                   <Bar value={hero.fatigue} max={100} tone={fatigueTone(hero)} />
                   <span className="muted">{fatigueText(t, hero)}</span>
@@ -313,6 +317,7 @@ function HeroDetail({
             scouting={save.scout?.heroId === hero.id}
             drilling={save.drills.some((drill) => drill.heroId === hero.id)}
           />
+          <HeroXp hero={hero} detailed />
           <span className="chips">
             <Chip tone="info">{t(`personality.names.${personality}`)}</Chip>
             {ancestorBonus > 0 ? <Chip tone="good">{t('legends.blessing', { percent: Math.round(100 * ancestorBonus) })}</Chip> : null}

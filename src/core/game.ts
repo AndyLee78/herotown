@@ -62,6 +62,11 @@ export type AbsenceReport = {
   visitors: string[]
   autoRuns: number
   autoGold: number
+  autoDetails?: {
+    dungeons: { dungeonId: string; wins: number; losses: number; xp: number; materials: Partial<Record<MaterialName, number>> }[]
+    gear: Gear[]
+    injured: { id: string; name: string }[]
+  }
   adClaimed: boolean
   aged: { name: string; age: number }[]
   returned: { dungeonId: string; victory: boolean }[]
@@ -875,7 +880,7 @@ function advance(state: GameState, now: number): GameState {
   // Time moves in pieces that end on each season turn, so everything due
   // before a turn (returns, births) is settled before the season's family
   // rolls, and those rolls happen at the turn itself.
-  const autoTally = { runs: 0, gold: 0 }
+  const autoTally: AutoTally = { runs: 0, gold: 0, ...(rawElapsed >= timeRules.reportAfterMs ? { details: { dungeons: [], gear: [], injured: [] } } : {}) }
   let next = state
   while (next.lastTickAt < effectiveNow) {
     const turnAt = next.lastTickAt + (timeRules.seasonMs - next.calendar.intoSeasonMs)
@@ -907,7 +912,9 @@ function advance(state: GameState, now: number): GameState {
     // The wandering merchant comes and goes (Docs/market.md).
     next = updateMerchant(next, until)
     const out = next.expeditions
+    const lootBeforeReturn = next.loot
     next = returnExpeditions(next, until, returned)
+    collectAbsenceGear(autoTally.details, lootBeforeReturn, next.loot)
     // The wounded who come home start treatment as they arrive.
     for (const trip of out.filter((entry) => !next.expeditions.some((still) => still.id === entry.id))) {
       next = autoCare(next, trip.returnAt, new Set(trip.heroIds))
@@ -959,6 +966,7 @@ function advance(state: GameState, now: number): GameState {
     visitors,
     autoRuns: autoTally.runs,
     autoGold: autoTally.gold,
+    ...(autoTally.details ? { autoDetails: autoTally.details } : {}),
     adClaimed: false,
     aged,
     returned,
@@ -1313,7 +1321,7 @@ function dungeonForMaterial(state: GameState): string | null {
   )
 }
 
-function autoMembers(state: GameState, presetId = state.presetId): PartyMember[] {
+function autoMembers(state: GameState, presetId = state.presetId, details?: AbsenceReport['autoDetails']): PartyMember[] {
   // The fixed policy's own party stands in for the selected preset only.
   const slots = state.auto.policy === 'fixed' && presetId === state.presetId ? state.auto.party : (presetById(state, presetId)?.slots ?? [])
   const away = busyHeroIds(state)
@@ -1323,6 +1331,7 @@ function autoMembers(state: GameState, presetId = state.presetId): PartyMember[]
       return []
     }
     if (hero.condition === 'critical' || (state.auto.policy === 'safe' && hero.condition === 'injured')) {
+      if (details && !details.injured.some(({ id }) => id === hero.id)) details.injured.push({ id: hero.id, name: hero.name })
       return []
     }
     // Grieving or dispirited heroes stay home from auto runs (Docs/morale.md).
@@ -1357,7 +1366,15 @@ export function withBonds(state: GameState, members: PartyMember[]): PartyMember
   })
 }
 
-function runAuto(state: GameState, elapsed: number, tally: { runs: number; gold: number }): GameState {
+type AutoTally = { runs: number; gold: number; details?: AbsenceReport['autoDetails'] }
+
+function collectAbsenceGear(details: AbsenceReport['autoDetails'], before: GameState['loot'], after: GameState['loot']) {
+  if (!details || before === after) return
+  const previous = new Set(before.map(({ gearId }) => gearId))
+  for (const entry of after) if (entry.gear && !previous.has(entry.gearId)) details.gear.push(entry.gear)
+}
+
+function runAuto(state: GameState, elapsed: number, tally: AutoTally): GameState {
   // Auto runs need the guild, which also sets how many parties go (Docs/guild.md).
   const parties = guildLevel(state.buildings.guild).autoParties
   if (!state.auto.enabled || parties < 1) {
@@ -1383,7 +1400,7 @@ function runAuto(state: GameState, elapsed: number, tally: { runs: number; gold:
       if (ran >= parties) {
         break
       }
-      const members = autoMembers(next, presetId)
+      const members = autoMembers(next, presetId, tally.details)
       if (members.length === 0 || members.some((member) => used.has(member.hero.id))) {
         continue
       }
@@ -1434,7 +1451,7 @@ function autoPresetOrder(state: GameState): string[] {
   return [state.presetId, ...state.presets.map((preset) => preset.id).filter((id) => id !== state.presetId)]
 }
 
-function autoRun(state: GameState, members: PartyMember[], presetId: string, dungeonId: string, tally: { runs: number; gold: number }): GameState {
+function autoRun(state: GameState, members: PartyMember[], presetId: string, dungeonId: string, tally: AutoTally): GameState {
   let next = state
   const preset = presetById(next, presetId)
   // A lasting run counter keeps every auto battle on its own seed.
@@ -1463,6 +1480,26 @@ function autoRun(state: GameState, members: PartyMember[], presetId: string, dun
   next = dropFromPresets(grantVictoryRewards(afterTrip(bondParty({ ...next, ...settled, gold: next.gold + goldGain }, heroIds, report.victory), heroIds, report.victory), report, dungeonId, scale))
   tally.runs += 1
   tally.gold += goldGain
+  if (tally.details) {
+    const details = tally.details
+    let dungeon = details.dungeons.find((entry) => entry.dungeonId === dungeonId)
+    if (!dungeon) {
+      dungeon = { dungeonId, wins: 0, losses: 0, xp: 0, materials: {} }
+      details.dungeons.push(dungeon)
+    }
+    if (report.victory) dungeon.wins += 1
+    else dungeon.losses += 1
+    for (const material of Object.keys(state.materials) as MaterialName[]) {
+      const gained = next.materials[material] - state.materials[material]
+      if (gained > 0) dungeon.materials[material] = (dungeon.materials[material] ?? 0) + gained
+    }
+    const lifetimeXp = (hero: Hero) => hero.xp + progression.xpPerLevel * hero.level * (hero.level - 1) / 2
+    for (const { hero } of members) {
+      const after = settled.roster.find(({ id }) => id === hero.id)
+      if (after) dungeon.xp += Math.max(0, lifetimeXp(after) - lifetimeXp(hero))
+    }
+    collectAbsenceGear(details, state.loot, next.loot)
+  }
   return next
 }
 

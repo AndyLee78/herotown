@@ -419,6 +419,34 @@ describe('economy fixes', () => {
     expect(report?.goldGained).toBeGreaterThanOrEqual(report?.autoGold ?? 0)
     expect(report?.goldGained).toBeGreaterThan(0)
     expect(later.gold - state.gold).toBe((report?.goldGained ?? 0) - (report?.wagesPaid ?? 0))
+    const dungeon = report?.autoDetails?.dungeons[0]
+    expect(dungeon).toMatchObject({ dungeonId: 'hill_cave', wins: report?.autoRuns, losses: 0 })
+    expect(dungeon?.materials.wood).toBe(later.materials.wood - state.materials.wood)
+    const lifetimeXp = (hero: GameState['roster'][number]) => hero.xp + progression.xpPerLevel * hero.level * (hero.level - 1) / 2
+    const xpTotal = (save: GameState) => save.roster.reduce((sum, hero) => sum + lifetimeXp(hero), 0)
+    expect(dungeon?.xp).toBe(xpTotal(later) - xpTotal(state))
+    expect(report?.autoDetails?.gear.every(({ id }) => !state.loot.some(({ gearId }) => gearId === id))).toBe(true)
+  })
+
+  it('reports injuries that exclude an auto party member and separates newly returned loot', () => {
+    let state = clearedCave(7)
+    state = reduce(state, { type: 'dungeon', id: 'moss_path' })
+    const sent = reduce(state, { type: 'depart', confirm: true, now: state.lastTickAt })
+    expect(sent.expeditions[0]?.report.victory).toBe(true)
+    const back = reduce(sent, { type: 'catchUp', now: state.lastTickAt + timeRules.reportAfterMs })
+    const newGear = back.loot.find(({ source }) => source === 'moss_path')?.gear
+    expect(newGear).toBeDefined()
+    expect(back.absence?.autoDetails?.gear).toEqual([newGear])
+
+    const hurt = state.roster[0]!
+    const recovering = {
+      ...state,
+      auto: { ...state.auto, enabled: true, policy: 'safe' as const, dungeonId: 'hill_cave' },
+      automation: { ...state.automation, care: false },
+      roster: state.roster.map((hero) => hero.id === hurt.id ? { ...hero, condition: 'critical' as const, recoverAt: state.lastTickAt + 2 * timeRules.reportAfterMs } : hero),
+    }
+    const settled = reduce(recovering, { type: 'catchUp', now: recovering.lastTickAt + timeRules.reportAfterMs })
+    expect(settled.absence?.autoDetails?.injured).toEqual([{ id: hurt.id, name: hurt.name }])
   })
 
   it('lets heroes rest without spending gold', () => {

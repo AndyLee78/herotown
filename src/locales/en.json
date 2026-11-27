@@ -1288,6 +1288,27 @@
     "flame": "Flame",
     "silver": "Silver"
   },
+  "storage": {
+    "xpLabel": "Experience to next level",
+    "xp": "XP {{xp}} / {{max}}",
+    "partyAverage": "Party average Lv {{level}}",
+    "slot": "Slot",
+    "grade": "Grade",
+    "kind": "Gear type",
+    "unique": "Unique",
+    "ordinary": "Standard",
+    "sort": "Sort by",
+    "recent": "Newest in storage",
+    "attack": "Attack",
+    "defense": "Defense",
+    "empty": "No gear matches these filters.",
+    "anyClass": "Usable by any class",
+    "selectHero": "Choose a hero",
+    "noHero": "No available hero can equip this item.",
+    "autoRecord": "{{count}} runs · {{wins}} wins · {{losses}} losses · party XP +{{xp}}",
+    "absenceGear": "Gear found while away",
+    "autoInjured": "Sat out due to injury: {{names}}"
+  },
   "loot": {
     "unique": "Unique",
     "setOn": "{{pieces}}-piece bonus active",

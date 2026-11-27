@@ -501,6 +501,7 @@ export function Prep({
         <div className="grow">
           <strong className="name">{t(`dungeon.${dungeon.id}.name`)}</strong>
           <span className="muted">{t('dungeon.recommended', { level: dungeon.recommendedLevel })}</span>
+          {heroes.length > 0 ? <span className="muted">{t('storage.partyAverage', { level: Number((heroes.reduce((sum, hero) => sum + hero.level, 0) / heroes.length).toFixed(1)) })}</span> : null}
         </div>
         <Chip tone={full ? 'bad' : 'info'}>{t('battle.slots', { used: save.expeditions.length, count: slots })}</Chip>
         <button type="button" className="btn small" onClick={onDungeons}>
@@ -554,6 +555,7 @@ export function Prep({
               <Portrait hero={hero} />
               <span className="hero-row-body">
                 <strong>{hero.name}</strong>
+                <Chip>{t('ui.level', { level: hero.level })}</Chip>
                 <HeroStatus save={save} hero={hero} presetId={preset.id} now={now} />
                 <GearSummary hero={hero} />
               </span>
@@ -816,6 +818,7 @@ export function PartyEditor({ save, onAction, onBack }: { save: GameState; onAct
                     <Portrait hero={hero} />
                     <span className="slot-body">
                       <strong>{hero.name}</strong>
+                      <Chip>{t('ui.level', { level: hero.level })}</Chip>
                       {(bonuses[hero.id] ?? 0) < 0 ? <Chip tone="bad">{t('personality.clash', { percent: Math.round(-100 * bonuses[hero.id]!) })}</Chip> : null}
                       <HeroStatus save={save} hero={hero} presetId={preset.id} now={now} />
                       <span className="row">
