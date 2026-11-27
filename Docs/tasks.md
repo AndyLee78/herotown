@@ -168,7 +168,7 @@ Claude Code, Cursor, GPT(Codex)가 함께 쓰는 작업 목록이다. 작업 하
 | 126 | 직업 사이 차이 줄이기 | GPT | `src/data/classes.json`, `src/data/*.json`, `src/core/*.test.ts`, `tools/*`, `Docs/identity.md` | 완료 (e062b37) |
 | 127 | 정예 처치 드롭 보너스 | GPT | `src/core/dungeon.ts`, `src/core/loot.ts`, `src/core/game.ts`, `src/core/types.ts`, `src/data/loot.json`, `src/core/loot.test.ts`, `Docs/identity.md` | 완료 (b212ded) |
 | 128 | 5단계 뒤 초반 흐름 점검 | GPT | `tools/*`, `Docs/balance.md`의 측정 절, 필요하면 `src/data/*.json`·`src/ui/styles.css`·`src/locales/*` | 완료 (42a28ae) |
-| 129 | 레벨·경험치 표시, 창고 화면, 재접속 자동 출정 보고 | GPT | `src/ui/App.tsx`, `src/ui/game/*.tsx`, `src/ui/styles.css`, `src/locales/*`, 보고에 필요한 만큼 `src/core/game.ts`·`src/core/*.test.ts` | 대기 (133과 함께 가능) |
+| 129 | 레벨·경험치 표시, 창고 화면, 재접속 자동 출정 보고 | GPT | `src/ui/App.tsx`, `src/ui/game/*.tsx`, `src/ui/styles.css`, `src/locales/*`, 보고에 필요한 만큼 `src/core/game.ts`·`src/core/*.test.ts` | 완료 (a2ffc69) |
 | 130 | 파티 자동 편성 | GPT | `src/core/*`(새 함수·행동), `src/ui/game/battleScreens.tsx`, `src/locales/*` | 대기 (129 뒤) |
 | 131 | 여관 유료 갱신 | GPT | `src/core/game.ts`, `src/data/village.json`, `src/core/*.test.ts`, `src/ui/game/*.tsx`, `src/locales/*` | 대기 (130 뒤) |
 | 132 | 결혼하면 2인실 배정(신혼방 없애기) | GPT | `src/core/family.ts`, `src/core/rooms.ts`, `src/data/family.json`, `src/core/*.test.ts`, `src/ui/game/*.tsx`, `src/locales/*`, `Docs/house.md` | 대기 (131 뒤) |
@@ -3205,6 +3205,9 @@ Docs/identity.md 5d를 측정한다. core와 src/data는 고치지 않는다. �
 ```
 
 **메모**
+
+5175의 375px Chrome에서 영웅 경험치, 준비·편성 레벨, 창고 필터·정렬·장착·판매, 재접속 보고를 확인했다. 창고의 최신순은 기존 저장의 입고 순서를 쓴다.
+자동 출정 전적·파티 경험치·재료와 부상으로 제외된 영웅, 비운 동안 새로 얻은 장비를 기록했다. 타입 검사·테스트 459개·빌드를 통과했다.
 
 ---
 
