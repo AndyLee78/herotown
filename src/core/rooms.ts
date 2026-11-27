@@ -1,4 +1,3 @@
-import { familyRules } from './data'
 import { bedsTaken, residents } from './family'
 import type { GameState } from './game'
 import { bedCount } from './game'
@@ -6,9 +5,9 @@ import { isChild } from './hero'
 import type { Hero } from './types'
 
 // The houses seen as rooms (Docs/house.md). This only groups people for the
-// screen; the rules stay beds = house level × 5 and couples = level × 2.
+// screen; marriage has no additional bed cost.
 //
-// - family: a married couple and their children, one of the level × 2 couple homes.
+// - family: a couple sharing a double room with their underage children.
 // - parent: a parent on their own with their children.
 // - shared: everyone else, two to a room, empty beds last.
 // Retirees sleep in town without a bed; they show in a family room when they
@@ -31,8 +30,6 @@ export type HouseView = {
   free: number
   // People without a bed when the house is too small (an old or imported save).
   overflow: number
-  coupleHomes: number
-  emptyCoupleHomes: number
   rooms: Room[]
   retirees: Hero[]
 }
@@ -94,14 +91,11 @@ export function houseRooms(state: GameState): HouseView {
     rooms.push({ kind: 'shared', members: [], beds: empty, empty, expecting: false })
   }
 
-  const coupleHomes = state.buildings.house * familyRules.couplesPerHouseLevel
   return {
     beds,
     used,
     free: Math.max(0, beds - used),
     overflow: Math.max(0, used - beds),
-    coupleHomes,
-    emptyCoupleHomes: Math.max(0, coupleHomes - wives.length),
     rooms,
     retirees: people.filter((hero) => !placed.has(hero.id) && !inRoster.has(hero.id)),
   }

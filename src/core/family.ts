@@ -130,9 +130,10 @@ export function coupleCount(state: GameState): number {
   return residents(state).filter((hero) => hero.spouseId != null && hero.gender === 'female').length
 }
 
-// Free homes for newly-weds: house level × couples per level, minus couples.
-export function housingFree(state: GameState): number {
-  return Math.max(0, state.buildings.house * familyRules.couplesPerHouseLevel - coupleCount(state))
+// The existing proposal UI treats zero as a housing block. Marriage uses
+// the beds both residents already have, so it has no separate capacity.
+export function housingFree(_state: GameState): number {
+  return Infinity
 }
 
 export function population(state: GameState): Population {
@@ -432,9 +433,6 @@ export function acceptProposal(state: GameState, a: string, b: string, now: numb
   }
   if (!first || !second || !canCourt(first, second, now)) {
     return { ...state, notice: 'missing', proposals: dropProposal(state.proposals, proposal) }
-  }
-  if (housingFree(state) <= 0) {
-    return { ...state, notice: 'noHouse' }
   }
   const wed = (hero: Hero): Hero =>
     hero.id === first.id || hero.id === second.id

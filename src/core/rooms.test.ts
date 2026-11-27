@@ -38,7 +38,20 @@ describe('house rooms', () => {
     expect(view.used).toBe(6)
     expect(view.beds).toBe(5)
     expect(view.overflow).toBe(1)
-    expect(view.emptyCoupleHomes).toBe(1)
+  })
+
+  it('puts an adult child in an ordinary shared room and assigns only two beds to the couple', () => {
+    const view = houseRooms(town([
+      person('wife', 'female', 42, { spouseId: 'man' }),
+      person('man', 'male', 43, { spouseId: 'wife' }),
+      person('adult', 'female', 20, { parents: ['wife', 'man'] }),
+      person('roommate', 'female', 21),
+    ]))
+    expect(view.rooms[0]).toMatchObject({ kind: 'family', beds: 2, empty: 0 })
+    expect(view.rooms[0]?.members.map(({ id }) => id)).toEqual(['wife', 'man'])
+    expect(view.rooms[1]?.members.map(({ id }) => id)).toEqual(['adult', 'roommate'])
+    expect(view.rooms[1]?.kind).toBe('shared')
+    expect(view.free).toBe(1)
   })
 
   it('fills spare beds into the last shared room, then empty rooms', () => {
@@ -61,11 +74,11 @@ describe('house rooms', () => {
     expect(shared.map((room) => room.members.map((hero) => hero.id))).toEqual([['a'], ['b']])
   })
 
-  it('keeps a fallen spouse in the family room and their couple home taken (review b1261a7)', () => {
+  it('keeps a fallen spouse and their bed in the family room (review b1261a7)', () => {
     const view = houseRooms(town([person('wife', 'female', 30, { spouseId: 'man' }), person('man', 'male', 31, { spouseId: 'wife', condition: 'dead' })]))
     expect(view.rooms[0]?.members.map((hero) => hero.id)).toEqual(['wife', 'man'])
     expect(view.rooms.reduce((sum, room) => sum + room.beds, 0)).toBe(view.beds)
-    expect(view.emptyCoupleHomes).toBe(1)
+    expect(view.rooms[0]?.beds).toBe(2)
   })
 })
 

@@ -10,7 +10,6 @@
   "proposeChance": 0.5,
   "declineAffinity": 20,
   "declineCooldownSeasons": 2,
-  "couplesPerHouseLevel": 2,
   "friendBonus": 0.01,
   "loverBonus": 0.03,
   "maxBonus": 0.05,

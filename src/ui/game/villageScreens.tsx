@@ -122,7 +122,6 @@ export function House({ save, onSelectHero }: { save: GameState; onSelectHero: (
         <div className="chips">
           <Chip>{t('house.beds', { used: view.used, beds: view.beds })}</Chip>
           <Chip>{t('house.free', { count: view.free })}</Chip>
-          <Chip>{t('house.newlywedCount', { empty: view.emptyCoupleHomes, total: view.coupleHomes })}</Chip>
           {groups.map(({ kind, rooms }) => <Chip key={kind}>{t('house.roomCount', { room: t(`house.${kind}`), count: rooms.length })}</Chip>)}
         </div>
         {view.overflow > 0 ? <p className="banner bad">{t('house.overflow', { count: view.overflow })}</p> : null}
@@ -143,12 +142,6 @@ export function House({ save, onSelectHero }: { save: GameState; onSelectHero: (
             </article>
           )
         }))}
-        {Array.from({ length: view.emptyCoupleHomes }, (_, index) => (
-          <article className="card house-vacancy" key={`newlywed-${index}`}>
-            <strong>{t('house.newlywed')}</strong>
-            <p className="muted">{t('house.newlywedHint')}</p>
-          </article>
-        ))}
       </div>
       {view.retirees.length > 0 ? <section>
         <h3 className="section-title">{t('house.retirees')}</h3>

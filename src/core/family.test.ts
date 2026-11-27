@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest'
 import { createHeroUnit } from './combat'
 import { familyRules, maxAge, progression, timeRules, villageRules } from './data'
-import { isLegend, ancestorsOf, bondOf, bondParty, bondStage, canCourt, familyLegends, familyOf, graveFor, hallOfFame, legendBonus, oldAgeChance, passAway, femaleChance, housingFree, makeChild, nextAge, partyBonus, population, topBonds } from './family'
+import { isLegend, ancestorsOf, bedsTaken, bondOf, bondParty, bondStage, canCourt, familyLegends, familyOf, graveFor, hallOfFame, legendBonus, oldAgeChance, passAway, femaleChance, makeChild, nextAge, partyBonus, population, topBonds } from './family'
 import { canDeploy, createHero, isChild, type HeroDraft } from './hero'
 import { freshState, migrate, reduce, type GameState } from './game'
 import { createRng } from './rng'
@@ -98,13 +98,34 @@ describe('proposals and marriage', () => {
     expect(bondStage(wed, 'a', 'b')).toBe('spouse')
   })
 
-  it('needs a free home to accept', () => {
-    const state = town([hero('a', 'male'), hero('b', 'female')], {
-      buildings: { ...freshState(5, now).buildings, house: 0 },
+  it('allows a third couple in an existing save without adding to its bed use', () => {
+    const state = town([
+      hero('a', 'male'), hero('b', 'female'),
+      hero('c', 'male', { spouseId: 'd' }), hero('d', 'female', { spouseId: 'c' }),
+      hero('e', 'male', { spouseId: 'f' }), hero('f', 'female', { spouseId: 'e' }),
+    ], {
+      buildings: { ...freshState(5, now).buildings, house: 1 },
       proposals: [{ a: 'a', b: 'b', at: now }],
     })
-    expect(housingFree(state)).toBe(0)
-    expect(reduce(state, { type: 'acceptProposal', a: 'a', b: 'b' }).notice).toBe('noHouse')
+    const loaded = migrate(JSON.parse(JSON.stringify(state)), now)
+    const wed = reduce(loaded, { type: 'acceptProposal', a: 'a', b: 'b' })
+    expect(wed.notice).toBeNull()
+    expect(familyOf(wed, 'a').spouse?.id).toBe('b')
+    expect(bedsTaken(wed)).toBe(bedsTaken(loaded))
+  })
+
+  it('permits marriage at full occupancy and still prevents conception without a free bed', () => {
+    const state = town([
+      hero('a', 'male'), hero('b', 'female'), hero('c', 'male'), hero('d', 'female'), hero('e', 'male'),
+    ], {
+      buildings: { ...freshState(5, now).buildings, house: 1 },
+      proposals: [{ a: 'a', b: 'b', at: now }],
+    })
+    const wed = reduce(state, { type: 'acceptProposal', a: 'a', b: 'b' })
+    expect(wed.notice).toBeNull()
+    expect(bedsTaken(wed)).toBe(5)
+    expect(familyOf(wed, 'a').spouse?.id).toBe('b')
+    expect(passSeasons(wed, 8).roster.some(({ expecting }) => expecting)).toBe(false)
   })
 
   it('cools a pair down when the player refuses', () => {
@@ -353,10 +374,9 @@ describe('stage 2b: old age, graves and legends', () => {
   })
 
   // Levels 5 and 6 came with the endgame (Docs/endgame.md).
-  it('builds houses up to level 6 with room for two couples per level', () => {
+  it('builds houses up to level 6', () => {
     const house = villageRules.buildings.find((building) => building.id === 'house')
     expect(house?.levels.map((level) => level.level)).toEqual([1, 2, 3, 4, 5, 6])
-    expect(housingFree(town([], { buildings: { ...freshState(5, now).buildings, house: 4 } }))).toBe(4 * familyRules.couplesPerHouseLevel)
   })
 
   it('opens a version 8 save whose graves have no family record', () => {
