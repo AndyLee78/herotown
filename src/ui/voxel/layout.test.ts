@@ -57,4 +57,14 @@ describe('village lot layout', () => {
       expect(pad.z).toBeGreaterThan(LOTS.legends.z)
     }
   })
+
+  // SE camera: depth ≈ x+z, screen X ≈ x−z. The shrine must either sit in front
+  // of the inn or on a clearly different screen column so the inn cannot hide it.
+  it('keeps the hall of fame clear of the inn on the SE camera', () => {
+    const depth = (lot: Lot) => lot.x + lot.z
+    const screenX = (lot: Lot) => lot.x - lot.z
+    const inFront = depth(LOTS.legends) >= depth(LOTS.inn)
+    const aside = Math.abs(screenX(LOTS.legends) - screenX(LOTS.inn)) > 8
+    expect(inFront || aside).toBe(true)
+  })
 })

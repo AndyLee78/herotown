@@ -1814,7 +1814,8 @@ export class VillageScene {
     }
     this.renderer.setSize(width, height, false)
     const aspect = width / height
-    const size = aspect < 1 ? (FRUSTUM / aspect) * 0.62 : FRUSTUM
+    // Portrait uses the full frustum so the north-east rim (hall of fame, market) stays on screen.
+    const size = aspect < 1 ? FRUSTUM / aspect : FRUSTUM
     this.camera.left = (-size * aspect) / 2
     this.camera.right = (size * aspect) / 2
     this.camera.top = size / 2

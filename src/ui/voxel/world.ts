@@ -15,23 +15,23 @@ export const LOTS: Record<BuildingId, Lot> = {
   // North row.
   hall: { x: -8.5, z: -8.5, w: 5, d: 4 },
   temple: { x: -1.5, z: -10.5, w: 4, d: 3.2 },
-  // Between temple and inn on the north grass (Docs/legends.md). Kept inside
-  // the flat village rim (|x|,|z| <= 12.5) so statues stay on the lawn.
-  legends: { x: 3.2, z: -10.2, w: 3.4, d: 2.8 },
-  // Pulled west and a little south so the hall of fame fits beside it.
-  inn: { x: 7.4, z: -7.6, w: 4, d: 3 },
+  // North-east of the plaza; kept clear of the hall of fame (Docs/legends.md).
+  inn: { x: 7.0, z: -8.0, w: 4, d: 3 },
+  // West of the plaza, between the house column and the training yard. The SE
+  // camera sees it on a different screen column from the inn, so the shrine is
+  // not buried behind the east cluster (Docs/legends.md).
+  legends: { x: -3.0, z: 3.0, w: 3.4, d: 2.8 },
   // West column, north to south.
   alchemy: { x: -10.5, z: -4, w: 3, d: 2.6 },
   magic: { x: -10.5, z: 1, w: 3, d: 2.6 },
   house: { x: -9, z: 5.8, w: 3, d: 2.6 },
   school: { x: -10.5, z: 10.6, w: 3.2, d: 2.6 },
-  // East of the square, between the inn yard and the guild (Docs/market.md).
+  // East of the square, spaced from the inn and tavern (Docs/market.md).
   // Kept clear of INN_YARD, the guild front, the fountain rim and the south road.
-  market: { x: 10.8, z: -3.2, w: 3.2, d: 2.6 },
-  // East of the square, between the plaza and the market (Docs/tavern.md).
-  // North-west of the square it stood in front of the hall and hid its door
-  // from the camera; here nothing stands behind it. The yard opens south.
-  tavern: { x: 7.3, z: -2.1, w: 3.2, d: 2.8 },
+  market: { x: 10.8, z: -2.4, w: 3.2, d: 2.6 },
+  // Closer to the plaza than the market so the east side is not one stack
+  // (Docs/tavern.md). The yard opens south.
+  tavern: { x: 5.5, z: -1.2, w: 3.2, d: 2.8 },
   // South-west of the square: the training yard, in plain view.
   training: { x: -5.6, z: 8.4, w: 3.6, d: 3.2 },
   // East and south-east.
@@ -95,7 +95,7 @@ export const PLAZA = { min: -5.3, max: 5.3 }
 // Parties gather here, then leave and come back through the south gate.
 export const GATHER = { x: 0, z: 4.2 }
 export const GATE = { x: 0, z: 12.2 }
-export const INN_YARD = { minX: 5.6, maxX: 9.2, minZ: -5.7, maxZ: -4.7 }
+export const INN_YARD = { minX: 5.2, maxX: 8.8, minZ: -6.1, maxZ: -5.1 }
 
 const HALF = 15
 const GRASS = ['#a5d46a', '#9acb5e', '#b0da78', '#94c55a']
@@ -136,16 +136,16 @@ export function buildTerrain(): THREE.Group {
       .box(0.5 * s, 0.4 * s, 0.5 * s, leaf, x, y + 0.7 + 1.6 * s, z)
   }
 
-  // SE plaza lamp sits west of the inn yard so it is not inside the inn lot.
-  for (const [x, z] of [[-6.4, -6.4], [4.6, -5.4], [-6.4, 6.4], [6.4, 6.4], [2.2, 10]] as const) {
+  // SE plaza lamp sits just south-west of the inn yard.
+  for (const [x, z] of [[-6.4, -6.4], [4.4, -4.6], [-6.4, 6.4], [6.4, 6.4], [2.2, 10]] as const) {
     b.box(0.32, 0.16, 0.32, '#6d6d6d', x, 0.08, z)
       .box(0.12, 1.4, 0.12, '#3a3a3a', x, 0.8, z)
       .box(0.24, 0.26, 0.24, x < 0 && z < 0 ? '#9fe8ff' : '#ffd36b', x, 1.6, z, { glow: true })
       .box(0.3, 0.05, 0.3, '#3a3a3a', x, 1.76, z)
   }
 
-  // Well and a picnic table by the inn yard.
-  b.within(6.8, 0, -4.0, 0, 0, 0, () => {
+  // Well by the inn yard; picnic table between the yard and the market path.
+  b.within(6.5, 0, -4.2, 0, 0, 0, () => {
     for (const [px, pz, sx, sz] of [[0, -0.45, 1.1, 0.2], [0, 0.45, 1.1, 0.2], [-0.45, 0, 0.2, 0.7], [0.45, 0, 0.2, 0.7]] as const) {
       b.box(sx, 0.5, sz, '#9e9a92', px, 0.25, pz)
     }
@@ -154,7 +154,7 @@ export function buildTerrain(): THREE.Group {
       .box(0.1, 1.2, 0.1, WOOD, 0.5, 0.6, 0)
       .box(1.4, 0.12, 0.9, '#b8443a', 0, 1.25, 0)
   })
-  b.within(10.4, 0, -5.0, 0, 0, 0, () => {
+  b.within(9.0, 0, -4.6, 0, 0, 0, () => {
     b.box(1.4, 0.1, 0.8, '#7a5a40', 0, 0.6, 0)
       .box(0.1, 0.55, 0.1, '#5d4433', -0.55, 0.28, 0)
       .box(0.1, 0.55, 0.1, '#5d4433', 0.55, 0.28, 0)
