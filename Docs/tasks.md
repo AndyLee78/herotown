@@ -173,7 +173,7 @@ Claude Code, Cursor, GPT(Codex)가 함께 쓰는 작업 목록이다. 작업 하
 | 131 | 여관 유료 갱신 | GPT | `src/core/game.ts`, `src/data/village.json`, `src/core/*.test.ts`, `src/ui/game/*.tsx`, `src/locales/*` | 완료 (5e422a7) |
 | 132 | 결혼하면 2인실 배정(신혼방 없애기) | GPT | `src/core/family.ts`, `src/core/rooms.ts`, `src/data/family.json`, `src/core/*.test.ts`, `src/ui/game/*.tsx`, `src/locales/*`, `Docs/house.md` | 완료 (1f6e55f) |
 | 133 | 마을 건물 위치 조정 | Cursor | `src/ui/voxel/*` | 완료 (3d1538e) |
-| 134 | 명예의 전당이 여관 뒤에 가려지는 배치 고치기 | Cursor | `src/ui/voxel/*` | 대기 (135와 함께 가능) |
+| 134 | 명예의 전당이 여관 뒤에 가려지는 배치 고치기 | Cursor | `src/ui/voxel/*` | 완료 (b8bdbff) |
 | 135 | 영웅 카드 경험치 막대에 설명 붙이기 | GPT | `src/ui/game/*.tsx`, `src/ui/styles.css`, `src/locales/*` | 완료 (05fd01b) |
 
 ---
@@ -3327,6 +3327,8 @@ Docs/identity.md 5d를 측정한다. core와 src/data는 고치지 않는다. �
 ```
 
 **메모**
+
+명예의 전당을 광장 서쪽(`-3.0, 3.0`, 훈련소·분수 사이)으로 옮겨 SE 카메라에서 여관과 화면 열이 갈라지게 했다. 여관·선술집·시장 간격을 벌리고, 세로 화면 frustum을 넓혀 375px에서도 이름표가 보이게 했다. 127.0.0.1:5175에서 PC·375px 확인. 타입 검사·테스트 473개·빌드 통과.
 
 ---
 
