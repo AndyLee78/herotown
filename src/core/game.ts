@@ -1,5 +1,6 @@
 import { chargeFountain, freshFountain, makeWish, readFountain, upgradeFountain, type FountainState } from './fountain'
 import { claimGuide, guideSteps } from './guide'
+import { claimAchievement, codexDungeons, readAchievements, readCodex, recordCollection, recordDungeonClear, recordEncounter, restoreCollection, type Codex } from './codex'
 import { canLearn, skillPicks } from './skills'
 import { deliver, ensureBoard, expeditionSlotsFor, guildLevel, progressClear, readBoard, type GuildBoard } from './guild'
 import { cheer, driftMorale, lowMorale, mourn } from './morale'
@@ -32,7 +33,7 @@ import type { Rng } from './rng'
 import type { Genes } from './genes'
 import type { Bond, ClassId, CombatError, DungeonReport, Gear, GearSlot, GearType, Gender, Hero, PartyMember, PotionId, Proposal, Role, Row, Supplies, Tactics, TrinketId , StatKey } from './types'
 
-export const SAVE_VERSION = 29
+export const SAVE_VERSION = 30
 
 // Town levels up to here come with fame alone (Docs/endgame.md 4b).
 export const PROMOTION_FREE = 7
@@ -174,6 +175,7 @@ export type Grave = {
   parents?: [string, string]
   spouseId?: string
   genes?: Genes
+  gift?: Hero['gift']
   // In the hall of fame (Docs/generations.md 11).
   legend?: boolean
 }
@@ -262,6 +264,8 @@ export type GameState = {
   stash: Gear[]
   craftNonce: number
   cleared: string[]
+  codex: Codex
+  achievements: string[]
   questProgress: number
   questClaimed: boolean
   nextVisitorAt: number
@@ -391,6 +395,7 @@ export type GameAction =
   | { type: 'reset'; now: number }
   | { type: 'adReward'; placement: AdPlacement; now: number }
   | { type: 'claimGuide' }
+  | { type: 'claimAchievement'; id: string }
   | { type: 'retire'; id: string }
   | { type: 'assignRetiree'; id: string; building: BuildingId | null }
   | { type: 'acceptProposal'; a: string; b: string; now?: number }
@@ -440,6 +445,8 @@ export function freshState(seed: number, now: number): GameState {
     stash: [],
     craftNonce: 0,
     cleared: [],
+    codex: readCodex(null),
+    achievements: [],
     questProgress: 0,
     questClaimed: false,
     nextVisitorAt: now + villageRules.inn.arriveEveryMs,
@@ -499,7 +506,9 @@ export function freshState(seed: number, now: number): GameState {
 }
 
 export function reduce(state: GameState, action: GameAction): GameState {
-  const next = applyAction(state, action)
+  const applied = applyAction(state, action)
+  const next = applied.roster !== state.roster || applied.stash !== state.stash || applied.retirees !== state.retirees || applied.graveyard !== state.graveyard
+    ? recordCollection(applied) : applied
   // A town level-up cheers everyone, whatever raised the fame: a first clear,
   // a building, a festival or a contract (Docs/morale.md, review b9036a0).
   const gained = townLevelOf(next).level - townLevelOf(state).level
@@ -551,10 +560,11 @@ export function migrate(raw: unknown, now: number): GameState {
   }
   const record = raw as Record<string, unknown>
   if (record.version === 1) {
-    return fromLegacy(record, now)
+    return restoreCollection(fromLegacy(record, now))
   }
   if (typeof record.version === 'number' && record.version >= 2 && record.version <= SAVE_VERSION) {
-    return unequipMisfits(dropUnpaidOrders(fitShrine(normalize(record, now)), record.version))
+    const next = unequipMisfits(dropUnpaidOrders(fitShrine(normalize(record, now)), record.version))
+    return record.version < 30 ? restoreCollection(next) : next
   }
   if (typeof record.version === 'number' && record.version > SAVE_VERSION) {
     throw new Error('newer')
@@ -764,6 +774,9 @@ function apply(state: GameState, action: GameAction): GameState {
   }
   if (action.type === 'claimGuide') {
     return claimGuide(state)
+  }
+  if (action.type === 'claimAchievement') {
+    return claimAchievement(state, action.id, townLevelOf(state).level)
   }
   if (action.type === 'wish') {
     return makeWish(state, action.now)
@@ -1701,7 +1714,7 @@ function settleParty(
   now: number,
   heroIds: string[],
   dungeonId: string,
-): Pick<GameState, 'roster' | 'graveyard' | 'stash'> {
+): Pick<GameState, 'roster' | 'graveyard' | 'stash' | 'codex'> {
   const rng = createRng(seed + 17)
   const partyIds = new Set(heroIds)
   // The statue of heroes speeds learning (Docs/endgame.md 4d).
@@ -1731,7 +1744,7 @@ function settleParty(
   // Grief lands when the party comes home with the news; several losses on
   // one trip count as the deepest one (Docs/morale.md, review b9036a0).
   const lost = graveyard.slice(state.graveyard.length)
-  return { roster: lost.length ? mourn(roster, lost, state.bonds) : roster, graveyard, stash }
+  return { roster: lost.length ? mourn(roster, lost, state.bonds) : roster, graveyard, stash, codex: recordEncounter(state.codex, report) }
 }
 
 // ---------- retirement ----------
@@ -1980,7 +1993,7 @@ function settleExpedition(state: GameState, expedition: Expedition): GameState {
       ? { ...expedition.report, conditions: expedition.report.conditions.map((entry) => (entry.condition === 'dead' ? { ...entry, condition: 'critical' as const } : entry)) }
       : expedition.report
   const settled = settleParty(state, report, expedition.seed, expedition.returnAt, expedition.heroIds, dungeonId)
-  const repeat = state.cleared.includes(dungeonId)
+  const repeat = !dungeonById(dungeonId).special && state.cleared.includes(dungeonId)
   // The arch and prosperity add to what comes home (Docs/endgame.md 4d).
   const goldGain = Math.floor((repeat ? report.gold * villageRules.repeatReward : report.gold) * (1 + rewardBonus(state)))
   const home: GameState = bondParty(
@@ -1997,7 +2010,7 @@ function settleExpedition(state: GameState, expedition: Expedition): GameState {
   const special = settleSpecial(grantVictoryRewards(afterTrip(home, expedition.heroIds, report.victory), report, dungeonId, undefined, { at: expedition.returnAt, trip: expedition.id }), dungeonId, report.floorsCleared, report.victory, expedition.abyssFrom)
   const raided = expedition.raid ? settleRaid(special, expedition.raid.week, expedition.raid.start, expedition.raid.left, expedition.raid.max, expedition.returnAt, expedition.raid.tier ?? 1, expedition.id) : special
   const rewarded = dungeonById(dungeonId).special === 'event' ? settleEvent(raided, report.victory) : raided
-  const next = dropFromPresets(rewarded)
+  const next = dropFromPresets(report.victory || raided.raidKills > state.raidKills ? recordDungeonClear(rewarded, dungeonId) : rewarded)
   const materials: Partial<Materials> = {}
   for (const key of ['wood', 'stone', 'iron', 'bone', 'herb', 'crystal'] as const) {
     const diff = next.materials[key] - state.materials[key]
@@ -2149,6 +2162,7 @@ function invade(state: GameState, until: number): GameState {
       return { ...current, ...settleParty(current, safe, current.seed + at, at, heroIds, 'invasion') }
     })
   }
+  if ((next.invasion?.wins ?? 0) > (state.invasion?.wins ?? 0)) next = recordDungeonClear(next, 'invasion')
   // A long absence does not stack up raids: the next one is a full wait away.
   if (next.invasion && next.invasion.nextAt <= until) {
     next = { ...next, invasion: { ...next.invasion, nextAt: until + rules.everyMs } }
@@ -2431,6 +2445,9 @@ function normalize(record: Record<string, unknown>, now: number): GameState {
     version: SAVE_VERSION,
     calendar,
     lastTickAt: numberOr(record.lastTickAt, now),
+    cleared: Array.isArray(record.cleared) ? [...new Set(record.cleared.filter((id) => codexDungeons.includes(id)))] : [],
+    codex: readCodex(record.codex),
+    achievements: readAchievements(record.achievements),
     visitors: validHeroes(record.visitors)
       ? openStays(record.visitors.map((hero) => withRecovery(knownBefore18(record, hero), now)), now, visitorStay(innLevel(record, base)))
       : base.visitors,

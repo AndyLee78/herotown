@@ -34,6 +34,43 @@
 - 행동: `{ type: 'claimAchievement', id }`(달성 전 `locked`, 이미 받음 `missing`).
 - 보상은 초반을 크게 흔들지 않게 작게 잡는다(5d 측정의 30일 골드·훈장 획득량의 5% 안팎). 숫자는 작업에서 정하고 문서에 남긴다.
 
+### 보상 수치
+
+처음 클리어의 보상은 골드 15로 잡고, 중후반 훈장 묶음은 한 업적에 4–20개로 나눴다. 5d의 30일 골드 수입 표본에 비해 골드 보상은 작게 잡았다. 아래 `all` 목표는 현재 도감의 전체 항목 수를 사용한다.
+
+| 묶음 | 업적 ID | 보상 |
+| --- | --- | --- |
+| collection | `monsters-10` | 골드 40 |
+| collection | `monsters-25` | 골드 75 · 용맹 훈장 5 |
+| collection | `monsters-all` | 골드 200 · 용맹 훈장 12 |
+| collection | `uniques-3` | 용맹 훈장 8 |
+| collection | `uniques-6` | 용맹 훈장 12 |
+| collection | `uniques-all` | 용맹 훈장 20 |
+| collection | `sets-1` | 용맹 훈장 10 |
+| collection | `sets-all` | 용맹 훈장 20 |
+| collection | `gifts-5` | 골드 60 |
+| collection | `gifts-10` | 골드 100 · 용맹 훈장 5 |
+| collection | `gifts-all` | 용맹 훈장 12 |
+| collection | `classes-all` | 골드 75 |
+| expedition | `clears-1` | 골드 15 |
+| expedition | `clears-5` | 용맹 훈장 4 |
+| expedition | `clears-all` | 용맹 훈장 20 |
+| expedition | `raids-1` | 용맹 훈장 8 |
+| expedition | `raids-10` | 용맹 훈장 18 |
+| expedition | `abyss-10` | 빛 정수 2 |
+| expedition | `abyss-20` | 심연석 3 |
+| expedition | `abyss-40` | 심연석 6 |
+| town | `town-5` | 골드 50 |
+| town | `town-10` | 골드 175 |
+| town | `heroes-10` | 골드 65 |
+| town | `heroes-20` | 골드 130 |
+| town | `buildings-3` | 골드 150 · 명성 10 |
+| family | `marriage-1` | 골드 25 |
+| family | `birth-1` | 골드 35 |
+| family | `generations-3` | 골드 85 |
+| family | `legends-1` | 골드 50 |
+| family | `legends-5` | 골드 140 |
+
 ## 알림
 
 지금 게임은 서버가 없는 정적 사이트(GitHub Pages)다. 그래서 단계를 나눈다.

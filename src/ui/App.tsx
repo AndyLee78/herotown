@@ -31,6 +31,8 @@ import { rewardedAds } from './ads'
 import { addGameOffset, gameNow, offsetSteps, resetGameOffset } from './clock'
 import { josa } from './josa'
 import { BattleHub, BattleViewTabs, type BattleView } from './game/battleScreens'
+import { AchievementsScreen, CodexScreen } from './game/codexScreens'
+import { achievementProgress } from '../core/codex'
 import { applyWithVaultHistory } from './game/specialDungeons'
 import { Market } from './game/marketScreens'
 import { Tavern } from './game/tavernScreens'
@@ -45,7 +47,7 @@ import { isSoundName, play, unlockSound } from './sound'
 const ExpeditionPanel = lazy(() => import('./ExpeditionPanel').then((mod) => ({ default: mod.ExpeditionPanel })))
 const VillageView = lazy(() => import('./VillageView').then((mod) => ({ default: mod.VillageView })))
 
-type Screen = 'town' | 'inn' | 'roster' | 'battle' | 'smith' | 'alchemy' | 'magic' | 'training' | 'school' | 'guild' | 'house' | 'market' | 'tavern' | 'legends' | 'settings' | 'festival'
+type Screen = 'town' | 'inn' | 'roster' | 'battle' | 'smith' | 'alchemy' | 'magic' | 'training' | 'school' | 'guild' | 'house' | 'market' | 'tavern' | 'legends' | 'settings' | 'festival' | 'codex' | 'achievements'
 type Toast = { id: number; text: string }
 
 const DOCK: { screen: Screen; icon: ReactNode }[] = [
@@ -435,8 +437,9 @@ export function App() {
   if (save.scout) {
     away.add(save.scout.heroId)
   }
+  const readyAchievements = achievementProgress(save, townLevelOf(save).level).filter(({ ready }) => ready).length
   const badges: Partial<Record<Screen, number | boolean>> = {
-    town: save.loot.length,
+    town: save.loot.length + readyAchievements,
     inn: save.visitors.length,
     roster: save.roster.some((hero) => needsWarning(hero) || hero.skillPoints > 0 || (!isChild(hero) && hero.condition !== 'dead' && lowMorale(hero))),
     battle: reportUnseen || save.expeditions.length > 0,
@@ -526,8 +529,15 @@ export function App() {
           footer={screen === 'battle' ? <BattleViewTabs view={battleView} onView={setBattleView} /> : undefined}
         >
           {screen === 'town' ? (
+            <><div className="chips">
+              <button type="button" className="btn" onClick={() => open('codex')}>{t('screen.codex')}</button>
+              <button type="button" className="btn" onClick={() => open('achievements')}>{t('screen.achievements')}{readyAchievements ? ` · ${readyAchievements}` : ''}</button>
+            </div>
             <Town save={save} onAction={apply} busy={adBusy} onWatch={() => watchAd('construction')} onAlchemy={() => open('alchemy')} onMagic={() => open('magic')} onTraining={() => open('training')} onSchool={() => open('school')} onGuild={() => open('guild')} onMarket={() => open('market')} onTavern={() => open('tavern')} onLegends={() => open('legends')} onFestival={() => open('festival')} onSelectHero={(id) => { setSelectedId(id); open('roster') }} />
+            </>
           ) : null}
+          {screen === 'codex' ? <CodexScreen save={save} /> : null}
+          {screen === 'achievements' ? <AchievementsScreen save={save} onAction={apply} /> : null}
           {screen === 'inn' ? <Inn save={save} onAction={apply} /> : null}
           {screen === 'house' ? <House save={save} onSelectHero={(id) => { setSelectedId(id); open('roster') }} /> : null}
           {screen === 'roster' ? (

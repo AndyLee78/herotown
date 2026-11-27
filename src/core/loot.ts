@@ -1,4 +1,5 @@
 import { dungeonById, endgameRules, lootRules, smithRules } from './data'
+import { recordLoot, type Codex } from './codex'
 import { forgeGear, recipeById, weaponTypes, armorTypes } from './gear'
 import { createRng, type Rng } from './rng'
 import type { Gear, GearGrade, GearSlot, GearType } from './types'
@@ -66,7 +67,7 @@ function remember(loot: LootEntry[] | undefined, found: Gear[], source: string, 
   return [...(loot ?? []), ...found.map((gear) => ({ gearId: gear.id, source, at: tag.at, gear, ...(tag.trip ? { trip: tag.trip } : {}) }))].slice(-lootRules.recent)
 }
 
-type LootState = { seed: number; craftNonce: number; stash: Gear[]; loot?: LootEntry[]; lastTickAt: number }
+type LootState = { seed: number; craftNonce: number; stash: Gear[]; loot?: LootEntry[]; lastTickAt: number; codex?: Codex }
 
 // What a won regular dungeon leaves: a sure piece on the first clear, then a
 // chance; and a small chance at the boss's unique. Auto runs find far less
@@ -103,7 +104,7 @@ export function dungeonLoot<S extends LootState>(state: S, dungeonId: string, fi
   if (found.length === 0) {
     return { ...state, craftNonce }
   }
-  return { ...state, craftNonce, stash: [...state.stash, ...found], loot: remember(state.loot, found, dungeonId, tag) }
+  return recordLoot({ ...state, craftNonce, stash: [...state.stash, ...found], loot: remember(state.loot, found, dungeonId, tag) }, found)
 }
 
 // A raid boss brought down may leave one of its two uniques; later tiers more often.
@@ -116,7 +117,7 @@ export function raidLoot<S extends LootState>(state: S, bossId: string, tier: nu
     return { ...state, craftNonce }
   }
   const piece = uniqueGear(rng.pick(pieces)!, `${state.seed}-r${craftNonce}`)
-  return { ...state, craftNonce, stash: [...state.stash, piece], loot: remember(state.loot, [piece], `raid.${bossId}`, tag) }
+  return recordLoot({ ...state, craftNonce, stash: [...state.stash, piece], loot: remember(state.loot, [piece], `raid.${bossId}`, tag) }, [piece])
 }
 
 // Where a unique can be traded for: its dungeon cleared, or a raid unique's spoils in hand.

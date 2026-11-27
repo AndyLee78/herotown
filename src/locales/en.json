@@ -295,6 +295,8 @@
     "reload": "Reload"
   },
   "screen": {
+    "codex": "Codex",
+    "achievements": "Achievements",
     "legends": "Hall of Fame",
     "tavern": "Tavern",
     "market": "Market",
@@ -1288,6 +1290,42 @@
   "element": {
     "flame": "Flame",
     "silver": "Silver"
+  },
+  "codex": {
+    "kind": {
+      "monsters": "Monsters",
+      "dungeons": "Dungeons",
+      "uniques": "Unique gear",
+      "sets": "Sets",
+      "gifts": "Gifts",
+      "classes": "Classes"
+    },
+    "group": {
+      "collection": "Collection",
+      "expedition": "Expeditions",
+      "town": "Town",
+      "family": "Family"
+    },
+    "goal": {
+      "monsters": "Meet {{target}} monster types",
+      "uniques": "Find {{target}} unique items",
+      "sets": "Complete {{target}} gear sets",
+      "gifts": "Discover {{target}} gifts",
+      "classes": "Discover {{target}} classes",
+      "clears": "Clear {{target}} different dungeons",
+      "raids": "Defeat {{target}} raid stages",
+      "abyss": "Reach Abyss floor {{target}}",
+      "town": "Reach town Lv {{target}}",
+      "heroes": "Have {{target}} heroes",
+      "buildings": "Raise every building to Lv {{target}}",
+      "marriage": "Accept a marriage proposal",
+      "birth": "Welcome a child",
+      "generations": "Record {{target}} generations in a family",
+      "legends": "Record {{target}} legends"
+    },
+    "claimed": "Claimed",
+    "unknown": "???",
+    "elite": "Elite encountered"
   },
   "storage": {
     "xpLabel": "Experience to next level",

@@ -511,6 +511,7 @@ export function graveFor(hero: Hero, cause: 'battle' | 'oldAge', year?: number):
   }
   if (year != null) grave.year = year
   if (hero.family != null) grave.family = hero.family
+  if (hero.gift != null) grave.gift = hero.gift
   if (hero.parents) grave.parents = [hero.parents[0], hero.parents[1]]
   if (hero.spouseId != null) grave.spouseId = hero.spouseId
   if (isLegend(hero)) grave.legend = true

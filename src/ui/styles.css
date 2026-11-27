@@ -2441,6 +2441,25 @@ button.chip {
   font-size: 0.85rem;
 }
 
+.codex-unknown {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  color: var(--muted);
+}
+
+.codex-unknown i {
+  width: 22px;
+  height: 22px;
+  background: currentColor;
+  opacity: 0.5;
+  clip-path: polygon(22% 12%, 78% 12%, 78% 52%, 100% 65%, 100% 94%, 0 94%, 0 65%, 22% 52%);
+}
+
+.achievement-ready {
+  border-color: var(--gold);
+}
+
 .storage-filters {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(min(100%, 8rem), 1fr));

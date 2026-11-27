@@ -295,6 +295,8 @@
     "reload": "새로고침"
   },
   "screen": {
+    "codex": "도감",
+    "achievements": "업적",
     "legends": "명예의 전당",
     "tavern": "선술집",
     "market": "시장",
@@ -1288,6 +1290,42 @@
   "element": {
     "flame": "화염",
     "silver": "은"
+  },
+  "codex": {
+    "kind": {
+      "monsters": "몬스터",
+      "dungeons": "던전",
+      "uniques": "고유 장비",
+      "sets": "세트",
+      "gifts": "천부",
+      "classes": "직업"
+    },
+    "group": {
+      "collection": "도감",
+      "expedition": "원정",
+      "town": "마을",
+      "family": "가문"
+    },
+    "goal": {
+      "monsters": "몬스터 {{target}}종 만나기",
+      "uniques": "고유 장비 {{target}}종 얻기",
+      "sets": "장비 세트 {{target}}종 완성",
+      "gifts": "천부 {{target}}종 발견",
+      "classes": "직업 {{target}}종 발견",
+      "clears": "서로 다른 던전 {{target}}곳 클리어",
+      "raids": "레이드 단계 {{target}}회 처치",
+      "abyss": "심연 {{target}}층 도달",
+      "town": "마을 Lv {{target}} 도달",
+      "heroes": "영웅 {{target}}명 모으기",
+      "buildings": "모든 건물을 Lv {{target}}으로 올리기",
+      "marriage": "첫 청혼 승낙",
+      "birth": "첫 아이 맞이",
+      "generations": "가문 {{target}}대 기록",
+      "legends": "전설 {{target}}명 기록"
+    },
+    "claimed": "받음",
+    "unknown": "???",
+    "elite": "정예 조우"
   },
   "storage": {
     "xpLabel": "다음 레벨까지 경험치",
