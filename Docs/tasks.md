@@ -172,7 +172,7 @@ Claude Code, Cursor, GPT(Codex)가 함께 쓰는 작업 목록이다. 작업 하
 | 130 | 파티 자동 편성 | GPT | `src/core/*`(새 함수·행동), `src/ui/game/battleScreens.tsx`, `src/locales/*` | 완료 (c7b2eaf) |
 | 131 | 여관 유료 갱신 | GPT | `src/core/game.ts`, `src/data/village.json`, `src/core/*.test.ts`, `src/ui/game/*.tsx`, `src/locales/*` | 완료 (5e422a7) |
 | 132 | 결혼하면 2인실 배정(신혼방 없애기) | GPT | `src/core/family.ts`, `src/core/rooms.ts`, `src/data/family.json`, `src/core/*.test.ts`, `src/ui/game/*.tsx`, `src/locales/*`, `Docs/house.md` | 완료 (1f6e55f) |
-| 133 | 마을 건물 위치 조정 | Cursor | `src/ui/voxel/*` | 대기 (129와 함께 가능) |
+| 133 | 마을 건물 위치 조정 | Cursor | `src/ui/voxel/*` | 완료 (3d1538e) |
 
 ---
 
@@ -3302,3 +3302,5 @@ Docs/identity.md 5d를 측정한다. core와 src/data는 고치지 않는다. �
 ```
 
 **메모**
+
+명예의 전당을 사원·여관 사이 잔디(`3.2, -10.2`)로 들여 평지 가장자리(|x|,|z|≤12.5) 안에 두었다. 텃밭 장식을 제거하고 여관을 `(7.4, -7.6)`으로 안쪽 이동, `INN_YARD`·우물·피크닉·SE 가로등을 맞췄다. 빈 터·공사·클릭은 `LOTS`를 따르며 `layout.test.ts`로 겹침·평지 안을 검사한다. 타입 검사·테스트 472개·빌드 통과.
