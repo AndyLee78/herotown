@@ -1,17 +1,19 @@
 // Plays the first hours like a simple player would, to catch dead ends in
 // the early flow. Run: npx tsx tools/first-hour.ts [minutes] [seed,seed,...] [--festival=off|on|compare]
-import { classById, dungeons, guildRules, moraleRules, potionById, progression, timeRules, trinketById, villageRules } from '../src/core/data'
+import { classById, dungeons, guildRules, moraleRules, potionById, progression, smithRules, timeRules, trinketById, villageRules } from '../src/core/data'
 import { fountainWishes } from '../src/core/fountain'
 import { busyHeroIds, dungeonUnlocked, festivalCost, freshState, presetById, reduce, townLevel, type BuildingId, type GameState } from '../src/core/game'
 import { guideStatus } from '../src/core/guide'
 import { guildLevel, type Contract } from '../src/core/guild'
+import { canWield, gearMods, weaponTypes } from '../src/core/gear'
 import { canDeploy, isChild } from '../src/core/hero'
 import { heroTrinkets, trinketOf } from '../src/core/magic'
 import { driftMorale, lowMorale, moraleOf } from '../src/core/morale'
 import { nestRevealed, nestSeason, seasonKey } from '../src/core/nest'
 import { NEST_ID, nestPreparation, skillChoices } from './curve'
 import { partyLevel as drillPartyLevel } from '../src/core/drill'
-import type { ClassId, Hero, PotionId, Supplies } from '../src/core/types'
+import { canLearn } from '../src/core/skills'
+import type { ClassId, Gear, Hero, PotionId, Supplies } from '../src/core/types'
 
 const isHurt = (hero: Hero) => hero.condition === 'injured' || hero.condition === 'critical'
 const essentialRoles = ['warrior', 'cleric'] as const
@@ -195,7 +197,43 @@ function catchUpWithoutContractGold(state: GameState, now: number) {
   }
 }
 
-function simulate(minutes: number, seed: number, fountain: FountainMode, keepFountainAtLevelOne = false, learnSkills = true, manageGuild = false, measureGuild = false, festivals?: boolean) {
+type StageFive = 'equip' | 'stash'
+const studyMinutes = [15, 30, 60, 120, 180]
+const isDrop = (item: Gear) => /^\d+-[du]\d+$/.test(item.id)
+const isCraft = (item: Gear) => /^\d+-g\d+$/.test(item.id)
+const gearScore = (gear: Gear) => {
+  const { attack, defense } = gearMods(gear)
+  return attack + defense + (gear.type ? 0.25 : 0) + (gear.options?.length ?? 0) * 0.1
+}
+
+function prepareStudyGear(state: GameState, now: number, mode: StageFive) {
+  const busy = busyHeroIds(state)
+  for (const hero of selectedHeroes(state)) {
+    if (!canDeploy(hero) || busy.has(hero.id)) continue
+    for (const slot of ['weapon', 'armor'] as const) {
+      const old = hero.gear.find((item) => item.slot === slot)
+      const upgrade = state.stash.filter((item) => item.slot === slot && canWield(hero.classId, item)
+        && (mode === 'equip' || !isDrop(item))).sort((a, b) => gearScore(b) - gearScore(a))[0]
+      if (upgrade && (!old || gearScore(upgrade) > gearScore(old))) {
+        state = reduce(state, { type: 'equip', heroId: hero.id, gearId: upgrade.id })
+      }
+    }
+  }
+  if (!state.buildings.smith || state.smith) return state
+  for (const recipe of smithRules.recipes.filter(({ smithLevel }) => smithLevel <= state.buildings.smith).reverse()) {
+    const hero = selectedHeroes(state).find((member) => {
+      const old = member.gear.find(({ slot }) => slot === recipe.slot)
+      return canDeploy(member) && (!old || recipe.attack + recipe.defense > gearScore(old))
+    })
+    if (!hero) continue
+    const crafted = reduce(state, { type: 'craft', recipeId: recipe.id, now,
+      gearType: recipe.slot === 'weapon' ? weaponTypes(hero.classId)[0] : undefined })
+    if (crafted.smith) return crafted
+  }
+  return state
+}
+
+function simulate(minutes: number, seed: number, fountain: FountainMode, keepFountainAtLevelOne = false, learnSkills = true, manageGuild = false, measureGuild = false, festivals?: boolean, study?: StageFive) {
   const firstClear: Record<string, number> = {}
   const start = 1_700_000_000_000
   let state = freshState(seed, start)
@@ -213,6 +251,17 @@ function simulate(minutes: number, seed: number, fountain: FountainMode, keepFou
   let drillsStarted = 0
   let skillsLearned = 0
   const recruits = new Set<string>()
+  const giftsSeen = new Set<string>()
+  const giftsHired = new Set<string>()
+  const acquired = new Map<string, Gear>()
+  const losses: Record<string, number> = {}
+  const attempts: Record<string, number> = {}
+  const dungeonLosses: Record<string, number> = {}
+  const dungeonStreaks: Record<string, number> = {}
+  const studyRows: object[] = []
+  let injuryMs = 0
+  let fatigueMs = 0
+  let smithAt: number | undefined
   const incomeAt: Record<number, Income> = {}
   const log: string[] = []
   const note = (text: string) => log.push(`${String(Math.round((now - start) / 60_000)).padStart(3)}m  ${text}`)
@@ -232,6 +281,9 @@ function simulate(minutes: number, seed: number, fountain: FountainMode, keepFou
     lowGoldSince = state.gold < progression.hireCost ? lowGoldSince ?? now : undefined
   }
   while (now - start < minutes * 60_000) {
+    if (study) for (const visitor of state.visitors) {
+      if (visitor.gift) giftsSeen.add(visitor.id)
+    }
     if (fountain !== 'off' && now >= nextFountainCheck) {
       while (fountainWishes(state, now) > 0) {
         state = reduce(state, { type: 'wish', now })
@@ -254,6 +306,7 @@ function simulate(minutes: number, seed: number, fountain: FountainMode, keepFou
       const before = state.roster.length
       state = reduce(state, { type: 'hire', id: visitor.id, now })
       if (state.roster.length > before) {
+        if (study && visitor.gift) giftsHired.add(visitor.id)
         recruits.add(visitor.id)
         note(`hire ${visitor.classId} (gold ${state.gold})`)
       }
@@ -262,7 +315,10 @@ function simulate(minutes: number, seed: number, fountain: FountainMode, keepFou
       const busy = busyHeroIds(state)
       for (const hero of state.roster) {
         if (!canDeploy(hero) || busy.has(hero.id)) continue
-        for (const skill of skillChoices(hero.classId, 'recommended').filter((id) => !hero.learned.includes(id)).slice(0, hero.skillPoints)) {
+        const recommended = skillChoices(hero.classId, 'recommended')
+        const skills = study ? [...new Set([...recommended, ...classById(hero.classId).skills.map(({ id }) => id)])]
+          .filter((id) => canLearn(hero, id)) : recommended.filter((id) => !hero.learned.includes(id))
+        for (const skill of skills.slice(0, hero.skillPoints)) {
           state = reduce(state, { type: 'learn', id: hero.id, skillId: skill })
           if (!state.notice) { skillsLearned += 1; note(`learn ${skill}`) }
         }
@@ -284,6 +340,7 @@ function simulate(minutes: number, seed: number, fountain: FountainMode, keepFou
       }
     }
     if (!state.expeditions.some(({ presetId }) => presetId === state.presetId)) state = fillParty(state)
+    if (study) state = prepareStudyGear(state, now, study)
     // Treat anyone hurt.
     for (const hero of state.roster) {
       if (isHurt(hero) && hero.treatAt == null && !busyHeroIds(state).has(hero.id)) {
@@ -468,6 +525,12 @@ function simulate(minutes: number, seed: number, fountain: FountainMode, keepFou
     const previous = state
     // Five seconds divides every fountain interval, so all modes use the same clock.
     now = Math.min(now + (autoWindow ? villageRules.auto.runMs : 5_000), horizon)
+    if (study && !previous.expeditions.some(({ presetId }) => presetId === previous.presetId)) {
+      const party = selectedHeroes(previous)
+      if (party.some(isHurt)) injuryMs += now - previous.lastTickAt
+      // The policy still deploys tired heroes. Observe exposure separately from blocked time.
+      if (party.some(({ fatigue }) => fatigue >= 80)) fatigueMs += now - previous.lastTickAt
+    }
     if (festivals != null) {
       const sample = moraleTime(previous, (now - previous.lastTickAt) / hourMs, autoWindow)
       morale.heroHours += sample.heroHours
@@ -492,6 +555,17 @@ function simulate(minutes: number, seed: number, fountain: FountainMode, keepFou
     for (const report of returns) {
       if (!measureGuild) income.expedition += report.gained?.gold ?? 0
       const dungeonId = report.dungeonId ?? state.dungeonId
+      if (study) {
+        attempts[dungeonId] = (attempts[dungeonId] ?? 0) + 1
+        if (report.victory) dungeonLosses[dungeonId] = 0
+        else {
+          const reason = report.defeatReason ?? 'unknown'
+          losses[reason] = (losses[reason] ?? 0) + 1
+          const streak = (dungeonLosses[dungeonId] ?? 0) + 1
+          dungeonLosses[dungeonId] = streak
+          dungeonStreaks[dungeonId] = Math.max(dungeonStreaks[dungeonId] ?? 0, streak)
+        }
+      }
       if (report.victory && state.cleared.includes(dungeonId)) firstClear[dungeonId] ??= ((report.finishedAt ?? now) - start) / 60_000
       if (manageGuild && report.presetId !== state.presetId) continue
       if (report.victory) {
@@ -515,6 +589,25 @@ function simulate(minutes: number, seed: number, fountain: FountainMode, keepFou
       }
     }
     if (checkpoints.includes(elapsedMinutes) || elapsedMinutes === 720 || elapsedMinutes === minutes) incomeAt[elapsedMinutes] = { ...income }
+    if (study) {
+      for (const item of state.stash) if (isDrop(item) || isCraft(item)) acquired.set(item.id, item)
+      if (state.buildings.smith > 0) smithAt ??= elapsedMinutes
+      if (studyMinutes.includes(elapsedMinutes) || elapsedMinutes === minutes) {
+        const items = [...acquired.values()]
+        const party = selectedHeroes(state)
+        studyRows.push({
+          minute: elapsedMinutes, town: townLevel(state.fame).level, heroes: state.roster.filter(canDeploy).length,
+          partyLevel: averageLevel(party), cleared: [...state.cleared], attempts: { ...attempts }, losses: { ...losses },
+          gold: state.gold, materials: state.materials, drops: Object.fromEntries(['common', 'fine', 'rare', 'epic', 'legend']
+            .map((grade) => [grade, items.filter((item) => isDrop(item) && item.grade === grade).length])),
+          unique: items.filter((item) => item.unique).length, crafted: items.filter(isCraft).length,
+          wornCrafted: party.flatMap(({ gear }) => gear).filter(isCraft).length, smithAt, skillsLearned,
+          giftsSeen: giftsSeen.size, giftsHired: giftsHired.size,
+          injuryMinutes: injuryMs / 60_000, fatigueAtHomeMinutes: fatigueMs / 60_000,
+          lowGoldMinutes: maxLowGoldMs / 60_000,
+        })
+      }
+    }
     const level = townLevel(state.fame).level
     if (level > lastTown) {
       note(`town level ${level}`)
@@ -528,7 +621,7 @@ function simulate(minutes: number, seed: number, fountain: FountainMode, keepFou
   }
   const wins = state.history.filter((report) => report.victory).length
   const party = selectedHeroes(state)
-  return { firstClear, incomeAt, guildAt, recordAt, morale, autoWindows, peakExpeditions, seed, state, log, wins, marshTrips, drillsStarted, skillsLearned, maxLosingStreak, maxLowGoldMs, partyLevel: averageLevel(party), ready: party.filter((hero) => !isHurt(hero)).length, partySize: party.length }
+  return { firstClear, studyRows, dungeonStreaks, incomeAt, guildAt, recordAt, morale, autoWindows, peakExpeditions, seed, state, log, wins, marshTrips, drillsStarted, skillsLearned, maxLosingStreak, maxLowGoldMs, partyLevel: averageLevel(party), ready: party.filter((hero) => !isHurt(hero)).length, partySize: party.length }
 }
 
 function median(sorted: number[]): number {
@@ -549,6 +642,7 @@ const festivalMode = args.find((arg) => arg.startsWith('--festival='))?.slice('-
 const compareFestivals = festivalMode === 'compare'
 const guildMode = args.find((arg) => arg.startsWith('--guild='))?.slice(8) ?? (festivalMode === 'off' ? 'off' : 'on')
 const compareGuild = guildMode === 'compare'
+const stageFive = args.includes('--stage5')
 const modes = ['on', 'off', 'compare']
 const longComparison = compareSkills || compareGuild || compareFestivals
 const [minutesArg, seedsArg] = args.filter((arg) => !arg.startsWith('--'))
@@ -561,10 +655,11 @@ const seeds = seedArgs.map(Number)
 if ((!compare && !fountain) || [compare, compareSkills, compareGuild, compareFestivals].filter(Boolean).length > 1
   || (festivalMode === 'on' && (compare || compareSkills || compareGuild))
   || ![skillMode, guildMode, festivalMode].every((mode) => modes.includes(mode))
-  || args.some((arg) => arg.startsWith('--') && !/^--(fountain|skills|guild|festival)=/.test(arg))
+  || (stageFive && (compare || longComparison || guildMode === 'on' || festivalMode === 'on'))
+  || args.some((arg) => arg.startsWith('--') && arg !== '--stage5' && !/^--(fountain|skills|guild|festival)=/.test(arg))
   || !Number.isFinite(minutes) || minutes <= 0 || (compare && minutes < 180) || (longComparison && minutes < 720)
   || seedArgs.some((seed, index) => !/^\d+$/.test(seed) || !Number.isSafeInteger(seeds[index]))) {
-  throw new Error('Usage: npx tsx tools/first-hour.ts [positive minutes] [seed,seed,...] [--fountain=off|ready|5min|compare] [--skills=on|off|compare] [--guild=off|on|compare] [--festival=off|on|compare]')
+  throw new Error('Usage: npx tsx tools/first-hour.ts [positive minutes] [seed,seed,...] [--fountain=off|ready|5min|compare] [--skills=on|off|compare] [--guild=off|on|compare] [--festival=off|on|compare] [--stage5]')
 }
 
 type Simulation = ReturnType<typeof simulate>
@@ -620,7 +715,12 @@ function festivalSummary(mode: string, results: Simulation[], at: number) {
   }
 }
 
-if (compareFestivals) {
+if (stageFive) {
+  for (const seed of seeds) for (const mode of ['equip', 'stash'] as const) {
+    const result = simulate(minutes, seed, fountain!, false, skillMode === 'on', false, false, undefined, mode)
+    console.log(JSON.stringify({ seed, mode, checkpoints: result.studyRows, firstClear: result.firstClear, streaks: result.dungeonStreaks }))
+  }
+} else if (compareFestivals) {
   const at = 720
   const run = (enabled: boolean) => seeds.map((seed) => simulate(at, seed, fountain!, false, skillMode === 'on', guildMode === 'on', true, enabled))
   const without = run(false)
