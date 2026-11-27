@@ -178,6 +178,8 @@ Claude Code, Cursor, GPT(Codex)가 함께 쓰는 작업 목록이다. 작업 하
 | 136 | 도감·업적 | GPT | `src/core/*`, `src/data/codex.json`(새 파일), `src/core/*.test.ts`, `src/ui/*`, `src/locales/*`, `Docs/codex.md` | 완료 (703461a) |
 | 137 | 알림 1단계(웹) | GPT | `src/core/*`(upcomingEvents), PWA 설정(`vite.config.ts`·서비스 워커), `src/ui/*`, `src/locales/*`, `Docs/codex.md` | 완료 (c280ba6) |
 | 138 | 축제 장식이 명예의 전당 터와 겹치는 문제 | Cursor | `src/ui/voxel/*` | 완료 (d59a8c3) |
+| 139 | 마을 사건 core | GPT | `src/core/*`(새 incidents.ts), `src/data/incidents.json`(새 파일), `src/core/*.test.ts`, `Docs/incidents.md` | 대기 |
+| 140 | 마을 사건 화면·보고·알림 | GPT | `src/ui/*`, `src/locales/*`, `src/core/*`(upcomingEvents에 사건만) | 대기 (139 뒤) |
 
 ---
 
@@ -3429,3 +3431,49 @@ Docs/codex.md "알림"의 1단계를 만든다. 사용자의 localhost:5174 세�
 **메모**
 
 `onBuildingLot`/`pickClearSpots`로 사계절 축제 소품을 LOTS 밖으로 두고, 광장 산책도 명예의 전당 터를 피하게 했다. `festival.test.ts`가 네 계절 앵커를 검사한다. 127.0.0.1:5175에서 가을 축제를 개최해 확인(빈 터 세이브). 스크린샷은 창이 가려져 저장하지 못했다. 타입 검사·테스트 485개·빌드 통과.
+
+---
+
+## 139. 마을 사건 core (GPT)
+
+**지금 시작할 수 있다.** 설계: `Docs/incidents.md`.
+
+**전달할 내용**
+
+```
+Docs/incidents.md의 마을 사건을 core에 만든다. 화면은 140에서 한다. 사용자의 localhost:5174 세이브는 건드리지 않는다. tsconfig.tsbuildinfo는 커밋하지 않는다.
+
+1. src/data/incidents.json: 사건 12개(id, 가중치, 조건, 등장 인물 고르는 규칙, 선택지[id, 비용·필요 조건, 결과 목록(확률 있는 결과 포함), ignore 결과]). 결과 종류는 설계 문서 표의 것만.
+2. src/core/incidents.ts: 다음 사건 시각 정하기, 조건 맞는 사건 고르기(최근 5개 제외, 가중치, 시드+incidentNonce), 등장 인물 고르기(원정 중·아이 아닌 성인 등 사건 규칙대로), 결과 적용(gold·materials·vault·fame·morale(feel)·affinity(bonds)·fatigue·xp·visitor·gear(rollDrop)·nothing), 만료 처리(ignore 결과). 모두 순수 함수.
+3. advance(시간 흐름)에서: 기다리는 사건이 없고 nextIncidentAt이 지났으면 사건을 만든다. 기다리는 사건이 expiresAt을 지나면 ignore로 닫는다. 비운 시간이 길어도 사건은 한 번에 하나.
+4. 행동 { type: 'resolveIncident', choice }: 등장 인물이 사라졌거나 조건이 깨졌으면 "상황이 바뀌었다"로 닫기(결과 없음, 로그에 남김). 선택지 비용이 안 되면 poor/locked.
+5. 세이브 버전 하나 올림. incident, incidentNonce, nextIncidentAt, recentIncidents(5), incidentLog(20). normalize에서 잘못된 값 정리, 예전 세이브는 설계 문서대로.
+6. 숫자 조정: 사기·골드 크기를 지금 게임 규모(축제 사기, 고용비, 초반 골드)에 맞춰 정하고 Docs/incidents.md 표를 고친다.
+7. 테스트: 생기는 주기(계절당 1–2번, 시드 여러 개), 한 번에 하나, 만료, 조건(조건 안 맞는 사건은 안 나옴), 등장 인물이 사라진 경우, 각 결과 종류 적용, 확률 결과의 시드 재현, 세이브 왕복과 예전 세이브.
+
+확인: tsc·test·build 통과. 확인한 내용을 메모에.
+```
+
+**메모**
+
+---
+
+## 140. 마을 사건 화면·보고·알림 (GPT)
+
+**작업 139 뒤에 시작한다.** 설계: `Docs/incidents.md`의 "화면".
+
+**전달할 내용**
+
+```
+139에서 만든 마을 사건을 화면에 보인다. src/ui/*, src/locales/*를 고친다. core는 upcomingEvents에 사건 생김을 더하는 것만 고친다. 사용자의 localhost:5174 세이브는 건드리지 않고 127.0.0.1:5175(쓰이면 5176)에서 확인한다. tsconfig.tsbuildinfo는 커밋하지 않는다.
+
+1. 기다리는 사건이 있으면 마을 화면에 말풍선 배지. 누르면 사건 창: 등장 영웅 얼굴(기존 Portrait), 두세 문장 글, 선택지 2–3개(비용, 대략의 결과 한 줄, 안 되는 선택지는 흐리게와 이유). 고르면 결과 글과 바뀐 수치(골드·사기·호감 등)를 보이고 닫는다.
+2. 사건 글 12개와 선택지·결과 글 ko/en. 영웅 이름을 보간. 성격에 따라 대사 한 줄이 달라지면 좋다(선택).
+3. 재접속 보고에 "비운 동안 생긴 일": 기다리는 사건 한 줄, 그냥 지나간 사건 한 줄.
+4. 알림: upcomingEvents에 다음 사건 시각을 더하고(kind 'incident'), 알림 문구.
+5. 375px에서 넘치지 않게.
+
+확인: tsc·test·build 통과. 127.0.0.1에서 세이브의 nextIncidentAt을 당겨 사건을 띄우고, 선택지마다 결과를 본다. 확인한 내용을 메모에.
+```
+
+**메모**
