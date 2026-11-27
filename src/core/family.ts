@@ -220,7 +220,7 @@ export function wageCount(state: GameState): number {
 
 // ---------- changes ----------
 
-function addAffinity(bonds: Bond[], a: string, b: string, amount: number): Bond[] {
+export function addAffinity(bonds: Bond[], a: string, b: string, amount: number): Bond[] {
   const [first, second] = pair(a, b)
   const found = bonds.find((bond) => bond.a === first && bond.b === second)
   if (!found) {
@@ -518,6 +518,12 @@ export function graveFor(hero: Hero, cause: 'battle' | 'oldAge', year?: number):
   return grave
 }
 
+export function recordGraveFriends(state: GameState, grave: Grave, diedAt: number): Grave {
+  const friends = state.bonds.flatMap(({ a, b, affinity }) => affinity < familyRules.friendAt ? []
+    : a === grave.id ? [b] : b === grave.id ? [a] : [])
+  return { ...grave, diedAt, ...(friends.length ? { friends } : {}) }
+}
+
 // Chance that a hero of this age passes away when the year turns.
 export function oldAgeChance(age: number): number {
   if (age >= maxAge) {
@@ -527,7 +533,7 @@ export function oldAgeChance(age: number): number {
 }
 
 // Run when a year turns: the old at home (not on an expedition) may pass away.
-export function passAway(state: GameState, events: FamilyEvents): GameState {
+export function passAway(state: GameState, events: FamilyEvents, now = state.lastTickAt): GameState {
   const rng = createRng(state.seed + 9_100_019 + state.calendar.year * 7907)
   const away = awayIds(state)
   const graves: Grave[] = []
@@ -537,7 +543,7 @@ export function passAway(state: GameState, events: FamilyEvents): GameState {
     if (chance <= 0 || hero.condition === 'dead' || away.has(hero.id) || rng.next() >= chance) {
       return false
     }
-    graves.push(graveFor(hero, 'oldAge', state.calendar.year))
+    graves.push(recordGraveFriends(state, graveFor(hero, 'oldAge', state.calendar.year), now))
     events.deaths.push(hero.name)
     return true
   }

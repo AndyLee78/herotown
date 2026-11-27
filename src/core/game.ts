@@ -1,5 +1,6 @@
 import { chargeFountain, freshFountain, makeWish, readFountain, upgradeFountain, type FountainState } from './fountain'
 import { claimGuide, guideSteps } from './guide'
+import { advanceIncident, nextIncidentTime, readIncidentState, resolveIncident, type Incident, type IncidentLog } from './incidents'
 import { claimAchievement, codexDungeons, readAchievements, readCodex, recordCollection, recordDungeonClear, recordEncounter, restoreCollection, type Codex } from './codex'
 import { canLearn, skillPicks } from './skills'
 import { deliver, ensureBoard, expeditionSlotsFor, guildLevel, progressClear, readBoard, type GuildBoard } from './guild'
@@ -27,13 +28,13 @@ import { canWield, forgeGear, normalizeGear, orderId, recipeById, rerollOption, 
 import { canExchange, dungeonLoot, exchangeCost, uniqueById, uniqueGear, type LootEntry, type LootTag } from './loot'
 import { applyReport, DEFAULT_TACTICS, gainXp, runDungeon } from './dungeon'
 import { canDeploy, generateHero, isChild, generateVisitors, normalizeHero, restHero, withAge } from './hero'
-import { acceptProposal, bedsTaken, bondParty, declineProposal, deliverBirths, femaleChance, graveFor, nextAge, partyParts, passAway, readBonds, readProposals, tidyFamily, turnSeason, wageCount, type FamilyEvents } from './family'
+import { acceptProposal, bedsTaken, bondParty, declineProposal, deliverBirths, femaleChance, graveFor, nextAge, partyParts, passAway, readBonds, readProposals, recordGraveFriends, tidyFamily, turnSeason, wageCount, type FamilyEvents } from './family'
 import { createRng } from './rng'
 import type { Rng } from './rng'
 import type { Genes } from './genes'
 import type { Bond, ClassId, CombatError, DungeonReport, Gear, GearSlot, GearType, Gender, Hero, PartyMember, PotionId, Proposal, Role, Row, Supplies, Tactics, TrinketId , StatKey } from './types'
 
-export const SAVE_VERSION = 30
+export const SAVE_VERSION = 31
 
 // Town levels up to here come with fame alone (Docs/endgame.md 4b).
 export const PROMOTION_FREE = 7
@@ -56,6 +57,7 @@ export type Calendar = {
 }
 
 export type AbsenceReport = {
+  incidents?: { pending?: string; ignored: string[] }
   elapsedMs: number
   capped: boolean
   seasonsPassed: number
@@ -161,6 +163,8 @@ export type Retiree = {
 }
 
 export type Grave = {
+  diedAt?: number
+  friends?: string[]
   id: string
   name: string
   classId: ClassId
@@ -254,6 +258,11 @@ export type GameNotice =
   | null
 
 export type GameState = {
+  incident: Incident | null
+  incidentNonce: number
+  nextIncidentAt: number
+  recentIncidents: string[]
+  incidentLog: IncidentLog[]
   version: typeof SAVE_VERSION
   gold: number
   materials: Materials
@@ -395,6 +404,7 @@ export type GameAction =
   | { type: 'reset'; now: number }
   | { type: 'adReward'; placement: AdPlacement; now: number }
   | { type: 'claimGuide' }
+  | { type: 'resolveIncident'; choice: string }
   | { type: 'claimAchievement'; id: string }
   | { type: 'retire'; id: string }
   | { type: 'assignRetiree'; id: string; building: BuildingId | null }
@@ -436,6 +446,11 @@ export type GameAction =
 export function freshState(seed: number, now: number): GameState {
   return {
     version: SAVE_VERSION,
+    incident: null,
+    incidentNonce: 0,
+    nextIncidentAt: nextIncidentTime(seed, 0, now),
+    recentIncidents: [],
+    incidentLog: [],
     gold: progression.startGold,
     materials: { ...villageRules.start, herb: 0, crystal: 0 },
     fame: 0,
@@ -588,6 +603,7 @@ function unequipMisfits(state: GameState): GameState {
 }
 
 function apply(state: GameState, action: GameAction): GameState {
+  if (action.type === 'resolveIncident') return resolveIncident(state, action.choice)
   if (action.type === 'hire') {
     const hero = state.visitors.find((entry) => entry.id === action.id)
     if (!hero) {
@@ -921,7 +937,8 @@ function advance(state: GameState, now: number): GameState {
     // An invasion ends a piece too, so everyone home by then can defend (review 1650b75).
     const raidAt = next.invasion && next.invasion.nextAt > next.lastTickAt ? next.invasion.nextAt : Infinity
     // Always move forward, even if a broken save has the season overrun.
-    const until = Math.min(Math.max(Math.min(turnAt, builtAt, raidAt), next.lastTickAt + 1), effectiveNow)
+    const incidentAt = next.incident?.expiresAt ?? next.nextIncidentAt
+    const until = Math.min(Math.max(Math.min(turnAt, builtAt, raidAt, incidentAt), next.lastTickAt + 1), effectiveNow)
     const piece = until - next.lastTickAt
     const from = next.lastTickAt
     const before = next.calendar
@@ -968,10 +985,11 @@ function advance(state: GameState, now: number): GameState {
     }
     // The old may pass away when a year turns, after everyone has aged.
     for (let years = next.calendar.year - before.year; years > 0; years -= 1) {
-      next = passAway(next, family)
+      next = passAway(next, family, until)
     }
     // Widow and unbond at the moment someone left, not when the catch-up ends.
     next = tidyFamily({ ...next, lastTickAt: until }, until)
+    next = advanceIncident(next, until)
     // The fountain fills offline too, up to its cap, at the level it had.
     next = { ...next, fountain: chargeFountain(next.fountain, next.buildings.fountain, until) }
   }
@@ -982,6 +1000,10 @@ function advance(state: GameState, now: number): GameState {
     return next
   }
   const absence: AbsenceReport = {
+    incidents: {
+      ...(next.incident ? { pending: next.incident.id } : {}),
+      ignored: next.incidentLog.filter(({ choice, at }) => choice === 'ignore' && at > state.lastTickAt).map(({ id }) => id),
+    },
     elapsedMs: elapsed,
     capped,
     seasonsPassed: seasonsBetween(state.calendar, next.calendar),
@@ -1736,7 +1758,7 @@ function settleParty(
       roster.push(stampRecovery(hero, outcome.hero, now))
     }
     if (outcome.grave) {
-      graveyard.push(outcome.grave)
+      graveyard.push(recordGraveFriends(state, outcome.grave, now))
       // What survived the fall comes home as an heirloom (Docs/tavern.md).
       stash.push(...bequeathed(state, hero, outcome.left ?? []))
     }
@@ -2425,7 +2447,7 @@ function fromLegacy(record: Record<string, unknown>, now: number): GameState {
   }
   // Visitors of a version 1 save were already looked over (review 8e1fa30).
   const visitors = Array.isArray(record.visitors) ? (record.visitors as Hero[]).map((hero) => ({ ...hero, interviewed: hero.interviewed || 1 })) : record.visitors
-  return normalize({ ...base, ...record, visitors, version: SAVE_VERSION, calendar: base.calendar, lastTickAt: now, absence: null, notice: null }, now)
+  return normalize({ ...base, ...record, ...readIncidentState({}, now), visitors, version: SAVE_VERSION, calendar: base.calendar, lastTickAt: now, absence: null, notice: null }, now)
 }
 
 function withRecovery(hero: Hero, now: number): Hero {
@@ -2443,6 +2465,7 @@ function normalize(record: Record<string, unknown>, now: number): GameState {
     ...base,
     ...record,
     version: SAVE_VERSION,
+    ...readIncidentState(record, now),
     calendar,
     lastTickAt: numberOr(record.lastTickAt, now),
     cleared: Array.isArray(record.cleared) ? [...new Set(record.cleared.filter((id) => codexDungeons.includes(id)))] : [],
