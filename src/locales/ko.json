@@ -389,6 +389,8 @@
     "slot": {
       "weapon": "무기",
       "armor": "방어구"
+   ,
+      "trinket": "장신구"
     },
     "blast": "광역기 대응"
   },

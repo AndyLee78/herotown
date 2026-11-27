@@ -389,6 +389,8 @@
     "slot": {
       "weapon": "Weapon",
       "armor": "Armor"
+   ,
+      "trinket": "Trinket"
     },
     "blast": "Against blasts"
   },
