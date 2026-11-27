@@ -175,8 +175,8 @@ Claude Code, Cursor, GPT(Codex)가 함께 쓰는 작업 목록이다. 작업 하
 | 133 | 마을 건물 위치 조정 | Cursor | `src/ui/voxel/*` | 완료 (3d1538e) |
 | 134 | 명예의 전당이 여관 뒤에 가려지는 배치 고치기 | Cursor | `src/ui/voxel/*` | 완료 (b8bdbff) |
 | 135 | 영웅 카드 경험치 막대에 설명 붙이기 | GPT | `src/ui/game/*.tsx`, `src/ui/styles.css`, `src/locales/*` | 완료 (05fd01b) |
-| 136 | 도감·업적 | GPT | `src/core/*`, `src/data/codex.json`(새 파일), `src/core/*.test.ts`, `src/ui/*`, `src/locales/*`, `Docs/codex.md` | 대기 |
-| 137 | 알림 1단계(웹) | GPT | `src/core/*`(upcomingEvents), PWA 설정(`vite.config.ts`·서비스 워커), `src/ui/*`, `src/locales/*`, `Docs/codex.md` | 대기 (136 뒤) |
+| 136 | 도감·업적 | GPT | `src/core/*`, `src/data/codex.json`(새 파일), `src/core/*.test.ts`, `src/ui/*`, `src/locales/*`, `Docs/codex.md` | 완료 (703461a) |
+| 137 | 알림 1단계(웹) | GPT | `src/core/*`(upcomingEvents), PWA 설정(`vite.config.ts`·서비스 워커), `src/ui/*`, `src/locales/*`, `Docs/codex.md` | 완료 (c280ba6) |
 
 ---
 
@@ -3378,6 +3378,9 @@ Docs/codex.md의 도감과 업적을 만든다. core·데이터·테스트·화�
 
 **메모**
 
+세이브 v30과 기존 저장 복구, 접촉·획득 기록, 업적 30개의 수동 수령을 추가했다.
+5175의 375px Chrome에서 동굴 귀환으로 도감이 채워지고 첫 클리어 보상 15골드가 지급되는 것을 확인했다. 타입 검사·테스트 478개·빌드 통과.
+
 ---
 
 ## 137. 알림 1단계(웹) (GPT)
@@ -3400,3 +3403,6 @@ Docs/codex.md "알림"의 1단계를 만든다. 사용자의 localhost:5174 세�
 ```
 
 **메모**
+
+5176의 375px Chrome에서 설정을 켜고, 숨겨진 탭에서 원정 귀환 알림 API가 성공한 것과 오프라인 새로고침을 확인했다.
+운영체제 알림 클릭은 직접 재현하지 못했다. 서비스 워커 테스트로 기존 창 포커스와 새 창 열기를 확인했고, 타입 검사·테스트 482개·빌드를 통과했다.
