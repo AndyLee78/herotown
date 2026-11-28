@@ -7,9 +7,14 @@ import { createRng } from './rng'
 
 const now = 1_800_000_000_000
 const season = timeRules.seasonMs
+function staffedVillage(seed: number): GameState {
+  const state = freshState(seed, now)
+  return { ...state, roster: state.visitors.slice(0, 2), visitors: [] }
+}
+
 function waiting(id: string, actors: string[] = [], patch: Partial<GameState> = {}): GameState {
   return {
-    ...freshState(4, now), ...patch,
+    ...staffedVillage(4), ...patch,
     incident: { id, actors, at: now, expiresAt: now + season },
     incidentNonce: 1, nextIncidentAt: now + season / 2,
   }
@@ -18,7 +23,7 @@ function waiting(id: string, actors: string[] = [], patch: Partial<GameState> = 
 describe('village incidents', () => {
   it('schedules one or two per season if answered promptly, across multiple seeds', () => {
     for (let seed = 1; seed <= 12; seed += 1) {
-      const base = freshState(seed, now)
+      const base = staffedVillage(seed)
       let state = { ...base, gold: 200, fame: 90, nextIncidentAt: nextIncidentTime(seed, 0, now) }
       const days = [0, 0, 0, 0]
       for (let attempt = 0; attempt < 24 && state.nextIncidentAt < now + 4 * season; attempt += 1) {
@@ -34,8 +39,43 @@ describe('village incidents', () => {
     }
   })
 
+  it('defers the first incident until two adult heroes have been hired', () => {
+    const initial = { ...freshState(1, now), nextIncidentAt: now + 10 }
+    const empty = reduce(initial, { type: 'catchUp', now: initial.nextIncidentAt })
+    expect(empty).toMatchObject({ incident: null, incidentNonce: 0, recentIncidents: [], incidentLog: [] })
+    expect(empty.nextIncidentAt).toBeGreaterThan(initial.nextIncidentAt)
+
+    const first = reduce(empty, { type: 'hire', id: empty.visitors[0]!.id })
+    expect(first.roster).toHaveLength(1)
+    const child = { ...initial.visitors[1]!, age: 8 }
+    expect(advanceIncident({ ...first, roster: [...first.roster, child] }, first.nextIncidentAt).incident).toBeNull()
+    const oneAdult = advanceIncident(first, first.nextIncidentAt)
+    expect(oneAdult.incident).toBeNull()
+    expect(oneAdult.nextIncidentAt).toBeGreaterThan(first.nextIncidentAt)
+
+    const second = reduce(oneAdult, { type: 'hire', id: oneAdult.visitors[0]!.id })
+    expect(second.roster).toHaveLength(2)
+    expect(advanceIncident(second, second.nextIncidentAt).incident).not.toBeNull()
+  })
+
+  it('counts adults on expeditions for the village minimum and reserves group events for adults at home', () => {
+    const town = staffedVillage(1)
+    const leader = town.roster[0]!
+    const sent = reduce(reduce(town, { type: 'add', id: leader.id }), { type: 'depart' })
+    expect(sent.expeditions[0]?.heroIds).toEqual([leader.id])
+
+    const shared = { ...sent, nextIncidentAt: now, gold: 0, fame: 0, recentIncidents: ['oldTraveler', 'wolf', 'quarrel', 'rivalry'] }
+    for (const event of ['rainyDay', 'festivalIdea']) {
+      const state = { ...shared, recentIncidents: [...shared.recentIncidents, event === 'rainyDay' ? 'festivalIdea' : 'rainyDay'] }
+      expect(advanceIncident(state, now).incident).toBeNull()
+      expect(advanceIncident({ ...state, expeditions: [] }, now).incident?.id).toBe(event)
+    }
+    const traveler = { ...shared, recentIncidents: ['wolf', 'quarrel', 'rivalry'] }
+    expect(advanceIncident(traveler, now).incident?.id).toBe('oldTraveler')
+  })
+
   it('holds a single pending incident and reports it or its expiry after catch-up', () => {
-    const state = { ...freshState(1, now), nextIncidentAt: now + 10 }
+    const state = { ...staffedVillage(1), nextIncidentAt: now + 10 }
     const back = reduce(state, { type: 'catchUp', now: now + timeRules.reportAfterMs })
     expect(back.incident?.at).toBe(now + 10)
     expect(back.absence?.incidents?.pending).toBe(back.incident?.id)
@@ -48,7 +88,7 @@ describe('village incidents', () => {
   })
 
   it('enforces prerequisites, shuffled candidates and the recent limit', () => {
-    const state = { ...freshState(1, now), roster: [], gold: 0, nextIncidentAt: now, recentIncidents: ['oldTraveler', 'rainyDay', 'wolf', 'festivalIdea'] }
+    const state = { ...staffedVillage(1), gold: 0, nextIncidentAt: now, recentIncidents: ['oldTraveler', 'rainyDay', 'wolf', 'festivalIdea', 'quarrel'] }
     const next = advanceIncident(state, now)
     expect(next.incident).toBeNull()
     expect(next.nextIncidentAt).toBeGreaterThan(now)

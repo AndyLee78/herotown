@@ -14,7 +14,7 @@ import type { Hero } from './types'
 
 type EffectKind = 'gold' | 'materials' | 'vault' | 'fame' | 'morale' | 'affinity' | 'fatigue' | 'xp' | 'visitor' | 'gear' | 'nothing'
 export type IncidentEffect = { kind: EffectKind; amount: number; resource?: string; target?: 'first' | 'second' | 'actors' | 'family' | 'town' | 'home'; emotion?: Emotion }
-type Requirements = { gold?: number; fame?: number; building?: BuildingId; level?: number; noFestival?: boolean }
+type Requirements = { gold?: number; fame?: number; building?: BuildingId; level?: number; noFestival?: boolean; adultsAtHome?: boolean }
 type Choice = { id: string; cost?: Partial<Record<'gold' | MaterialName, number>>; requires?: Requirements; actorCount?: number; effects: IncidentEffect[]; outcomes?: { chance: number; effects: IncidentEffect[] }[] }
 type Definition = { id: string; weight: number; actors: string; requires?: Requirements; choices: Choice[]; ignore: IncidentEffect[] }
 export const incidentDefinitions = data.incidents as Definition[]
@@ -28,9 +28,19 @@ export function nextIncidentTime(seed: number, nonce: number, from: number): num
   return from + Math.round(timeRules.seasonMs * (data.minSeasonShare + rng.next() * (data.maxSeasonShare - data.minSeasonShare)))
 }
 
+function livingAdults(state: GameState) {
+  return state.roster.filter((hero) => hero.condition !== 'dead' && !isChild(hero))
+}
+
+function hasAdultsAtHome(state: GameState) {
+  const away = new Set(state.expeditions.flatMap(({ heroIds }) => heroIds))
+  return livingAdults(state).filter(({ id }) => !away.has(id)).length >= data.minAdults
+}
+
 function meets(state: GameState, rules?: Requirements) {
   return !rules || (state.gold >= (rules.gold ?? 0) && state.fame >= (rules.fame ?? 0)
     && (!rules.building || state.buildings[rules.building] >= (rules.level ?? 1))
+    && (!rules.adultsAtHome || hasAdultsAtHome(state))
     && (!rules.noFestival || state.festival?.season !== seasonKey(state.calendar)))
 }
 
@@ -194,7 +204,7 @@ function expireIncident(state: GameState, incident: Incident): GameState {
 export function advanceIncident(state: GameState, now: number): GameState {
   if (state.incident) return now >= state.incident.expiresAt ? expireIncident(state, state.incident) : state
   if (now < state.nextIncidentAt) return state
-  const available = incidentDefinitions.flatMap((definition) => {
+  const available = livingAdults(state).length < data.minAdults ? [] : incidentDefinitions.flatMap((definition) => {
     if (state.recentIncidents.includes(definition.id) || !meets(state, definition.requires)) return []
     const groups = actorGroups(state, definition.actors, now)
     return groups.length ? [{ definition, groups }] : []

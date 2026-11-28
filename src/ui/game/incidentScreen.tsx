@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import { useTranslation } from 'react-i18next'
-import { MessageCircle } from 'lucide-react'
+import { UiIcon } from './icons'
 import type { GameState } from '../../core/game'
 import { incidentChoices, type IncidentLog } from '../../core/incidents'
 import { CostList, Portrait, Window } from './kit'
@@ -23,7 +23,7 @@ export function IncidentScreen({ save, onResolve, onClose }: {
   const format = new Intl.NumberFormat(i18n.language, { signDisplay: 'always', maximumFractionDigits: 1 })
 
   return (
-    <Window title={id ? t(`incidents.events.${id}.title`) : t('incidents.title')} icon={<MessageCircle size={24} />} onClose={onClose} small>
+    <Window title={id ? t(`incidents.events.${id}.title`) : t('incidents.title')} icon={<UiIcon name="town" />} onClose={onClose} small>
       {result ? (
         <>
           <p role="status">{result.choice === 'changed' || result.choice === 'ignore'
