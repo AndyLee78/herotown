@@ -17,6 +17,19 @@ import { Builder, disposeTree, makeLabel } from './kit'
 import { gearStyleKey, gearStyleOf, hashString, lookFor, lookKey, seeded } from './look'
 import { buildMoodBubble, idleSeconds, strollPace, type MoodKind } from './mood'
 import {
+  FOUNTAIN_CLEAR,
+  STUCK_PROGRESS,
+  fountainRimSpot,
+  hitsObstacle,
+  isWalkable,
+  pickClearInArea,
+  pushOffObstacles,
+  resolveWalkTarget,
+  shouldUnstick,
+  villageObstacles,
+  type Obstacle,
+} from './obstacles'
+import {
   GATE,
   GATHER,
   INN_YARD,
@@ -39,7 +52,6 @@ import {
   lotFront,
   marketFront,
   merchantPark,
-  onBuildingLot,
   shrinePedestals,
   tavernTableSpot,
   tavernYard,
@@ -130,12 +142,16 @@ type Walker = {
   stuck: number
   stuckX: number
   stuckZ: number
+  // Obstacle id that last jammed this walker; skipped for the next few picks.
+  avoidId: string | null
+  avoidLeft: number
 }
 
 type MoodSlot = { group: THREE.Group; kind: MoodKind; life: number; host: Walker | null }
 
 const MOOD_SPIKE = 8
 const MAX_MOODS = 4
+const BASE_OBSTACLES = villageObstacles()
 const EDGE_SPOTS: { x: number; z: number }[] = [
   { x: PLAZA.min - 0.8, z: PLAZA.min - 0.6 },
   { x: PLAZA.max + 0.8, z: PLAZA.min - 0.6 },
@@ -145,7 +161,7 @@ const EDGE_SPOTS: { x: number; z: number }[] = [
   { x: PLAZA.max + 1.2, z: 1.2 },
   { x: -3.5, z: PLAZA.min - 1 },
   { x: 3.5, z: PLAZA.min - 1 },
-].filter((spot) => !onBuildingLot(spot.x, spot.z, 0.5))
+].filter((spot) => isWalkable(spot.x, spot.z, BASE_OBSTACLES, 0.4))
 
 type LotView = { key: string; group: THREE.Group; label: THREE.Sprite | null; labelText: string; top: number }
 
@@ -155,8 +171,6 @@ const PAN_LIMIT = 9
 const PICK_RADIUS = 28
 const PLAZA_AREA: Area = { minX: PLAZA.min, maxX: PLAZA.max, minZ: PLAZA.min, maxZ: PLAZA.max }
 const YARD_AREA: Area = INN_YARD
-// Nobody walks through the fountain basin: walkers keep this far from its middle.
-const FOUNTAIN_CLEAR = 1.75
 const PACE: Record<Hero['condition'], number> = { healthy: 1, fatigued: 0.8, injured: 0.6, critical: 0.4, dead: 0 }
 
 export class VillageScene {
@@ -235,6 +249,7 @@ export class VillageScene {
   private shrineRoot: THREE.Group | null = null
   private readonly childIds = new Set<string>()
   private readonly moodSlots: MoodSlot[] = []
+  private obstacleList: Obstacle[] = villageObstacles()
 
   constructor(
     private readonly canvas: HTMLCanvasElement,
@@ -622,6 +637,7 @@ export class VillageScene {
       walker.state = 'toastWalk'
       walker.root.visible = true
       walker.target.set(seat.x, 0, seat.z)
+      this.ensureWalkTarget(walker)
       walker.speed = 1.35
       walker.leanOn = null
       walker.solo = 0
@@ -750,7 +766,7 @@ export class VillageScene {
       const radius = 1.6 + (index % 3) * 0.35
       walker.state = 'promote'
       walker.target.set(Math.cos(angle) * radius, 0, Math.sin(angle) * radius)
-      keepClear(walker.target)
+      this.ensureWalkTarget(walker)
       walker.timer = 4.8
       walker.root.visible = true
       index += 1
@@ -930,6 +946,7 @@ export class VillageScene {
       }
       walker.state = 'promote'
       walker.target.set((slot - 2) * 0.65, 0, GATE.z - 1.6 - (slot % 2) * 0.35)
+      this.ensureWalkTarget(walker)
       walker.timer = 4.2
       slot += 1
       if (slot >= 6) {
@@ -1016,6 +1033,7 @@ export class VillageScene {
       this.festivalBooted = true
       this.festivalKind = kind
       this.festivalWithYard = withYard
+      this.obstacleList = villageObstacles({ festival: kind })
       if (kind) {
         this.setFestivalDecor(kind, withYard)
       }
@@ -1027,6 +1045,7 @@ export class VillageScene {
     const opened = this.festivalKind == null && kind != null
     this.festivalKind = kind
     this.festivalWithYard = withYard
+    this.obstacleList = villageObstacles({ festival: kind })
     if (!kind) {
       this.clearFestivalDecor()
       return
@@ -1408,6 +1427,8 @@ export class VillageScene {
         stuck: 0,
         stuckX: 0,
         stuckZ: 0,
+        avoidId: null,
+        avoidLeft: 0,
       }
       walker.root.add(walker.rig.group)
       this.placeIn(walker, kind === 'visitor' ? YARD_AREA : PLAZA_AREA)
@@ -1531,7 +1552,14 @@ export class VillageScene {
     walker.stuck = 0
     walker.stuckX = walker.root.position.x
     walker.stuckZ = walker.root.position.z
+    if (walker.avoidLeft > 0) {
+      walker.avoidLeft -= 1
+      if (walker.avoidLeft <= 0) {
+        walker.avoidId = null
+      }
+    }
     const personality = walker.personality
+    const avoid = walker.avoidLeft > 0 ? walker.avoidId : null
     if (walker.kind === 'roster' && personality && this.rollPersonalityTarget(walker, personality)) {
       this.ensureWalkTarget(walker)
       return
@@ -1539,51 +1567,28 @@ export class VillageScene {
     const yardChance = personality === 'social' ? 0.22 : 0.08
     if (walker.kind === 'roster' && this.tavernOpen && walker.random() < yardChance) {
       const yard = tavernYard()
-      walker.target.set(
-        yard.minX + walker.random() * (yard.maxX - yard.minX),
-        0,
-        yard.minZ + walker.random() * (yard.maxZ - yard.minZ),
-      )
+      const clear = pickClearInArea(yard, this.obstacleList, walker.random, avoid)
+      walker.target.set(clear.x, 0, clear.z)
     } else if (walker.kind === 'roster' && this.marketOpen && walker.random() < 0.12) {
       const front = marketFront()
-      walker.target.set(
-        front.minX + walker.random() * (front.maxX - front.minX),
-        0,
-        front.minZ + walker.random() * (front.maxZ - front.minZ),
-      )
+      const clear = pickClearInArea(front, this.obstacleList, walker.random, avoid)
+      walker.target.set(clear.x, 0, clear.z)
+    } else if (walker.kind === 'roster' && walker.random() < 0.12) {
+      // Sightseeing the fountain from its rim, never into the basin.
+      const rim = fountainRimSpot(walker.random() * Math.PI * 2, FOUNTAIN_CLEAR + 0.4 + walker.random() * 0.3)
+      walker.target.set(rim.x, 0, rim.z)
     } else {
       const area = walker.kind === 'visitor' ? YARD_AREA : PLAZA_AREA
-      for (let attempt = 0; attempt < 8; attempt += 1) {
-        const x = area.minX + walker.random() * (area.maxX - area.minX)
-        const z = area.minZ + walker.random() * (area.maxZ - area.minZ)
-        if (!onBuildingLot(x, z, 0.35) && Math.hypot(x, z) >= FOUNTAIN_CLEAR + 0.2) {
-          walker.target.set(x, 0, z)
-          this.ensureWalkTarget(walker)
-          return
-        }
-      }
-      walker.target.set(2.4 + (walker.random() - 0.5) * 1.2, 0, 2.6 + (walker.random() - 0.5) * 1.2)
+      const clear = pickClearInArea(area, this.obstacleList, walker.random, avoid)
+      walker.target.set(clear.x, 0, clear.z)
     }
     this.ensureWalkTarget(walker)
   }
 
-  // Keep stroll / sightseeing targets outside fences and the fountain basin.
+  // Keep stroll / sightseeing targets outside every village obstacle.
   private ensureWalkTarget(walker: Walker) {
-    keepClear(walker.target)
-    if (
-      !onBuildingLot(walker.target.x, walker.target.z, 0.3) &&
-      Math.hypot(walker.target.x, walker.target.z) >= FOUNTAIN_CLEAR + 0.15
-    ) {
-      return
-    }
-    const open = lotFront(LOTS.legends, (walker.random() - 0.5) * 1.2, 0.7)
-    if (!onBuildingLot(open.x, open.z, 0.3) && Math.hypot(open.x, open.z) >= FOUNTAIN_CLEAR + 0.15) {
-      walker.target.set(open.x, 0, open.z)
-      keepClear(walker.target)
-      return
-    }
-    walker.target.set(2.5 + (walker.random() - 0.5), 0, -2.2 + (walker.random() - 0.5))
-    keepClear(walker.target)
+    const avoid = walker.avoidLeft > 0 ? walker.avoidId : null
+    resolveWalkTarget(walker.target, this.obstacleList, walker.random, avoid)
   }
 
   private rollPersonalityTarget(walker: Walker, personality: PersonalityId): boolean {
@@ -1696,7 +1701,7 @@ export class VillageScene {
         walker.state = 'idle'
         walker.timer = 0.8
         walker.target.set(PLAZA.min + walker.random() * (PLAZA.max - PLAZA.min), 0, walker.random() * PLAZA.max)
-        keepClear(walker.target)
+        this.ensureWalkTarget(walker)
       }
     }
   }
@@ -1737,7 +1742,7 @@ export class VillageScene {
         } else {
           walker.state = 'gather'
           walker.target.set(GATHER.x + ((order % 3) - 1) * 0.75, 0, GATHER.z + Math.floor(order / 3) * 0.75)
-          keepClear(walker.target)
+          this.ensureWalkTarget(walker)
           walker.stuck = 0
           walker.stuckX = walker.root.position.x
           walker.stuckZ = walker.root.position.z
@@ -1800,12 +1805,9 @@ export class VillageScene {
   }
 
   private placeIn(walker: Walker, area: Area) {
-    walker.root.position.set(
-      area.minX + walker.random() * (area.maxX - area.minX),
-      0,
-      area.minZ + walker.random() * (area.maxZ - area.minZ),
-    )
-    keepClear(walker.root.position)
+    const clear = pickClearInArea(area, this.obstacleList, walker.random)
+    walker.root.position.set(clear.x, 0, clear.z)
+    pushOffObstacles(walker.root.position, this.obstacleList)
     walker.state = 'idle'
   }
 
@@ -1975,7 +1977,7 @@ export class VillageScene {
         const stepLength = Math.min(distance, walker.speed * pace * 1.55 * delta)
         position.x += (dx / distance) * stepLength
         position.z += (dz / distance) * stepLength
-        keepClear(position)
+        pushOffObstacles(position, this.obstacleList)
         walker.root.rotation.y = turnToward(walker.root.rotation.y, Math.atan2(dx, dz), delta * 8)
         walkPose(walker.rig, time, walker.phase, 1.2)
         return
@@ -2109,31 +2111,25 @@ export class VillageScene {
     const stepLength = Math.min(distance, walker.speed * pace * trait * hurry * carrying * lean * delta)
     position.x += (dx / distance) * stepLength
     position.z += (dz / distance) * stepLength
-    // Slide around the fountain rim instead of through the basin; a little
-    // sideways nudge keeps a walker heading straight at it from sticking.
-    if (keepOffFountain(position)) {
-      const fountain = LOTS.fountain
-      const ox = position.x - fountain.x
-      const oz = position.z - fountain.z
+    // Slide around circular obstacles (fountain, lamps, trees) instead of jamming.
+    const hit = pushOffObstacles(position, this.obstacleList)
+    if (hit?.kind === 'circle') {
+      const ox = position.x - hit.x
+      const oz = position.z - hit.z
       const side = ox * dz - oz * dx >= 0 ? 1 : -1
-      position.x += (-oz / FOUNTAIN_CLEAR) * side * stepLength * 0.5
-      position.z += (ox / FOUNTAIN_CLEAR) * side * stepLength * 0.5
-      keepOffFountain(position)
-    }
-    keepOffLots(position)
-    // Prefer the open east/south lane if a lot push shoved the walker into the basin.
-    if (Math.hypot(position.x, position.z) < FOUNTAIN_CLEAR + 0.05 && onBuildingLot(position.x, position.z, 0.35)) {
-      position.x = Math.max(position.x, FOUNTAIN_CLEAR + 0.35)
-      keepClear(position)
+      const radius = Math.max(hit.r, 0.2)
+      position.x += (-oz / radius) * side * stepLength * 0.5
+      position.z += (ox / radius) * side * stepLength * 0.5
+      pushOffObstacles(position, this.obstacleList)
     }
     const progressed = Math.hypot(position.x - walker.stuckX, position.z - walker.stuckZ)
-    if (progressed > 0.22) {
+    if (progressed > STUCK_PROGRESS) {
       walker.stuck = 0
       walker.stuckX = position.x
       walker.stuckZ = position.z
     } else {
       walker.stuck += delta
-      if (walker.stuck > 2.4) {
+      if (shouldUnstick(walker.stuck)) {
         this.unstickWalker(walker)
       }
     }
@@ -2148,8 +2144,15 @@ export class VillageScene {
     }
   }
 
-  // After a few seconds jammed against a fence or the fountain, skip ahead or pick a new stroll.
+  // After a short jam against any obstacle, skip ahead or pick a new stroll (and avoid that obstacle).
   private unstickWalker(walker: Walker) {
+    const jam =
+      hitsObstacle(walker.root.position.x, walker.root.position.z, this.obstacleList, 0.55) ??
+      hitsObstacle(walker.target.x, walker.target.z, this.obstacleList, 0.55)
+    if (jam) {
+      walker.avoidId = jam.id
+      walker.avoidLeft = 4
+    }
     walker.stuck = 0
     walker.stuckX = walker.root.position.x
     walker.stuckZ = walker.root.position.z
@@ -2165,7 +2168,7 @@ export class VillageScene {
     }
     if (walker.state === 'arrive' || walker.state === 'toastWalk' || walker.state === 'promote') {
       walker.root.position.set(walker.target.x, 0, walker.target.z)
-      keepClear(walker.root.position)
+      pushOffObstacles(walker.root.position, this.obstacleList)
       return
     }
     this.pickStrollTarget(walker)
@@ -2279,56 +2282,6 @@ function freeOwnMaterials(root: THREE.Object3D) {
     const materials = object.userData.materials as THREE.Material[] | undefined
     materials?.forEach((material) => material.dispose())
   })
-}
-
-// Moves a point inside the fountain's clearing out to its edge; says whether it moved.
-function keepOffFountain(point: { x: number; z: number }): boolean {
-  const fountain = LOTS.fountain
-  const dx = point.x - fountain.x
-  const dz = point.z - fountain.z
-  const distance = Math.hypot(dx, dz)
-  if (distance >= FOUNTAIN_CLEAR) {
-    return false
-  }
-  if (distance < 1e-4) {
-    point.x = fountain.x + FOUNTAIN_CLEAR
-    return true
-  }
-  point.x = fountain.x + (dx / distance) * FOUNTAIN_CLEAR
-  point.z = fountain.z + (dz / distance) * FOUNTAIN_CLEAR
-  return true
-}
-
-// Push plaza strolls out of building lots so festival crowds do not stand on the
-// hall of fame with shrine visitors. Training stays walkable for drills.
-function keepOffLots(point: { x: number; z: number }, pad = 0.3): boolean {
-  let moved = false
-  for (const [id, lot] of Object.entries(LOTS)) {
-    if (id === 'fountain' || id === 'training') {
-      continue
-    }
-    const hx = lot.w / 2 + pad
-    const hz = lot.d / 2 + pad
-    const dx = point.x - lot.x
-    const dz = point.z - lot.z
-    if (Math.abs(dx) > hx || Math.abs(dz) > hz) {
-      continue
-    }
-    const pushX = (hx - Math.abs(dx) + 0.05) * (dx < 0 ? -1 : 1)
-    const pushZ = (hz - Math.abs(dz) + 0.05) * (dz < 0 ? -1 : 1)
-    if (Math.abs(dx) / hx > Math.abs(dz) / hz) {
-      point.x += pushX
-    } else {
-      point.z += pushZ
-    }
-    moved = true
-  }
-  return moved
-}
-
-function keepClear(point: { x: number; z: number }): void {
-  keepOffFountain(point)
-  keepOffLots(point)
 }
 
 function turnToward(current: number, target: number, step: number): number {

@@ -97,6 +97,34 @@ export const GATHER = { x: 0, z: 4.2 }
 export const GATE = { x: 0, z: 12.2 }
 export const INN_YARD = { minX: 5.2, maxX: 8.8, minZ: -6.1, maxZ: -5.1 }
 
+// Terrain props shared with walk obstacles (src/ui/voxel/obstacles.ts).
+export const TREE_SPOTS: readonly (readonly [number, number, number])[] = [
+  [-13.5, -2, 1],
+  [-13.6, 3.6, 0.8],
+  [-13.5, 10, 1.1],
+  [-4.5, -13.5, 0.9],
+  [4.5, -13.5, 1],
+  [14, 4.5, 1],
+  [13.5, 8.5, 0.9],
+  [13, 13, 1.1],
+  [-13.4, 13.2, 0.9],
+  [14.8, -13.2, 1],
+  [-13, -13, 1.1],
+  [3, 13.5, 0.8],
+  [-13.4, -7, 0.7],
+  [15.2, -11.2, 0.8],
+  [-2.6, 13.5, 1],
+]
+export const LAMP_SPOTS: readonly (readonly [number, number])[] = [
+  [-6.4, -6.4],
+  [4.4, -4.6],
+  [-6.4, 6.4],
+  [6.4, 6.4],
+  [2.2, 10],
+]
+export const WELL_SPOT = { x: 6.5, z: -4.2 }
+export const PICNIC_SPOT = { x: 9.0, z: -4.6 }
+
 const HALF = 15
 const GRASS = ['#a5d46a', '#9acb5e', '#b0da78', '#94c55a']
 const DIRT = ['#e2cfa6', '#dcc79b', '#e6d5b0', '#d8c294']
@@ -122,11 +150,7 @@ export function buildTerrain(): THREE.Group {
     }
   }
 
-  const trees: [number, number, number][] = [
-    [-13.5, -2, 1], [-13.6, 3.6, 0.8], [-13.5, 10, 1.1], [-4.5, -13.5, 0.9], [4.5, -13.5, 1], [14, 4.5, 1], [13.5, 8.5, 0.9],
-    [13, 13, 1.1], [-13.4, 13.2, 0.9], [14.8, -13.2, 1], [-13, -13, 1.1], [3, 13.5, 0.8], [-13.4, -7, 0.7], [15.2, -11.2, 0.8], [-2.6, 13.5, 1],
-  ]
-  for (const [x, z, s] of trees) {
+  for (const [x, z, s] of TREE_SPOTS) {
     const y = groundTop(x, z)
     const leaf = pick(['#7cb342', '#6fa83a', '#86bd4a'])
     const light = mixHex(leaf, '#ffffff', 0.12)
@@ -137,7 +161,7 @@ export function buildTerrain(): THREE.Group {
   }
 
   // SE plaza lamp sits just south-west of the inn yard.
-  for (const [x, z] of [[-6.4, -6.4], [4.4, -4.6], [-6.4, 6.4], [6.4, 6.4], [2.2, 10]] as const) {
+  for (const [x, z] of LAMP_SPOTS) {
     b.box(0.32, 0.16, 0.32, '#6d6d6d', x, 0.08, z)
       .box(0.12, 1.4, 0.12, '#3a3a3a', x, 0.8, z)
       .box(0.24, 0.26, 0.24, x < 0 && z < 0 ? '#9fe8ff' : '#ffd36b', x, 1.6, z, { glow: true })
@@ -145,7 +169,7 @@ export function buildTerrain(): THREE.Group {
   }
 
   // Well by the inn yard; picnic table between the yard and the market path.
-  b.within(6.5, 0, -4.2, 0, 0, 0, () => {
+  b.within(WELL_SPOT.x, 0, WELL_SPOT.z, 0, 0, 0, () => {
     for (const [px, pz, sx, sz] of [[0, -0.45, 1.1, 0.2], [0, 0.45, 1.1, 0.2], [-0.45, 0, 0.2, 0.7], [0.45, 0, 0.2, 0.7]] as const) {
       b.box(sx, 0.5, sz, '#9e9a92', px, 0.25, pz)
     }
@@ -154,7 +178,7 @@ export function buildTerrain(): THREE.Group {
       .box(0.1, 1.2, 0.1, WOOD, 0.5, 0.6, 0)
       .box(1.4, 0.12, 0.9, '#b8443a', 0, 1.25, 0)
   })
-  b.within(9.0, 0, -4.6, 0, 0, 0, () => {
+  b.within(PICNIC_SPOT.x, 0, PICNIC_SPOT.z, 0, 0, 0, () => {
     b.box(1.4, 0.1, 0.8, '#7a5a40', 0, 0.6, 0)
       .box(0.1, 0.55, 0.1, '#5d4433', -0.55, 0.28, 0)
       .box(0.1, 0.55, 0.1, '#5d4433', 0.55, 0.28, 0)
