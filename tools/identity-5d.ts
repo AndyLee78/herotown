@@ -154,6 +154,18 @@ if (stage === 'all' || stage === 'branches' || stage === 'classes') {
   output('classes', classList.map(({ id }) => ({ id, level: round(threshold({ klass: id, swap: true, tier: 4 })) })))
 }
 
+if (stage === 'titles') {
+  for (const mode of ['control', 'healerSaint', 'healingHands'] as const) {
+    const parties = samples.map((_, sample) => {
+      const party = lineup(sample, 14, { klass: 'cleric', gift: mode === 'healingHands' ? mode : null })
+      const cleric = party.find(member => member.hero.classId === 'cleric')!
+      if (mode === 'healerSaint') cleric.hero.titles = ['healerSaint']
+      return party
+    })
+    output(mode, measure(parties, 'bandit_fort', 8))
+  }
+}
+
 if (stage === 'cleric-probe') {
   const klass = classById('cleric')
   const heal = klass.branches.find(({ id }) => id === 'cleric.mercy')!.mastery

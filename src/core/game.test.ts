@@ -457,6 +457,7 @@ describe('economy fixes', () => {
     expect(later.gold - state.gold).toBe((report?.goldGained ?? 0) - (report?.wagesPaid ?? 0))
     const dungeon = report?.autoDetails?.dungeons[0]
     expect(dungeon).toMatchObject({ dungeonId: 'hill_cave', wins: report?.autoRuns, losses: 0 })
+    expect(later.roster[0]!.deeds!.wins).toBe((state.roster[0]!.deeds?.wins ?? 0) + report!.autoRuns!)
     expect(dungeon?.materials.wood).toBe(later.materials.wood - state.materials.wood)
     const lifetimeXp = (hero: GameState['roster'][number]) => hero.xp + progression.xpPerLevel * hero.level * (hero.level - 1) / 2
     const xpTotal = (save: GameState) => save.roster.reduce((sum, hero) => sum + lifetimeXp(hero), 0)

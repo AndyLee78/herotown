@@ -1031,7 +1031,7 @@ function hurt(
   push(log, tick, key, params)
   if (target.hp === 0) {
     target.overkill = amount
-    push(log, tick, 'log.down', actorParams(target))
+    push(log, tick, 'log.down', { ...actorParams(target), ...(actor ? { killerId: actor.id } : {}), ...(target.side === 'enemy' ? { kind: target.kind ?? '', elite: Number(target.elite ?? false), boss: Number(target.boss) } : {}) })
   }
 }
 

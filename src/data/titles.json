@@ -1,0 +1,83 @@
+[
+  {
+    "id": "veteran",
+    "deed": "wins",
+    "threshold": 2500,
+    "effect": {
+      "guard": 0.04
+    }
+  },
+  {
+    "id": "resilient",
+    "deed": "losses",
+    "threshold": 1500,
+    "effect": {
+      "xpGain": 0.05
+    }
+  },
+  {
+    "id": "bossHunter",
+    "deed": "bossKills",
+    "threshold": 2400,
+    "effect": {
+      "bossDamage": 0.06
+    }
+  },
+  {
+    "id": "dragonslayer",
+    "deed": "dragonKills",
+    "threshold": 165,
+    "effect": {
+      "bossDamage": 0.04,
+      "blastGuard": 0.05
+    }
+  },
+  {
+    "id": "undeadBane",
+    "deed": "undeadKills",
+    "threshold": 4500,
+    "effect": {
+      "holy": 0.08
+    }
+  },
+  {
+    "id": "eliteHunter",
+    "deed": "eliteKills",
+    "threshold": 180,
+    "effect": {
+      "crit": 0.03
+    }
+  },
+  {
+    "id": "raider",
+    "deed": "raidKills",
+    "threshold": 19,
+    "effect": {
+      "partyAttack": 0.02
+    }
+  },
+  {
+    "id": "deathKnown",
+    "deed": "downed",
+    "threshold": 45,
+    "effect": {
+      "lastStand": 0.1
+    }
+  },
+  {
+    "id": "healerSaint",
+    "deed": "healed",
+    "threshold": 300000,
+    "effect": {
+      "heal": 0.05
+    }
+  },
+  {
+    "id": "abyssWalker",
+    "deed": "abyssBest",
+    "threshold": 80,
+    "effect": {
+      "dotGuard": 0.15
+    }
+  }
+]

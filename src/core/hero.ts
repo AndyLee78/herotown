@@ -1,3 +1,4 @@
+import { readTitles } from './titles'
 import { ageBands, ageMultiplier, bandForAge, classById, classList, giftRules, maxAge, names, personalityRules, progression, traits } from './data'
 import { normalizeGear } from './gear'
 import { normalizeLearned } from './skills'
@@ -16,7 +17,7 @@ import {
   type GiftId,
 } from './types'
 
-export type HeroDraft = {
+export type HeroDraft = import('./types').TitleHistory & {
   id: string
   name: string
   gender: Gender
@@ -98,6 +99,7 @@ export function createHero(draft: HeroDraft): Hero {
   const potentials = { ...draft.potentials }
   const skills = normalizeLearned(draft.classId, draft.learned, draft.level ?? 1)
   return {
+    ...readTitles(draft),
     id: draft.id,
     name: draft.name,
     gender: draft.gender,

@@ -1,3 +1,4 @@
+import { recordTripTitles, readTitleLog, readTitles, validTitle } from './titles'
 import { chargeFountain, freshFountain, makeWish, readFountain, upgradeFountain, type FountainState } from './fountain'
 import { claimGuide, guideSteps } from './guide'
 import { advanceIncident, nextIncidentTime, readIncidentState, resolveIncident, type Incident, type IncidentLog } from './incidents'
@@ -34,7 +35,7 @@ import type { Rng } from './rng'
 import type { Genes } from './genes'
 import type { Bond, ClassId, CombatError, DungeonReport, Gear, GearSlot, GearType, Gender, Hero, PartyMember, PotionId, Proposal, Role, Row, Supplies, Tactics, TrinketId , StatKey } from './types'
 
-export const SAVE_VERSION = 31
+export const SAVE_VERSION = 32
 
 // Town levels up to here come with fame alone (Docs/endgame.md 4b).
 export const PROMOTION_FREE = 7
@@ -57,6 +58,7 @@ export type Calendar = {
 }
 
 export type AbsenceReport = {
+  titlesEarned?: import('./types').TitleRecord[]
   incidents?: { pending?: string; ignored: string[] }
   elapsedMs: number
   capped: boolean
@@ -162,7 +164,7 @@ export type Retiree = {
   building: BuildingId | null
 }
 
-export type Grave = {
+export type Grave = import('./types').TitleHistory & {
   diedAt?: number
   friends?: string[]
   id: string
@@ -262,6 +264,8 @@ export type GameState = {
   incidentNonce: number
   nextIncidentAt: number
   recentIncidents: string[]
+  discoveredTitles: import('./types').TitleId[]
+  titleLog: import('./types').TitleRecord[]
   incidentLog: IncidentLog[]
   version: typeof SAVE_VERSION
   gold: number
@@ -450,6 +454,7 @@ export function freshState(seed: number, now: number): GameState {
     incidentNonce: 0,
     nextIncidentAt: nextIncidentTime(seed, 0, now),
     recentIncidents: [],
+    discoveredTitles: [], titleLog: [],
     incidentLog: [],
     gold: progression.startGold,
     materials: { ...villageRules.start, herb: 0, crystal: 0 },
@@ -1004,6 +1009,7 @@ function advance(state: GameState, now: number): GameState {
       ...(next.incident ? { pending: next.incident.id } : {}),
       ignored: next.incidentLog.filter(({ choice, at }) => choice === 'ignore' && at > state.lastTickAt).map(({ id }) => id),
     },
+    ...(next.titleLog !== state.titleLog ? { titlesEarned: next.titleLog.filter(entry => !state.titleLog.includes(entry)) } : {}),
     elapsedMs: elapsed,
     capped,
     seasonsPassed: seasonsBetween(state.calendar, next.calendar),
@@ -1461,7 +1467,7 @@ function runAuto(state: GameState, elapsed: number, tally: AutoTally): GameState
         used.add(member.hero.id)
       }
       const before = new Map(members.map((member) => [member.hero.id, member.hero.fatigue]))
-      next = autoRun(next, members, presetId, dungeonId, tally)
+      next = autoRun(next, members, presetId, dungeonId, tally, state.lastTickAt + elapsed - budget + villageRules.auto.runMs)
       for (const hero of next.roster) {
         const was = before.get(hero.id)
         if (was != null && hero.fatigue > was) {
@@ -1504,7 +1510,7 @@ function autoPresetOrder(state: GameState): string[] {
   return [state.presetId, ...state.presets.map((preset) => preset.id).filter((id) => id !== state.presetId)]
 }
 
-function autoRun(state: GameState, members: PartyMember[], presetId: string, dungeonId: string, tally: AutoTally): GameState {
+function autoRun(state: GameState, members: PartyMember[], presetId: string, dungeonId: string, tally: AutoTally, at: number): GameState {
   let next = state
   const preset = presetById(next, presetId)
   // A lasting run counter keeps every auto battle on its own seed.
@@ -1531,6 +1537,7 @@ function autoRun(state: GameState, members: PartyMember[], presetId: string, dun
   const settled = settleParty(next, report, battleSeed, next.lastTickAt, heroIds, dungeonId)
   const goldGain = report.victory ? Math.floor(result.report.gold * scale * (1 + rewardBonus(next))) : 0
   next = dropFromPresets(grantVictoryRewards(afterTrip(bondParty({ ...next, ...settled, gold: next.gold + goldGain }, heroIds, report.victory), heroIds, report.victory), report, dungeonId, scale))
+  next = recordTripTitles(next, report, heroIds, at)
   tally.runs += 1
   tally.gold += goldGain
   if (tally.details) {
@@ -2032,7 +2039,8 @@ function settleExpedition(state: GameState, expedition: Expedition): GameState {
   const special = settleSpecial(grantVictoryRewards(afterTrip(home, expedition.heroIds, report.victory), report, dungeonId, undefined, { at: expedition.returnAt, trip: expedition.id }), dungeonId, report.floorsCleared, report.victory, expedition.abyssFrom)
   const raided = expedition.raid ? settleRaid(special, expedition.raid.week, expedition.raid.start, expedition.raid.left, expedition.raid.max, expedition.returnAt, expedition.raid.tier ?? 1, expedition.id) : special
   const rewarded = dungeonById(dungeonId).special === 'event' ? settleEvent(raided, report.victory) : raided
-  const next = dropFromPresets(report.victory || raided.raidKills > state.raidKills ? recordDungeonClear(rewarded, dungeonId) : rewarded)
+  const cleared = dropFromPresets(report.victory || raided.raidKills > state.raidKills ? recordDungeonClear(rewarded, dungeonId) : rewarded)
+  const next = recordTripTitles(cleared, report, expedition.heroIds, expedition.returnAt, expedition.abyssFrom, raided.raidKills > state.raidKills)
   const materials: Partial<Materials> = {}
   for (const key of ['wood', 'stone', 'iron', 'bone', 'herb', 'crystal'] as const) {
     const diff = next.materials[key] - state.materials[key]
@@ -2048,8 +2056,10 @@ function settleExpedition(state: GameState, expedition: Expedition): GameState {
       vaultGained[key] = diff
     }
   }
+  const titlesEarned = next.titleLog.filter(entry => !state.titleLog.includes(entry))
   const record: DungeonReport = {
     ...report,
+    ...(titlesEarned.length ? { titlesEarned } : {}),
     // The experience as granted, with the statue's share (review 1eeb27b).
     xp: Math.round(report.xp * (1 + statueXp(state))),
     dungeonId,
@@ -2469,13 +2479,15 @@ function normalize(record: Record<string, unknown>, now: number): GameState {
     calendar,
     lastTickAt: numberOr(record.lastTickAt, now),
     cleared: Array.isArray(record.cleared) ? [...new Set(record.cleared.filter((id) => codexDungeons.includes(id)))] : [],
+    titleLog: readTitleLog(record.titleLog),
+    discoveredTitles: Array.isArray(record.discoveredTitles) ? [...new Set(record.discoveredTitles.filter(validTitle))] : [],
     codex: readCodex(record.codex),
     achievements: readAchievements(record.achievements),
     visitors: validHeroes(record.visitors)
       ? openStays(record.visitors.map((hero) => withRecovery(knownBefore18(record, hero), now)), now, visitorStay(innLevel(record, base)))
       : base.visitors,
     roster: validHeroes(record.roster) ? record.roster.map((hero) => withRecovery(hero, now)) : [],
-    graveyard: Array.isArray(record.graveyard) ? (record.graveyard as Grave[]) : [],
+    graveyard: Array.isArray(record.graveyard) ? (record.graveyard as Grave[]).filter(Boolean).map(grave => ({ ...grave, deeds: undefined, titles: undefined, titleDates: undefined, ...readTitles(grave) })) : [],
     // Gear on the anvil is read like stored gear (review 3ad100c).
     smith: isSmith(record.smith) ? { ...record.smith, gear: record.smith.gear ? normalizeGear(record.smith.gear, 'warrior') : null } : null,
     stash: Array.isArray(record.stash) ? (record.stash as Partial<Gear>[]).map((item) => normalizeGear(item, 'warrior')) : [],

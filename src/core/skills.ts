@@ -1,3 +1,4 @@
+import { titleRules } from './titles'
 import { classById, giftRules, personalityRules, trainingRules } from './data'
 import { gearEffect, setBonuses } from './gear'
 import type { ClassId, GiftId, Hero, PersonalityId, SkillDef, SkillEffect } from './types'
@@ -165,6 +166,7 @@ export function heroSkillEffects(hero: Hero, context: SkillContext = {}): SkillT
       addEffect(totals, branch.mastery, scaleFor(index))
     }
   })
+  for (const id of hero.titles ?? []) addEffect(totals, titleRules.find(rule => rule.id === id)?.effect)
   addEffect(totals, giftEffect(hero.gift))
   // Weapon and armour types and their options (Docs/identity.md 5b).
   const uniques = new Set<string>()

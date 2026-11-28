@@ -244,7 +244,15 @@ export type Gear = {
   heirloom?: { ownerId: string; ownerName: string; family?: string; generations: number; comforted?: string[] }
 }
 
-export type Hero = {
+export type DeedKey = 'wins' | 'losses' | 'bossKills' | 'dragonKills' | 'undeadKills' | 'eliteKills' | 'raidKills' | 'downed' | 'healed' | 'abyssBest'
+export type TitleId = 'veteran' | 'resilient' | 'bossHunter' | 'dragonslayer' | 'undeadBane' | 'eliteHunter' | 'raider' | 'deathKnown' | 'healerSaint' | 'abyssWalker'
+export type TitleRecord = { heroId: string; title: TitleId; at: number }
+export type TitleHistory = {
+  deeds?: Partial<Record<DeedKey, number>>
+  titles?: TitleId[]
+  titleDates?: Partial<Record<TitleId, number>>
+}
+export type Hero = TitleHistory & {
   id: string
   name: string
   gender: Gender
@@ -374,6 +382,7 @@ export type ReplayHero = {
 }
 
 export type DungeonReport = {
+  titlesEarned?: TitleRecord[]
   // Replay data. Missing on reports saved before replays existed.
   dungeonId?: string
   party?: ReplayHero[]
