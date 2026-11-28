@@ -17,10 +17,10 @@ export const LOTS: Record<BuildingId, Lot> = {
   temple: { x: -1.5, z: -10.5, w: 4, d: 3.2 },
   // North-east of the plaza; kept clear of the hall of fame (Docs/legends.md).
   inn: { x: 7.0, z: -8.0, w: 4, d: 3 },
-  // West of the plaza, between the house column and the training yard. The SE
-  // camera sees it on a different screen column from the inn, so the shrine is
-  // not buried behind the east cluster (Docs/legends.md).
-  legends: { x: -3.0, z: 3.0, w: 3.4, d: 2.8 },
+  // West of the plaza, pulled off the fountain so walkers keep a ≥2-unit lane
+  // between the shrine fence and the basin (Docs/legends.md). The SE camera
+  // still sees it on a different screen column from the inn.
+  legends: { x: -5.6, z: 3.2, w: 3.4, d: 2.8 },
   // West column, north to south.
   alchemy: { x: -10.5, z: -4, w: 3, d: 2.6 },
   magic: { x: -10.5, z: 1, w: 3, d: 2.6 },
@@ -880,6 +880,22 @@ export function onBuildingLot(x: number, z: number, pad = 0.4): boolean {
   return Object.values(LOTS).some(
     (lot) => Math.abs(x - lot.x) < lot.w / 2 + pad && Math.abs(z - lot.z) < lot.d / 2 + pad,
   )
+}
+
+// South doorstep outside a lot — safe sightseeing / timid stop (not past the fence).
+export function lotFront(lot: Lot, along = 0, out = 0.55): { x: number; z: number } {
+  return { x: lot.x + along, z: lot.z + lot.d / 2 + out }
+}
+
+// How much open ground lies between an expanded lot and the fountain clear circle.
+// Negative means the keep-off zones overlap and walkers can jam there.
+export function walkClearance(lot: Lot, fountainClear = 1.75, pad = 0.3): number {
+  const fountain = LOTS.fountain
+  const hx = lot.w / 2 + pad
+  const hz = lot.d / 2 + pad
+  const closestX = Math.max(lot.x - hx, Math.min(lot.x + hx, fountain.x))
+  const closestZ = Math.max(lot.z - hz, Math.min(lot.z + hz, fountain.z))
+  return Math.hypot(closestX - fountain.x, closestZ - fountain.z) - fountainClear
 }
 
 // Prefer the listed spots; fill from a plaza ring so a moved lot never leaves a hole.

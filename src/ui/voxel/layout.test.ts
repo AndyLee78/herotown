@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { INN_YARD, LOTS, legendStatuePads, type Lot } from './world'
+import { INN_YARD, LOTS, legendStatuePads, lotFront, onBuildingLot, walkClearance, type Lot } from './world'
 
 const FLAT = 12.5
 
@@ -66,5 +66,17 @@ describe('village lot layout', () => {
     const inFront = depth(LOTS.legends) >= depth(LOTS.inn)
     const aside = Math.abs(screenX(LOTS.legends) - screenX(LOTS.inn)) > 8
     expect(inFront || aside).toBe(true)
+  })
+
+  // Walkers keep off lots and the fountain clear circle; overlapping keep-off
+  // zones is what jammed parties between the shrine and the basin.
+  it('leaves a walkable lane between the hall of fame and the fountain', () => {
+    expect(walkClearance(LOTS.legends, 1.75, 0.3)).toBeGreaterThanOrEqual(2)
+  })
+
+  it('puts lot doorsteps outside the fence for sightseeing stops', () => {
+    const front = lotFront(LOTS.legends)
+    expect(onBuildingLot(front.x, front.z, 0.3)).toBe(false)
+    expect(front.z).toBeGreaterThan(LOTS.legends.z + LOTS.legends.d / 2)
   })
 })

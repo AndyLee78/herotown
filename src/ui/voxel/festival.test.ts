@@ -11,9 +11,10 @@ const KINDS: FestivalKind[] = ['spring', 'summer', 'autumn', 'winter']
 
 describe('festival decor placement', () => {
   it('treats the hall of fame lot as blocked', () => {
-    expect(onBuildingLot(-3.0, 3.0)).toBe(true)
-    expect(onBuildingLot(-3.8, 3.5)).toBe(true)
+    expect(onBuildingLot(-5.6, 3.2)).toBe(true)
+    expect(onBuildingLot(-5.0, 3.5)).toBe(true)
     expect(onBuildingLot(0, 3.5)).toBe(false)
+    expect(onBuildingLot(-3.0, 3.0)).toBe(false)
   })
 
   it('picks clear plaza spots away from lots and the fountain', () => {

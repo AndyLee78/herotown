@@ -36,6 +36,7 @@ import {
   buildToastTable,
   buildTownDecor,
   legendStatuePads,
+  lotFront,
   marketFront,
   merchantPark,
   onBuildingLot,
@@ -125,6 +126,10 @@ type Walker = {
   lastMorale: number | null
   fidget: number
   mood: THREE.Group | null
+  // Seconds without meaningful progress toward the current target (jam escape).
+  stuck: number
+  stuckX: number
+  stuckZ: number
 }
 
 type MoodSlot = { group: THREE.Group; kind: MoodKind; life: number; host: Walker | null }
@@ -1400,6 +1405,9 @@ export class VillageScene {
         lastMorale: null,
         fidget: 0,
         mood: null,
+        stuck: 0,
+        stuckX: 0,
+        stuckZ: 0,
       }
       walker.root.add(walker.rig.group)
       this.placeIn(walker, kind === 'visitor' ? YARD_AREA : PLAZA_AREA)
@@ -1520,9 +1528,12 @@ export class VillageScene {
 
   // Personality habits while strolling the square (Docs/personality.md).
   private pickStrollTarget(walker: Walker) {
+    walker.stuck = 0
+    walker.stuckX = walker.root.position.x
+    walker.stuckZ = walker.root.position.z
     const personality = walker.personality
     if (walker.kind === 'roster' && personality && this.rollPersonalityTarget(walker, personality)) {
-      keepClear(walker.target)
+      this.ensureWalkTarget(walker)
       return
     }
     const yardChance = personality === 'social' ? 0.22 : 0.08
@@ -1542,12 +1553,36 @@ export class VillageScene {
       )
     } else {
       const area = walker.kind === 'visitor' ? YARD_AREA : PLAZA_AREA
-      walker.target.set(
-        area.minX + walker.random() * (area.maxX - area.minX),
-        0,
-        area.minZ + walker.random() * (area.maxZ - area.minZ),
-      )
+      for (let attempt = 0; attempt < 8; attempt += 1) {
+        const x = area.minX + walker.random() * (area.maxX - area.minX)
+        const z = area.minZ + walker.random() * (area.maxZ - area.minZ)
+        if (!onBuildingLot(x, z, 0.35) && Math.hypot(x, z) >= FOUNTAIN_CLEAR + 0.2) {
+          walker.target.set(x, 0, z)
+          this.ensureWalkTarget(walker)
+          return
+        }
+      }
+      walker.target.set(2.4 + (walker.random() - 0.5) * 1.2, 0, 2.6 + (walker.random() - 0.5) * 1.2)
     }
+    this.ensureWalkTarget(walker)
+  }
+
+  // Keep stroll / sightseeing targets outside fences and the fountain basin.
+  private ensureWalkTarget(walker: Walker) {
+    keepClear(walker.target)
+    if (
+      !onBuildingLot(walker.target.x, walker.target.z, 0.3) &&
+      Math.hypot(walker.target.x, walker.target.z) >= FOUNTAIN_CLEAR + 0.15
+    ) {
+      return
+    }
+    const open = lotFront(LOTS.legends, (walker.random() - 0.5) * 1.2, 0.7)
+    if (!onBuildingLot(open.x, open.z, 0.3) && Math.hypot(open.x, open.z) >= FOUNTAIN_CLEAR + 0.15) {
+      walker.target.set(open.x, 0, open.z)
+      keepClear(walker.target)
+      return
+    }
+    walker.target.set(2.5 + (walker.random() - 0.5), 0, -2.2 + (walker.random() - 0.5))
     keepClear(walker.target)
   }
 
@@ -1604,9 +1639,10 @@ export class VillageScene {
       }
     }
     if (personality === 'timid' && roll < 0.65) {
-      const lots = Object.values(LOTS)
+      const lots = Object.values(LOTS).filter((lot) => lot !== LOTS.fountain)
       const lot = lots[Math.floor(walker.random() * lots.length)]!
-      walker.target.set(lot.x + (walker.random() - 0.5) * lot.w * 0.5, 0, lot.z + lot.d / 2 + 0.45 + walker.random() * 0.5)
+      const front = lotFront(lot, (walker.random() - 0.5) * lot.w * 0.4, 0.5 + walker.random() * 0.35)
+      walker.target.set(front.x, 0, front.z)
       return true
     }
     if (personality === 'hotheaded' && roll < 0.35) {
@@ -1695,9 +1731,16 @@ export class VillageScene {
           walker.state = 'leave'
           walker.speed = 2.4
           walker.target.set(GATE.x + (walker.random() - 0.5) * 0.6, 0, GATE.z + 0.6)
+          walker.stuck = 0
+          walker.stuckX = walker.root.position.x
+          walker.stuckZ = walker.root.position.z
         } else {
           walker.state = 'gather'
           walker.target.set(GATHER.x + ((order % 3) - 1) * 0.75, 0, GATHER.z + Math.floor(order / 3) * 0.75)
+          keepClear(walker.target)
+          walker.stuck = 0
+          walker.stuckX = walker.root.position.x
+          walker.stuckZ = walker.root.position.z
           order += 1
         }
       } else if (!isAway && walker.away) {
@@ -2078,6 +2121,22 @@ export class VillageScene {
       keepOffFountain(position)
     }
     keepOffLots(position)
+    // Prefer the open east/south lane if a lot push shoved the walker into the basin.
+    if (Math.hypot(position.x, position.z) < FOUNTAIN_CLEAR + 0.05 && onBuildingLot(position.x, position.z, 0.35)) {
+      position.x = Math.max(position.x, FOUNTAIN_CLEAR + 0.35)
+      keepClear(position)
+    }
+    const progressed = Math.hypot(position.x - walker.stuckX, position.z - walker.stuckZ)
+    if (progressed > 0.22) {
+      walker.stuck = 0
+      walker.stuckX = position.x
+      walker.stuckZ = position.z
+    } else {
+      walker.stuck += delta
+      if (walker.stuck > 2.4) {
+        this.unstickWalker(walker)
+      }
+    }
     walker.root.rotation.y = turnToward(walker.root.rotation.y, Math.atan2(dx, dz), delta * 8)
     walkPose(walker.rig, time, walker.phase, walker.speed * pace * trait)
     this.applyMoralePose(walker)
@@ -2087,6 +2146,30 @@ export class VillageScene {
       walker.rig.armL.rotation.set(-0.4, 0, 1.2)
       walker.rig.legR.rotation.x *= 0.3
     }
+  }
+
+  // After a few seconds jammed against a fence or the fountain, skip ahead or pick a new stroll.
+  private unstickWalker(walker: Walker) {
+    walker.stuck = 0
+    walker.stuckX = walker.root.position.x
+    walker.stuckZ = walker.root.position.z
+    if (walker.state === 'gather') {
+      walker.state = 'pack'
+      walker.timer = 0.35
+      return
+    }
+    if (walker.state === 'leave') {
+      walker.state = 'gone'
+      walker.root.visible = false
+      return
+    }
+    if (walker.state === 'arrive' || walker.state === 'toastWalk' || walker.state === 'promote') {
+      walker.root.position.set(walker.target.x, 0, walker.target.z)
+      keepClear(walker.root.position)
+      return
+    }
+    this.pickStrollTarget(walker)
+    walker.state = 'walk'
   }
 
   private clampPan() {
