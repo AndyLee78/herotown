@@ -181,8 +181,8 @@ Claude Code, Cursor, GPT(Codex)가 함께 쓰는 작업 목록이다. 작업 하
 | 139 | 마을 사건 core | GPT | `src/core/*`(새 incidents.ts), `src/data/incidents.json`(새 파일), `src/core/*.test.ts`, `Docs/incidents.md` | 완료 (b8cdb06) |
 | 140 | 마을 사건 화면·보고·알림 | GPT | `src/ui/*`, `src/locales/*`, `src/core/*`(upcomingEvents에 사건만) | 완료 (f7cb5e0) |
 | 141 | 마을 사건 다듬기: 영웅 없는 마을, 빈 아이콘 | GPT | `src/data/incidents.json`, `src/core/incidents.ts`, `src/core/*.test.ts`, `src/ui/*`, `Docs/incidents.md` | 완료 (8b13897) |
-| 142 | 후천적 특성(행적·칭호) core | GPT | `src/core/*`(새 titles.ts), `src/data/titles.json`(새 파일), `src/core/*.test.ts`, `tools/*`, `Docs/deeds.md` | 대기 |
-| 143 | 후천적 특성 화면·연출·도감 | GPT | `src/ui/*`, `src/locales/*`, 도감 기록에 필요한 만큼 `src/core/codex.ts` | 대기 (142 뒤) |
+| 142 | 후천적 특성(행적·칭호) core | GPT | `src/core/*`(새 titles.ts), `src/data/titles.json`(새 파일), `src/core/*.test.ts`, `tools/*`, `Docs/deeds.md` | 완료 (c1ed86c) |
+| 143 | 후천적 특성 화면·연출·도감 | GPT | `src/ui/*`, `src/locales/*`, 도감 기록에 필요한 만큼 `src/core/codex.ts` | 완료 (1435c70) |
 
 ---
 
@@ -3535,6 +3535,9 @@ Docs/deeds.md의 행적과 칭호를 core에 만든다. 화면은 143에서 한�
 
 **메모**
 
+- 수동·자동 원정에서 영웅별 행적 10종과 칭호 최대 3개를 정산하고 세이브 v32에 기록한다. 시드 2에서 Lv10 도달 시 2명, 이후 30일 시점에 9명이 칭호를 보유했다.
+- 성자와 치유의 손길의 회복 보너스는 각각 +5%, +10%. 산적 요새 비교에서는 각 96승으로 승률 차이가 없었다. 타입 검사·테스트 496개·빌드 통과.
+
 ---
 
 ## 143. 후천적 특성 화면·연출·도감 (GPT)
@@ -3557,3 +3560,6 @@ Docs/deeds.md의 행적과 칭호를 core에 만든다. 화면은 143에서 한�
 ```
 
 **메모**
+
+- 영웅·방문자·묘지·명예의 전당에 칭호를 표시하고 상세 행적 표, 도감, 획득 알림과 원정·재접속 보고를 연결했다.
+- 격리 Chrome 375px(127.0.0.1:5176)에서 승리 2,499회인 영웅이 원정 한 번으로 백전노장을 얻고 재접속 보고, 배지 효과·획득 시각, 행적 표 10행, 도감 1/10에 반영되는 것을 확인했다. 타입 검사·테스트 497개·빌드 통과.
