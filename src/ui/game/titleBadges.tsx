@@ -16,6 +16,13 @@ export function TitleBadges({ hero }: { hero: TitleHistory }) {
   })}</>
 }
 
+// Titles inside a list card: plain chips, since the card itself is a button.
+export function TitleChips({ hero }: { hero: TitleHistory }) {
+  const { t } = useTranslation()
+  if (!hero.titles?.length) return null
+  return <span className="title-chips">{hero.titles.map(id => <span key={id} className="title-chip" title={t(`deeds.effects.${id}`)}>{t(`deeds.names.${id}`)}</span>)}</span>
+}
+
 export function DeedProgress({ hero }: { hero: TitleHistory }) {
   const { t, i18n } = useTranslation()
   return <details className="card deed-progress">

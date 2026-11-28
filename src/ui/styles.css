@@ -2601,3 +2601,7 @@ button.chip {
     to { opacity: 1; transform: translateY(0); }
   }
 }
+
+/* Earned titles on a roster card, beside the name. */
+.title-chips { display: inline-flex; flex-wrap: wrap; gap: 4px; margin: 2px 0; }
+.title-chip { padding: 1px 7px; border-radius: 8px; background: #d3efeb; color: #24545c; font-size: 0.75rem; font-weight: bold; }

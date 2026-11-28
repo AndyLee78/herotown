@@ -1,4 +1,4 @@
-import { TitleBadges, DeedProgress } from './titleBadges'
+import { TitleBadges, TitleChips, DeedProgress } from './titleBadges'
 import { ChevronLeft, Clock, Hourglass, Sparkles, Swords } from 'lucide-react'
 import { useMemo, useState } from 'react'
 import { useTranslation } from 'react-i18next'
@@ -216,6 +216,7 @@ export function Roster({
               <Portrait hero={hero} />
               <span className="hero-row-body">
                 <strong>{hero.name}</strong>
+                <TitleChips hero={hero} />
                 <HeroChips
                   hero={hero}
                   scouting={save.scout?.heroId === hero.id}
@@ -229,7 +230,7 @@ export function Roster({
                 <MoraleBar hero={hero} />
               </span>
               {needsWarning(hero) ? <span className="warn-dot" aria-label={t('hero.warning')} /> : null}
-            </button><TitleBadges hero={hero} /></div>
+            </button></div>
           ))}
         </div>
         {save.roster.some(isChild) ? <p className="muted">{t('hero.childrenElsewhere', { count: save.roster.filter(isChild).length })}</p> : null}
