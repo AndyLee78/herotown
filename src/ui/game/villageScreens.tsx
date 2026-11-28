@@ -1,3 +1,4 @@
+import { TitleBadges, TitleAwards } from './titleBadges'
 import { Lock } from 'lucide-react'
 import type { TFunction } from 'i18next'
 import { IconSheet, UiIcon } from './icons'
@@ -678,7 +679,7 @@ function Hall({ save, onClose }: { save: GameState; onClose: () => void }) {
             <article key={grave.id} className="grave legend">
               <GraveFace grave={grave} />
               <span className="hero-row-body">
-                <strong>{grave.name}</strong>
+                <strong>{grave.name}</strong><TitleBadges hero={grave} />
                 <span className="chips">
                   <Chip tone="info">{t(`class.${grave.classId}`)}</Chip>
                   <Chip>{t('ui.level', { level: grave.level })}</Chip>
@@ -1230,6 +1231,7 @@ export function Report({ report }: { report: DungeonReport | null }) {
       <div className={report.victory ? 'result-banner win' : 'result-banner lose'}>
         <strong>{report.victory ? t('result.victory') : t('result.defeat')}</strong>
         {report.dungeonId ? <span>{t(`dungeon.${report.dungeonId}.name`)}</span> : null}
+        <TitleAwards awards={report.titlesEarned} names={report.units} />
         <span className="chips"><SpecialRewardChips report={report} /></span>
         {report.defeatReason ? (
           <span>{report.defeatReason === 'tooWeak' ? t('defeat.tooWeak', { level: recommended }) : t(`defeat.${report.defeatReason}`)}</span>
@@ -1479,6 +1481,7 @@ export function Absence({ save, busy, onWatch, onClose }: { save: GameState; bus
   return (
     <Window title={t('absence.title')} onClose={onClose} small>
       <p>{t('absence.hours', { hours: Math.max(1, Math.round(report.elapsedMs / 3_600_000)) })}</p>
+      <TitleAwards awards={report.titlesEarned} names={[...save.roster, ...save.retirees.map(r => r.hero), ...save.graveyard]} />
       {report.capped ? <p className="muted">{t('absence.capped')}</p> : null}
       <p className="muted">{t('absence.season', { year: report.year, season: t(`season.${report.season}`) })}</p>
       <div className="reward-line">

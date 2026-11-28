@@ -2579,3 +2579,25 @@ button.chip {
   overflow-wrap: anywhere;
   white-space: normal;
 }
+
+.titled-hero-row > .hero-row { width: 100%; }
+.earned-title { width: fit-content; max-width: 100%; margin: 3px 0; color: #24545c; }
+.earned-title summary { padding: 2px 8px; border-radius: 8px; background: #d3efeb; cursor: pointer; font-weight: bold; }
+.deed-progress summary { cursor: pointer; }
+.deed-progress table { width: 100%; }
+.deed-progress th { text-align: start; }
+.deed-progress small { display: block; font-weight: normal; }
+.deed-progress td { text-align: end; }
+.title-award { color: #24545c; background: #d3efeb; padding: 4px 8px; border-radius: 8px; }
+@media (prefers-reduced-motion: no-preference) {
+  .title-award { animation: title-arrival .35s ease-out; }
+  @keyframes title-arrival { from { opacity: 0; transform: translateY(4px); } }
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  .title-award { animation: title-arrival 350ms ease-out; }
+  @keyframes title-arrival {
+    from { opacity: 0; transform: translateY(4px); }
+    to { opacity: 1; transform: translateY(0); }
+  }
+}

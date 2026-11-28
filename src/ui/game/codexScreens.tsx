@@ -1,3 +1,4 @@
+import { titleRules } from '../../core/titles'
 import { useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { achievementProgress, codexDungeons, codexEntries, type Codex } from '../../core/codex'
@@ -5,15 +6,16 @@ import { townLevelOf, type GameAction, type GameState } from '../../core'
 import { uniqueById, uniqueGear } from '../../core/loot'
 import { Bar, Chip, Res, VaultAmount, itemLabel, vaultKinds } from './kit'
 
-const categories = ['monsters', 'dungeons', 'uniques', 'sets', 'gifts', 'classes'] as const
+const categories = ['monsters', 'dungeons', 'uniques', 'sets', 'gifts', 'classes', 'titles'] as const
 const groups = ['collection', 'expedition', 'town', 'family'] as const
 
 export function CodexScreen({ save }: { save: GameState }) {
   const { t } = useTranslation()
   const [category, select] = useState<typeof categories[number]>('monsters')
-  const found = category === 'dungeons' ? save.cleared : save.codex[category as keyof Codex]
-  const entries = category === 'dungeons' ? codexDungeons : codexEntries[category]
+  const found: string[] = category === 'titles' ? save.discoveredTitles : category === 'dungeons' ? save.cleared : save.codex[category as keyof Codex]
+  const entries = category === 'titles' ? titleRules.map(rule => rule.id) : category === 'dungeons' ? codexDungeons : codexEntries[category]
   function label(id: string) {
+    if (category === 'titles') return t(`deeds.names.${id}`)
     if (category === 'monsters') return t(`enemy.${id}`)
     if (category === 'dungeons') return t(`dungeon.${id}.name`)
     if (category === 'sets') return t(`gearSet.${id}`)
@@ -24,8 +26,8 @@ export function CodexScreen({ save }: { save: GameState }) {
   return <section className="column">
     <div className="chips" aria-label={t('screen.codex')}>
       {categories.map((kind) => {
-        const count = kind === 'dungeons' ? save.cleared.length : save.codex[kind].length
-        const total = kind === 'dungeons' ? codexDungeons.length : codexEntries[kind].length
+        const count = kind === 'titles' ? save.discoveredTitles.length : kind === 'dungeons' ? save.cleared.length : save.codex[kind].length
+        const total = kind === 'titles' ? titleRules.length : kind === 'dungeons' ? codexDungeons.length : codexEntries[kind].length
         return <button type="button" className={kind === category ? 'btn small gold' : 'btn small'} key={kind} aria-pressed={kind === category} onClick={() => select(kind)}>
           {t(`codex.kind.${kind}`)} {count}/{total}
         </button>

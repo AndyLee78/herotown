@@ -333,6 +333,18 @@ export function App() {
     return next
   }
 
+  const lastTitles = useRef<GameState['titleLog'] | null>(null)
+  useEffect(() => {
+    if (!save) return
+    const previous = lastTitles.current
+    lastTitles.current = save.titleLog
+    if (!previous || previous === save.titleLog) return
+    const names = [...save.roster, ...save.retirees.map(r => r.hero), ...save.graveyard]
+    const messages = save.titleLog.filter(row => !previous.some(old => old.heroId === row.heroId && old.title === row.title && old.at === row.at))
+      .map(row => t('deeds.awarded', { hero: names.find(h => h.id === row.heroId)?.name ?? row.heroId, title: t(`deeds.names.${row.title}`) }))
+    if (messages.length) pushToast(messages.join('\n'))
+  }, [save, t])
+
   const birthMark = useRef<string | null>(null)
   const born = save?.absence?.births ?? []
   const bornKey = born.length > 0 ? `${save?.lastTickAt ?? 0}|${born.join(',')}` : ''

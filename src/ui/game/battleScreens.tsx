@@ -1,3 +1,4 @@
+import { TitleAwards } from './titleBadges'
 import { ChevronLeft, Clock, Lock } from 'lucide-react'
 import { useEffect, useMemo, useState } from 'react'
 import type { TFunction } from 'i18next'
@@ -1029,6 +1030,7 @@ function History({ save, onOpen }: { save: GameState; onOpen: (report: DungeonRe
         const minutes = report.finishedAt ? Math.max(0, Math.round((now - report.finishedAt) / 60_000)) : null
         return (
           <article key={`${report.finishedAt ?? 0}-${index}`} className={report.victory ? 'card history-card win' : 'card history-card lose'}>
+            <TitleAwards awards={report.titlesEarned} names={report.units} />
             <div className="card-top">
               <Chip tone={report.victory ? 'good' : 'bad'}>{report.victory ? t('result.victory') : t('result.defeat')}</Chip>
               <strong>{report.dungeonId ? t(`dungeon.${report.dungeonId}.name`) : ''}</strong>

@@ -390,8 +390,7 @@
     "trinkets": "Trinkets",
     "slot": {
       "weapon": "Weapon",
-      "armor": "Armor"
-   ,
+      "armor": "Armor",
       "trinket": "Trinket"
     },
     "blast": "Against blasts"
@@ -1550,7 +1549,8 @@
       "uniques": "Unique gear",
       "sets": "Sets",
       "gifts": "Gifts",
-      "classes": "Classes"
+      "classes": "Classes",
+      "titles": "Titles"
     },
     "group": {
       "collection": "Collection",
@@ -2142,5 +2142,47 @@
     "gravekeeper": "Gravekeeper",
     "windwalker": "Windwalker",
     "choir": "Choir"
+  },
+  "deeds": {
+    "heading": "Expedition deeds",
+    "full": "All three title slots are filled.",
+    "date": "Earned {{date}}",
+    "awarded": "{{hero}} earned the title {{title}}",
+    "names": {
+      "veteran": "Veteran",
+      "resilient": "Resilient",
+      "bossHunter": "Boss Hunter",
+      "dragonslayer": "Dragonslayer",
+      "undeadBane": "Undead Bane",
+      "eliteHunter": "Elite Hunter",
+      "raider": "Raider",
+      "deathKnown": "Death-Known",
+      "healerSaint": "Saint",
+      "abyssWalker": "Abyss Walker"
+    },
+    "keys": {
+      "wins": "Expeditions won",
+      "losses": "Defeats survived",
+      "bossKills": "Boss hunts",
+      "dragonKills": "Dragon boss hunts",
+      "undeadKills": "Undead and spirit killing blows",
+      "eliteKills": "Elite killing blows",
+      "raidKills": "Raid stages defeated",
+      "downed": "Expeditions survived after falling",
+      "healed": "Total healing",
+      "abyssBest": "Deepest abyss floor"
+    },
+    "effects": {
+      "veteran": "Damage taken −4%",
+      "resilient": "Expedition XP +5%",
+      "bossHunter": "Boss damage +6%",
+      "dragonslayer": "Boss damage +4%, blast resistance +5%",
+      "undeadBane": "Damage to undead and spirits +8%",
+      "eliteHunter": "Critical chance +3%",
+      "raider": "Party attack +2%",
+      "deathKnown": "Last stand attack +10%",
+      "healerSaint": "Healing +5%",
+      "abyssWalker": "Damage over time taken −15%"
+    }
   }
 }

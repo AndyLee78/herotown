@@ -1,3 +1,4 @@
+import { TitleBadges, DeedProgress } from './titleBadges'
 import { ChevronLeft, Clock, Hourglass, Sparkles, Swords } from 'lucide-react'
 import { useMemo, useState } from 'react'
 import { useTranslation } from 'react-i18next'
@@ -136,6 +137,7 @@ export function Inn({ save, onAction }: { save: GameState; onAction: Act }) {
                   <Chip>{t('ui.level', { level: hero.level })}</Chip>
                   <HeroXp hero={hero} />
                   <GiftBadge hero={hero} />
+                  <TitleBadges hero={hero} />
                   <span className="chips">
                     <Chip tone="info">{t(`class.${hero.classId}`)}</Chip>
                     <Chip>{t(`gender.${hero.gender}`)}</Chip>
@@ -210,7 +212,7 @@ export function Roster({
         {save.roster.length === 0 ? <p className="empty">{t('hint.emptyRoster')}</p> : null}
         <div className="hero-list">
           {save.roster.filter((hero) => !isChild(hero)).map((hero) => (
-            <button key={hero.id} type="button" className={hero.id === selectedId ? 'hero-row selected' : 'hero-row'} onClick={() => onSelect(hero.id)}>
+            <div key={hero.id} className="titled-hero-row"><button type="button" className={hero.id === selectedId ? 'hero-row selected' : 'hero-row'} onClick={() => onSelect(hero.id)}>
               <Portrait hero={hero} />
               <span className="hero-row-body">
                 <strong>{hero.name}</strong>
@@ -227,7 +229,7 @@ export function Roster({
                 <MoraleBar hero={hero} />
               </span>
               {needsWarning(hero) ? <span className="warn-dot" aria-label={t('hero.warning')} /> : null}
-            </button>
+            </button><TitleBadges hero={hero} /></div>
           ))}
         </div>
         {save.roster.some(isChild) ? <p className="muted">{t('hero.childrenElsewhere', { count: save.roster.filter(isChild).length })}</p> : null}
@@ -240,6 +242,7 @@ export function Roster({
                 <li key={grave.id} className={grave.legend ? 'grave legend' : 'grave'}>
                   <GraveFace grave={grave} />
                   <span className="hero-row-body">
+                    <TitleBadges hero={grave} />
                     <strong>{grave.family ? `${grave.name} · ${grave.family}` : grave.name}</strong>
                     <span className="chips">
                       <Chip tone="info">{t(`class.${grave.classId}`)}</Chip>
@@ -336,6 +339,8 @@ function HeroDetail({
         </div>
       </div>
       <GiftBadge hero={hero} />
+      <TitleBadges hero={hero} />
+      <DeedProgress hero={hero} />
       <div className="personality-detail">
         <span>{t(`personality.descriptions.${personality}`)}</span>
         {strongEmotions ? <span className="muted">{t('personality.strong', { emotions: strongEmotions })}</span> : null}

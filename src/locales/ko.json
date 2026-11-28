@@ -390,8 +390,7 @@
     "trinkets": "장신구",
     "slot": {
       "weapon": "무기",
-      "armor": "방어구"
-   ,
+      "armor": "방어구",
       "trinket": "장신구"
     },
     "blast": "광역기 대응"
@@ -1550,7 +1549,8 @@
       "uniques": "고유 장비",
       "sets": "세트",
       "gifts": "천부",
-      "classes": "직업"
+      "classes": "직업",
+      "titles": "칭호"
     },
     "group": {
       "collection": "도감",
@@ -2142,5 +2142,47 @@
     "gravekeeper": "묘지기",
     "windwalker": "바람걸음",
     "choir": "성가대"
+  },
+  "deeds": {
+    "heading": "행적",
+    "full": "칭호가 가득합니다 (3/3).",
+    "date": "획득한 때 · {{date}}",
+    "awarded": "{{hero}} · {{title}} 칭호 획득",
+    "names": {
+      "veteran": "백전노장",
+      "resilient": "패배를 딛고 선 자",
+      "bossHunter": "거인 사냥꾼",
+      "dragonslayer": "용 사냥꾼",
+      "undeadBane": "망자 사냥꾼",
+      "eliteHunter": "정예 사냥꾼",
+      "raider": "레이드 용사",
+      "deathKnown": "죽음을 아는 자",
+      "healerSaint": "성자",
+      "abyssWalker": "심연을 걷는 자"
+    },
+    "keys": {
+      "wins": "승리",
+      "losses": "패배 후 생환",
+      "bossKills": "보스 처치 참여",
+      "dragonKills": "용 보스 처치 참여",
+      "undeadKills": "언데드·영혼 마지막 일격",
+      "eliteKills": "정예 마지막 일격",
+      "raidKills": "레이드 단계 처치 참여",
+      "downed": "쓰러진 뒤 생환",
+      "healed": "누적 회복량",
+      "abyssBest": "심연 최고 층"
+    },
+    "effects": {
+      "veteran": "받는 피해 −4%",
+      "resilient": "원정 경험치 +5%",
+      "bossHunter": "보스 피해 +6%",
+      "dragonslayer": "보스 피해 +4%, 광역기 저항 +5%",
+      "undeadBane": "언데드·영혼 피해 +8%",
+      "eliteHunter": "치명타 확률 +3%",
+      "raider": "파티 공격 +2%",
+      "deathKnown": "위기 공격 +10%",
+      "healerSaint": "회복 +5%",
+      "abyssWalker": "지속 피해 −15%"
+    }
   }
 }
