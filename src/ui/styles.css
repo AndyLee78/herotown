@@ -2559,3 +2559,23 @@ button.chip {
   background: transparent;
   border-style: dashed;
 }
+
+.incident-badge {
+  position: absolute;
+  z-index: 6;
+  bottom: calc(108px + var(--safe-bottom));
+  left: 12px;
+  max-width: calc(100% - 100px);
+  white-space: normal;
+}
+
+.incident-choice.unavailable {
+  opacity: 0.72;
+}
+
+.incident-choice .btn,
+.incident-changes,
+.incident-choice {
+  overflow-wrap: anywhere;
+  white-space: normal;
+}

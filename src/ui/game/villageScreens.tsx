@@ -1474,6 +1474,8 @@ export function Absence({ save, busy, onWatch, onClose }: { save: GameState; bus
     return null
   }
   const crafted = report.crafted ?? []
+  const incidents = report.incidents
+  const hasIncidents = !!(incidents?.pending || incidents?.ignored.length)
   return (
     <Window title={t('absence.title')} onClose={onClose} small>
       <p>{t('absence.hours', { hours: Math.max(1, Math.round(report.elapsedMs / 3_600_000)) })}</p>
@@ -1503,7 +1505,12 @@ export function Absence({ save, busy, onWatch, onClose }: { save: GameState; bus
       {(report.proposals ?? 0) > 0 ? <p>{t('absence.proposals', { count: report.proposals })}</p> : null}
       {(report.births ?? []).length > 0 ? <p>{t('absence.births', { names: (report.births ?? []).join(', ') })}</p> : null}
       {(report.deaths ?? []).length > 0 ? <p>{t('absence.deaths', { names: (report.deaths ?? []).join(', ') })}</p> : null}
-      {report.completed.length === 0 && report.visitors.length === 0 && crafted.length === 0 && (report.aged ?? []).length === 0 && (report.proposals ?? 0) === 0 && (report.births ?? []).length === 0 && (report.deaths ?? []).length === 0 && !report.autoRuns && !report.autoDetails?.gear.length && !report.autoDetails?.injured.length ? <p className="muted">{t('absence.quiet')}</p> : null}
+      {hasIncidents ? <section className="card column">
+        <strong>{t('incidents.absence.title')}</strong>
+        {incidents?.pending ? <span>{t('incidents.absence.pending', { event: t(`incidents.events.${incidents.pending}.title`) })}</span> : null}
+        {incidents?.ignored.map((id, index) => <span key={`${id}-${index}`}>{t('incidents.absence.ignored', { event: t(`incidents.events.${id}.title`) })}</span>)}
+      </section> : null}
+      {!hasIncidents && report.completed.length === 0 && report.visitors.length === 0 && crafted.length === 0 && (report.aged ?? []).length === 0 && (report.proposals ?? 0) === 0 && (report.births ?? []).length === 0 && (report.deaths ?? []).length === 0 && !report.autoRuns && !report.autoDetails?.gear.length && !report.autoDetails?.injured.length ? <p className="muted">{t('absence.quiet')}</p> : null}
       <div className="actions">
         {report.adClaimed ? null : (
           <button type="button" className="btn ad" disabled={busy} onClick={onWatch}>

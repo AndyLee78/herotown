@@ -1291,6 +1291,243 @@
     "flame": "Flame",
     "silver": "Silver"
   },
+  "incidents": {
+    "title": "Village incident",
+    "badge": "Something happened in the village",
+    "changed": "Circumstances changed and the incident ended.",
+    "ignore": "The incident passed on its own.",
+    "noChanges": "No changes",
+    "confirm": "Confirm",
+    "poor": "You need more gold.",
+    "building": "Requires {{building}} level {{level}}",
+    "actor": "No eligible hero is available.",
+    "materials": "You need more materials.",
+    "absence": {
+      "title": "While you were away",
+      "pending": "Awaiting a choice · {{event}}",
+      "ignored": "Passed on its own · {{event}}"
+    },
+    "change": {
+      "gold": "Gold",
+      "fame": "Fame",
+      "materials": "Material",
+      "vault": "Vault",
+      "affinity": "Affinity",
+      "morale": "Morale",
+      "fatigue": "Fatigue",
+      "xp": "XP",
+      "visitor": "Visitor",
+      "gear": "Gear"
+    },
+    "events": {
+      "quarrel": {
+        "title": "A heated argument",
+        "story": "{{first}} and {{second}} are still arguing. Their companions hover nearby, unsure whether to step in.",
+        "choices": {
+          "mediate": {
+            "label": "Mediate",
+            "hint": "Both heroes gain morale and get along better.",
+            "result0": "After hearing each other out, both heroes feel better."
+          },
+          "pass": {
+            "label": "Leave them alone",
+            "hint": "The two heroes will get along less well.",
+            "result0": "They walk away, still holding a grudge."
+          },
+          "side": {
+            "label": "Side with {{first}}",
+            "hint": "One hero gains morale. The other loses morale, and their affinity falls.",
+            "result0": "One hero is relieved. The other feels slighted."
+          }
+        }
+      },
+      "oldTraveler": {
+        "title": "An old traveler",
+        "story": "An old traveler arrives at dusk. They ask for a warm place to spend the night.",
+        "choices": {
+          "host": {
+            "label": "Offer a room",
+            "hint": "The traveler may leave gear or spread the village’s good name.",
+            "result0": "The traveler leaves a piece of gear in thanks.",
+            "result1": "The traveler tells others about the village’s kindness."
+          },
+          "refuse": {
+            "label": "Turn them away",
+            "hint": "The traveler moves on to another village.",
+            "result0": "The traveler nods and continues down the road."
+          }
+        }
+      },
+      "lostChild": {
+        "title": "A child lost in the woods",
+        "story": "{{first}} hasn’t come back from the woods. There’s still time to search before dark.",
+        "choices": {
+          "send": {
+            "label": "Send a hero",
+            "hint": "The search tires the hero and lifts the spirits of the child and family.",
+            "result0": "The hero brings the child home safely."
+          },
+          "search": {
+            "label": "Search together",
+            "hint": "The search costs the village a little energy and lifts morale.",
+            "result0": "The villagers work together and find the child."
+          }
+        }
+      },
+      "merchantDeal": {
+        "title": "A questionable iron deal",
+        "story": "A merchant offers iron well below market price. The sack stays sealed until payment.",
+        "choices": {
+          "buy": {
+            "label": "Buy the iron",
+            "hint": "The sack will probably hold plenty of iron, but it could be mostly empty.",
+            "result0": "The sack is full of iron.",
+            "result1": "There’s only a little iron at the bottom of the sack."
+          },
+          "refuse": {
+            "label": "Refuse",
+            "hint": "Send the merchant on without making a deal.",
+            "result0": "The merchant picks up the sack and leaves."
+          }
+        }
+      },
+      "rainyDay": {
+        "title": "Days of rain",
+        "story": "Rain has kept the village quiet for days. The heroes are spending their time indoors.",
+        "choices": {
+          "treat": {
+            "label": "Treat everyone to a round",
+            "hint": "Morale rises across the village.",
+            "result0": "Conversation and laughter return to the warm tavern."
+          },
+          "train": {
+            "label": "Hold a training session",
+            "hint": "Heroes at home gain experience and tire a little.",
+            "result0": "The heroes spend the afternoon practicing their drills."
+          },
+          "rest": {
+            "label": "Give them time to rest",
+            "hint": "Fatigue falls across the village.",
+            "result0": "The heroes take a breather while the rain patters outside."
+          }
+        }
+      },
+      "rivalry": {
+        "title": "Friendly rivals",
+        "story": "{{first}} and {{second}} each claim to be better at the same technique. A crowd gathers by the practice yard.",
+        "choices": {
+          "match": {
+            "label": "Hold a match",
+            "hint": "Both gain experience. The winner gains morale and the loser loses some.",
+            "result0": "The first hero wins. Both learn something from the match.",
+            "result1": "The second hero wins. Both learn something from the match."
+          },
+          "stop": {
+            "label": "Call it off",
+            "hint": "The match is called off.",
+            "result0": "The crowd disperses and both heroes finish their practice."
+          }
+        }
+      },
+      "bard": {
+        "title": "A song for the village",
+        "story": "A wandering bard hears stories in the square. For a fee, the bard will turn them into a song and carry it to distant villages.",
+        "choices": {
+          "tip": {
+            "label": "Pay the bard",
+            "hint": "The village gains fame.",
+            "result0": "The song carries the village’s story far and wide."
+          },
+          "refuse": {
+            "label": "Decline politely",
+            "hint": "The bard continues on their way.",
+            "result0": "The bard packs up and heads for the next village."
+          }
+        }
+      },
+      "wolf": {
+        "title": "Wolves at the fence",
+        "story": "Wolves howl near the livestock pens after dark. The pens need to be secured before dawn.",
+        "choices": {
+          "guard": {
+            "label": "Post a guard",
+            "hint": "The guard grows tired and the village gains fame.",
+            "result0": "The guard drives the wolves away."
+          },
+          "trap": {
+            "label": "Set a trap",
+            "hint": "The trap has a good chance of yielding bones.",
+            "result0": "By morning, there are bones to collect near the trap.",
+            "result1": "The trap is still empty at dawn."
+          }
+        }
+      },
+      "confession": {
+        "title": "An unspoken feeling",
+        "story": "{{first}} admits to having feelings for {{second}} and asks what to do next.",
+        "choices": {
+          "cheer": {
+            "label": "Encourage them",
+            "hint": "The pair’s affinity rises considerably.",
+            "result0": "With a little courage, the hero lets some of those feelings show."
+          },
+          "watch": {
+            "label": "Give it time",
+            "hint": "The pair’s affinity rises a little.",
+            "result0": "The two spend time together and let things develop at their own pace."
+          }
+        }
+      },
+      "grieving": {
+        "title": "Missing a companion",
+        "story": "{{first}} stays up late grieving a companion. Even familiar tasks feel hard to start.",
+        "choices": {
+          "stay": {
+            "label": "Keep them company",
+            "hint": "The hero gains morale and tires a little from staying up.",
+            "result0": "After talking for a while, the hero feels a little more at ease."
+          },
+          "work": {
+            "label": "Give them work",
+            "hint": "The hero gains experience but loses some morale.",
+            "result0": "The work gets done, but the hero still feels down."
+          }
+        }
+      },
+      "festivalIdea": {
+        "title": "A small celebration",
+        "story": "The heroes suggest a small celebration in the square. They need funds for food and decorations.",
+        "choices": {
+          "hold": {
+            "label": "Hold the celebration",
+            "hint": "Morale rises across the village.",
+            "result0": "The square fills with food and laughter."
+          },
+          "later": {
+            "label": "Put it off",
+            "hint": "Morale falls a little across the village.",
+            "result0": "The heroes disperse, a little disappointed."
+          }
+        }
+      },
+      "ancientCoin": {
+        "title": "An ancient coin",
+        "story": "{{first}} finds a worn coin between some stones and proudly shows it to the villagers.",
+        "choices": {
+          "vault": {
+            "label": "Put it in the treasury",
+            "hint": "The village gains gold.",
+            "result0": "The coin is added to the village treasury."
+          },
+          "keep": {
+            "label": "Let the child keep it",
+            "hint": "The child gains morale.",
+            "result0": "The child slips the coin carefully into a pocket."
+          }
+        }
+      }
+    }
+  },
   "notifications": {
     "title": "Notifications",
     "enable": "Get notifications",
@@ -1298,6 +1535,7 @@
     "denied": "Notification permission was not granted. Check your browser or system settings.",
     "hint": "Get reminders while the game is open in the background.",
     "event": {
+      "incident": "A new village incident is waiting for you.",
       "expedition": "An expedition has returned.",
       "build": "{{building}} construction is complete.",
       "workshop": "A job at {{building}} is complete.",

@@ -1,4 +1,4 @@
-import { Clock } from 'lucide-react'
+import { Clock, MessageCircle } from 'lucide-react'
 import { lazy, Suspense, useEffect, useRef, useState, type ReactNode } from 'react'
 import { useTranslation } from 'react-i18next'
 import {
@@ -37,6 +37,7 @@ import { useGameNotifications } from './notifications'
 import { applyWithVaultHistory } from './game/specialDungeons'
 import { Market } from './game/marketScreens'
 import { Tavern } from './game/tavernScreens'
+import { IncidentScreen } from './game/incidentScreen'
 import { Inn, Roster } from './game/heroScreens'
 import { UiIcon, TownLogo, type ResourceKind } from './game/icons'
 import { Bar, Portrait, Res, Window, needsWarning, useNow, waitLabel } from './game/kit'
@@ -48,7 +49,7 @@ import { isSoundName, play, unlockSound } from './sound'
 const ExpeditionPanel = lazy(() => import('./ExpeditionPanel').then((mod) => ({ default: mod.ExpeditionPanel })))
 const VillageView = lazy(() => import('./VillageView').then((mod) => ({ default: mod.VillageView })))
 
-type Screen = 'town' | 'inn' | 'roster' | 'battle' | 'smith' | 'alchemy' | 'magic' | 'training' | 'school' | 'guild' | 'house' | 'market' | 'tavern' | 'legends' | 'settings' | 'festival' | 'codex' | 'achievements'
+type Screen = 'incident' | 'town' | 'inn' | 'roster' | 'battle' | 'smith' | 'alchemy' | 'magic' | 'training' | 'school' | 'guild' | 'house' | 'market' | 'tavern' | 'legends' | 'settings' | 'festival' | 'codex' | 'achievements'
 type Toast = { id: number; text: string }
 
 const DOCK: { screen: Screen; icon: ReactNode }[] = [
@@ -329,6 +330,7 @@ export function App() {
         pushToast(t('family.married', { a: first.name, b: second.name }))
       }
     }
+    return next
   }
 
   const birthMark = useRef<string | null>(null)
@@ -441,7 +443,7 @@ export function App() {
   }
   const readyAchievements = achievementProgress(save, townLevelOf(save).level).filter(({ ready }) => ready).length
   const badges: Partial<Record<Screen, number | boolean>> = {
-    town: save.loot.length + readyAchievements,
+    town: save.loot.length + readyAchievements + Number(!!save.incident),
     inn: save.visitors.length,
     roster: save.roster.some((hero) => needsWarning(hero) || hero.skillPoints > 0 || (!isChild(hero) && hero.condition !== 'dead' && lowMorale(hero))),
     battle: reportUnseen || save.expeditions.length > 0,
@@ -506,6 +508,12 @@ export function App() {
 
       <WishButton save={save} coins={coins} onWish={() => apply({ type: 'wish', now: gameNow() })} />
 
+      {save.incident && !covered ? (
+        <button type="button" className="btn incident-badge" onClick={() => open('incident')}>
+          <MessageCircle size={19} aria-hidden="true" /> {t('incidents.badge')}
+        </button>
+      ) : null}
+
       <nav className="dock" aria-label={t('label.village')}>
         {DOCK.map((item) => {
           const badge = badges[item.screen]
@@ -521,6 +529,11 @@ export function App() {
 
       {screen === 'festival' ? (
         <Festival save={save} onAction={apply} onClose={() => { play('close'); setScreen('town') }} />
+      ) : screen === 'incident' ? (
+        <IncidentScreen save={save} onClose={() => { play('close'); setScreen(null) }} onResolve={(choice) => {
+          const next = apply({ type: 'resolveIncident', choice })
+          return next && !next.incident ? next.incidentLog.at(-1) : undefined
+        }} />
       ) : screen ? (
         <Window
           title={t(`screen.${screen}`)}
@@ -532,6 +545,7 @@ export function App() {
         >
           {screen === 'town' ? (
             <><div className="chips">
+              {save.incident ? <button type="button" className="btn" onClick={() => open('incident')}><MessageCircle size={19} aria-hidden="true" /> {t('incidents.badge')}</button> : null}
               <button type="button" className="btn" onClick={() => open('codex')}>{t('screen.codex')}</button>
               <button type="button" className="btn" onClick={() => open('achievements')}>{t('screen.achievements')}{readyAchievements ? ` · ${readyAchievements}` : ''}</button>
             </div>

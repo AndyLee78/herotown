@@ -2,7 +2,7 @@ import { dungeonUnlocked, visitorCap, visitorStay, type GameState } from './game
 import { raidWeek } from './raid'
 
 export type UpcomingEvent = {
-  kind: 'expedition' | 'build' | 'workshop' | 'visitor' | 'raid'
+  kind: 'expedition' | 'build' | 'workshop' | 'visitor' | 'raid' | 'incident'
   at: number
   refId: string
 }
@@ -23,6 +23,7 @@ export function upcomingEvents(state: GameState): UpcomingEvent[] {
       : departures[state.visitors.length - cap]!
     events.push({ kind: 'visitor', at, refId: String(state.visitorNonce + 1) })
   }
+  if (!state.incident) events.push({ kind: 'incident', at: state.nextIncidentAt, refId: String(state.incidentNonce + 1) })
   if (dungeonUnlocked(state, 'raid')) {
     const date = new Date(state.lastTickAt)
     const days = ((8 - date.getDay()) % 7) || 7

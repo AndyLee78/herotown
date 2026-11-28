@@ -17,7 +17,7 @@ describe('upcoming events', () => {
     expect(events.slice(0, 5).map(({ kind, refId }) => [kind, refId])).toEqual([
       ['workshop', 'alchemy'], ['workshop', 'smith'], ['workshop', 'magic'], ['visitor', '1'], ['build', 'hall'],
     ])
-    expect(events.at(-1)).toEqual({ kind: 'expedition', at: sent.expeditions[0]!.returnAt, refId: sent.expeditions[0]!.id })
+    expect(events.at(-2)).toEqual({ kind: 'expedition', at: sent.expeditions[0]!.returnAt, refId: sent.expeditions[0]!.id })
   })
 
   it('waits until a bed is freed when the inn is full and uses next Monday at local midnight', () => {
@@ -26,9 +26,17 @@ describe('upcoming events', () => {
     expect(upcomingEvents(state)).toEqual([
       { kind: 'visitor', at: Math.min(...state.visitors.map(({ arrivedAt }) => arrivedAt ?? now)) + visitorStay(state.buildings.inn), refId: '1' },
       { kind: 'raid', at: new Date(2026, 10, 30).getTime(), refId: '2026-11-30' },
+      { kind: 'incident', at: state.nextIncidentAt, refId: '1' },
     ])
-    expect(upcomingEvents({ ...state, lastTickAt: new Date(2026, 10, 30).getTime(), visitors: [], nextVisitorAt: now })).toEqual([
+    expect(upcomingEvents({ ...state, lastTickAt: new Date(2026, 10, 30).getTime(), visitors: [], nextVisitorAt: now, nextIncidentAt: now })).toEqual([
       { kind: 'raid', at: new Date(2026, 11, 7).getTime(), refId: '2026-12-07' },
     ])
+  })
+
+  it('schedules the next incident only while there is no pending choice', () => {
+    const state = { ...freshState(4, now), incidentNonce: 3, nextIncidentAt: now + 500 }
+    expect(upcomingEvents(state)[0]).toEqual({ kind: 'incident', at: now + 500, refId: '4' })
+    const waiting = { ...state, incident: { id: 'rainyDay', actors: [], at: now, expiresAt: now + 1_000 } }
+    expect(upcomingEvents(waiting).some(({ kind }) => kind === 'incident')).toBe(false)
   })
 })
