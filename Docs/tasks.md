@@ -178,8 +178,8 @@ Claude Code, Cursor, GPT(Codex)가 함께 쓰는 작업 목록이다. 작업 하
 | 136 | 도감·업적 | GPT | `src/core/*`, `src/data/codex.json`(새 파일), `src/core/*.test.ts`, `src/ui/*`, `src/locales/*`, `Docs/codex.md` | 완료 (703461a) |
 | 137 | 알림 1단계(웹) | GPT | `src/core/*`(upcomingEvents), PWA 설정(`vite.config.ts`·서비스 워커), `src/ui/*`, `src/locales/*`, `Docs/codex.md` | 완료 (c280ba6) |
 | 138 | 축제 장식이 명예의 전당 터와 겹치는 문제 | Cursor | `src/ui/voxel/*` | 완료 (d59a8c3) |
-| 139 | 마을 사건 core | GPT | `src/core/*`(새 incidents.ts), `src/data/incidents.json`(새 파일), `src/core/*.test.ts`, `Docs/incidents.md` | 대기 |
-| 140 | 마을 사건 화면·보고·알림 | GPT | `src/ui/*`, `src/locales/*`, `src/core/*`(upcomingEvents에 사건만) | 대기 (139 뒤) |
+| 139 | 마을 사건 core | GPT | `src/core/*`(새 incidents.ts), `src/data/incidents.json`(새 파일), `src/core/*.test.ts`, `Docs/incidents.md` | 완료 (b8cdb06) |
+| 140 | 마을 사건 화면·보고·알림 | GPT | `src/ui/*`, `src/locales/*`, `src/core/*`(upcomingEvents에 사건만) | 완료 (f7cb5e0) |
 
 ---
 
@@ -3456,6 +3456,9 @@ Docs/incidents.md의 마을 사건을 core에 만든다. 화면은 140에서 한
 
 **메모**
 
+- 사건 12종의 시드 기반 발생·등장인물·선택지·만료와 효과를 구현하고 세이브 v31, 기존 세이브 이관을 반영했다.
+- 시드 12개의 발생 주기, 한 번에 하나 대기, 조건·결과·확률 재현·세이브 왕복 테스트를 추가했다. tsc·테스트 491개·빌드 통과.
+
 ---
 
 ## 140. 마을 사건 화면·보고·알림 (GPT)
@@ -3477,3 +3480,6 @@ Docs/incidents.md의 마을 사건을 core에 만든다. 화면은 140에서 한
 ```
 
 **메모**
+
+- 마을 배지·사건 창·영웅 초상·비용과 선택 불가 사유·결과 수치·재접속 보고·다음 사건 알림을 한영으로 연결했다.
+- 127.0.0.1:5175의 격리 Chrome 375px에서 사건 12종과 선택지 26개, 확률 분기와 대기·만료 보고를 확인했다. 알림 일정 테스트 및 tsc·테스트 492개·빌드 통과. OS 알림 수신은 미확인.
