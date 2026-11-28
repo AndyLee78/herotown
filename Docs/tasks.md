@@ -183,7 +183,7 @@ Claude Code, Cursor, GPT(Codex)가 함께 쓰는 작업 목록이다. 작업 하
 | 141 | 마을 사건 다듬기: 영웅 없는 마을, 빈 아이콘 | GPT | `src/data/incidents.json`, `src/core/incidents.ts`, `src/core/*.test.ts`, `src/ui/*`, `Docs/incidents.md` | 완료 (8b13897) |
 | 142 | 후천적 특성(행적·칭호) core | GPT | `src/core/*`(새 titles.ts), `src/data/titles.json`(새 파일), `src/core/*.test.ts`, `tools/*`, `Docs/deeds.md` | 완료 (c1ed86c) |
 | 143 | 후천적 특성 화면·연출·도감 | GPT | `src/ui/*`, `src/locales/*`, 도감 기록에 필요한 만큼 `src/core/codex.ts` | 완료 (1435c70) |
-| 144 | 출정하는 영웅이 명예의 전당과 분수 사이에 끼는 문제 | Cursor | `src/ui/voxel/*` | 대기 |
+| 144 | 출정하는 영웅이 명예의 전당과 분수 사이에 끼는 문제 | Cursor | `src/ui/voxel/*` | 완료 (7a72e44) |
 
 ---
 
@@ -3588,3 +3588,5 @@ Docs/deeds.md의 행적과 칭호를 core에 만든다. 화면은 143에서 한�
 ```
 
 **메모**
+
+원인은 명예의 전당 keep-off와 분수 클리어가 겹쳐 영웅이 울타리·분수 사이에서 밀리기만 한 것이었다. 전당을 `(-5.6, 3.2)`로 밀어 통로 ≥2를 확보하고, 산책 목표는 터 밖(입구 앞)만 고르며 2.4초 무진행 시 목표를 넘긴다. `walkClearance` 테스트 추가. 타입 검사·테스트 499개·빌드 통과.
