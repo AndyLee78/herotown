@@ -184,7 +184,7 @@ Claude Code, Cursor, GPT(Codex)가 함께 쓰는 작업 목록이다. 작업 하
 | 142 | 후천적 특성(행적·칭호) core | GPT | `src/core/*`(새 titles.ts), `src/data/titles.json`(새 파일), `src/core/*.test.ts`, `tools/*`, `Docs/deeds.md` | 완료 (c1ed86c) |
 | 143 | 후천적 특성 화면·연출·도감 | GPT | `src/ui/*`, `src/locales/*`, 도감 기록에 필요한 만큼 `src/core/codex.ts` | 완료 (1435c70) |
 | 144 | 출정하는 영웅이 명예의 전당과 분수 사이에 끼는 문제 | Cursor | `src/ui/voxel/*` | 완료 (7a72e44) |
-| 145 | 영웅이 분수 등 장애물 앞에서 계속 미는 문제(일반 해결) | Cursor | `src/ui/voxel/*` | 대기 |
+| 145 | 영웅이 분수 등 장애물 앞에서 계속 미는 문제(일반 해결) | Cursor | `src/ui/voxel/*` | 완료 (412e63e) |
 
 ---
 
@@ -3613,3 +3613,5 @@ Docs/deeds.md의 행적과 칭호를 core에 만든다. 화면은 143에서 한�
 ```
 
 **메모**
+
+건물 터·분수·가로등·나무·우물·피크닉·성문·축제 장식을 `obstacles.ts` 한 목록으로 모으고, 산책·출정 목표와 매 프레임 keep-off를 그 목록으로 돌렸다. 끼임은 1.5초·같은 장애물 avoidId로 넘긴다. tsc·테스트 507·빌드 통과. 브라우저에서 몇 분 관찰·스크린샷은 이 세션에서 못 했고, 단위 테스트로 목표점·푸시·unstick만 확인했다.
