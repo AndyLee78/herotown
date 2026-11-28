@@ -181,6 +181,8 @@ Claude Code, Cursor, GPT(Codex)가 함께 쓰는 작업 목록이다. 작업 하
 | 139 | 마을 사건 core | GPT | `src/core/*`(새 incidents.ts), `src/data/incidents.json`(새 파일), `src/core/*.test.ts`, `Docs/incidents.md` | 완료 (b8cdb06) |
 | 140 | 마을 사건 화면·보고·알림 | GPT | `src/ui/*`, `src/locales/*`, `src/core/*`(upcomingEvents에 사건만) | 완료 (f7cb5e0) |
 | 141 | 마을 사건 다듬기: 영웅 없는 마을, 빈 아이콘 | GPT | `src/data/incidents.json`, `src/core/incidents.ts`, `src/core/*.test.ts`, `src/ui/*`, `Docs/incidents.md` | 완료 (8b13897) |
+| 142 | 후천적 특성(행적·칭호) core | GPT | `src/core/*`(새 titles.ts), `src/data/titles.json`(새 파일), `src/core/*.test.ts`, `tools/*`, `Docs/deeds.md` | 대기 |
+| 143 | 후천적 특성 화면·연출·도감 | GPT | `src/ui/*`, `src/locales/*`, 도감 기록에 필요한 만큼 `src/core/codex.ts` | 대기 (142 뒤) |
 
 ---
 
@@ -3508,3 +3510,50 @@ Docs/incidents.md의 마을 사건을 core에 만든다. 화면은 140에서 한
 
 - 모든 사건은 살아 있는 성인 영웅 2명부터 발생한다. 비와 작은 잔치 제안은 원정 중이 아닌 성인 2명이 필요하다. 조건을 충족하지 않으면 다음 확인 시각만 미룬다.
 - 격리된 Chrome 375px의 127.0.0.1:5176에서 첫 고용 전과 한 명 고용 후에는 배지가 없고, 두 명 고용 후에는 작은 잔치 제안과 마을 아이콘이 표시됨을 확인했다. 타입 검사·테스트 494개·빌드 통과.
+
+---
+
+## 142. 후천적 특성(행적·칭호) core (GPT)
+
+**지금 시작할 수 있다.** 설계: `Docs/deeds.md`.
+
+**전달할 내용**
+
+```
+Docs/deeds.md의 행적과 칭호를 core에 만든다. 화면은 143에서 한다. 사용자의 localhost:5174 세이브는 건드리지 않는다. tsconfig.tsbuildinfo는 커밋하지 않는다.
+
+1. src/data/titles.json: 칭호 10개(id, 행적 키, 기준, 효과 SkillEffect). 행적 키 목록.
+2. src/core/titles.ts: 원정 보고서에서 영웅별 행적 더하기(전투 기록의 마지막 일격·쓰러짐, 보스·정예·몬스터 종류는 monsterById와 리플레이 유닛으로), 기준을 넘은 칭호 붙이기(최대 3, 정해진 순서), titleLog에 남기기. 순수 함수.
+3. 원정 정산(손·자동·침공·레이드·심연)에서 호출. 레이드 처치 참여는 settleRaid의 단계 처치 때.
+4. 효과: heroSkillEffects에 칭호 효과를 더한다(gear·gift와 같은 길).
+5. 세이브 버전 하나 올림. Hero.deeds, Hero.titles, GameState.titleLog(20). normalize에서 잘못된 키·id 정리, 칭호 3개 넘으면 앞 3개. 예전 세이브는 0부터.
+6. 기준 측정: 4d·5d 월간 도구(tools/identity-5d-month.ts 등)를 써서 Lv10 이후 30일 동안 칭호가 언제 몇 명에게 생기는지 잰다. 첫 칭호가 Lv10 무렵 한두 명에게 생기도록 기준을 맞추고 Docs/deeds.md 표를 고친다. 효과가 천부보다 세지 않은지 5d 측정 방식으로 한두 개 확인.
+7. 테스트: 행적 세기(마지막 일격, 쓰러짐 뒤 생존, 보스·용·정예), 칭호 붙기·3개 한도·중복 없음, 효과 합계, 자동 출정에서도 셈, 세이브 왕복·예전 세이브.
+
+확인: tsc·test·build 통과. 확인한 내용을 메모에.
+```
+
+**메모**
+
+---
+
+## 143. 후천적 특성 화면·연출·도감 (GPT)
+
+**작업 142 뒤에 시작한다.** 설계: `Docs/deeds.md`의 "화면".
+
+**전달할 내용**
+
+```
+142에서 만든 칭호를 화면에 보인다. src/ui/*, src/locales/*를 고친다. 도감 칸을 위해 필요하면 src/core/codex.ts에 칭호 기록을 더한다(세이브는 142의 버전을 쓴다. 더 올려야 하면 하나만). 사용자의 localhost:5174 세이브는 건드리지 않고 127.0.0.1:5175(쓰이면 5176)에서 확인한다. tsconfig.tsbuildinfo는 커밋하지 않는다.
+
+1. 영웅 카드·상세·방문자 카드에 칭호 배지(천부 금빛과 다른 색). 누르면 설명·효과·얻은 때.
+2. 영웅 상세에 행적 표: 키마다 지금 값과 다음 칭호까지 진행(이미 3개면 "칭호가 가득 찼다").
+3. 칭호를 얻으면: 원정 결과에 한 줄과 짧은 연출(기존 새 장비 알림 연출 정도), 재접속 보고에 한 줄, 알림(upcomingEvents가 아니라 얻은 순간이라 화면 안내만이어도 된다).
+4. 명예의 전당·묘지의 영웅 기록에 칭호.
+5. 도감에 "칭호" 칸(10개, 못 본 것은 ???).
+6. 칭호 이름·설명 ko/en. 375px에서 넘치지 않게.
+
+확인: tsc·test·build 통과. 127.0.0.1에서 세이브의 행적을 기준 직전으로 고쳐 원정 한 번에 칭호가 붙는 것을 본다. 확인한 내용을 메모에.
+```
+
+**메모**
