@@ -180,7 +180,7 @@ Claude Code, Cursor, GPT(Codex)가 함께 쓰는 작업 목록이다. 작업 하
 | 138 | 축제 장식이 명예의 전당 터와 겹치는 문제 | Cursor | `src/ui/voxel/*` | 완료 (d59a8c3) |
 | 139 | 마을 사건 core | GPT | `src/core/*`(새 incidents.ts), `src/data/incidents.json`(새 파일), `src/core/*.test.ts`, `Docs/incidents.md` | 완료 (b8cdb06) |
 | 140 | 마을 사건 화면·보고·알림 | GPT | `src/ui/*`, `src/locales/*`, `src/core/*`(upcomingEvents에 사건만) | 완료 (f7cb5e0) |
-| 141 | 마을 사건 다듬기: 영웅 없는 마을, 빈 아이콘 | GPT | `src/data/incidents.json`, `src/core/incidents.ts`, `src/core/*.test.ts`, `src/ui/*`, `Docs/incidents.md` | 대기 |
+| 141 | 마을 사건 다듬기: 영웅 없는 마을, 빈 아이콘 | GPT | `src/data/incidents.json`, `src/core/incidents.ts`, `src/core/*.test.ts`, `src/ui/*`, `Docs/incidents.md` | 완료 (8b13897) |
 
 ---
 
@@ -3505,3 +3505,6 @@ Docs/incidents.md의 마을 사건을 core에 만든다. 화면은 140에서 한
 ```
 
 **메모**
+
+- 모든 사건은 살아 있는 성인 영웅 2명부터 발생한다. 비와 작은 잔치 제안은 원정 중이 아닌 성인 2명이 필요하다. 조건을 충족하지 않으면 다음 확인 시각만 미룬다.
+- 격리된 Chrome 375px의 127.0.0.1:5176에서 첫 고용 전과 한 명 고용 후에는 배지가 없고, 두 명 고용 후에는 작은 잔치 제안과 마을 아이콘이 표시됨을 확인했다. 타입 검사·테스트 494개·빌드 통과.
